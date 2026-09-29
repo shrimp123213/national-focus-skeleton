@@ -294,6 +294,9 @@ function environment() {
       GENERATION_ENDED: 'generation-end',
       MESSAGE_RECEIVED: 'received',
       CHAT_CHANGED: 'chat',
+      MESSAGE_SWIPED: 'swipe',
+      MESSAGE_DELETED: 'deleted',
+      MESSAGE_EDITED: 'edited',
     },
     generateRaw: async () => '{}',
     stopGenerationById: () => true,
@@ -365,13 +368,13 @@ test('國策寫入樓層最外層，保留完整 stat_data、初始化資料與�
     env.platform.dispose();
   }
 });
-for (const change of ['next', 'swipe', 'chat', 'changeExternal'] as const) {
-  test(`來源 ${change} 改變後，遲到結果不回寫任何樓層`, async () => {
+for (const change of ['generation-start', 'swipe', 'chat', 'deleted'] as const) {
+  test(`生命週期事件 ${change} 取消舊任務，遲到結果不回寫`, async () => {
     const env = environment();
     try {
       const snapshot = await env.platform.read(defaultConfig());
-      env[change]();
-      await assert.rejects(env.platform.commit(snapshot, snapshot.state), /STALE/);
+      env.emit(change);
+      await assert.rejects(env.platform.commit(snapshot, snapshot.state), /abort/i);
       assert.equal(env.getData().国策, undefined);
       assert.equal(env.getData().stat_data.国策, undefined);
     } finally {
@@ -393,8 +396,8 @@ test('舊版完整樹與進度可讀取，成功保存才移到最外層且不�
     assert.deepEqual(env.getData(), before);
     await env.platform.commit(snapshot, snapshot.state);
     const { basis, prompt: _prompt, ...saved } = env.getData().国策;
-    assert.deepEqual({ ...saved, basis: legacy.basis }, legacy);
-    assert.ok(basis.hash);
+    assert.deepEqual(saved, legacy);
+    assert.equal(basis, undefined);
     delete before.stat_data.国策;
     const { 国策, ...remaining } = env.getData();
     assert.deepEqual(remaining, before);
@@ -420,15 +423,17 @@ test('兩位置同時有資料時以最外層為準，無效最外層資料明�
   }
 });
 
-test('最外層國策被修改後拒絕遲到結果，保留較新的進度', async () => {
+test('保存不比較國策或世界變量指紋，保留其他變量的最新值', async () => {
   const env = environment();
   try {
     env.getData().国策 = demoState();
     const snapshot = await env.platform.read(defaultConfig());
     env.getData().国策.day++;
-    const newer = structuredClone(env.getData());
-    await assert.rejects(env.platform.commit(snapshot, snapshot.state), /STALE/);
-    assert.deepEqual(env.getData(), newer);
+    env.changeExternal();
+    env.edit();
+    await env.platform.commit(snapshot, snapshot.state);
+    assert.equal(env.getData().国策.day, snapshot.state.day);
+    assert.equal(env.getData().stat_data.角色.金幣, 70);
   } finally {
     env.platform.dispose();
   }
@@ -477,29 +482,91 @@ test('收到正文而一般 MVU 尚未寫入時，不啟動背景任務；兩者
     env.emit('mvu-write', { message_content: '正文' });
     await new Promise((resolve) => setTimeout(resolve, 450));
     assert.equal(count, 1);
+    env.emit('received');
+    env.emit('generation-end');
+    env.emit('mvu-write', { message_content: env.text() });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.equal(count, 1, '同樓層重複完成事件不得重新啟動');
     await env.platform.read(defaultConfig());
   } finally {
     env.platform.dispose();
   }
 });
-test('新正文一開始，舊背景任務就已過期，即使新楼尚未插入', async () => {
+test('新正文一開始就取消舊任務，即使新樓尚未插入', async () => {
   const env = environment();
   try {
     const snapshot = await env.platform.read(defaultConfig());
     env.emit('generation-start');
-    await assert.rejects(env.platform.commit(snapshot, snapshot.state), /STALE/);
+    await assert.rejects(env.platform.commit(snapshot, snapshot.state), /abort/i);
   } finally {
     env.platform.dispose();
   }
 });
 
-test('重新讀取已保存狀態時檢查正文依據，編輯後不偽裝已同步', async () => {
+test('舊存檔的正文依據不再驗證，編輯後可繼續讀取', async () => {
   const env = environment();
   try {
     const snapshot = await env.platform.read(defaultConfig());
     await env.platform.commit(snapshot, snapshot.state);
+    env.getData().国策.basis = { messageId: 3, hash: 'legacy-hash' };
     env.edit();
-    await assert.rejects(env.platform.read(defaultConfig()), /舊正文已被編輯/);
+    env.emit('edited');
+    const current = await env.platform.read(defaultConfig());
+    assert.deepEqual(current.state, snapshot.state);
+    await env.platform.commit(current, current.state);
+    assert.equal(env.getData().国策.basis, undefined);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
+test('同次來源讀取共用一份聊天記錄，提交不讀取或雜湊歷史正文', async () => {
+  const env = environment();
+  const messages = [
+    { message_id: 0, role: 'user', message: '起點', swipe_id: 0, swipes: ['起點'] },
+    { message_id: 1, role: 'assistant', message: '第一樓', swipe_id: 0, swipes: ['第一樓'] },
+    { message_id: 2, role: 'user', message: '繼續', swipe_id: 0, swipes: ['繼續'] },
+    { message_id: 3, role: 'assistant', message: '第二樓', swipe_id: 0, swipes: ['第二樓'] },
+  ];
+  const ranges: (string | number)[] = [];
+  env.api.getChatMessages = (range) => {
+    if (range === -1) {
+      return structuredClone(messages.slice(-1));
+    }
+    ranges.push(range);
+    if (typeof range === 'number') {
+      return structuredClone(messages.filter((message) => message.message_id === range));
+    }
+    const end = Number(String(range).split('-').at(-1));
+    return structuredClone(messages.filter((message) => message.message_id <= end));
+  };
+  try {
+    const config = defaultConfig();
+    const first = await env.platform.read(config);
+    await env.platform.commit(first, first.state);
+    ranges.length = 0;
+    const saved = await env.platform.read(config, 'update');
+    assert.deepEqual(ranges, ['0-3']);
+    assert.equal(saved.turn, 2);
+    assert.equal(Object.hasOwn(saved, 'historyHash'), false);
+    assert.match(JSON.stringify(saved.context), /第二樓/);
+
+    // A later floor can continue even when older story text was edited.
+    env.next();
+    env.next();
+    messages.push(
+      { message_id: 4, role: 'user', message: '再繼續', swipe_id: 0, swipes: ['再繼續'] },
+      { message_id: 5, role: 'assistant', message: '第三樓', swipe_id: 0, swipes: ['第三樓'] },
+    );
+    ranges.length = 0;
+    const next = await env.platform.read(config, 'update');
+    assert.deepEqual(ranges, ['0-5']);
+    assert.equal(next.turn, 3);
+    ranges.length = 0;
+    messages[1].message = '舊樓已被靜默編輯';
+    await env.platform.commit(next, next.state);
+    assert.ok(!ranges.some((range) => typeof range === 'string' && range.startsWith('0-')));
+    await env.platform.read(config, 'update');
   } finally {
     env.platform.dispose();
   }
@@ -540,8 +607,7 @@ test('提交新新聞時標記所在樓層並在正文末尾加標籤；標籤�
     assert.equal(env.getData().国策.events.news.shownAt, 3);
     assert.equal(env.text(), '正文\n\n<国策快讯/>');
     const again = await env.platform.read(defaultConfig());
-    assert.equal(again.historyHash, snapshot.historyHash);
-    assert.equal(again.state.basis?.hash, snapshot.historyHash);
+    assert.equal(Object.hasOwn(again.state, 'basis'), false);
     await env.platform.commit(again, again.state);
     assert.equal(env.text(), '正文\n\n<国策快讯/>');
     let injected = '';

@@ -22,7 +22,7 @@ await build({
 });
 await build({ ...options, entryPoints: [join(root, 'src/preview.ts')], outfile: join(output, 'preview.js') });
 const notices = await Promise.all(
-  ['zod', '@noble/hashes', 'yaml'].map(
+  ['zod', 'yaml'].map(
     async (name) => `${name}\n${await readFile(join(root, 'node_modules', name, 'LICENSE'), 'utf8')}`,
   ),
 );
@@ -35,7 +35,7 @@ await writeFile(join(output, 'THIRD_PARTY_NOTICES.txt'), notices.join('\n\n'), '
 const exported = {
   type: 'script',
   enabled: true,
-  name: '【命定之詩】國策檔案 v0.14.0 骨架版',
+  name: '【命定之詩】國策檔案 v0.14.2 骨架版',
   id: '3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13',
   content: script,
   info: '正文完成後於背景演化的國策樹。需酒館助手與 MVU。從懸浮球開啟；請先設定可靠故事時間欄位與 API。',
@@ -96,10 +96,16 @@ await writeFile(
 );
 await writeFile(
   join(output, '國策快訊-提示移除正則.json'),
-  JSON.stringify(regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b02', '國策快訊不送給模型', { promptOnly: true }), null, 4),
+  JSON.stringify(
+    regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b02', '國策快訊不送給模型', { promptOnly: true }),
+    null,
+    4,
+  ),
   'utf8',
 );
 // Offline check of the card with a stand-in for the Tavern Helper iframe functions.
 const cardPreview = `<!doctype html><html lang="zh-Hant"><head><meta charset="UTF-8"><title>國策快訊卡片預覽</title></head><body style="background:#141d18;padding:24px"><script>window.__emitted=[];window.getCurrentMessageId=()=>7;window.getVariables=(o)=>o&&o.type==='global'?(window.__global||{}):window.__variables;window.insertOrAssignVariables=(v)=>{window.__global=Object.assign(window.__global||{},v);};window.eventEmit=(...args)=>{window.__emitted.push(args);return Promise.resolve();};</script><iframe id="card" style="width:100%;border:0;height:900px"></iframe><script>const source=${JSON.stringify(card).replaceAll('</script', '<\\/script')};window.showCard=(variables)=>{window.__variables=variables;const frame=document.getElementById('card');frame.srcdoc='<script>for (const k of ["getCurrentMessageId","getVariables","eventEmit","insertOrAssignVariables"]) window[k]=parent[k];<\\/script>'+source;};</script></body></html>`;
 await writeFile(join(output, '國策快訊-卡片預覽.html'), cardPreview, 'utf8');
-console.log('Built: dist/國策檔案-骨架版-酒館助手.json, dist/national-focus.js, dist/UI測試.html, dist/國策快訊-*.json');
+console.log(
+  'Built: dist/國策檔案-骨架版-酒館助手.json, dist/national-focus.js, dist/UI測試.html, dist/國策快訊-*.json',
+);

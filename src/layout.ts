@@ -23,32 +23,53 @@ export function layoutTree<T extends Pick<FocusNode, 'id' | 'branch' | 'prerequi
       throw new Error('國策前置形成循環');
     }
     visiting.add(id);
-    const parents = node.prerequisites.flat();
-    const result = parents.length ? 1 + Math.max(...parents.map(level)) : 0;
+    let result = 0;
+    for (const group of node.prerequisites) {
+      for (const parent of group) {
+        result = Math.max(result, 1 + level(parent));
+      }
+    }
     visiting.delete(id);
     levels.set(id, result);
     return result;
   }
+  const branches = new Map<string, Map<number, T[]>>();
   for (const node of nodes) {
-    level(node.id);
+    const y = level(node.id);
+    let rows = branches.get(node.branch);
+    if (!rows) {
+      rows = new Map();
+      branches.set(node.branch, rows);
+    }
+    const row = rows.get(y);
+    if (row) {
+      row.push(node);
+    } else {
+      rows.set(y, [node]);
+    }
   }
   const positions = new Map<string, { x: number; y: number }>();
   let lane = 0;
-  for (const branch of new Set(nodes.map((n) => n.branch))) {
-    const rows = new Map<number, T[]>();
-    for (const node of nodes.filter((n) => n.branch === branch)) {
-      const y = levels.get(node.id)!;
-      rows.set(y, [...(rows.get(y) ?? []), node]);
-    }
+  for (const rows of branches.values()) {
     const width = Math.max(...[...rows.values()].map((row) => row.length));
     for (const [y, row] of [...rows].sort(([a], [b]) => a - b)) {
-      const center = (node: T) => {
-        const parents = node.prerequisites
-          .flat()
-          .flatMap((id) => (positions.has(id) ? [positions.get(id)!.x] : []));
-        return parents.length ? parents.reduce((a, b) => a + b, 0) / parents.length : lane;
-      };
-      row.sort((a, b) => center(a) - center(b));
+      // Parent positions cannot change while sorting this row; calculate each center once.
+      const centers = new Map<string, number>();
+      for (const node of row) {
+        let sum = 0;
+        let count = 0;
+        for (const group of node.prerequisites) {
+          for (const parent of group) {
+            const position = positions.get(parent);
+            if (position) {
+              sum += position.x;
+              count++;
+            }
+          }
+        }
+        centers.set(node.id, count ? sum / count : lane);
+      }
+      row.sort((a, b) => centers.get(a.id)! - centers.get(b.id)!);
       row.forEach((node, index) =>
         positions.set(node.id, { x: lane + Math.floor((width - row.length) / 2) + index, y }),
       );

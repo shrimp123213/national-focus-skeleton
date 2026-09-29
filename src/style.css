@@ -1802,7 +1802,6 @@ code {
 .job-log .queued {
   color: var(--gold);
 }
-.job-log .stale,
 .job-log .cancelled {
   color: var(--muted);
 }
@@ -2734,8 +2733,7 @@ button.icon {
 .hud-item.success .hud-text b {
   color: var(--green);
 }
-.hud-item.cancelled,
-.hud-item.stale {
+.hud-item.cancelled {
   opacity: 0.7;
 }
 .hud-item time {

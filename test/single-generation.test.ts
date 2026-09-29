@@ -22,7 +22,6 @@ class SingleCountryPlatform implements Platform {
   commits = 0;
   revision = 0;
   block = false;
-  stale = false;
   invalid = '';
   failedResponses = 0;
   branchCount = 3;
@@ -56,7 +55,7 @@ class SingleCountryPlatform implements Platform {
   async read(): Promise<Snapshot> {
     return {
       identity: 'floor1',
-      fingerprint: String(this.revision),
+      messageId: 1,
       day: 100,
       turn: 1,
       state: structuredClone(this.state),
@@ -64,9 +63,6 @@ class SingleCountryPlatform implements Platform {
     };
   }
   async commit(snapshot: Snapshot, state: State) {
-    if (snapshot.fingerprint !== String(this.revision)) {
-      throw new Error('STALE:來源已改變');
-    }
     this.state = structuredClone(state);
     this.revision++;
     this.commits++;
@@ -80,9 +76,6 @@ class SingleCountryPlatform implements Platform {
     this.calls.push(p);
     if (this.block) {
       return new Promise(() => {});
-    }
-    if (this.stale) {
-      this.revision++;
     }
     if (this.failedResponses-- > 0) {
       return '{"nodes":[';
@@ -222,14 +215,13 @@ test('歷史國策不重新要求當年的能力，也不重發歷史效果', as
   assert.equal(platform.calls.length, 1);
 });
 
-test('取消、來源過期與結構錯誤均不提交，取消多國任務後不繼續下一國', async () => {
-  for (const defect of ['stale', 'route', 'capability', 'reference']) {
+test('取消與結構錯誤均不提交，取消多國任務後不繼續下一國', async () => {
+  for (const defect of ['route', 'capability', 'reference']) {
     const platform = new SingleCountryPlatform();
-    platform.stale = defect === 'stale';
     platform.invalid = defect;
     const controller = new FocusController(platform);
     await controller.run('generate', candidate);
-    assert.equal(controller.jobs[0].state, defect === 'stale' ? 'stale' : 'failed');
+    assert.equal(controller.jobs[0].state, 'failed');
     assert.equal(platform.commits, 0);
     assert.equal(platform.calls.length, 1);
   }

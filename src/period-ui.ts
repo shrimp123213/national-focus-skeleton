@@ -15,15 +15,18 @@ const time = (day: number): string => {
 export function periodControl(country: Country): string {
   return `<label class="switch-label period-toggle" title="關閉後保留當前樹，事件仍繼續推進"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod ? 'checked' : ''}>自動換期</label>`;
 }
-export function periodBar(country: Country, jobs: JobStatus[]): string {
+export function periodNote(country: Country, jobs: JobStatus[]): string {
   const generating = jobs.some(
     (job) => job.periodWork?.transition.country === country.id && ['queued', 'running'].includes(job.state),
   );
-  const note = generating
+  return generating
     ? '下一期生成中；事件繼續更新，成功後才換樹'
     : country.autoPeriod
       ? country.agenda || '本期目的完成或局勢不再適配時自動換期'
       : '保留當前國策樹；事件仍繼續更新';
+}
+export function periodBar(country: Country, jobs: JobStatus[]): string {
+  const note = periodNote(country, jobs);
   return `<section class="period-strip" aria-label="當前期別"><div class="period-copy"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}</strong><small role="status" title="${escape(note)}">${escape(note)}</small></div>${periodControl(country)}<button data-action="period-history">往期摘要${country.period.history.length ? ` · ${country.period.history.length}` : ''}</button></section>`;
 }
 export function anchorBadge(country: Country, node: FocusNode): string {

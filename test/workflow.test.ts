@@ -7,12 +7,19 @@ import type { Config } from '../src/model';
 
 class ControlledPlatform extends DemoPlatform {
   ready: () => void = () => {};
+  sourceRun = new AbortController();
   day = 114;
   turn = 8;
   outputs: (() => Promise<string>)[] = [];
   requests = 0;
   override async read() {
-    return { ...(await super.read()), day: this.day, turn: this.turn, identity: `floor_${this.turn}` };
+    return {
+      ...(await super.read()),
+      day: this.day,
+      turn: this.turn,
+      signal: this.sourceRun.signal,
+      identity: `floor_${this.turn}`,
+    };
   }
   override onReady(callback?: () => void) {
     this.ready = callback ?? (() => {});
@@ -50,6 +57,38 @@ test('不把玩家現在的暫停操作倒填至尚未結算的故事時間', as
   controller.dispose();
 });
 
+test('手動任務不為排程讀取存檔，自動任務仍依樓層檢查', async () => {
+  const platform = new ControlledPlatform();
+  let reads = 0;
+  const read = platform.read.bind(platform);
+  platform.read = async () => {
+    reads++;
+    return read();
+  };
+  const controller = new FocusController(platform);
+  try {
+    for (const job of Object.values(controller.config.jobs)) {
+      job.schedule = 'manual';
+    }
+    await controller.runScheduled();
+    assert.equal(reads, 0);
+    assert.equal(platform.requests, 0);
+    controller.config.jobs.update.schedule = 'reply';
+    platform.outputs.push(async () =>
+      JSON.stringify({ id: 'scheduled', until: 114, reason: '排程', steps: [] }),
+    );
+    await controller.runScheduled();
+    assert.equal(platform.requests, 1);
+    assert.equal(controller.jobs[0].state, 'success');
+    reads = 0;
+    await controller.runScheduled();
+    assert.equal(reads, 1);
+    assert.equal(platform.requests, 1);
+  } finally {
+    controller.dispose();
+  }
+});
+
 test('舊背景任務尚在執行時，新樓完成通知會保留並重新判定排程', async () => {
   const platform = new ControlledPlatform();
   let release!: (value: string) => void;
@@ -74,6 +113,8 @@ test('舊背景任務尚在執行時，新樓完成通知會保留並重新判�
   await finished(controller);
   assert.equal(platform.requests, 2);
   assert.equal((await platform.read()).state.day, 121);
+  assert.equal(controller.jobs.find((job) => job.state === 'cancelled')?.kind, 'update');
+  assert.ok(!(await platform.read()).state.receipts.includes('first'));
   controller.dispose();
 });
 
@@ -126,7 +167,7 @@ test('主連線失敗才使用設定中的備援，排隊任務可立即取消',
   platform.outputs.push(() => new Promise(() => {}));
   const active = controller.run('update');
   await tick();
-  const queued = controller.run('update');
+  const queued = controller.run('reshape');
   await tick();
   assert.equal(controller.jobs[0].state, 'queued');
   controller.cancel(controller.jobs[0].id);
@@ -173,6 +214,125 @@ test('完整請求超限時零 API 呼叫，不重試或切備援，也不提交
     assert.match(controller.jobs[0].message, /輸入過大/);
     assert.ok(controller.jobs[0].inputCharacters! > 700000);
     assert.deepEqual((await platform.read()).state, before);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('同一任務重複點擊不額外排隊或呼叫 API，完成後仍能手動重跑', async () => {
+  const platform = new ControlledPlatform();
+  let release!: (value: string) => void;
+  platform.outputs.push(
+    () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  );
+  const controller = new FocusController(platform);
+  try {
+    const first = controller.run('update');
+    await tick();
+    await controller.run('update');
+    assert.equal(platform.requests, 1);
+    assert.equal(controller.jobs.length, 1);
+    release(JSON.stringify({ id: 'once', until: 114, reason: '手動更新', steps: [] }));
+    await first;
+    platform.outputs.push(async () => JSON.stringify({ id: 'again', until: 114, reason: '重跑', steps: [] }));
+    await controller.run('update');
+    assert.equal(platform.requests, 2);
+    assert.ok((await platform.read()).state.receipts.includes('again'));
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('正文生命週期取消正在生成的工作，供應商遲到回應也不提交', async () => {
+  const platform = new ControlledPlatform();
+  let release!: (value: string) => void;
+  platform.outputs.push(
+    () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  );
+  const controller = new FocusController(platform);
+  try {
+    const before = (await platform.read()).state;
+    const pending = controller.run('update');
+    await tick();
+    platform.sourceRun.abort();
+    await pending;
+    release(JSON.stringify({ id: 'late', until: 114, reason: '遲到回應', steps: [] }));
+    await tick();
+    assert.equal(controller.jobs[0].state, 'cancelled');
+    assert.deepEqual((await platform.read()).state, before);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('背景生成期間的玩家操作保留，回應套用到最新國策而不比對來源', async () => {
+  const platform = new ControlledPlatform();
+  let release!: (value: string) => void;
+  platform.outputs.push(
+    () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  );
+  const controller = new FocusController(platform);
+  try {
+    const pending = controller.run('update');
+    await tick();
+    await controller.mutate((state) => pauseFocus(state, 'augustium'));
+    release(JSON.stringify({ id: 'latest', until: 114, reason: '更新局勢', steps: [] }));
+    await pending;
+    assert.equal(controller.jobs[0].state, 'success');
+    assert.equal((await platform.read()).state.countries.augustium.progress.focus_1_1.status, 'paused');
+    assert.ok((await platform.read()).state.receipts.includes('latest'));
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('並行任務回應依序保存，後一筆保留先前已保存的結果', async () => {
+  const platform = new ControlledPlatform();
+  const releases: ((value: string) => void)[] = [];
+  platform.outputs.push(
+    () =>
+      new Promise((resolve) => {
+        releases.push(resolve);
+      }),
+    () =>
+      new Promise((resolve) => {
+        releases.push(resolve);
+      }),
+  );
+  const commit = platform.commit.bind(platform);
+  platform.commit = async (snapshot, state) => {
+    await tick();
+    await commit(snapshot, state);
+  };
+  const controller = new FocusController(platform);
+  controller.config.concurrency = 2;
+  controller.config.sources.maxInputCharacters = 200000;
+  try {
+    const first = controller.run('update');
+    const second = controller.run('reshape');
+    for (let i = 0; i < 100 && releases.length < 2; i++) {
+      await tick();
+    }
+    assert.equal(releases.length, 2, JSON.stringify(controller.jobs));
+    releases[0](JSON.stringify({ id: 'parallel_a', until: 114, reason: '更新', steps: [] }));
+    releases[1](JSON.stringify({ id: 'parallel_b', until: 114, reason: '改樹', steps: [] }));
+    await Promise.all([first, second]);
+    assert.ok(
+      controller.jobs.every((job) => job.state === 'success'),
+      JSON.stringify(controller.jobs),
+    );
+    const saved = (await platform.read()).state;
+    assert.ok(saved.receipts.includes('parallel_a'));
+    assert.ok(saved.receipts.includes('parallel_b'));
   } finally {
     controller.dispose();
   }

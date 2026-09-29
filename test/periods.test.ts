@@ -236,8 +236,7 @@ class PeriodPlatform extends DemoPlatform {
   override async read(): Promise<Snapshot> {
     return {
       identity: this.identity,
-      storyFingerprint: this.story,
-      fingerprint: String(this.revisionNumber),
+      messageId: 1,
       day: this.data.day,
       turn: 1,
       state: structuredClone(this.data),
@@ -245,7 +244,6 @@ class PeriodPlatform extends DemoPlatform {
     };
   }
   override async commit(source: Snapshot, state: State) {
-    assert.equal(source.fingerprint, String(this.revisionNumber));
     this.data = structuredClone(state);
     this.revisionNumber++;
   }
@@ -304,8 +302,8 @@ test('新期失敗保留原樹與已提交事件，重試只生成該期', async
   assert.equal(platform.calls, 3);
 });
 
-test('生成中較新的純事件進展保留；國策、世界資料、樓層或開關變動拒絕舊結果', async () => {
-  for (const change of ['event', 'focus', 'story', 'floor', 'switch']) {
+test('生成中事件與世界資料更新不阻擋換期，關閉換期仍遵守功能開關', async () => {
+  for (const change of ['event', 'story', 'switch']) {
     const platform = new PeriodPlatform();
     platform.outputs.push(
       async () => JSON.stringify(update),
@@ -313,14 +311,8 @@ test('生成中較新的純事件進展保留；國策、世界資料、樓層�
         if (change === 'event') {
           platform.data.events.project.current = '橋墩完工';
         }
-        if (change === 'focus') {
-          platform.data.countries.land.progress.old_active.status = 'paused';
-        }
         if (change === 'story') {
           platform.story = 'new story';
-        }
-        if (change === 'floor') {
-          platform.identity = 'new floor';
         }
         if (change === 'switch') {
           platform.data.countries.land.autoPeriod = false;
@@ -331,10 +323,10 @@ test('生成中較新的純事件進展保留；國策、世界資料、樓層�
     );
     const controller = controllerFor(platform);
     await controller.run('update');
-    assert.equal(platform.data.countries.land.period.number, change === 'event' ? 2 : 1, change);
+    assert.equal(platform.data.countries.land.period.number, change === 'switch' ? 1 : 2, change);
     assert.equal(
       controller.jobs[0].state,
-      change === 'event' ? 'success' : 'stale',
+      change === 'switch' ? 'failed' : 'success',
       controller.jobs[0].message,
     );
     if (change === 'event') {

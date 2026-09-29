@@ -10,7 +10,16 @@ try {
   const platform = new TavernPlatform(scope, window.parent.localStorage);
   const controller = new FocusController(platform);
   const removeUI = mountUI(controller, doc);
+  const chatId = scope.SillyTavern.getCurrentChatId();
+  const chatListener = scope.eventOn(scope.tavern_events.CHAT_CHANGED, () => {
+    const current = scope.SillyTavern.getCurrentChatId();
+    if (current && current !== chatId) {
+      dispose();
+      window.location.reload();
+    }
+  });
   const dispose = () => {
+    chatListener.stop();
     controller.dispose();
     platform.dispose();
     removeUI();

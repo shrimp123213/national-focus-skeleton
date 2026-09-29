@@ -89,7 +89,7 @@ export function mountTaskPanel(
     const text = running
       ? '執行中'
       : job
-        ? `上次：${job.state === 'success' ? '成功' : job.state === 'failed' ? '失敗' : job.state === 'stale' ? '來源已改變' : '已取消'} · ${job.time}`
+        ? `上次：${job.state === 'success' ? '成功' : job.state === 'failed' ? '失敗' : '已取消'} · ${job.time}`
         : saved
           ? `上次成功：第 ${saved.turn} 則正文 · 故事日 ${Math.floor(saved.day)}`
           : '尚未執行';

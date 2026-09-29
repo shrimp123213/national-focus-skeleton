@@ -29,11 +29,6 @@ export function periodAnchor(country: Country, invalidateActive = false): string
   );
 }
 
-/** Compare policy state while allowing newer event text and other countries to be retained. */
-export function periodBasis(state: State, country: string): string {
-  return JSON.stringify([state.countries[country], state.settings.size, state.settings.pace, state.day]);
-}
-
 export function checkTransition(state: State, transition: Transition): void {
   const country = state.countries[transition.country];
   if (!country?.enabled || !country.autoPeriod || country.calibration) {

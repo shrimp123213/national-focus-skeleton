@@ -65,7 +65,7 @@ export class DemoPlatform implements Platform {
       : undefined;
     return {
       identity: 'demo',
-      fingerprint: String(this.revision),
+      messageId: this.revision,
       turn: 8,
       day: this.state.day,
       state: structuredClone(this.state),
@@ -75,16 +75,12 @@ export class DemoPlatform implements Platform {
     };
   }
   async commit(snapshot: Snapshot, state: State): Promise<void> {
-    if (snapshot.fingerprint !== String(this.revision)) {
-      throw new Error('STALE:示範狀態已更新');
-    }
     this.state = this.publish(structuredClone(state));
     this.revision++;
   }
   /** Stand-in for an AI floor: each saved revision publishes its news on "floor" = revision. */
   private publish(state: State): State {
     stampNews(state, this.revision);
-    state.basis = { messageId: this.revision, hash: '' };
     return state;
   }
   async news(): Promise<void> {

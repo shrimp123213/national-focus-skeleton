@@ -1,6 +1,6 @@
 {
   "name": "national-focus-tavern",
-  "version": "0.14.0-skeleton",
+  "version": "0.14.2-skeleton",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,6 @@
     "preview": "node scripts/serve.mjs"
   },
   "dependencies": {
-    "@noble/hashes": "^2.0.1",
     "yaml": "^2.9.1",
     "zod": "^4.1.0"
   },

@@ -310,7 +310,6 @@ export const StateSchema = z.object({
   events: z.record(Id, EventSchema),
   receipts: z.array(z.string()),
   schedules: z.record(z.string(), z.object({ turn: z.number(), day: Day })),
-  basis: z.object({ messageId: z.number().int().nonnegative(), hash: z.string() }).nullable().default(null),
 });
 export const ProposalSchema = z
   .object({

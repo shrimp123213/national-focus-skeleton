@@ -4,11 +4,6 @@ import type { Transition } from './periods';
 
 export type PeriodWork = {
   transition: Transition;
-  identity: string;
-  historyHash?: string;
-  storyFingerprint?: string;
-  day: number;
-  basis: string;
 };
 
 /** `name` is only for display and logs; API requests send role and content only. */
@@ -25,9 +20,9 @@ export type RenderedPrompt = {
 
 export type Snapshot = {
   identity: string;
-  fingerprint: string;
-  historyHash?: string;
-  storyFingerprint?: string;
+  messageId: number;
+  /** Cancelled by lifecycle events, without comparing source data. */
+  signal?: AbortSignal;
   turn: number;
   day: number;
   state: State;
@@ -49,7 +44,7 @@ export type SourceEntry = {
 export type JobStatus = {
   id: string;
   kind: string;
-  state: 'queued' | 'running' | 'success' | 'failed' | 'cancelled' | 'stale';
+  state: 'queued' | 'running' | 'success' | 'failed' | 'cancelled';
   message: string;
   time: string;
   inputCharacters?: number;

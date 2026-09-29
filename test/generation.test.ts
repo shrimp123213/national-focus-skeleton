@@ -69,6 +69,30 @@ test('300 個節點自動布局不重疊，跨分支前置位於子節點上方�
   );
 });
 
+test('布局依前置位置排序，同中心節點保留原順序，跨分支不改動輸入', () => {
+  const nodes = [
+    { id: 'left', branch: 'main', prerequisites: [] },
+    { id: 'right', branch: 'main', prerequisites: [] },
+    { id: 'to_right', branch: 'main', prerequisites: [['right']] },
+    { id: 'to_left', branch: 'main', prerequisites: [['left']] },
+    { id: 'also_left', branch: 'main', prerequisites: [['left']] },
+    { id: 'cross', branch: 'other', prerequisites: [['to_left', 'to_right']] },
+  ];
+  const before = structuredClone(nodes);
+  assert.deepEqual(
+    layoutTree(nodes).map(({ id, x, y }) => ({ id, x, y })),
+    [
+      { id: 'left', x: 0, y: 0 },
+      { id: 'right', x: 1, y: 0 },
+      { id: 'to_right', x: 2, y: 1 },
+      { id: 'to_left', x: 0, y: 1 },
+      { id: 'also_left', x: 1, y: 1 },
+      { id: 'cross', x: 4, y: 2 },
+    ],
+  );
+  assert.deepEqual(nodes, before);
+});
+
 test('互斥組至少兩條路線；路線起點是沒有同路線前置的國策', async () => {
   const { assertMutexChoices, mutexRoutes } = await import('../src/reachability');
   const m = (route: string) => ({ group: 'g', route, lock: 'complete' as const, reason: 'r' });

@@ -1,4 +1,4 @@
-import { periodBar, periodControl, anchorNotice, anchorBadge, historyBody } from './period-ui';
+import { periodBar, periodNote, periodControl, anchorNotice, anchorBadge, historyBody } from './period-ui';
 import { blockers, changeCountry, pauseFocus, resultNames, startFocus } from './engine';
 import { icon } from './icons';
 import { layoutTree } from './layout';
@@ -41,7 +41,6 @@ const jobStates: Record<string, string> = {
   success: '完成',
   failed: '失敗',
   cancelled: '已取消',
-  stale: '已過期',
 };
 const checked = (value: boolean) => (value ? 'checked' : '');
 /** Node card geometry on the tree canvas (grid units come from layoutTree). */
@@ -88,6 +87,7 @@ export function mountUI(
   const shell = root.querySelector<HTMLElement>('.shell')!;
   const orb = root.querySelector<HTMLButtonElement>('.orb')!;
   const backdrop = root.querySelector<HTMLElement>('.modal-backdrop')!;
+  let rendered: { state: State | null; config: Config; error: string } | undefined;
   let countryId = '';
   let nodeId = '';
   let query = '';
@@ -274,7 +274,7 @@ export function mountUI(
       };
     });
   }
-  function render(): void {
+  function render(jobsOnly = false): void {
     shell.hidden = !open;
     orb.hidden = open;
     const busy = controller.jobs.filter((j) => ['running', 'queued'].includes(j.state)).length;
@@ -288,6 +288,31 @@ export function mountUI(
     }
     const country = currentCountry();
     const state = controller.state;
+    // Controller snapshots and saved config are replaced on change. Job notifications keep
+    // those references, so they can update status without losing canvas focus or pointer capture.
+    if (
+      jobsOnly &&
+      rendered?.state === state &&
+      rendered.config === controller.config &&
+      rendered.error === controller.error
+    ) {
+      const taskButton = shell.querySelector<HTMLElement>('.command [data-action="jobs"]');
+      if (taskButton) {
+        taskButton.outerHTML = renderTaskButton(busy);
+      }
+      const status = shell.querySelector<HTMLElement>('.status-jobs');
+      if (status) {
+        status.outerHTML = renderTaskSummary();
+      }
+      const note = shell.querySelector<HTMLElement>('.period-copy small');
+      if (country && note) {
+        const text = periodNote(country, controller.jobs);
+        note.textContent = text;
+        note.title = text;
+      }
+      updateTaskWindows();
+      return;
+    }
     const countries = state ? Object.values(state.countries) : [];
     if (country && centeredCountry && centeredCountry !== `${country.id}:${country.period.number}`) {
       query = '';
@@ -305,7 +330,7 @@ export function mountUI(
           `<button class="nation-tab ${c.id === countryId ? 'active' : ''} ${c.control}" data-country="${escape(c.id)}" title="${escape(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === 'player' ? 'eagle' : 'crown')}</span><span class="tab-copy"><strong>${escape(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`,
       )
       .join('');
-    const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ''}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : '—'}</strong></div><button class="cmd-btn ${busy ? 'busy' : ''}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ''}${unseenFailures().length ? `，${unseenFailures().length} 項失敗` : ''}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : '☰'}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ''}</span>${unseenFailures().length ? '<i class="alert-dot" aria-hidden="true"></i>' : ''}</button><button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
+    const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ''}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : '—'}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
     const error = controller.error
       ? `<div class="error-banner" role="alert"><span>${escape(controller.error)}</span><button data-action="refresh">重新讀取</button></div>`
       : '';
@@ -339,8 +364,7 @@ export function mountUI(
     } else {
       body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '為這個世界選擇方向' : '連接你的故事'}</h2><p>${state ? '先辨識本局國家，再勾選要啟用的對象。國策內容會依你選擇的世界書與劇情生成。' : '國策樹需要一則已完成的正文，以及本樓可讀取的 MVU 變數。你仍可先設定 API 與來源。'}</p><div class="row"><button class="primary" data-action="countries">選擇啟用國家</button><button data-action="settings">設定來源與 API</button></div></div></section>`;
     }
-    const summary = taskSummary();
-    shell.innerHTML = `${command}${error}${body}<footer class="statusline"><button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape(summary.text)}</button><span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ''}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
+    shell.innerHTML = `${command}${error}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ''}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
     if (country) {
       drawTree(country);
       bindCanvas();
@@ -356,6 +380,10 @@ export function mountUI(
         body.innerHTML = historyBody(country);
       }
     }
+    rendered = { state, config: controller.config, error: controller.error };
+    updateTaskWindows();
+  }
+  function updateTaskWindows(): void {
     if (modal === 'jobs') {
       showJobs();
     }
@@ -363,6 +391,14 @@ export function mountUI(
       showCountries(false);
     }
     updateModalJobs();
+  }
+  function renderTaskButton(busy: number): string {
+    const failures = unseenFailures().length;
+    return `<button class="cmd-btn ${busy ? 'busy' : ''}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ''}${failures ? `，${failures} 項失敗` : ''}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : '☰'}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ''}</span>${failures ? '<i class="alert-dot" aria-hidden="true"></i>' : ''}</button>`;
+  }
+  function renderTaskSummary(): string {
+    const summary = taskSummary();
+    return `<button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape(summary.text)}</button>`;
   }
   /** Failed jobs not yet seen in the task window. */
   function unseenFailures() {
@@ -1009,7 +1045,7 @@ export function mountUI(
     const rows = controller.jobs
       .map(
         (j) =>
-          `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape(j.time)}</small>${j.inputCharacters !== undefined ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ''}</div><div>${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${j.route ? ` · ${escape(j.route)}` : ''}<br>${message(j)}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${['failed', 'stale'].includes(j.state) ? `<button data-retry="${j.id}">重試</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ''}</div></div>`,
+          `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape(j.time)}</small>${j.inputCharacters !== undefined ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ''}</div><div>${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${j.route ? ` · ${escape(j.route)}` : ''}<br>${message(j)}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button data-retry="${j.id}">重試</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ''}</div></div>`,
       )
       .join('');
     const body = `<div class="job-actions"><button data-modal="run-reshape" title="劇情大幅改變時，修改尚未開始的國策">評估重大改樹</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任務</button></div>${rows || '<p class="muted">尚無任務紀錄。正文與一般變數更新完成後，國策任務會在背景執行，不會鎖住聊天；進度顯示在懸浮球上方。</p>'}${controller.config.runLog ? '<p class="muted">執行紀錄已開啟：請求內容只保存在此頁記憶體，重新整理即清除。</p>' : ''}`;
@@ -1745,11 +1781,7 @@ export function mountUI(
         if (target.dataset.retry) {
           const job = controller.jobs.find((j) => j.id === target.dataset.retry);
           if (job) {
-            if (job.periodWork && job.state === 'stale') {
-              await controller.run('update');
-            } else {
-              await controller.run(job.kind as JobKind, job.candidate, job.periodWork);
-            }
+            await controller.run(job.kind as JobKind, job.candidate, job.periodWork);
           }
           return;
         }
@@ -1878,7 +1910,7 @@ export function mountUI(
     }
   });
   unsub = controller.subscribe(() => {
-    render();
+    render(true);
   });
   // The newspaper bar in the chat opens the panel or its event log.
   const stopNews =

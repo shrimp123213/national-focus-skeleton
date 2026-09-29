@@ -27,30 +27,52 @@
         throw new Error("國策前置形成循環");
       }
       visiting.add(id);
-      const parents = node2.prerequisites.flat();
-      const result = parents.length ? 1 + Math.max(...parents.map(level)) : 0;
+      let result = 0;
+      for (const group of node2.prerequisites) {
+        for (const parent of group) {
+          result = Math.max(result, 1 + level(parent));
+        }
+      }
       visiting.delete(id);
       levels.set(id, result);
       return result;
     }
+    const branches2 = /* @__PURE__ */ new Map();
     for (const node2 of nodes) {
-      level(node2.id);
+      const y = level(node2.id);
+      let rows = branches2.get(node2.branch);
+      if (!rows) {
+        rows = /* @__PURE__ */ new Map();
+        branches2.set(node2.branch, rows);
+      }
+      const row = rows.get(y);
+      if (row) {
+        row.push(node2);
+      } else {
+        rows.set(y, [node2]);
+      }
     }
     const positions = /* @__PURE__ */ new Map();
     let lane = 0;
-    for (const branch of new Set(nodes.map((n) => n.branch))) {
-      const rows = /* @__PURE__ */ new Map();
-      for (const node2 of nodes.filter((n) => n.branch === branch)) {
-        const y = levels.get(node2.id);
-        rows.set(y, [...rows.get(y) ?? [], node2]);
-      }
+    for (const rows of branches2.values()) {
       const width = Math.max(...[...rows.values()].map((row) => row.length));
       for (const [y, row] of [...rows].sort(([a], [b]) => a - b)) {
-        const center = (node2) => {
-          const parents = node2.prerequisites.flat().flatMap((id) => positions.has(id) ? [positions.get(id).x] : []);
-          return parents.length ? parents.reduce((a, b) => a + b, 0) / parents.length : lane;
-        };
-        row.sort((a, b) => center(a) - center(b));
+        const centers = /* @__PURE__ */ new Map();
+        for (const node2 of row) {
+          let sum = 0;
+          let count = 0;
+          for (const group of node2.prerequisites) {
+            for (const parent of group) {
+              const position = positions.get(parent);
+              if (position) {
+                sum += position.x;
+                count++;
+              }
+            }
+          }
+          centers.set(node2.id, count ? sum / count : lane);
+        }
+        row.sort((a, b) => centers.get(a.id) - centers.get(b.id));
         row.forEach(
           (node2, index) => positions.set(node2.id, { x: lane + Math.floor((width - row.length) / 2) + index, y })
         );
@@ -609,7 +631,7 @@
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/classic/external.js
+  // node_modules/zod/v4/classic/external.js
   var external_exports = {};
   __export(external_exports, {
     $brand: () => $brand,
@@ -872,7 +894,7 @@
     xor: () => xor
   });
 
-  // ../national-focus/node_modules/zod/v4/core/index.js
+  // node_modules/zod/v4/core/index.js
   var core_exports2 = {};
   __export(core_exports2, {
     $ZodAny: () => $ZodAny,
@@ -1189,7 +1211,7 @@
     withParser: () => withParser
   });
 
-  // ../national-focus/node_modules/zod/v4/core/util.js
+  // node_modules/zod/v4/core/util.js
   var util_exports = {};
   __export(util_exports, {
     BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -2032,7 +2054,7 @@
     return fn;
   }
 
-  // ../national-focus/node_modules/zod/v4/core/core.js
+  // node_modules/zod/v4/core/core.js
   var _a;
   var NEVER = /* @__PURE__ */ Object.freeze({
     status: "aborted"
@@ -2154,7 +2176,7 @@
     return globalConfig;
   }
 
-  // ../national-focus/node_modules/zod/v4/core/errors.js
+  // node_modules/zod/v4/core/errors.js
   function _getMessage() {
     const internals = this._zod;
     internals.message ?? (internals.message = JSON.stringify(internals.def, jsonStringifyReplacer, 2));
@@ -2346,7 +2368,7 @@
     return lines.join("\n");
   }
 
-  // ../national-focus/node_modules/zod/v4/core/parse.js
+  // node_modules/zod/v4/core/parse.js
   function finalizeParams(callee, params) {
     return { callee: params?.callee ?? callee, Err: params?.Err };
   }
@@ -2506,7 +2528,7 @@
   };
   var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
-  // ../national-focus/node_modules/zod/v4/core/regexes.js
+  // node_modules/zod/v4/core/regexes.js
   var regexes_exports = {};
   __export(regexes_exports, {
     anyString: () => anyString,
@@ -2678,7 +2700,7 @@
   var sha512_base64 = /* @__PURE__ */ fixedBase64(86, "==");
   var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
-  // ../national-focus/node_modules/zod/v4/core/checks.js
+  // node_modules/zod/v4/core/checks.js
   var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
     var _a3;
     inst._zod ?? (inst._zod = {});
@@ -3154,7 +3176,7 @@
     };
   });
 
-  // ../national-focus/node_modules/zod/v4/core/doc.js
+  // node_modules/zod/v4/core/doc.js
   var Doc = class {
     constructor(args = [], closed = {}) {
       this.content = [];
@@ -3195,14 +3217,14 @@ ${content.join("\n")}
     }
   };
 
-  // ../national-focus/node_modules/zod/v4/core/versions.js
+  // node_modules/zod/v4/core/versions.js
   var version = {
     major: 4,
     minor: 6,
     patch: 5
   };
 
-  // ../national-focus/node_modules/zod/v4/core/schemas.js
+  // node_modules/zod/v4/core/schemas.js
   var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     var _a3;
     inst ?? (inst = {});
@@ -5616,7 +5638,7 @@ ${content.join("\n")}
     }
   }
 
-  // ../national-focus/node_modules/zod/v4/core/memoizer.js
+  // node_modules/zod/v4/core/memoizer.js
   var $ZodCyclicError = class extends Error {
     constructor() {
       super(`Cannot parse a reference cycle that closes through a transform`);
@@ -5893,7 +5915,7 @@ ${content.join("\n")}
     return backEdges !== void 0 && isRef(value) && backEdges.has(value);
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/index.js
+  // node_modules/zod/v4/locales/index.js
   var locales_exports = {};
   __export(locales_exports, {
     ar: () => ar_default,
@@ -5961,7 +5983,7 @@ ${content.join("\n")}
     zhTW: () => zh_TW_default
   });
 
-  // ../national-focus/node_modules/zod/v4/locales/ar.js
+  // node_modules/zod/v4/locales/ar.js
   var error = () => {
     const Sizable = {
       string: { unit: "حرف", verb: "أن يحوي" },
@@ -6073,7 +6095,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/az.js
+  // node_modules/zod/v4/locales/az.js
   var error2 = () => {
     const Sizable = {
       string: { unit: "simvol", verb: "olmalıdır" },
@@ -6184,7 +6206,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/be.js
+  // node_modules/zod/v4/locales/be.js
   function getBelarusianPlural(count, one, few, many) {
     const absCount = Math.abs(count);
     const lastDigit = absCount % 10;
@@ -6353,7 +6375,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/bg.js
+  // node_modules/zod/v4/locales/bg.js
   var error4 = () => {
     const Sizable = {
       string: { unit: "символа", verb: "да съдържа" },
@@ -6479,7 +6501,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/bn.js
+  // node_modules/zod/v4/locales/bn.js
   var error5 = () => {
     const Sizable = {
       string: { unit: "অক্ষর", verb: "থাকতে হবে" },
@@ -6593,7 +6615,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ca.js
+  // node_modules/zod/v4/locales/ca.js
   var error6 = () => {
     const Sizable = {
       string: { unit: "caràcters", verb: "contenir" },
@@ -6707,7 +6729,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ckb.js
+  // node_modules/zod/v4/locales/ckb.js
   var error7 = () => {
     const Sizable = {
       string: { unit: "پیت", verb: "بێت" },
@@ -6840,7 +6862,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/cs.js
+  // node_modules/zod/v4/locales/cs.js
   var error8 = () => {
     const Sizable = {
       string: { unit: "znaků", verb: "mít" },
@@ -6957,7 +6979,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/da.js
+  // node_modules/zod/v4/locales/da.js
   var error9 = () => {
     const Sizable = {
       string: { unit: "tegn", verb: "havde" },
@@ -7078,7 +7100,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/de.js
+  // node_modules/zod/v4/locales/de.js
   var error10 = () => {
     const Sizable = {
       string: { unit: "Zeichen", verb: "zu haben" },
@@ -7192,7 +7214,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/el.js
+  // node_modules/zod/v4/locales/el.js
   var error11 = () => {
     const Sizable = {
       string: { unit: "χαρακτήρες", verb: "να έχει" },
@@ -7305,7 +7327,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/en.js
+  // node_modules/zod/v4/locales/en.js
   var error12 = () => {
     const Sizable = {
       string: { unit: "characters", verb: "to have" },
@@ -7430,7 +7452,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/eo.js
+  // node_modules/zod/v4/locales/eo.js
   var error13 = () => {
     const Sizable = {
       string: { unit: "karaktrojn", verb: "havi" },
@@ -7545,7 +7567,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/es.js
+  // node_modules/zod/v4/locales/es.js
   var error14 = () => {
     const Sizable = {
       string: { unit: "caracteres", verb: "tener" },
@@ -7682,7 +7704,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/fa.js
+  // node_modules/zod/v4/locales/fa.js
   var error15 = () => {
     const Sizable = {
       string: { unit: "کاراکتر", verb: "داشته باشد" },
@@ -7802,7 +7824,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/fi.js
+  // node_modules/zod/v4/locales/fi.js
   var error16 = () => {
     const Sizable = {
       string: { unit: "merkkiä", subject: "merkkijonon" },
@@ -7920,7 +7942,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/fr.js
+  // node_modules/zod/v4/locales/fr.js
   var error17 = () => {
     const Sizable = {
       string: { unit: "caractères", verb: "avoir" },
@@ -8050,7 +8072,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/fr-CA.js
+  // node_modules/zod/v4/locales/fr-CA.js
   var error18 = () => {
     const Sizable = {
       string: { unit: "caractères", verb: "avoir" },
@@ -8163,7 +8185,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/gu.js
+  // node_modules/zod/v4/locales/gu.js
   var error19 = () => {
     const Sizable = {
       string: { unit: "અક્ષર", verb: "હોવા જોઈએ" },
@@ -8277,7 +8299,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/he.js
+  // node_modules/zod/v4/locales/he.js
   var error20 = () => {
     const TypeNames = {
       string: { label: "מחרוזת", gender: "f" },
@@ -8479,7 +8501,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/hi.js
+  // node_modules/zod/v4/locales/hi.js
   var error21 = () => {
     const Sizable = {
       string: { unit: "अक्षर", verb: "रखने के लिए" },
@@ -8591,7 +8613,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/hr.js
+  // node_modules/zod/v4/locales/hr.js
   var error22 = () => {
     const Sizable = {
       string: { unit: "znakova", verb: "imati" },
@@ -8718,7 +8740,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/hu.js
+  // node_modules/zod/v4/locales/hu.js
   var error23 = () => {
     const Sizable = {
       string: { unit: "karakter", verb: "legyen" },
@@ -8832,7 +8854,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/hy.js
+  // node_modules/zod/v4/locales/hy.js
   function getArmenianPlural(count, one, many) {
     return Math.abs(count) === 1 ? one : many;
   }
@@ -8991,7 +9013,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/id.js
+  // node_modules/zod/v4/locales/id.js
   var error25 = () => {
     const Sizable = {
       string: { unit: "karakter", verb: "memiliki" },
@@ -9103,7 +9125,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/is.js
+  // node_modules/zod/v4/locales/is.js
   var error26 = () => {
     const Sizable = {
       string: { unit: "stafi", verb: "að hafa" },
@@ -9218,7 +9240,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/it.js
+  // node_modules/zod/v4/locales/it.js
   var error27 = () => {
     const Sizable = {
       string: { unit: "caratteri", verb: "avere" },
@@ -9332,7 +9354,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ja.js
+  // node_modules/zod/v4/locales/ja.js
   var error28 = () => {
     const Sizable = {
       string: { unit: "文字", verb: "である" },
@@ -9445,7 +9467,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ka.js
+  // node_modules/zod/v4/locales/ka.js
   var error29 = () => {
     const Sizable = {
       string: { unit: "სიმბოლო", verb: "უნდა შეიცავდეს" },
@@ -9563,7 +9585,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/km.js
+  // node_modules/zod/v4/locales/km.js
   var error30 = () => {
     const Sizable = {
       string: { unit: "តួអក្សរ", verb: "គួរមាន" },
@@ -9679,12 +9701,12 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/kh.js
+  // node_modules/zod/v4/locales/kh.js
   function kh_default() {
     return km_default();
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/kn.js
+  // node_modules/zod/v4/locales/kn.js
   var error31 = () => {
     const Sizable = {
       string: { unit: "ಅಕ್ಷರಗಳು", verb: "ಹೊಂದಲು" },
@@ -9800,7 +9822,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ko.js
+  // node_modules/zod/v4/locales/ko.js
   var error32 = () => {
     const Sizable = {
       string: { unit: "문자", verb: "to have" },
@@ -9917,7 +9939,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/lt.js
+  // node_modules/zod/v4/locales/lt.js
   var capitalizeFirstCharacter = (text) => {
     return text.charAt(0).toUpperCase() + text.slice(1);
   };
@@ -10125,7 +10147,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/mk.js
+  // node_modules/zod/v4/locales/mk.js
   var error34 = () => {
     const Sizable = {
       string: { unit: "знаци", verb: "да имаат" },
@@ -10240,7 +10262,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ms.js
+  // node_modules/zod/v4/locales/ms.js
   var error35 = () => {
     const Sizable = {
       string: { unit: "aksara", verb: "mempunyai" },
@@ -10353,7 +10375,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ne.js
+  // node_modules/zod/v4/locales/ne.js
   var error36 = () => {
     const Sizable = {
       string: { unit: "अक्षर", verb: "हुनुपर्छ" },
@@ -10465,7 +10487,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/nl.js
+  // node_modules/zod/v4/locales/nl.js
   var error37 = () => {
     const Sizable = {
       string: { unit: "tekens", verb: "heeft" },
@@ -10581,7 +10603,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/nn.js
+  // node_modules/zod/v4/locales/nn.js
   var error38 = () => {
     const Sizable = {
       string: { unit: "teikn", verb: "å ha" },
@@ -10695,7 +10717,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/no.js
+  // node_modules/zod/v4/locales/no.js
   var error39 = () => {
     const Sizable = {
       string: { unit: "tegn", verb: "å ha" },
@@ -10809,7 +10831,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ota.js
+  // node_modules/zod/v4/locales/ota.js
   var error40 = () => {
     const Sizable = {
       string: { unit: "harf", verb: "olmalıdır" },
@@ -10924,7 +10946,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ps.js
+  // node_modules/zod/v4/locales/ps.js
   var error41 = () => {
     const Sizable = {
       string: { unit: "توکي", verb: "ولري" },
@@ -11044,7 +11066,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/pl.js
+  // node_modules/zod/v4/locales/pl.js
   var error42 = () => {
     const Sizable = {
       string: { unit: "znaków", verb: "mieć" },
@@ -11159,7 +11181,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/pt.js
+  // node_modules/zod/v4/locales/pt.js
   var error43 = () => {
     const Sizable = {
       string: { unit: "caracteres" },
@@ -11303,7 +11325,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/pt-BR.js
+  // node_modules/zod/v4/locales/pt-BR.js
   var error44 = () => {
     const Sizable = {
       string: { unit: "caracteres" },
@@ -11448,7 +11470,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ro.js
+  // node_modules/zod/v4/locales/ro.js
   var error45 = () => {
     const Sizable = {
       string: { unit: "caractere", verb: "să aibă" },
@@ -11571,7 +11593,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ru.js
+  // node_modules/zod/v4/locales/ru.js
   function getRussianPlural(count, one, few, many) {
     const absCount = Math.abs(count);
     const lastDigit = absCount % 10;
@@ -11740,7 +11762,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/sk.js
+  // node_modules/zod/v4/locales/sk.js
   var error47 = () => {
     const Sizable = {
       string: { unit: "znakov", verb: "mať" },
@@ -11857,7 +11879,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/sl.js
+  // node_modules/zod/v4/locales/sl.js
   var error48 = () => {
     const Sizable = {
       string: { unit: "znakov", verb: "imeti" },
@@ -11972,7 +11994,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/sv.js
+  // node_modules/zod/v4/locales/sv.js
   var error49 = () => {
     const Sizable = {
       string: { unit: "tecken", verb: "att ha" },
@@ -12088,7 +12110,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ta.js
+  // node_modules/zod/v4/locales/ta.js
   var error50 = () => {
     const Sizable = {
       string: { unit: "எழுத்துக்கள்", verb: "கொண்டிருக்க வேண்டும்" },
@@ -12204,7 +12226,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/tg.js
+  // node_modules/zod/v4/locales/tg.js
   var error51 = () => {
     const Sizable = {
       string: { unit: "аломат", verb: "дошта бошад" },
@@ -12321,7 +12343,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/th.js
+  // node_modules/zod/v4/locales/th.js
   var error52 = () => {
     const Sizable = {
       string: { unit: "ตัวอักษร", verb: "ควรมี" },
@@ -12437,7 +12459,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/tk.js
+  // node_modules/zod/v4/locales/tk.js
   var error53 = () => {
     const Sizable = {
       string: { unit: "simwol", verb: "bolmaly" },
@@ -12545,7 +12567,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/tr.js
+  // node_modules/zod/v4/locales/tr.js
   var error54 = () => {
     const Sizable = {
       string: { unit: "karakter", verb: "olmalı" },
@@ -12656,7 +12678,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/uk.js
+  // node_modules/zod/v4/locales/uk.js
   var error55 = () => {
     const Sizable = {
       string: { unit: "символів", verb: "матиме" },
@@ -12770,12 +12792,12 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ua.js
+  // node_modules/zod/v4/locales/ua.js
   function ua_default() {
     return uk_default();
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/ur.js
+  // node_modules/zod/v4/locales/ur.js
   var error56 = () => {
     const Sizable = {
       string: { unit: "حروف", verb: "ہونا" },
@@ -12891,7 +12913,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/uz.js
+  // node_modules/zod/v4/locales/uz.js
   var error57 = () => {
     const Sizable = {
       string: { unit: "belgi", verb: "bo‘lishi kerak" },
@@ -13005,7 +13027,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/vi.js
+  // node_modules/zod/v4/locales/vi.js
   var error58 = () => {
     const Sizable = {
       string: { unit: "ký tự", verb: "có" },
@@ -13119,7 +13141,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/zh-CN.js
+  // node_modules/zod/v4/locales/zh-CN.js
   var error59 = () => {
     const Sizable = {
       string: { unit: "字符", verb: "包含" },
@@ -13234,7 +13256,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/zh-TW.js
+  // node_modules/zod/v4/locales/zh-TW.js
   var error60 = () => {
     const Sizable = {
       string: { unit: "字元", verb: "擁有" },
@@ -13347,7 +13369,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/locales/yo.js
+  // node_modules/zod/v4/locales/yo.js
   var error61 = () => {
     const Sizable = {
       string: { unit: "àmi", verb: "ní" },
@@ -13460,7 +13482,7 @@ ${content.join("\n")}
     };
   }
 
-  // ../national-focus/node_modules/zod/v4/core/registries.js
+  // node_modules/zod/v4/core/registries.js
   var _a2;
   var $output = /* @__PURE__ */ Symbol("ZodOutput");
   var $input = /* @__PURE__ */ Symbol("ZodInput");
@@ -13510,7 +13532,7 @@ ${content.join("\n")}
   (_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
   var globalRegistry = globalThis.__zod_globalRegistry;
 
-  // ../national-focus/node_modules/zod/v4/core/compile.js
+  // node_modules/zod/v4/core/compile.js
   var INVALID = Symbol.for("zod.compile.invalid");
   var FALLBACK_FLAG = Symbol.for("zod.compile.fallback");
   var ZodCompileAsyncError = class extends Error {
@@ -15112,7 +15134,7 @@ ${code}
     return accessor;
   }
 
-  // ../national-focus/node_modules/zod/v4/core/api.js
+  // node_modules/zod/v4/core/api.js
   function snapshotChecks(def) {
     if (def.checks)
       def.checks = [...def.checks];
@@ -16171,7 +16193,7 @@ ${code}
     return inst;
   }
 
-  // ../national-focus/node_modules/zod/v4/core/to-json-schema.js
+  // node_modules/zod/v4/core/to-json-schema.js
   function assignProps(target, ...sources) {
     for (const source of sources) {
       for (const key of Reflect.ownKeys(source)) {
@@ -16701,7 +16723,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return finalize(ctx, schema4);
   };
 
-  // ../national-focus/node_modules/zod/v4/core/json-schema-processors.js
+  // node_modules/zod/v4/core/json-schema-processors.js
   var narrowMin = (agg, key, value) => {
     if (agg[key] === void 0 || value > agg[key])
       agg[key] = value;
@@ -17449,7 +17471,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return finalize(ctx, input2);
   }
 
-  // ../national-focus/node_modules/zod/v4/core/json-schema-generator.js
+  // node_modules/zod/v4/core/json-schema-generator.js
   var JSONSchemaGenerator = class {
     /** @deprecated Access via ctx instead */
     get metadataRegistry() {
@@ -17527,10 +17549,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
   };
 
-  // ../national-focus/node_modules/zod/v4/core/json-schema.js
+  // node_modules/zod/v4/core/json-schema.js
   var json_schema_exports = {};
 
-  // ../national-focus/node_modules/zod/v4/classic/schemas.js
+  // node_modules/zod/v4/classic/schemas.js
   var schemas_exports2 = {};
   __export(schemas_exports2, {
     ZodAny: () => ZodAny,
@@ -17711,7 +17733,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     xor: () => xor
   });
 
-  // ../national-focus/node_modules/zod/v4/classic/checks.js
+  // node_modules/zod/v4/classic/checks.js
   var checks_exports2 = {};
   __export(checks_exports2, {
     endsWith: () => _endsWith,
@@ -17746,7 +17768,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uppercase: () => _uppercase
   });
 
-  // ../national-focus/node_modules/zod/v4/classic/errors.js
+  // node_modules/zod/v4/classic/errors.js
   var _installedErrorProtos = /* @__PURE__ */ new WeakSet([Object.prototype, Error.prototype]);
   function _lazyMethod(proto, key, make) {
     Object.defineProperty(proto, key, {
@@ -17792,7 +17814,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     Parent: Error
   });
 
-  // ../national-focus/node_modules/zod/v4/classic/parse.js
+  // node_modules/zod/v4/classic/parse.js
   var parse2 = /* @__PURE__ */ _parse(ZodRealError);
   var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
   var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -17806,7 +17828,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
   var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-  // ../national-focus/node_modules/zod/v4/classic/schemas.js
+  // node_modules/zod/v4/classic/schemas.js
   function _ensureDefaultLocale() {
     if (!globalConfig.localeError)
       config(en_default());
@@ -19271,7 +19293,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     });
   }
 
-  // ../national-focus/node_modules/zod/v4/classic/compat.js
+  // node_modules/zod/v4/classic/compat.js
   var ZodIssueCode = {
     invalid_type: "invalid_type",
     too_big: "too_big",
@@ -19297,7 +19319,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   /* @__PURE__ */ (function(ZodFirstPartyTypeKind2) {
   })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-  // ../national-focus/node_modules/zod/v4/classic/iso.js
+  // node_modules/zod/v4/classic/iso.js
   var iso_exports = {};
   __export(iso_exports, {
     ZodISODate: () => ZodISODate,
@@ -19322,7 +19344,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return _isoDuration(ZodISODuration, params);
   }
 
-  // ../national-focus/node_modules/zod/v4/classic/from-json-schema.js
+  // node_modules/zod/v4/classic/from-json-schema.js
   var z = {
     ...schemas_exports2,
     ...checks_exports2,
@@ -20055,7 +20077,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return convertSchema(normalized, ctx);
   }
 
-  // ../national-focus/node_modules/zod/v4/core/visit.js
+  // node_modules/zod/v4/core/visit.js
   var RESOLVING = Symbol("z.visit/resolving");
   function visit(schema4, fnOrHandlers) {
     const fn = typeof fnOrHandlers === "function" ? fnOrHandlers : (node2, rewritten) => {
@@ -20210,7 +20232,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return run(schema4);
   }
 
-  // ../national-focus/node_modules/zod/v4/classic/deep-partial.js
+  // node_modules/zod/v4/classic/deep-partial.js
   function deepPartial(schema4) {
     return visit(schema4, {
       object: (s) => s.partial(),
@@ -20222,7 +20244,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     });
   }
 
-  // ../national-focus/node_modules/zod/v4/classic/in-out.js
+  // node_modules/zod/v4/classic/in-out.js
   function withChecks(side, checks) {
     if (!checks?.length)
       return side;
@@ -20252,7 +20274,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     });
   }
 
-  // ../national-focus/node_modules/zod/v4/classic/coerce.js
+  // node_modules/zod/v4/classic/coerce.js
   var coerce_exports = {};
   __export(coerce_exports, {
     bigint: () => bigint3,
@@ -20631,8 +20653,7 @@ ${DATA_TOKEN}`;
     countries: external_exports.record(Id, CountrySchema),
     events: external_exports.record(Id, EventSchema),
     receipts: external_exports.array(external_exports.string()),
-    schedules: external_exports.record(external_exports.string(), external_exports.object({ turn: external_exports.number(), day: Day })),
-    basis: external_exports.object({ messageId: external_exports.number().int().nonnegative(), hash: external_exports.string() }).nullable().default(null)
+    schedules: external_exports.record(external_exports.string(), external_exports.object({ turn: external_exports.number(), day: Day }))
   });
   var ProposalSchema = external_exports.object({
     id: Id,
@@ -24533,9 +24554,6 @@ ${formatIssues(checked2.problems)}`
     }
     return Object.entries(country.progress).filter(([, progress]) => progress.status === "completed").sort((a, b) => (b[1].completed ?? -1) - (a[1].completed ?? -1))[0]?.[0] ?? "";
   }
-  function periodBasis(state, country) {
-    return JSON.stringify([state.countries[country], state.settings.size, state.settings.pace, state.day]);
-  }
   function checkTransition(state, transition) {
     const country = state.countries[transition.country];
     if (!country?.enabled || !country.autoPeriod || country.calibration) {
@@ -24916,7 +24934,7 @@ ${formatIssues(checked2.problems)}`
       }) : void 0;
       return {
         identity: "demo",
-        fingerprint: String(this.revision),
+        messageId: this.revision,
         turn: 8,
         day: this.state.day,
         state: structuredClone(this.state),
@@ -24926,16 +24944,12 @@ ${formatIssues(checked2.problems)}`
       };
     }
     async commit(snapshot, state) {
-      if (snapshot.fingerprint !== String(this.revision)) {
-        throw new Error("STALE:示範狀態已更新");
-      }
       this.state = this.publish(structuredClone(state));
       this.revision++;
     }
     /** Stand-in for an AI floor: each saved revision publishes its news on "floor" = revision. */
     publish(state) {
       stampNews(state, this.revision);
-      state.basis = { messageId: this.revision, hash: "" };
       return state;
     }
     async news() {
@@ -25415,7 +25429,7 @@ ${issuesText(parsed.error)}`);
     );
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/identity.js
+  // node_modules/yaml/browser/dist/nodes/identity.js
   var ALIAS = Symbol.for("yaml.alias");
   var DOC = Symbol.for("yaml.document");
   var MAP = Symbol.for("yaml.map");
@@ -25451,7 +25465,7 @@ ${issuesText(parsed.error)}`);
   }
   var hasAnchor = (node2) => (isScalar(node2) || isCollection(node2)) && !!node2.anchor;
 
-  // ../national-focus/node_modules/yaml/browser/dist/visit.js
+  // node_modules/yaml/browser/dist/visit.js
   var BREAK = Symbol("break visit");
   var SKIP = Symbol("skip children");
   var REMOVE = Symbol("remove node");
@@ -25601,7 +25615,7 @@ ${issuesText(parsed.error)}`);
     }
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/doc/directives.js
+  // node_modules/yaml/browser/dist/doc/directives.js
   var escapeChars = {
     "!": "%21",
     ",": "%2C",
@@ -25764,7 +25778,7 @@ ${issuesText(parsed.error)}`);
   Directives.defaultYaml = { explicit: false, version: "1.2" };
   Directives.defaultTags = { "!!": "tag:yaml.org,2002:" };
 
-  // ../national-focus/node_modules/yaml/browser/dist/doc/anchors.js
+  // node_modules/yaml/browser/dist/doc/anchors.js
   function anchorIsValid(anchor2) {
     if (/[\x00-\x19\s,[\]{}]/.test(anchor2)) {
       const sa = JSON.stringify(anchor2);
@@ -25823,7 +25837,7 @@ ${issuesText(parsed.error)}`);
     };
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/doc/applyReviver.js
+  // node_modules/yaml/browser/dist/doc/applyReviver.js
   function applyReviver(reviver, obj, key, val) {
     if (val && typeof val === "object") {
       if (Array.isArray(val)) {
@@ -25867,7 +25881,7 @@ ${issuesText(parsed.error)}`);
     return reviver.call(obj, key, val);
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/toJS.js
+  // node_modules/yaml/browser/dist/nodes/toJS.js
   function toJS(value, arg, ctx) {
     if (Array.isArray(value))
       return value.map((v, i) => toJS(v, String(i), ctx));
@@ -25890,7 +25904,7 @@ ${issuesText(parsed.error)}`);
     return value;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/Node.js
+  // node_modules/yaml/browser/dist/nodes/Node.js
   var NodeBase = class {
     constructor(type) {
       Object.defineProperty(this, NODE_TYPE, { value: type });
@@ -25922,7 +25936,7 @@ ${issuesText(parsed.error)}`);
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/Alias.js
+  // node_modules/yaml/browser/dist/nodes/Alias.js
   var Alias = class extends NodeBase {
     constructor(source) {
       super(ALIAS);
@@ -26029,7 +26043,7 @@ ${issuesText(parsed.error)}`);
     return 1;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/Scalar.js
+  // node_modules/yaml/browser/dist/nodes/Scalar.js
   var isScalarValue = (value) => !value || typeof value !== "function" && typeof value !== "object";
   var Scalar = class extends NodeBase {
     constructor(value) {
@@ -26049,7 +26063,7 @@ ${issuesText(parsed.error)}`);
   Scalar.QUOTE_DOUBLE = "QUOTE_DOUBLE";
   Scalar.QUOTE_SINGLE = "QUOTE_SINGLE";
 
-  // ../national-focus/node_modules/yaml/browser/dist/doc/createNode.js
+  // node_modules/yaml/browser/dist/doc/createNode.js
   var defaultTagPrefix = "tag:yaml.org,2002:";
   function findTagObject(value, tagName, tags) {
     if (tagName) {
@@ -26115,7 +26129,7 @@ ${issuesText(parsed.error)}`);
     return node2;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/Collection.js
+  // node_modules/yaml/browser/dist/nodes/Collection.js
   function collectionFromPath(schema4, path, value) {
     let v = value;
     for (let i = path.length - 1; i >= 0; --i) {
@@ -26247,7 +26261,7 @@ ${issuesText(parsed.error)}`);
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyComment.js
+  // node_modules/yaml/browser/dist/stringify/stringifyComment.js
   var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
   function indentComment(comment, indent) {
     if (/^\n+$/.test(comment))
@@ -26256,7 +26270,7 @@ ${issuesText(parsed.error)}`);
   }
   var lineComment = (str, indent, comment) => str.endsWith("\n") ? indentComment(comment, indent) : comment.includes("\n") ? "\n" + indentComment(comment, indent) : (str.endsWith(" ") ? "" : " ") + comment;
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/foldFlowLines.js
+  // node_modules/yaml/browser/dist/stringify/foldFlowLines.js
   var FOLD_FLOW = "flow";
   var FOLD_BLOCK = "block";
   var FOLD_QUOTED = "quoted";
@@ -26383,7 +26397,7 @@ ${indent}${text.slice(fold + 1, end2)}`;
     return end;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyString.js
+  // node_modules/yaml/browser/dist/stringify/stringifyString.js
   var getFoldOptions = (ctx, isBlock2) => ({
     indentAtStart: isBlock2 ? ctx.indent.length : ctx.indentAtStart,
     lineWidth: ctx.options.lineWidth,
@@ -26658,7 +26672,7 @@ ${indent}`);
     return res;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringify.js
+  // node_modules/yaml/browser/dist/stringify/stringify.js
   function createStringifyContext(doc, options) {
     const opt = Object.assign({
       blockQuote: true,
@@ -26771,7 +26785,7 @@ ${indent}`);
 ${ctx.indent}${str}`;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyPair.js
+  // node_modules/yaml/browser/dist/stringify/stringifyPair.js
   function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
     let keyComment = isNode(key) && key.comment || null;
@@ -26894,14 +26908,14 @@ ${ctx.indent}`;
     return str;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/log.js
+  // node_modules/yaml/browser/dist/log.js
   function warn(logLevel, warning) {
     if (logLevel === "debug" || logLevel === "warn") {
       console.warn(warning);
     }
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js
   var MERGE_KEY = "<<";
   var merge2 = {
     identify: (value) => value === MERGE_KEY || typeof value === "symbol" && value.description === MERGE_KEY,
@@ -26951,7 +26965,7 @@ ${ctx.indent}`;
     return ctx && isAlias(value) ? value.resolve(ctx.doc, ctx) : value;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js
+  // node_modules/yaml/browser/dist/nodes/addPairToJSMap.js
   function addPairToJSMap(ctx, map3, { key, value }) {
     if (isNode(key) && key.addToJSMap)
       key.addToJSMap(ctx, map3, value);
@@ -27004,7 +27018,7 @@ ${ctx.indent}`;
     return JSON.stringify(jsKey);
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/Pair.js
+  // node_modules/yaml/browser/dist/nodes/Pair.js
   function createPair(key, value, ctx) {
     const k = createNode(key, void 0, ctx);
     const v = createNode(value, void 0, ctx);
@@ -27033,7 +27047,7 @@ ${ctx.indent}`;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyCollection.js
+  // node_modules/yaml/browser/dist/stringify/stringifyCollection.js
   function stringifyCollection(collection, ctx, options) {
     const flow = ctx.inFlow ?? collection.flow;
     const stringify4 = flow ? stringifyFlowCollection : stringifyBlockCollection;
@@ -27175,7 +27189,7 @@ ${indent}${end}`;
     }
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/YAMLMap.js
+  // node_modules/yaml/browser/dist/nodes/YAMLMap.js
   function findPair(items, key) {
     const k = isScalar(key) ? key.value : key;
     for (const it of items) {
@@ -27306,7 +27320,7 @@ ${indent}${end}`;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/common/map.js
+  // node_modules/yaml/browser/dist/schema/common/map.js
   var map2 = {
     collection: "map",
     default: true,
@@ -27320,7 +27334,7 @@ ${indent}${end}`;
     createNode: (schema4, obj, ctx) => YAMLMap.from(schema4, obj, ctx)
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/nodes/YAMLSeq.js
+  // node_modules/yaml/browser/dist/nodes/YAMLSeq.js
   var YAMLSeq = class extends Collection {
     static get tagName() {
       return "tag:yaml.org,2002:seq";
@@ -27424,7 +27438,7 @@ ${indent}${end}`;
     return typeof idx === "number" && Number.isInteger(idx) && idx >= 0 ? idx : null;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/common/seq.js
+  // node_modules/yaml/browser/dist/schema/common/seq.js
   var seq = {
     collection: "seq",
     default: true,
@@ -27438,7 +27452,7 @@ ${indent}${end}`;
     createNode: (schema4, obj, ctx) => YAMLSeq.from(schema4, obj, ctx)
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/common/string.js
+  // node_modules/yaml/browser/dist/schema/common/string.js
   var string4 = {
     identify: (value) => typeof value === "string",
     default: true,
@@ -27450,7 +27464,7 @@ ${indent}${end}`;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/common/null.js
+  // node_modules/yaml/browser/dist/schema/common/null.js
   var nullTag = {
     identify: (value) => value == null,
     createNode: () => new Scalar(null),
@@ -27461,7 +27475,7 @@ ${indent}${end}`;
     stringify: ({ source }, ctx) => typeof source === "string" && nullTag.test.test(source) ? source : ctx.options.nullStr
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/core/bool.js
+  // node_modules/yaml/browser/dist/schema/core/bool.js
   var boolTag = {
     identify: (value) => typeof value === "boolean",
     default: true,
@@ -27478,7 +27492,7 @@ ${indent}${end}`;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyNumber.js
+  // node_modules/yaml/browser/dist/stringify/stringifyNumber.js
   function stringifyNumber({ format, minFractionDigits, tag, value }) {
     if (typeof value === "bigint")
       return String(value);
@@ -27499,7 +27513,7 @@ ${indent}${end}`;
     return n;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/core/float.js
+  // node_modules/yaml/browser/dist/schema/core/float.js
   var floatNaN = {
     identify: (value) => typeof value === "number",
     default: true,
@@ -27535,7 +27549,7 @@ ${indent}${end}`;
     stringify: stringifyNumber
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/core/int.js
+  // node_modules/yaml/browser/dist/schema/core/int.js
   var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
   var intResolve = (str, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str) : parseInt(str.substring(offset), radix);
   function intStringify(node2, radix, prefix) {
@@ -27571,7 +27585,7 @@ ${indent}${end}`;
     stringify: (node2) => intStringify(node2, 16, "0x")
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/core/schema.js
+  // node_modules/yaml/browser/dist/schema/core/schema.js
   var schema = [
     map2,
     seq,
@@ -27586,7 +27600,7 @@ ${indent}${end}`;
     float
   ];
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/json/schema.js
+  // node_modules/yaml/browser/dist/schema/json/schema.js
   function intIdentify2(value) {
     return typeof value === "bigint" || Number.isInteger(value);
   }
@@ -27644,7 +27658,7 @@ ${indent}${end}`;
   };
   var schema2 = [map2, seq].concat(jsonScalars, jsonError);
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js
   var binary = {
     identify: (value) => value instanceof Uint8Array,
     // Buffer inherits from Uint8Array
@@ -27697,7 +27711,7 @@ ${indent}${end}`;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js
   function resolvePairs(seq2, onError) {
     if (isSeq(seq2)) {
       for (let i = 0; i < seq2.items.length; ++i) {
@@ -27763,7 +27777,7 @@ ${cn.comment}` : item.comment;
     createNode: createPairs
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js
   var YAMLOMap = class _YAMLOMap extends YAMLSeq {
     constructor() {
       super();
@@ -27829,7 +27843,7 @@ ${cn.comment}` : item.comment;
     createNode: (schema4, iterable, ctx) => YAMLOMap.from(schema4, iterable, ctx)
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js
   function boolStringify({ value, source }, ctx) {
     const boolObj = value ? trueTag : falseTag;
     if (source && boolObj.test.test(source))
@@ -27853,7 +27867,7 @@ ${cn.comment}` : item.comment;
     stringify: boolStringify
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/float.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/float.js
   var floatNaN2 = {
     identify: (value) => typeof value === "number",
     default: true,
@@ -27892,7 +27906,7 @@ ${cn.comment}` : item.comment;
     stringify: stringifyNumber
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/int.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/int.js
   var intIdentify3 = (value) => typeof value === "bigint" || Number.isInteger(value);
   function intResolve2(str, offset, radix, { intAsBigInt }) {
     const sign = str[0];
@@ -27961,7 +27975,7 @@ ${cn.comment}` : item.comment;
     stringify: (node2) => intStringify2(node2, 16, "0x")
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/set.js
   var YAMLSet = class _YAMLSet extends YAMLMap {
     constructor(schema4) {
       super(schema4);
@@ -28040,7 +28054,7 @@ ${cn.comment}` : item.comment;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js
   function parseSexagesimal(str, asBigInt) {
     const sign = str[0];
     const parts = sign === "-" || sign === "+" ? str.substring(1) : str;
@@ -28119,7 +28133,7 @@ ${cn.comment}` : item.comment;
     stringify: ({ value }) => value?.toISOString().replace(/(T00:00:00)?\.000Z$/, "") ?? ""
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js
+  // node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js
   var schema3 = [
     map2,
     seq,
@@ -28144,7 +28158,7 @@ ${cn.comment}` : item.comment;
     timestamp
   ];
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/tags.js
+  // node_modules/yaml/browser/dist/schema/tags.js
   var schemas = /* @__PURE__ */ new Map([
     ["core", schema],
     ["failsafe", [map2, seq, string4]],
@@ -28215,7 +28229,7 @@ ${cn.comment}` : item.comment;
     }, []);
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/schema/Schema.js
+  // node_modules/yaml/browser/dist/schema/Schema.js
   var sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
   var Schema = class _Schema {
     constructor({ compat, customTags, merge: merge3, resolveKnownTags, schema: schema4, sortMapEntries, toStringDefaults }) {
@@ -28236,7 +28250,7 @@ ${cn.comment}` : item.comment;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyDocument.js
+  // node_modules/yaml/browser/dist/stringify/stringifyDocument.js
   function stringifyDocument(doc, options) {
     const lines = [];
     let hasDirectives = options.directives === true;
@@ -28307,7 +28321,7 @@ ${cn.comment}` : item.comment;
     return lines.join("\n") + "\n";
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/doc/Document.js
+  // node_modules/yaml/browser/dist/doc/Document.js
   var Document = class _Document {
     constructor(value, replacer, options) {
       this.commentBefore = null;
@@ -28599,7 +28613,7 @@ ${cn.comment}` : item.comment;
     throw new Error("Expected a YAML collection as document contents");
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/errors.js
+  // node_modules/yaml/browser/dist/errors.js
   var YAMLError = class extends Error {
     constructor(name, pos, code, message) {
       super();
@@ -28655,7 +28669,7 @@ ${pointer}
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-props.js
+  // node_modules/yaml/browser/dist/compose/resolve-props.js
   function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
     let spaceBefore = false;
     let atNewline = startOnNewline;
@@ -28783,7 +28797,7 @@ ${pointer}
     };
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/util-contains-newline.js
+  // node_modules/yaml/browser/dist/compose/util-contains-newline.js
   function containsNewline(key) {
     if (!key)
       return null;
@@ -28819,7 +28833,7 @@ ${pointer}
     }
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/util-flow-indent-check.js
+  // node_modules/yaml/browser/dist/compose/util-flow-indent-check.js
   function flowIndentCheck(indent, fc, onError) {
     if (fc?.type === "flow-collection") {
       const end = fc.end[0];
@@ -28830,7 +28844,7 @@ ${pointer}
     }
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/util-map-includes.js
+  // node_modules/yaml/browser/dist/compose/util-map-includes.js
   function mapIncludes(ctx, items, search) {
     const { uniqueKeys } = ctx.options;
     if (uniqueKeys === false)
@@ -28839,7 +28853,7 @@ ${pointer}
     return items.some((pair) => isEqual(pair.key, search));
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-block-map.js
+  // node_modules/yaml/browser/dist/compose/resolve-block-map.js
   var startColMsg = "All mapping items must start at the same column";
   function resolveBlockMap({ composeNode: composeNode2, composeEmptyNode: composeEmptyNode2 }, ctx, bm, onError, tag) {
     const NodeClass = tag?.nodeClass ?? YAMLMap;
@@ -28935,7 +28949,7 @@ ${pointer}
     return map3;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-block-seq.js
+  // node_modules/yaml/browser/dist/compose/resolve-block-seq.js
   function resolveBlockSeq({ composeNode: composeNode2, composeEmptyNode: composeEmptyNode2 }, ctx, bs, onError, tag) {
     const NodeClass = tag?.nodeClass ?? YAMLSeq;
     const seq2 = new NodeClass(ctx.schema);
@@ -28977,7 +28991,7 @@ ${pointer}
     return seq2;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-end.js
+  // node_modules/yaml/browser/dist/compose/resolve-end.js
   function resolveEnd(end, offset, reqSpace, onError) {
     let comment = "";
     if (end) {
@@ -29014,7 +29028,7 @@ ${pointer}
     return { comment, offset };
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-flow-collection.js
+  // node_modules/yaml/browser/dist/compose/resolve-flow-collection.js
   var blockMsg = "Block collections are not allowed within flow collections";
   var isBlock = (token) => token && (token.type === "block-map" || token.type === "block-seq");
   function resolveFlowCollection({ composeNode: composeNode2, composeEmptyNode: composeEmptyNode2 }, ctx, fc, onError, tag) {
@@ -29194,7 +29208,7 @@ ${pointer}
     return coll;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-collection.js
+  // node_modules/yaml/browser/dist/compose/compose-collection.js
   function resolveCollection(CN2, ctx, token, onError, tagName, tag) {
     const coll = token.type === "block-map" ? resolveBlockMap(CN2, ctx, token, onError, tag) : token.type === "block-seq" ? resolveBlockSeq(CN2, ctx, token, onError, tag) : resolveFlowCollection(CN2, ctx, token, onError, tag);
     const Coll = coll.constructor;
@@ -29246,7 +29260,7 @@ ${pointer}
     return node2;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-block-scalar.js
+  // node_modules/yaml/browser/dist/compose/resolve-block-scalar.js
   function resolveBlockScalar(ctx, scalar, onError) {
     const start = scalar.offset;
     const header = parseBlockScalarHeader(scalar, ctx.options.strict, onError);
@@ -29422,7 +29436,7 @@ ${pointer}
     return lines;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js
+  // node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js
   function resolveFlowScalar(scalar, strict, onError) {
     const { offset, type, source, end } = scalar;
     let _type;
@@ -29635,7 +29649,7 @@ ${pointer}
     }
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-scalar.js
+  // node_modules/yaml/browser/dist/compose/compose-scalar.js
   function composeScalar(ctx, token, tagToken, onError) {
     const { value, type, comment, range } = token.type === "block-scalar" ? resolveBlockScalar(ctx, token, onError) : resolveFlowScalar(token, ctx.options.strict, onError);
     const tagName = tagToken ? ctx.directives.tagName(tagToken.source, (msg) => onError(tagToken, "TAG_RESOLVE_FAILED", msg)) : null;
@@ -29706,7 +29720,7 @@ ${pointer}
     return tag;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/util-empty-scalar-position.js
+  // node_modules/yaml/browser/dist/compose/util-empty-scalar-position.js
   function emptyScalarPosition(offset, before, pos) {
     if (before) {
       pos ?? (pos = before.length);
@@ -29730,7 +29744,7 @@ ${pointer}
     return offset;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-node.js
+  // node_modules/yaml/browser/dist/compose/compose-node.js
   var CN = { composeNode, composeEmptyNode };
   function composeNode(ctx, token, props, onError) {
     const atKey = ctx.atKey;
@@ -29823,7 +29837,7 @@ ${pointer}
     return alias;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-doc.js
+  // node_modules/yaml/browser/dist/compose/compose-doc.js
   function composeDoc(options, directives, { offset, start, value, end }, onError) {
     const opts = Object.assign({ _directives: directives }, options);
     const doc = new Document(void 0, opts);
@@ -29856,7 +29870,7 @@ ${pointer}
     return doc;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/compose/composer.js
+  // node_modules/yaml/browser/dist/compose/composer.js
   function getErrorPos(src) {
     if (typeof src === "number")
       return [src, src + 1];
@@ -30049,7 +30063,7 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/parse/cst-visit.js
+  // node_modules/yaml/browser/dist/parse/cst-visit.js
   var BREAK2 = Symbol("break visit");
   var SKIP2 = Symbol("skip children");
   var REMOVE2 = Symbol("remove item");
@@ -30105,7 +30119,7 @@ ${end.comment}` : end.comment;
     return typeof ctrl === "function" ? ctrl(item, path) : ctrl;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/parse/cst.js
+  // node_modules/yaml/browser/dist/parse/cst.js
   var BOM = "\uFEFF";
   var DOCUMENT = "";
   var FLOW_END = "";
@@ -30170,7 +30184,7 @@ ${end.comment}` : end.comment;
     return null;
   }
 
-  // ../national-focus/node_modules/yaml/browser/dist/parse/lexer.js
+  // node_modules/yaml/browser/dist/parse/lexer.js
   function isEmpty(ch) {
     switch (ch) {
       case void 0:
@@ -30752,7 +30766,7 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/parse/line-counter.js
+  // node_modules/yaml/browser/dist/parse/line-counter.js
   var LineCounter = class {
     constructor() {
       this.lineStarts = [];
@@ -30777,7 +30791,7 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/parse/parser.js
+  // node_modules/yaml/browser/dist/parse/parser.js
   function includesToken(list, type) {
     for (let i = 0; i < list.length; ++i)
       if (list[i].type === type)
@@ -31640,7 +31654,7 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // ../national-focus/node_modules/yaml/browser/dist/public-api.js
+  // node_modules/yaml/browser/dist/public-api.js
   function parseOptions(options) {
     const prettyErrors = options.prettyErrors !== false;
     const lineCounter = options.lineCounter || prettyErrors && new LineCounter() || null;
@@ -32015,6 +32029,8 @@ ${end.comment}` : end.comment;
     listeners = /* @__PURE__ */ new Set();
     aborters = /* @__PURE__ */ new Map();
     active = 0;
+    runEpoch = 0;
+    writes = Promise.resolve();
     waiters = [];
     automatic = null;
     pendingReady = false;
@@ -32035,6 +32051,7 @@ ${end.comment}` : end.comment;
     async initialize() {
       this.stops.push(
         this.platform.onReady(() => {
+          this.cancelAll();
           this.pendingReady = true;
           if (!this.automatic) {
             this.automatic = (async () => {
@@ -32096,19 +32113,41 @@ ${end.comment}` : end.comment;
       }
       this.notify();
     }
+    /** Serialize local saves so concurrent API replies apply to the latest committed state. */
+    writeState(operation, signal) {
+      const epoch = this.runEpoch;
+      const save = this.writes.then(async () => {
+        const checkCancelled = () => {
+          signal?.throwIfAborted();
+          if (this.disposed || epoch !== this.runEpoch) {
+            throw new DOMException("任務已取消", "AbortError");
+          }
+        };
+        checkCancelled();
+        const snapshot = await this.platform.read(this.config);
+        checkCancelled();
+        const next = operation(snapshot);
+        await this.platform.commit(snapshot, next);
+        return next;
+      });
+      this.writes = save.catch(() => {
+      });
+      return save;
+    }
     async mutate(operation, changesTimeline = false) {
-      const snapshot = await this.platform.read(this.config);
       if (this.disposed) {
         return;
       }
-      if (changesTimeline && Object.values(snapshot.state.countries).some(
-        (c) => c.enabled && !c.calibration && c.cursor !== snapshot.day
-      )) {
-        throw new Error(
-          "故事時間已前進，請先完成「更新局勢」，再開始、暫停或交接國策；避免把新操作倒填至過去。"
-        );
-      }
-      await this.platform.commit(snapshot, operation(snapshot.state));
+      await this.writeState((snapshot) => {
+        if (changesTimeline && Object.values(snapshot.state.countries).some(
+          (c) => c.enabled && !c.calibration && c.cursor !== snapshot.day
+        )) {
+          throw new Error(
+            "故事時間已前進，請先完成「更新局勢」，再開始、暫停或交接國策；避免把新操作倒填至過去。"
+          );
+        }
+        return operation(snapshot.state);
+      });
       await this.refresh();
     }
     saveSettings(config2) {
@@ -32139,17 +32178,26 @@ ${end.comment}` : end.comment;
       this.aborters.get(id)?.abort();
     }
     cancelAll() {
+      this.runEpoch++;
+      this.progress.clear();
       for (const aborter of this.aborters.values()) {
         aborter.abort();
       }
     }
     async runScheduled() {
+      const epoch = this.runEpoch;
       for (const kind of ["identify", "update", "reshape"]) {
-        if (this.disposed) {
+        if (this.disposed || epoch !== this.runEpoch) {
           return;
         }
-        const snapshot = await this.platform.read(this.config);
         const job = this.config.jobs[kind];
+        if (job.schedule === "manual") {
+          continue;
+        }
+        const snapshot = await this.platform.read(this.config);
+        if (this.disposed || epoch !== this.runEpoch) {
+          return;
+        }
         const last = snapshot.state.schedules[kind];
         const due = job.schedule === "reply" ? last?.turn !== snapshot.turn : job.schedule === "rounds" ? !last || snapshot.turn - last.turn >= job.interval : job.schedule === "days" ? !last || snapshot.day - last.day >= job.interval : false;
         if (due && (kind === "identify" || Object.values(snapshot.state.countries).some((c) => c.enabled))) {
@@ -32185,15 +32233,21 @@ ${end.comment}` : end.comment;
       this.notify();
     }
     async enable(candidates) {
+      const epoch = this.runEpoch;
       for (const candidate of candidates) {
         await this.run("generate", candidate);
-        if (this.disposed || !this.state?.countries[candidate.id]) {
+        if (this.disposed || epoch !== this.runEpoch || !this.state?.countries[candidate.id]) {
           break;
         }
       }
     }
     async run(kind, candidate, periodWork) {
       if (this.disposed) {
+        return;
+      }
+      if (this.jobs.some(
+        (job) => job.kind === kind && job.candidate?.id === candidate?.id && ["queued", "running"].includes(job.state) && !this.aborters.get(job.id)?.signal.aborted
+      )) {
         return;
       }
       const id = requestId("job");
@@ -32212,6 +32266,8 @@ ${end.comment}` : end.comment;
       this.aborters.set(id, aborter);
       this.notify();
       let acquired = false;
+      let sourceSignal;
+      const cancelSource = () => aborter.abort();
       const periods = [];
       try {
         while (this.active >= this.config.concurrency) {
@@ -32236,21 +32292,20 @@ ${end.comment}` : end.comment;
         status.message = "正在分析本樓資料";
         this.notify();
         const snapshot = await this.platform.read(this.config, kind);
+        sourceSignal = snapshot.signal;
+        sourceSignal?.addEventListener("abort", cancelSource, { once: true });
+        if (sourceSignal?.aborted) {
+          aborter.abort();
+        }
+        aborter.signal.throwIfAborted();
         if (periodWork) {
           checkTransition(snapshot.state, periodWork.transition);
-          if (snapshot.identity !== periodWork.identity || snapshot.historyHash !== periodWork.historyHash || snapshot.storyFingerprint !== periodWork.storyFingerprint || snapshot.day !== periodWork.day || periodBasis(snapshot.state, candidate.id) !== periodWork.basis) {
-            throw new Error("STALE:換期依據已改變，請更新局勢重新判定");
-          }
         }
         if (kind === "generate" && !candidate) {
           throw new Error("請先選擇要生成的候選國家");
         }
         const ask = async (stage, data, schema4, validate2, label2, shown) => {
           aborter.signal.throwIfAborted();
-          const current = await this.platform.read(this.config);
-          if (current.identity !== snapshot.identity || !periodWork && current.fingerprint !== snapshot.fingerprint || current.historyHash !== snapshot.historyHash || current.day !== snapshot.day) {
-            throw new Error("STALE:生成期間來源已改變");
-          }
           status.message = label2 ?? (kind === "generate" ? "單次生成完整國策樹" : "分析本樓局勢");
           this.notify();
           return this.request(
@@ -32264,14 +32319,7 @@ ${end.comment}` : end.comment;
           );
         };
         const segmentMax = this.segmentMax();
-        const progressKey = kind === "generate" ? [
-          snapshot.identity,
-          snapshot.fingerprint,
-          snapshot.historyHash,
-          snapshot.day,
-          snapshot.state.settings.size,
-          candidate.id
-        ].join("\0") : "";
+        const progressKey = kind === "generate" ? [snapshot.identity, snapshot.state.settings.size, candidate.id].join("\0") : "";
         const progress = this.progress.get(progressKey) ?? { filled: {} };
         if (kind === "generate") {
           this.progress.delete(progressKey);
@@ -32342,16 +32390,11 @@ ${end.comment}` : end.comment;
           }
         );
         aborter.signal.throwIfAborted();
-        let commitSource = snapshot;
-        if (periodWork) {
-          commitSource = await this.platform.read(this.config);
-          if (commitSource.identity !== snapshot.identity || commitSource.historyHash !== snapshot.historyHash || commitSource.storyFingerprint !== snapshot.storyFingerprint || JSON.stringify(commitSource.state.countries) !== JSON.stringify(snapshot.state.countries) || commitSource.day !== snapshot.day || periodBasis(commitSource.state, candidate.id) !== periodWork.basis) {
-            throw new Error("STALE:換期期間國策或局勢已改變");
-          }
-        }
-        const next = periodWork ? transitionPeriod(commitSource.state, periodWork.transition, PeriodReplySchema.parse(result)) : this.proposedState(kind, snapshot, result, candidate);
-        next.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
-        await this.platform.commit(commitSource, next);
+        const next = await this.writeState((current) => {
+          const state = periodWork ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result)) : this.proposedState(kind, current, result, candidate);
+          state.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
+          return state;
+        }, aborter.signal);
         if (kind === "update" && !snapshot.state.receipts.includes(ProposalSchema.parse(result).id)) {
           for (const transition of ProposalSchema.parse(result).transitions) {
             const country = next.countries[transition.country];
@@ -32366,12 +32409,7 @@ ${end.comment}` : end.comment;
                 evidence: country.evidence
               },
               work: {
-                transition,
-                identity: snapshot.identity,
-                historyHash: snapshot.historyHash,
-                storyFingerprint: snapshot.storyFingerprint,
-                day: snapshot.day,
-                basis: periodBasis(next, country.id)
+                transition
               }
             });
           }
@@ -32387,9 +32425,10 @@ ${end.comment}` : end.comment;
         await this.refresh();
       } catch (error62) {
         const message = redactApiError(error62, this.config.apis);
-        status.state = aborter.signal.aborted ? "cancelled" : message.startsWith("STALE:") ? "stale" : "failed";
-        status.message = status.state === "cancelled" ? "已取消，未套用結果" : status.state === "stale" ? periodWork ? "換期來源已改變，請更新局勢重新判定；按重試會執行更新局勢" : "來源樓層或變數已改變，請依目前樓層重試" : `未提交：${message.slice(0, 1500)}`;
+        status.state = aborter.signal.aborted || error62 instanceof Error && error62.name === "AbortError" ? "cancelled" : "failed";
+        status.message = status.state === "cancelled" ? "已取消，未套用結果" : `未提交：${message.slice(0, 1500)}`;
       } finally {
+        sourceSignal?.removeEventListener("abort", cancelSource);
         status.finished = Date.now();
         if (acquired) {
           this.active--;
@@ -32645,11 +32684,14 @@ ${json2}`
   function periodControl(country) {
     return `<label class="switch-label period-toggle" title="關閉後保留當前樹，事件仍繼續推進"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod ? "checked" : ""}>自動換期</label>`;
   }
-  function periodBar(country, jobs) {
+  function periodNote(country, jobs) {
     const generating = jobs.some(
       (job) => job.periodWork?.transition.country === country.id && ["queued", "running"].includes(job.state)
     );
-    const note = generating ? "下一期生成中；事件繼續更新，成功後才換樹" : country.autoPeriod ? country.agenda || "本期目的完成或局勢不再適配時自動換期" : "保留當前國策樹；事件仍繼續更新";
+    return generating ? "下一期生成中；事件繼續更新，成功後才換樹" : country.autoPeriod ? country.agenda || "本期目的完成或局勢不再適配時自動換期" : "保留當前國策樹；事件仍繼續更新";
+  }
+  function periodBar(country, jobs) {
+    const note = periodNote(country, jobs);
     return `<section class="period-strip" aria-label="當前期別"><div class="period-copy"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}</strong><small role="status" title="${escape(note)}">${escape(note)}</small></div>${periodControl(country)}<button data-action="period-history">往期摘要${country.period.history.length ? ` · ${country.period.history.length}` : ""}</button></section>`;
   }
   function anchorBadge(country, node2) {
@@ -32850,7 +32892,7 @@ ${json2}`
         (item) => item.kind === kind && ["running", "queued"].includes(item.state)
       );
       const saved = controller2.state?.schedules[kind];
-      const text = running ? "執行中" : job ? `上次：${job.state === "success" ? "成功" : job.state === "failed" ? "失敗" : job.state === "stale" ? "來源已改變" : "已取消"} · ${job.time}` : saved ? `上次成功：第 ${saved.turn} 則正文 · 故事日 ${Math.floor(saved.day)}` : "尚未執行";
+      const text = running ? "執行中" : job ? `上次：${job.state === "success" ? "成功" : job.state === "failed" ? "失敗" : "已取消"} · ${job.time}` : saved ? `上次成功：第 ${saved.turn} 則正文 · 故事日 ${Math.floor(saved.day)}` : "尚未執行";
       return `<small class="last-run">${escape2(text)}</small>`;
     }
     const promptCount = (items) => `${items.length} 段 · 送出 ${items.filter((item) => item.enabled || item.kind === "data").length} 段`;
@@ -33327,7 +33369,6 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
     running: Infinity,
     success: 6e3,
     cancelled: 6e3,
-    stale: 8e3,
     failed: 2e4
   };
   var symbols = {
@@ -33335,8 +33376,7 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
     running: '<i class="spinner"></i>',
     success: '<i class="hud-sym ok">✓</i>',
     failed: '<i class="hud-sym bad">!</i>',
-    cancelled: '<i class="hud-sym off">–</i>',
-    stale: '<i class="hud-sym off">↺</i>'
+    cancelled: '<i class="hud-sym off">–</i>'
   };
   var HUD_WIDTH = 320;
   var GAP = 10;
@@ -33511,7 +33551,7 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
   }
 
   // src/style.css
-  var style_default = "/* 國策檔案 v0.4 · 戰情檔案館介面\n * Tokens first; every colour below derives from them so states stay consistent. */\n:host {\n  all: initial;\n  --ink: #0d1310;\n  --bg: #131a16;\n  --panel: #19221d;\n  --raised: #212b25;\n  --raised-2: #29352e;\n  --line: rgba(217, 191, 120, 0.14);\n  --line-strong: rgba(217, 191, 120, 0.32);\n  --gold: #dcc27c;\n  --gold-deep: #a88d4c;\n  --text: #ece6d4;\n  --muted: #a8b0a1;\n  --faint: #7d867a;\n  --green: #72c492;\n  --amber: #e6a950;\n  --blue: #8fb0d6;\n  --red: #d9705f;\n  --cross: #7fa6cf;\n  --radius: 10px;\n  --drawer: 392px;\n  --serif: 'Noto Serif TC', 'Source Han Serif TC', 'PMingLiU', Georgia, serif;\n  font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;\n  color: var(--text);\n  font-size: 14px;\n  line-height: 1.6;\n  -webkit-font-smoothing: antialiased;\n}\n* {\n  box-sizing: border-box;\n}\nbutton,\ninput,\nselect,\ntextarea {\n  font: inherit;\n  color: inherit;\n}\nbutton {\n  cursor: pointer;\n  border: 1px solid var(--line-strong);\n  background: var(--raised);\n  padding: 7px 12px;\n  border-radius: 7px;\n  line-height: 1.3;\n  transition:\n    background 0.15s,\n    border-color 0.15s,\n    color 0.15s;\n}\nbutton:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: var(--raised-2);\n}\nbutton:disabled {\n  opacity: 0.4;\n  cursor: not-allowed;\n}\nbutton:focus-visible,\ninput:focus-visible,\nselect:focus-visible,\ntextarea:focus-visible,\nsummary:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: 2px;\n}\ninput,\nselect,\ntextarea {\n  color: var(--text);\n  background: var(--ink);\n  border: 1px solid rgba(217, 191, 120, 0.24);\n  border-radius: 7px;\n  padding: 8px 10px;\n  max-width: 100%;\n}\ninput::placeholder,\ntextarea::placeholder {\n  color: var(--faint);\n}\nselect option {\n  background: var(--panel);\n}\ninput[type='checkbox'] {\n  accent-color: var(--gold);\n  width: 16px;\n  height: 16px;\n}\nsvg {\n  width: 24px;\n  height: 24px;\n  flex-shrink: 0;\n}\na {\n  color: var(--gold);\n}\np {\n  margin: 0 0 12px;\n}\nh1,\nh2,\nh3,\nh4 {\n  font-family: var(--serif);\n  font-weight: 600;\n  margin: 0;\n}\nsmall {\n  color: var(--muted);\n}\ncode {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n}\n.muted {\n  color: var(--muted);\n}\n.gold {\n  color: var(--gold);\n}\n.row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n}\n.between {\n  justify-content: space-between;\n}\n.primary {\n  background: linear-gradient(180deg, #7a6a37, #5b4f28);\n  border-color: var(--gold);\n  color: #fff4d0;\n  font-weight: 600;\n}\n.primary:hover:not(:disabled) {\n  background: linear-gradient(180deg, #8d7b41, #6a5c2f);\n}\n.ghost {\n  background: transparent;\n  border-color: transparent;\n}\n.danger {\n  color: #f0a898;\n}\n.tag {\n  font-size: 11px;\n  letter-spacing: 0.18em;\n  color: var(--gold);\n}\n.pill {\n  display: inline-flex;\n  align-items: center;\n  border: 1px solid var(--line-strong);\n  padding: 2px 8px;\n  font-size: 12px;\n  border-radius: 99px;\n}\n.separator {\n  height: 1px;\n  background: var(--line);\n  margin: 16px 0;\n}\n.sr {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}\n.spinner {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border: 2px solid rgba(220, 194, 124, 0.3);\n  border-top-color: var(--gold);\n  border-radius: 50%;\n  animation: spin 0.9s linear infinite;\n  vertical-align: -2px;\n}\n@keyframes spin {\n  to {\n    transform: rotate(360deg);\n  }\n}\n\n/* ---------- Floating orb ---------- */\n.orb {\n  position: fixed;\n  right: 24px;\n  bottom: 24px;\n  width: 60px;\n  height: 60px;\n  padding: 12px;\n  border-radius: 50%;\n  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);\n  border: 2px solid var(--gold-deep);\n  box-shadow:\n    0 8px 28px rgba(0, 0, 0, 0.55),\n    inset 0 0 0 3px rgba(0, 0, 0, 0.35);\n  color: var(--gold);\n  z-index: 2147482999;\n}\n.orb:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);\n}\n.orb svg {\n  width: 100%;\n  height: 100%;\n}\n.orb .count {\n  position: absolute;\n  top: -3px;\n  right: -3px;\n  min-width: 20px;\n  height: 20px;\n  padding: 0 5px;\n  border-radius: 10px;\n  background: var(--gold);\n  color: #1a1d12;\n  font-size: 11px;\n  font-weight: 700;\n  line-height: 20px;\n}\n\n/* ---------- Shell ---------- */\n.shell {\n  position: fixed;\n  inset: 16px;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: var(--bg);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.shell[hidden],\n.modal-backdrop[hidden],\n.orb[hidden] {\n  display: none;\n}\n\n/* Command bar */\n.command {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-height: 58px;\n  padding: 8px 14px;\n  background: linear-gradient(180deg, #1c2620, #151d18);\n  border-bottom: 1px solid var(--line);\n}\n.brand-mark {\n  width: 38px;\n  height: 38px;\n  display: grid;\n  place-items: center;\n  color: var(--gold);\n  border: 1px solid var(--line-strong);\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.07);\n  flex-shrink: 0;\n}\n.brand-mark svg {\n  width: 26px;\n  height: 26px;\n}\n.brand {\n  display: grid;\n  line-height: 1.15;\n  flex-shrink: 0;\n}\n.brand h1 {\n  font-size: 17px;\n  letter-spacing: 0.12em;\n}\n.brand small {\n  font-size: 9.5px;\n  letter-spacing: 0.3em;\n  color: var(--gold-deep);\n}\n.nation-tabs {\n  display: flex;\n  gap: 6px;\n  overflow-x: auto;\n  scrollbar-width: none;\n  margin-left: 10px;\n  min-width: 0;\n}\n.nation-tabs::-webkit-scrollbar {\n  display: none;\n}\n.nation-tab {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 5px 12px 5px 6px;\n  border-radius: 9px;\n  border-color: transparent;\n  background: transparent;\n  white-space: nowrap;\n  flex-shrink: 0;\n}\n.nation-tab.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.tab-crest {\n  width: 30px;\n  height: 30px;\n  display: grid;\n  place-items: center;\n  border-radius: 7px;\n  background: rgba(255, 255, 255, 0.04);\n  color: var(--blue);\n}\n.nation-tab.player .tab-crest {\n  color: var(--gold);\n}\n.tab-crest svg {\n  width: 20px;\n  height: 20px;\n}\n.tab-copy {\n  display: grid;\n  text-align: left;\n  line-height: 1.2;\n}\n.tab-copy strong {\n  font-size: 13.5px;\n  font-weight: 600;\n}\n.tab-copy small {\n  font-size: 11px;\n}\n.nation-tab.add {\n  width: 38px;\n  justify-content: center;\n  padding: 6px;\n  border: 1px dashed var(--line-strong);\n  color: var(--gold);\n}\n.nation-picker {\n  display: none;\n  min-width: 0;\n  flex: 1;\n}\n.nation-picker select {\n  width: 100%;\n}\n.command-spacer {\n  flex: 1;\n}\n.test-label {\n  font-size: 11px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  padding: 3px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n}\n.date-chip {\n  display: grid;\n  line-height: 1.15;\n  text-align: right;\n  padding: 0 6px;\n}\n.date-chip small {\n  font-size: 10.5px;\n}\n.date-chip strong {\n  font-family: var(--serif);\n  font-size: 17px;\n  color: var(--gold);\n}\n.cmd-btn {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  height: 38px;\n  flex-shrink: 0;\n  white-space: nowrap;\n}\n.date-chip,\n.test-label,\n.nation-tab.add {\n  flex-shrink: 0;\n}\n.cmd-btn.busy {\n  border-color: var(--gold);\n}\n.cmd-btn.close {\n  width: 38px;\n  justify-content: center;\n  font-size: 20px;\n  padding: 0;\n}\n.error-banner {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  justify-content: space-between;\n  padding: 9px 16px;\n  background: rgba(217, 112, 95, 0.14);\n  border-bottom: 1px solid rgba(217, 112, 95, 0.4);\n  color: #f6c6ba;\n  font-size: 13px;\n}\n\n/* Nation bar */\n.nation-bar {\n  display: grid;\n  grid-template-columns: minmax(200px, 1.1fr) auto minmax(260px, 1.25fr) auto;\n  align-items: center;\n  gap: 20px;\n  padding: 12px 18px;\n  background: var(--panel);\n  border-bottom: 1px solid var(--line);\n}\n.nation-id {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-width: 0;\n}\n.nation-crest {\n  width: 48px;\n  height: 48px;\n  display: grid;\n  place-items: center;\n  border-radius: 12px;\n  border: 1px solid var(--line-strong);\n  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));\n  color: var(--gold);\n  flex-shrink: 0;\n}\n.nation-crest svg {\n  width: 32px;\n  height: 32px;\n}\n.nation-copy {\n  min-width: 0;\n}\n.nation-copy h2 {\n  font-size: 22px;\n  line-height: 1.25;\n  letter-spacing: 0.04em;\n}\n.nation-copy p {\n  margin: 2px 0 0;\n  color: var(--muted);\n  font-size: 12.5px;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.gauges {\n  display: flex;\n  gap: 16px;\n}\n.gauge {\n  width: 132px;\n}\n.gauge-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n}\n.gauge-head small {\n  font-size: 12px;\n}\n.gauge-head strong {\n  font-family: var(--serif);\n  font-size: 22px;\n  line-height: 1.1;\n}\n.gauge-track {\n  height: 6px;\n  border-radius: 3px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n  margin-top: 4px;\n}\n.gauge-track i {\n  display: block;\n  height: 100%;\n  border-radius: 3px;\n}\n.gauge.stability .gauge-track i {\n  background: linear-gradient(90deg, #5f9e75, var(--green));\n}\n.gauge.war .gauge-track i {\n  background: linear-gradient(90deg, #b75a49, var(--amber));\n}\n.agenda {\n  display: grid;\n  grid-template-columns: 46px 1fr;\n  gap: 12px;\n  align-items: center;\n  text-align: left;\n  padding: 9px 14px 9px 10px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line-strong);\n  min-width: 0;\n}\n.agenda.active {\n  border-color: rgba(114, 196, 146, 0.6);\n}\n.agenda.waiting {\n  border-color: rgba(230, 169, 80, 0.6);\n}\n.agenda.paused {\n  border-color: rgba(143, 176, 214, 0.6);\n}\n.agenda-icon {\n  width: 46px;\n  height: 46px;\n  display: grid;\n  place-items: center;\n  border-radius: 10px;\n  background: rgba(220, 194, 124, 0.1);\n  color: var(--gold);\n}\n.agenda.active .agenda-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n}\n.agenda.waiting .agenda-icon {\n  color: var(--amber);\n  background: rgba(230, 169, 80, 0.12);\n}\n.agenda-icon svg {\n  width: 28px;\n  height: 28px;\n}\n.agenda-copy {\n  display: grid;\n  gap: 2px;\n  min-width: 0;\n}\n.agenda-copy small {\n  font-size: 11.5px;\n  letter-spacing: 0.08em;\n}\n.agenda-copy strong {\n  font-family: var(--serif);\n  font-size: 16px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.agenda-bar {\n  height: 7px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n  margin-top: 3px;\n}\n.agenda-bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n  border-radius: 4px;\n}\n.agenda.waiting .agenda-bar i {\n  background: linear-gradient(90deg, #b67c2f, var(--amber));\n}\n.agenda.paused .agenda-bar i {\n  background: linear-gradient(90deg, #5c7ca3, var(--blue));\n}\n.agenda-meta {\n  display: flex;\n  justify-content: space-between;\n  gap: 10px;\n  font-size: 12px;\n  color: var(--muted);\n}\n.empty-agenda {\n  border-style: dashed;\n}\n.nation-actions {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.control-select select {\n  height: 36px;\n  padding: 0 8px;\n}\n.toggle {\n  height: 36px;\n  white-space: nowrap;\n}\n.toggle.on {\n  color: var(--gold);\n  border-color: var(--gold-deep);\n  background: rgba(220, 194, 124, 0.1);\n}\n.nation-actions .primary {\n  height: 36px;\n  white-space: nowrap;\n}\n\n/* ---------- Stage ---------- */\n.stage {\n  position: relative;\n  flex: 1;\n  min-height: 0;\n  overflow: hidden;\n  background:\n    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),\n    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    var(--ink);\n}\n.canvas {\n  position: absolute;\n  inset: 0;\n  overflow: hidden;\n  cursor: grab;\n  touch-action: none;\n  user-select: none;\n}\n.canvas:active {\n  cursor: grabbing;\n}\n.canvas:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: -4px;\n}\n.tree {\n  position: absolute;\n  left: 0;\n  top: 0;\n  transform-origin: 0 0;\n}\n.connectors {\n  position: absolute;\n  inset: 0;\n  width: auto;\n  height: auto;\n  overflow: visible;\n  pointer-events: none;\n}\n.connector {\n  fill: none;\n  stroke: rgba(220, 194, 124, 0.3);\n  stroke-width: 2.4;\n}\n.connector.done {\n  stroke: var(--gold);\n  stroke-width: 3;\n}\n.connector.alternative {\n  stroke-dasharray: 8 6;\n}\n.connector.cross-branch {\n  stroke: rgba(127, 166, 207, 0.55);\n}\n.connector.cross-branch.done {\n  stroke: var(--cross);\n}\n.connector.mutex {\n  stroke: var(--red);\n  stroke-width: 2;\n  stroke-dasharray: 2 6;\n  stroke-linecap: round;\n}\n.branch-banner {\n  position: absolute;\n  top: 16px;\n  height: 34px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  border-bottom: 1px solid var(--line-strong);\n  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));\n  pointer-events: none;\n}\n.branch-banner span {\n  font-family: var(--serif);\n  font-size: 15px;\n  letter-spacing: 0.3em;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  padding: 0 8px;\n}\n.branch-banner.active {\n  border-bottom-color: var(--gold);\n}\n.branch-summary {\n  position: absolute;\n  height: 66px;\n  display: grid;\n  align-content: center;\n  text-align: left;\n  border: 1px dashed var(--gold-deep);\n  background: rgba(220, 194, 124, 0.06);\n  border-radius: var(--radius);\n  padding: 8px 14px;\n}\n.branch-summary strong {\n  font-family: var(--serif);\n  color: var(--gold);\n}\n.branch-summary span {\n  font-size: 12px;\n  color: var(--muted);\n}\n\n/* Nodes */\n.node {\n  position: absolute;\n  display: grid;\n  grid-template-columns: 44px 1fr;\n  gap: 10px;\n  align-items: center;\n  padding: 8px 12px 8px 10px;\n  text-align: left;\n  border-radius: var(--radius);\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: linear-gradient(180deg, #25302a, #1b231f);\n  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);\n  transition:\n    transform 0.12s,\n    box-shadow 0.12s,\n    border-color 0.12s,\n    opacity 0.15s;\n}\n.node:hover:not(:disabled) {\n  transform: translateY(-2px);\n  border-color: var(--gold);\n  background: linear-gradient(180deg, #2c3830, #1e2722);\n}\n.node-icon {\n  width: 44px;\n  height: 44px;\n  display: grid;\n  place-items: center;\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid rgba(220, 194, 124, 0.2);\n  color: var(--gold);\n}\n.node-icon svg {\n  width: 26px;\n  height: 26px;\n}\n.node-text {\n  display: grid;\n  gap: 1px;\n  min-width: 0;\n}\n.node-name {\n  font-size: 14px;\n  font-weight: 600;\n  line-height: 1.3;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.node-meta {\n  font-size: 11.5px;\n  color: var(--muted);\n  white-space: nowrap;\n}\n.node-flag {\n  position: absolute;\n  top: 4px;\n  right: 7px;\n  font-size: 12px;\n  color: var(--red);\n}\n.node-progress {\n  position: absolute;\n  left: 10px;\n  right: 10px;\n  bottom: 5px;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.node-progress i {\n  display: block;\n  height: 100%;\n  background: var(--green);\n}\n.node.available .node-name {\n  color: #fffaf0;\n}\n.node.locked {\n  opacity: 0.58;\n  border-style: dashed;\n  border-color: rgba(236, 230, 212, 0.26);\n  box-shadow: none;\n}\n.node.locked .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.node.completed .node-icon {\n  background: rgba(255, 240, 200, 0.18);\n  border-color: rgba(255, 240, 200, 0.35);\n  color: #fff3c9;\n}\n.node.completed .node-name {\n  color: #fff7dc;\n}\n.node.completed .node-meta {\n  color: #f1dfa6;\n}\n.node.active {\n  border: 1.5px solid var(--green);\n  box-shadow:\n    0 0 0 3px rgba(114, 196, 146, 0.16),\n    0 0 26px rgba(114, 196, 146, 0.24);\n}\n.node.active .node-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n  border-color: rgba(114, 196, 146, 0.35);\n}\n.node.active .node-meta {\n  color: #a7e3bd;\n}\n.node.waiting {\n  border: 1.5px solid var(--amber);\n  box-shadow:\n    0 0 0 3px rgba(230, 169, 80, 0.14),\n    0 0 22px rgba(230, 169, 80, 0.2);\n}\n.node.waiting .node-icon,\n.node.waiting .node-meta {\n  color: var(--amber);\n}\n.node.waiting .node-progress i {\n  background: var(--amber);\n}\n.node.paused {\n  border: 1.5px solid var(--blue);\n}\n.node.paused .node-icon,\n.node.paused .node-meta {\n  color: var(--blue);\n}\n.node.paused .node-progress i {\n  background: var(--blue);\n}\n.node.sealed,\n.node.terminated {\n  opacity: 0.7;\n  border-color: rgba(217, 112, 95, 0.6);\n  background:\n    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.1) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #2a2522, #1f1c1a);\n}\n.node.sealed .node-icon,\n.node.terminated .node-icon {\n  color: var(--red);\n  background: rgba(217, 112, 95, 0.08);\n  border-color: rgba(217, 112, 95, 0.25);\n}\n.node.sealed .node-meta,\n.node.terminated .node-meta {\n  color: #f0a898;\n}\n.node.unknown {\n  border-color: rgba(236, 230, 212, 0.18);\n  background:\n    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #202824, #181f1b);\n}\n.node.unknown .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.current {\n  animation: current-pulse 2.6s ease-in-out infinite;\n}\n@keyframes current-pulse {\n  50% {\n    box-shadow:\n      0 0 0 6px rgba(114, 196, 146, 0.1),\n      0 0 34px rgba(114, 196, 146, 0.32);\n  }\n}\n.node.selected {\n  outline: 2px solid var(--gold);\n  outline-offset: 4px;\n}\n.node.dim {\n  opacity: 0.16;\n}\n\n/* Overlays on the stage */\n.routes {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  bottom: 12px;\n  width: 268px;\n  display: none;\n  flex-direction: column;\n  background: rgba(19, 26, 22, 0.94);\n  backdrop-filter: blur(8px);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);\n  z-index: 3;\n  max-height: calc(100% - 24px);\n}\n.routes.open {\n  display: flex;\n}\n.routes-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 8px 6px 14px;\n}\n.routes-head strong {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n}\n.routes-head small {\n  flex: 1;\n  font-size: 12px;\n}\n.routes-head button {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  font-size: 18px;\n}\n.search-row {\n  display: flex;\n  gap: 6px;\n  padding: 4px 10px 8px;\n}\n.search-row label {\n  flex: 1;\n  min-width: 0;\n}\n.search-row input {\n  width: 100%;\n  height: 34px;\n}\n.search-row button {\n  height: 34px;\n  white-space: nowrap;\n  font-size: 12.5px;\n}\n.route-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 6px;\n  overflow: auto;\n  flex: 1;\n  border-top: 1px solid var(--line);\n  border-bottom: 1px solid var(--line);\n}\n.route-list li {\n  display: flex;\n  align-items: stretch;\n  gap: 4px;\n  margin: 2px 0;\n}\n.route-jump {\n  flex: 1;\n  display: grid;\n  grid-template-columns: 1fr auto;\n  gap: 2px 8px;\n  text-align: left;\n  padding: 7px 10px;\n  border-color: transparent;\n  background: transparent;\n  min-width: 0;\n}\n.route-list li.active .route-jump {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n}\n.route-list li.folded .route-name {\n  color: var(--faint);\n}\n.route-name {\n  font-size: 13.5px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\n.route-live {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  box-shadow: 0 0 8px var(--green);\n  flex-shrink: 0;\n}\n.route-count {\n  font-size: 12px;\n  color: var(--muted);\n  font-variant-numeric: tabular-nums;\n}\n.route-bar {\n  grid-column: 1/-1;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n}\n.route-bar i {\n  display: block;\n  height: 100%;\n  background: var(--gold);\n}\n.route-fold {\n  width: 30px;\n  padding: 0;\n  border-color: transparent;\n  background: transparent;\n  color: var(--muted);\n}\n.route-actions {\n  display: flex;\n  gap: 6px;\n  padding: 8px 10px 10px;\n}\n.route-actions button {\n  flex: 1;\n  font-size: 12.5px;\n}\n.routes-tab {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  z-index: 3;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);\n}\n.routes-tab small {\n  color: var(--gold);\n}\n.stage-hint {\n  position: absolute;\n  left: 50%;\n  bottom: 12px;\n  transform: translateX(-50%);\n  font-size: 12px;\n  color: var(--faint);\n  pointer-events: none;\n  white-space: nowrap;\n}\n.stage-tools {\n  position: absolute;\n  right: 12px;\n  bottom: 12px;\n  display: flex;\n  align-items: flex-end;\n  gap: 8px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage-tools > button,\n.zoom-controls,\n.legend-pop > summary {\n  height: 36px;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);\n}\n.zoom-controls {\n  display: flex;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n  overflow: hidden;\n}\n.zoom-controls button {\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  min-width: 36px;\n}\n.zoom-controls button + button {\n  border-left: 1px solid var(--line);\n}\n.zoom-value {\n  font-variant-numeric: tabular-nums;\n  font-size: 12.5px;\n}\n.legend-pop {\n  position: relative;\n}\n.legend-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  padding: 0 12px;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n}\n.legend-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.legend-list {\n  position: absolute;\n  right: 0;\n  bottom: 44px;\n  width: 210px;\n  margin: 0;\n  padding: 10px 14px;\n  list-style: none;\n  display: grid;\n  gap: 6px;\n  font-size: 12.5px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);\n}\n.legend-list li {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n}\n.sw {\n  width: 22px;\n  height: 14px;\n  border-radius: 4px;\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: #232d27;\n  flex-shrink: 0;\n}\n.sw.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.sw.active {\n  border: 2px solid var(--green);\n}\n.sw.waiting {\n  border: 2px solid var(--amber);\n}\n.sw.paused {\n  border: 2px solid var(--blue);\n}\n.sw.locked {\n  border-style: dashed;\n  opacity: 0.6;\n}\n.sw.terminated {\n  border-color: var(--red);\n  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);\n}\n.sw.unknown {\n  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);\n}\n.ln {\n  width: 22px;\n  height: 0;\n  border-top: 2.5px solid rgba(220, 194, 124, 0.6);\n  flex-shrink: 0;\n}\n.ln.dashed {\n  border-top-style: dashed;\n}\n.ln.cross {\n  border-top-color: var(--cross);\n}\n.ln.mutex {\n  border-top: 2.5px dotted var(--red);\n}\n.minimap {\n  position: absolute;\n  right: 12px;\n  bottom: 58px;\n  width: 190px;\n  height: 120px;\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  background: rgba(13, 19, 16, 0.92);\n  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\n  z-index: 2;\n  padding: 6px;\n  cursor: crosshair;\n  touch-action: none;\n  transition: right 0.22s ease;\n}\n.minimap-svg {\n  width: 100%;\n  height: 100%;\n}\n.mm {\n  fill: rgba(236, 230, 212, 0.28);\n}\n.mm.completed {\n  fill: var(--gold);\n}\n.mm.active,\n.mm.current {\n  fill: var(--green);\n}\n.mm.waiting {\n  fill: var(--amber);\n}\n.mm.paused {\n  fill: var(--blue);\n}\n.mm.locked,\n.mm.unknown {\n  fill: rgba(236, 230, 212, 0.12);\n}\n.mm.sealed,\n.mm.terminated {\n  fill: rgba(217, 112, 95, 0.55);\n}\n.mm.folded {\n  fill: rgba(220, 194, 124, 0.25);\n}\n.mm-view {\n  fill: rgba(220, 194, 124, 0.08);\n  stroke: var(--gold);\n  stroke-width: 1.5;\n  vector-effect: non-scaling-stroke;\n}\n.stage.with-drawer .stage-tools {\n  right: calc(var(--drawer) + 12px);\n}\n/* The drawer already covers part of the tree; the minimap would cover more. */\n.stage.with-drawer .minimap {\n  display: none;\n}\n.demo-pop {\n  position: absolute;\n  top: 12px;\n  right: 12px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage.with-drawer .demo-pop {\n  right: calc(var(--drawer) + 12px);\n}\n.demo-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  background: rgba(19, 26, 22, 0.94);\n  padding: 6px 10px;\n  border-radius: 7px;\n}\n.demo-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.demo-pop[open] {\n  display: grid;\n  gap: 6px;\n  width: 200px;\n  padding: 10px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n}\n.demo-pop[open] > summary {\n  border: 0;\n  padding: 0;\n  background: none;\n}\n\n/* Drawer */\n.drawer {\n  position: absolute;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  width: var(--drawer);\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border-left: 1px solid var(--line-strong);\n  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);\n  transform: translateX(100%);\n  transition: transform 0.22s ease;\n  z-index: 4;\n}\n.drawer.open {\n  transform: none;\n}\n.drawer-head {\n  position: relative;\n  display: grid;\n  grid-template-columns: 58px 1fr;\n  gap: 14px;\n  align-items: center;\n  padding: 18px 44px 16px 18px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n  box-shadow: inset 4px 0 0 var(--line-strong);\n}\n.drawer-head.completed {\n  box-shadow: inset 4px 0 0 var(--gold);\n}\n.drawer-head.active {\n  box-shadow: inset 4px 0 0 var(--green);\n}\n.drawer-head.waiting {\n  box-shadow: inset 4px 0 0 var(--amber);\n}\n.drawer-head.paused {\n  box-shadow: inset 4px 0 0 var(--blue);\n}\n.drawer-head.sealed,\n.drawer-head.terminated {\n  box-shadow: inset 4px 0 0 var(--red);\n}\n.drawer-close {\n  position: absolute;\n  top: 10px;\n  right: 10px;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n  font-size: 20px;\n}\n.drawer-emblem {\n  width: 58px;\n  height: 58px;\n  display: grid;\n  place-items: center;\n  border-radius: 13px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid var(--line-strong);\n  color: var(--gold);\n}\n.drawer-emblem svg {\n  width: 34px;\n  height: 34px;\n}\n.drawer-branch {\n  display: block;\n  font-size: 11.5px;\n  letter-spacing: 0.2em;\n  color: var(--gold);\n}\n.drawer-head h3 {\n  font-size: 20px;\n  line-height: 1.3;\n  margin: 2px 0 6px;\n}\n.state-pill,\n.days-pill {\n  display: inline-block;\n  font-size: 12px;\n  padding: 1px 9px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  margin-right: 6px;\n}\n.state-pill.completed {\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.22);\n  border-color: var(--gold);\n}\n.state-pill.active {\n  color: #a7e3bd;\n  border-color: var(--green);\n}\n.state-pill.waiting {\n  color: var(--amber);\n  border-color: var(--amber);\n}\n.state-pill.paused {\n  color: var(--blue);\n  border-color: var(--blue);\n}\n.state-pill.available {\n  color: #fffaf0;\n  border-color: rgba(236, 230, 212, 0.6);\n}\n.state-pill.locked,\n.state-pill.unknown {\n  color: var(--muted);\n}\n.state-pill.sealed,\n.state-pill.terminated {\n  color: #f0a898;\n  border-color: var(--red);\n}\n.days-pill {\n  color: var(--muted);\n}\n.drawer-body {\n  flex: 1;\n  overflow: auto;\n  padding: 16px 18px 24px;\n}\n.drawer-progress {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 14px;\n}\n.drawer-progress strong {\n  font-variant-numeric: tabular-nums;\n  color: var(--gold);\n}\n.bar {\n  height: 8px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n}\n.drawer-action {\n  display: grid;\n  gap: 8px;\n  padding: 12px;\n  margin-bottom: 16px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line);\n}\n.drawer-action .primary {\n  height: 40px;\n  font-size: 14.5px;\n}\n.blockers {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: #f0c49a;\n}\n.description {\n  font-size: 14px;\n  line-height: 1.8;\n}\n.detail-section {\n  padding: 14px 0;\n  border-top: 1px solid var(--line);\n}\n.detail-section h4 {\n  font-size: 13px;\n  letter-spacing: 0.12em;\n  color: var(--gold);\n  margin-bottom: 8px;\n}\n.detail-section ul {\n  margin: 0;\n  padding-left: 18px;\n  display: grid;\n  gap: 4px;\n  font-size: 13.5px;\n}\n.detail-section p {\n  font-size: 13.5px;\n}\n.reason {\n  color: var(--muted);\n  font-size: 13px;\n  margin: 8px 0 0;\n}\n.prereqs {\n  display: grid;\n  gap: 6px;\n}\n.prereq-group {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n}\n.chip {\n  font-size: 12.5px;\n  padding: 3px 10px;\n  border-radius: 99px;\n}\n.chip.done {\n  border-color: var(--gold);\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.15);\n}\n.or,\n.and {\n  font-size: 11.5px;\n  color: var(--faint);\n}\n.and {\n  display: block;\n  padding-left: 4px;\n}\n.conditions {\n  list-style: none;\n  padding: 0 !important;\n}\n.conditions li {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n}\n.cond-kind {\n  flex-shrink: 0;\n  font-size: 11px;\n  padding: 0 7px;\n  border-radius: 4px;\n  background: rgba(220, 194, 124, 0.12);\n  color: var(--gold);\n}\n.mutex-note {\n  border-left: 3px solid var(--red);\n  padding-left: 12px;\n}\n.route-facts {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  gap: 6px 12px;\n  margin: 8px 0 0;\n  font-size: 13px;\n}\n.route-facts dt {\n  color: var(--muted);\n}\n.route-facts dd {\n  margin: 0;\n}\n\n/* Status line and empty state */\n.statusline {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  min-height: 32px;\n  padding: 4px 16px;\n  border-top: 1px solid var(--line);\n  background: #111814;\n  font-size: 12px;\n  color: var(--muted);\n}\n.status-dot {\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  margin-right: 8px;\n  vertical-align: 1px;\n}\n.status-dot.busy {\n  background: var(--gold);\n  box-shadow: 0 0 8px var(--gold);\n}\n.linkish {\n  border: 0;\n  background: none;\n  padding: 2px 4px;\n  color: var(--gold);\n  font-size: 12px;\n}\n.empty {\n  flex: 1;\n  display: grid;\n  place-items: center;\n  padding: 24px;\n  background: var(--ink);\n}\n.empty-card {\n  max-width: 440px;\n  text-align: center;\n  display: grid;\n  justify-items: center;\n  gap: 12px;\n}\n.empty-card svg {\n  width: 72px;\n  height: 72px;\n  color: var(--gold);\n}\n.empty-card p {\n  color: var(--muted);\n}\n\n/* ---------- Modals and settings ---------- */\n.modal-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 2147483001;\n  background: rgba(5, 9, 7, 0.78);\n  backdrop-filter: blur(3px);\n  display: grid;\n  place-items: center;\n  padding: 24px;\n}\n.modal {\n  width: min(880px, 100%);\n  max-height: 90vh;\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.modal-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 16px 20px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);\n}\n.modal-header h2 {\n  font-size: 20px;\n  letter-spacing: 0.06em;\n}\n.modal-header button {\n  width: 34px;\n  height: 34px;\n  padding: 0;\n  font-size: 19px;\n}\n.modal-body {\n  padding: 18px 22px;\n  overflow: auto;\n}\n.modal-footer {\n  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n  padding: 12px 20px;\n  border-top: 1px solid var(--line);\n  background: #161e1a;\n}\n.modal-error {\n  color: #f6b3a4;\n  font-size: 13px;\n  white-space: pre-wrap;\n}\n.modal-body h3 {\n  font-size: 17px;\n  color: var(--gold);\n  margin-bottom: 6px;\n}\n.modal-body h4 {\n  font-size: 14px;\n  margin: 14px 0 6px;\n}\n.tabs {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-bottom: 18px;\n  padding-bottom: 10px;\n  border-bottom: 1px solid var(--line);\n}\n.tabs button {\n  border-color: transparent;\n  background: transparent;\n}\n.tabs button.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  color: var(--gold);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.settings-section[hidden] {\n  display: none;\n}\n.form-grid {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 14px 18px;\n}\n.form-grid > .wide {\n  grid-column: 1/-1;\n  min-width: 0;\n}\n.field {\n  display: grid;\n  gap: 6px;\n  font-size: 13px;\n  color: #d5d0bf;\n  min-width: 0;\n}\n.field.wide {\n  grid-column: 1/-1;\n}\n.field small {\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.field textarea {\n  min-height: 80px;\n  resize: vertical;\n}\n.check {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  color: #d5d0bf;\n}\n.check.wide,\n.check:has(> small) {\n  flex-wrap: wrap;\n}\n.check small {\n  flex-basis: 100%;\n  font-size: 11.5px;\n  line-height: 1.7;\n  padding-left: 24px;\n}\n.api-row,\n.job-card,\n.candidate,\n.event-card {\n  padding: 14px 16px;\n  border: 1px solid var(--line);\n  background: var(--raised);\n  border-radius: var(--radius);\n  margin-bottom: 12px;\n}\n.job-card .job-title {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n  margin-bottom: 12px;\n}\n.candidate {\n  display: flex;\n  gap: 12px;\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n.candidate strong {\n  display: block;\n  margin-bottom: 2px;\n}\n.candidate p {\n  font-size: 13px;\n  color: var(--muted);\n  margin: 0;\n}\n.event-card h3 {\n  margin: 6px 0;\n}\n.event-card p {\n  font-size: 13.5px;\n}\n.job-log {\n  display: grid;\n  grid-template-columns: 110px 1fr auto;\n  gap: 12px;\n  align-items: start;\n  border-bottom: 1px solid var(--line);\n  padding: 12px 0;\n  font-size: 13px;\n}\n.job-log > div:last-child {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n}\n.job-log .success {\n  color: var(--green);\n}\n.job-log .failed {\n  color: var(--red);\n}\n.job-log .running,\n.job-log .queued {\n  color: var(--gold);\n}\n.job-log .stale,\n.job-log .cancelled {\n  color: var(--muted);\n}\n.api-actions {\n  display: flex;\n  align-items: end;\n  flex-wrap: wrap;\n  gap: 10px;\n  margin: 12px 0;\n}\n.segment-max {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: end;\n  gap: 8px 12px;\n}\n.segment-max .field {\n  flex: 0 1 220px;\n}\n.segment-max-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  padding-bottom: 4px;\n}\n.segment-max small {\n  flex-basis: 100%;\n}\n.api-picker {\n  flex: 1;\n  min-width: 180px;\n}\n.api-editor {\n  margin-top: 16px;\n}\n.api-status {\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--gold);\n  font-size: 13px;\n}\n#source-panel fieldset {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  margin: 16px 0;\n  padding: 14px;\n  min-width: 0;\n}\n#source-panel legend {\n  color: var(--gold);\n  padding: 0 6px;\n  font-size: 13.5px;\n}\n#source-panel fieldset:disabled {\n  opacity: 0.55;\n}\n.source-list {\n  max-height: 300px;\n  overflow: auto;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 6px 12px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.source-group {\n  position: sticky;\n  top: -6px;\n  margin: 8px -12px 4px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--gold);\n  background: var(--ink);\n  border-bottom: 1px solid var(--line);\n}\n.source-entry {\n  display: flex;\n  align-items: start;\n  gap: 10px;\n  padding: 6px 0;\n  font-size: 13px;\n}\n.source-entry small {\n  display: block;\n  font-size: 11.5px;\n}\n.source-disabled span {\n  opacity: 0.65;\n}\n.source-book[hidden],\n.source-entry[hidden] {\n  display: none;\n}\n.source-rule {\n  display: grid;\n  grid-template-columns: 1fr 1fr auto;\n  gap: 8px;\n  margin: 8px 0;\n}\n.source-rule input {\n  min-width: 0;\n}\n.source-toggles {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px 18px;\n}\n.segment {\n  display: grid;\n  gap: 8px;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 10px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.segment-head {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.segment-head input[data-seg='name'] {\n  flex: 1;\n  min-width: 120px;\n}\n.segment textarea {\n  min-height: 70px;\n  resize: vertical;\n  width: 100%;\n}\n.legend {\n  margin-bottom: 14px;\n  font-size: 13px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend code {\n  color: var(--gold);\n}\n\n/* ---------- Responsive ---------- */\n@media (max-width: 1280px) {\n  .nation-bar {\n    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1.2fr);\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: flex-end;\n    margin-top: -4px;\n  }\n  .nation-copy p {\n    -webkit-line-clamp: 1;\n  }\n}\n@media (max-width: 1100px) {\n  .brand,\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n}\n@media (max-width: 1000px) {\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    gap: 12px 16px;\n  }\n  .agenda {\n    grid-column: 1/-1;\n    order: 3;\n  }\n  .nation-actions {\n    order: 4;\n  }\n  :host {\n    --drawer: 340px;\n  }\n}\n@media (max-width: 760px) {\n  .shell {\n    inset: 0;\n    border-radius: 0;\n    border: 0;\n  }\n  .command {\n    gap: 8px;\n    padding: 6px 8px;\n    min-height: 52px;\n  }\n  .brand-mark {\n    width: 34px;\n    height: 34px;\n  }\n  .nation-tabs,\n  .date-chip,\n  .test-label {\n    display: none;\n  }\n  .nation-picker {\n    display: block;\n  }\n  .command-spacer {\n    display: none;\n  }\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n  .cmd-btn.busy {\n    width: auto;\n    padding: 0 8px;\n  }\n  .cmd-btn.busy .cmd-text {\n    display: inline;\n  }\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    padding: 10px 12px;\n    gap: 10px;\n  }\n  .nation-crest {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-copy h2 {\n    font-size: 18px;\n  }\n  .nation-copy p {\n    display: none;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: 72px;\n  }\n  .gauge-head {\n    display: grid;\n  }\n  .gauge-head small {\n    font-size: 10.5px;\n    white-space: nowrap;\n  }\n  .gauge-head strong {\n    font-size: 18px;\n  }\n  .agenda {\n    padding: 7px 10px 7px 8px;\n    grid-template-columns: 38px 1fr;\n  }\n  .agenda-icon {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: stretch;\n    margin: 0;\n  }\n  .nation-actions > * {\n    flex: 1;\n  }\n  .control-select select {\n    width: 100%;\n  }\n  .routes {\n    top: 0;\n    left: 0;\n    bottom: 0;\n    width: min(320px, 86%);\n    max-height: none;\n    border-radius: 0 12px 12px 0;\n  }\n  .minimap,\n  .stage-hint {\n    display: none;\n  }\n  .stage.with-drawer .demo-pop {\n    right: 12px;\n  }\n  .drawer {\n    top: auto;\n    left: 0;\n    width: auto;\n    height: 72%;\n    border-left: 0;\n    border-top: 1px solid var(--line-strong);\n    border-radius: 16px 16px 0 0;\n    transform: translateY(100%);\n    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);\n  }\n  .drawer::before {\n    content: '';\n    display: block;\n    width: 44px;\n    height: 4px;\n    border-radius: 2px;\n    background: var(--line-strong);\n    margin: 8px auto 0;\n  }\n  .drawer.open {\n    transform: none;\n  }\n  .stage.with-drawer .stage-tools {\n    right: 12px;\n  }\n  .statusline .status-mid {\n    display: none;\n  }\n  .modal-backdrop {\n    padding: 0;\n    place-items: end stretch;\n  }\n  .modal {\n    max-height: 94dvh;\n    border-radius: 16px 16px 0 0;\n  }\n  .modal-body {\n    padding: 14px;\n  }\n  .form-grid,\n  .source-toggles {\n    grid-template-columns: 1fr;\n  }\n  .job-log {\n    grid-template-columns: 80px 1fr;\n  }\n  .job-log > div:last-child {\n    grid-column: 1/-1;\n    justify-content: flex-start;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  *,\n  *::before {\n    animation: none !important;\n    transition: none !important;\n  }\n}\n@media (max-width: 1200px) {\n  .stage.with-drawer .minimap {\n    display: none;\n  }\n}\n.demo-pop[open] button {\n  width: 100%;\n  text-align: left;\n}\n\n/* ---------- Tasks tab (任務) ---------- */\n.preset-bar {\n  padding: 14px 16px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));\n  margin-bottom: 14px;\n}\n.preset-title {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.preset-title h3 {\n  margin: 0;\n}\n.preset-title small {\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n}\n.preset-row {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.preset-row select {\n  flex: 1 1 200px;\n  min-width: 0;\n}\n.preset-row input[data-preset-name] {\n  flex: 1 1 160px;\n  min-width: 0;\n}\n.preset-bar .api-status:empty {\n  display: none;\n}\n.preset-bar .api-status {\n  margin: 8px 0 0;\n}\n.task-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 8px;\n  margin-bottom: 14px;\n}\n.task-tab {\n  display: grid;\n  gap: 3px;\n  text-align: left;\n  padding: 10px 12px;\n  background: var(--raised);\n  border-color: var(--line);\n  min-width: 0;\n}\n.task-tab strong {\n  font-family: var(--serif);\n  font-size: 14.5px;\n  font-weight: 600;\n}\n.task-tab small {\n  color: var(--faint);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.task-tab.active {\n  border-color: var(--gold);\n  background: var(--raised-2);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.task-tab.active strong {\n  color: var(--gold);\n}\n.task-editor[hidden] {\n  display: none;\n}\n.task-head {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.task-head h3 {\n  margin: 0;\n}\n.task-head small {\n  color: var(--muted);\n  font-size: 12.5px;\n}\n.task-block {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  background: var(--raised);\n  padding: 0 14px;\n  margin-bottom: 12px;\n}\n.task-block > summary {\n  cursor: pointer;\n  padding: 11px 0;\n  font-weight: 600;\n  color: var(--gold);\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.task-block > summary::-webkit-details-marker {\n  display: none;\n}\n.task-block > summary::before {\n  content: '▸';\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.task-block[open] > summary::before {\n  transform: rotate(90deg);\n}\n.task-block[open] {\n  padding-bottom: 14px;\n}\n.task-block .summary-note {\n  margin-left: auto;\n  font-weight: 400;\n  font-size: 12px;\n  color: var(--muted);\n}\n.block-note {\n  display: block;\n  margin-top: 8px;\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.route-row {\n  display: grid;\n  grid-template-columns: 1fr 120px auto;\n  gap: 10px;\n  align-items: end;\n  margin-bottom: 10px;\n}\n.route-row > .field:first-child:last-of-type {\n  grid-column: 1/3;\n}\n.route-row button {\n  height: 36px;\n}\n.prompt-toolbar {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n  margin-bottom: 10px;\n}\n.prompt-toolbar .spacer {\n  flex: 1;\n}\n.prompt-toolbar small {\n  color: var(--muted);\n  font-size: 12px;\n}\n.prompt-list {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 10px;\n}\n.prompt-card {\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  background: #1b2420;\n  transition:\n    border-color 0.15s,\n    opacity 0.15s;\n}\n.prompt-card.open {\n  border-color: var(--line-strong);\n}\n.prompt-card[data-kind='data'] {\n  border-left: 3px solid var(--blue);\n}\n.prompt-card[data-kind='guide'],\n.prompt-card[data-kind='task'] {\n  border-left: 3px solid var(--gold-deep);\n}\n.prompt-card[data-kind='custom'] {\n  border-left: 3px solid var(--green);\n}\n.prompt-card.off {\n  opacity: 0.55;\n}\n.prompt-card.off .pname {\n  text-decoration: line-through;\n  text-decoration-color: var(--faint);\n}\n.prompt-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 4px 6px 4px 4px;\n}\n.prompt-toggle {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 0;\n  background: transparent;\n  padding: 6px 8px;\n  text-align: left;\n}\n.prompt-toggle:hover:not(:disabled) {\n  background: rgba(255, 255, 255, 0.03);\n}\n.prompt-toggle .chev {\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.prompt-card.open .chev {\n  transform: rotate(90deg);\n}\n.pname {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-weight: 600;\n}\n.role-tag,\n.kind-tag {\n  flex: none;\n  font-size: 10.5px;\n  padding: 1px 7px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  color: var(--muted);\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n}\n.kind-tag {\n  font-family: inherit;\n}\n.kind-tag.data {\n  color: var(--blue);\n  border-color: rgba(143, 176, 214, 0.4);\n}\n.kind-tag.custom {\n  color: var(--green);\n  border-color: rgba(114, 196, 146, 0.4);\n}\n.kind-tag.modified {\n  color: var(--amber);\n  border-color: rgba(230, 169, 80, 0.45);\n}\n.pchars {\n  flex: none;\n  margin-left: auto;\n  font-size: 11px;\n  color: var(--faint);\n}\n.switch {\n  flex: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 12px;\n  color: var(--muted);\n  cursor: pointer;\n}\n.switch input {\n  appearance: none;\n  width: 30px;\n  height: 17px;\n  border-radius: 99px;\n  background: #0f1512;\n  border: 1px solid var(--line-strong);\n  position: relative;\n  margin: 0;\n  padding: 0;\n  cursor: pointer;\n  transition: background 0.15s;\n}\n.switch input::after {\n  content: '';\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 11px;\n  height: 11px;\n  border-radius: 50%;\n  background: var(--faint);\n  transition:\n    transform 0.15s,\n    background 0.15s;\n}\n.switch input:checked {\n  background: rgba(114, 196, 146, 0.25);\n  border-color: var(--green);\n}\n.switch input:checked::after {\n  transform: translateX(13px);\n  background: var(--green);\n}\n.switch input:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.switch span {\n  display: none;\n}\nbutton.icon {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  display: inline-grid;\n  place-items: center;\n  flex: none;\n}\n.prompt-body {\n  padding: 4px 12px 12px;\n  display: grid;\n  gap: 8px;\n}\n.prompt-body[hidden] {\n  display: none;\n}\n.prompt-fields {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n.prompt-fields input {\n  flex: 1 1 180px;\n  min-width: 0;\n}\n.prompt-fields select {\n  flex: 0 0 120px;\n}\n.prompt-body textarea {\n  width: 100%;\n  resize: vertical;\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12.5px;\n  line-height: 1.6;\n}\n.prompt-body small {\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.prompt-preview {\n  margin-top: 12px;\n}\n.prompt-preview textarea {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.55;\n  min-height: 260px;\n}\n.legend {\n  font-size: 12.5px;\n  color: var(--muted);\n  margin-bottom: 10px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend ul {\n  margin: 8px 0 0;\n  padding-left: 18px;\n  line-height: 1.8;\n}\n.legend code {\n  color: var(--text);\n}\n\n/* ---------- Progress window above the orb ---------- */\n.hud {\n  position: fixed;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: rgba(22, 30, 26, 0.96);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow:\n    0 14px 40px rgba(0, 0, 0, 0.55),\n    inset 0 1px 0 rgba(220, 194, 124, 0.08);\n  backdrop-filter: blur(6px);\n  color: var(--text);\n  font-size: 13px;\n  overflow: hidden;\n}\n.hud[hidden] {\n  display: none;\n}\n.hud.enter {\n  animation: hud-in 0.18s ease-out;\n}\n@keyframes hud-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n}\n.hud[data-side='below'].enter {\n  animation-name: hud-in-below;\n}\n@keyframes hud-in-below {\n  from {\n    opacity: 0;\n    transform: translateY(-6px);\n  }\n}\n.hud-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 7px 8px 7px 12px;\n  cursor: grab;\n  user-select: none;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n}\n.hud-head:active {\n  cursor: grabbing;\n}\n.hud-head .status-dot {\n  margin-right: 2px;\n  flex: none;\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.hud-head strong {\n  font-family: var(--serif);\n  color: var(--gold);\n  letter-spacing: 0.06em;\n  flex: none;\n}\n.hud-count {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--muted);\n  font-size: 12px;\n}\n.hud-actions {\n  margin-left: auto;\n  display: flex;\n  gap: 4px;\n  flex: none;\n}\n.hud-actions button {\n  padding: 3px 8px;\n  font-size: 12px;\n}\n.hud-actions button.icon {\n  width: 26px;\n  height: 26px;\n  padding: 0;\n}\n.hud-actions button[hidden] {\n  display: none;\n}\n.hud-bar {\n  height: 3px;\n  background: rgba(220, 194, 124, 0.12);\n  position: relative;\n  overflow: hidden;\n  flex: none;\n}\n.hud-bar i {\n  position: absolute;\n  inset: 0 auto 0 0;\n  background: var(--gold);\n  transition: width 0.3s;\n}\n.hud-bar.indeterminate i {\n  width: 35% !important;\n  animation: hud-slide 1.3s ease-in-out infinite;\n}\n@keyframes hud-slide {\n  from {\n    left: -35%;\n  }\n  to {\n    left: 100%;\n  }\n}\n.hud-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 0;\n  overflow: auto;\n  min-height: 0;\n}\n.hud-list[hidden] {\n  display: none;\n}\n.hud-item {\n  display: grid;\n  grid-template-columns: 18px minmax(0, 1fr) auto auto;\n  gap: 8px;\n  align-items: center;\n  padding: 6px 8px 6px 12px;\n  animation: hud-in 0.18s ease-out;\n}\n.hud-item + .hud-item {\n  border-top: 1px solid rgba(217, 191, 120, 0.07);\n}\n.hud-item .spinner {\n  width: 13px;\n  height: 13px;\n}\n.hud-sym {\n  font-style: normal;\n  font-weight: 700;\n  text-align: center;\n  width: 16px;\n  height: 16px;\n  line-height: 16px;\n  border-radius: 50%;\n  font-size: 11px;\n}\n.hud-sym.ok {\n  color: #0f1512;\n  background: var(--green);\n}\n.hud-sym.bad {\n  color: #0f1512;\n  background: var(--red);\n}\n.hud-sym.wait,\n.hud-sym.off {\n  color: var(--muted);\n  border: 1px solid var(--line-strong);\n  line-height: 14px;\n}\n.hud-text {\n  min-width: 0;\n  display: grid;\n}\n.hud-text b {\n  font-weight: 600;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-text small {\n  color: var(--muted);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-item.failed .hud-text small {\n  color: #f0a898;\n  white-space: normal;\n  display: -webkit-box;\n  -webkit-line-clamp: 3;\n  -webkit-box-orient: vertical;\n}\n.hud-item.success .hud-text b {\n  color: var(--green);\n}\n.hud-item.cancelled,\n.hud-item.stale {\n  opacity: 0.7;\n}\n.hud-item time {\n  font-variant-numeric: tabular-nums;\n  color: var(--faint);\n  font-size: 11.5px;\n}\n.hud-item button.icon {\n  width: 22px;\n  height: 22px;\n  border-color: transparent;\n  background: transparent;\n  color: var(--faint);\n}\n.hud.collapsed .hud-head {\n  border-bottom: 0;\n}\n\n@media (max-width: 760px) {\n  .task-tabs {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n  .route-row {\n    grid-template-columns: 1fr 90px;\n  }\n  .route-row > button {\n    grid-column: 1/-1;\n  }\n  .route-row > .field:first-child:last-of-type {\n    grid-column: 1/-1;\n  }\n  .pchars,\n  .role-tag {\n    display: none;\n  }\n  .hud-actions button[data-hud='log'] {\n    display: none;\n  }\n}\n.task-block.prompts-block {\n  padding: 12px 14px 14px;\n}\n.prompt-toolbar h4 {\n  margin: 0;\n  color: var(--gold);\n  font-size: 14px;\n}\n.prompts-block > .muted {\n  font-size: 12.5px;\n  margin: 0 0 8px;\n}\n.task-editor input:not([type='checkbox']),\n.task-editor select,\n.preset-row input,\n.preset-row select,\n.preset-row button,\n.route-row button {\n  height: 38px;\n}\n.task-editor .prompt-body input {\n  height: 36px;\n}\n\n/* ---------- Country manager: delete tree ---------- */\n.country-row {\n  align-items: center;\n}\n.country-row .row-spacer {\n  flex: 1;\n}\n.remove-confirm {\n  flex-basis: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 12px;\n  border: 1px solid rgba(217, 112, 95, 0.45);\n  border-radius: 8px;\n  background: rgba(217, 112, 95, 0.08);\n}\n.remove-confirm small {\n  flex: 1 1 260px;\n  color: #f0c2b8;\n  line-height: 1.6;\n}\n\n/* ---------- Country manager: tree files ---------- */\n.tree-io h3 {\n  margin-bottom: 4px;\n}\n.tree-io > small {\n  display: block;\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n  margin-bottom: 10px;\n}\n.tree-io-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.tree-io .api-status {\n  margin: 8px 0 0;\n}\n.import-panel {\n  margin-top: 12px;\n  padding: 12px 14px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: var(--raised);\n  display: grid;\n  gap: 10px;\n}\n.import-panel h4 {\n  margin: 0;\n  color: var(--gold);\n}\n.import-panel ul {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.8;\n}\n.import-panel code {\n  font-size: 11.5px;\n  color: var(--muted);\n}\n.import-panel .warn {\n  color: var(--amber);\n}\n.tree-io {\n  margin-bottom: 18px;\n}\n\n/* ---------- News window (國際快訊) ---------- */\n.event-timeline {\n  margin: 6px 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.7;\n  color: var(--muted);\n}\n.event-timeline b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-current {\n  font-size: 13px;\n}\n.event-current b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-steps {\n  list-style: none;\n  margin: 6px 0;\n  padding: 0;\n  font-size: 13px;\n  line-height: 1.7;\n}\n.event-steps li::before {\n  display: inline-block;\n  width: 1.4em;\n  color: var(--muted);\n}\n.event-steps li.done {\n  color: var(--muted);\n  text-decoration: line-through;\n}\n.event-steps li.done::before {\n  content: '✓';\n}\n.event-steps li.active {\n  color: var(--gold);\n  font-weight: 700;\n}\n.event-steps li.active::before {\n  content: '▶';\n}\n.event-steps li.pending::before {\n  content: '○';\n}\n.event-steps li.planned {\n  font-style: italic;\n}\n.event-steps li.planned::before {\n  content: '◷';\n}\n.event-effects {\n  display: block;\n  color: var(--gold);\n}\n.node-pivot {\n  position: absolute;\n  top: 3px;\n  right: 22px;\n  font-size: 12px;\n  color: var(--gold);\n  text-shadow: 0 0 6px rgba(220, 194, 124, 0.6);\n}\n.pivotal-note {\n  border-left: 3px solid var(--gold);\n  padding-left: 10px;\n}\n.rel-core {\n  border: 1px solid var(--gold);\n  border-radius: 10px;\n  padding: 10px 14px;\n  margin: 10px 0 14px;\n  background: rgba(220, 194, 124, 0.08);\n}\n.rel-core h3,\n.rel-independent h3 {\n  margin: 0 0 6px;\n  font-size: 15px;\n}\n.rel-list {\n  list-style: none;\n  padding: 0;\n  margin: 0;\n  display: grid;\n  gap: 10px;\n}\n.rel-card {\n  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));\n  border-radius: 10px;\n  padding: 10px 12px;\n}\n.rel-card p {\n  margin: 6px 0;\n}\n.rel-pair {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-top: 6px;\n}\n.rel-branch {\n  color: var(--muted);\n}\n.rel-arrow {\n  color: var(--gold);\n}\n.rel-via {\n  margin: 4px 0 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: var(--muted);\n}\n.rel-independent {\n  margin-top: 14px;\n}\n.rel-independent dt {\n  font-weight: 600;\n}\n.rel-independent dd {\n  margin: 0 0 8px;\n  color: var(--muted);\n}\n\n.job-message {\n  white-space: pre-line;\n  overflow-wrap: anywhere;\n}\n\n/* v0.13.1 UI review */\n.status-jobs {\n  color: var(--muted);\n  display: inline-flex;\n  align-items: center;\n}\n.status-jobs.failed {\n  color: var(--red);\n}\n.status-jobs.busy {\n  color: var(--gold);\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.cmd-btn {\n  position: relative;\n}\n.alert-dot {\n  position: absolute;\n  top: 4px;\n  right: 4px;\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  background: var(--red);\n  box-shadow: 0 0 0 2px var(--bg);\n}\n.lock-confirm {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.lock-confirm p {\n  margin: 0 0 8px;\n  font-size: 13px;\n}\n.lock-confirm strong {\n  color: var(--amber);\n}\n.lock-confirm .row {\n  display: flex;\n  gap: 8px;\n}\n.job-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  padding-bottom: 12px;\n  margin-bottom: 8px;\n  border-bottom: 1px solid var(--line);\n}\n.job-buttons {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  justify-content: flex-end;\n}\n.job-detail summary {\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--muted);\n}\n.job-detail p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n.event-filters {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-bottom: 12px;\n}\n.event-filters select {\n  width: auto;\n  min-width: 140px;\n}\n.event-filters small {\n  margin-left: auto;\n  color: var(--muted);\n}\n.chip.active {\n  border-color: var(--gold);\n  color: var(--gold);\n  background: rgba(220, 194, 124, 0.1);\n}\n.country-row {\n  flex-wrap: wrap;\n  gap: 10px 14px;\n}\n.country-name {\n  min-width: 7em;\n}\n.switch-label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13px;\n}\n.tree-io > summary {\n  cursor: pointer;\n  color: var(--gold);\n  font-weight: 700;\n  margin-bottom: 8px;\n}\n.task-head {\n  flex-wrap: wrap;\n}\n.task-head .spacer {\n  flex: 1;\n}\n.last-run {\n  color: var(--muted);\n}\n.field .static {\n  margin: 6px 0 0;\n  font-size: 13px;\n  color: var(--muted);\n}\n.unsaved {\n  margin-right: auto;\n  color: var(--amber);\n  font-size: 13px;\n}\n.field[hidden] {\n  display: none;\n}\n.modal-jobs {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  margin: 0 12px 0 auto;\n  min-width: 0;\n  max-width: 55%;\n  font-size: 12px;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.modal-jobs[hidden] {\n  display: none;\n}\n.modal-jobs.failed {\n  color: var(--red);\n}\n.modal-jobs .spinner {\n  flex: none;\n  width: 12px;\n  height: 12px;\n}\n.modal-jobs .status-dot {\n  margin-right: 0;\n}\n.status-jobs {\n  max-width: 60vw;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;\n   the control select and 更新局勢 open from ⋯ (the top picker lists names only). */\n.nation-more-btn,\n.control-tag {\n  display: none;\n}\n@media (max-width: 760px) {\n  .nation-bar {\n    grid-template-columns: minmax(0, 1fr) auto auto;\n    padding: 6px 10px 8px;\n    gap: 6px 10px;\n  }\n  .nation-crest {\n    display: none;\n  }\n  .nation-copy h2 {\n    font-size: 16px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .control-tag {\n    display: block;\n    font-size: 11px;\n    color: var(--muted);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: auto;\n    min-width: 44px;\n  }\n  .gauge-head {\n    display: grid;\n    line-height: 1.1;\n  }\n  .gauge-head small {\n    font-size: 10px;\n  }\n  .gauge-head strong {\n    font-size: 16px;\n  }\n  .gauge-track {\n    height: 3px;\n    margin-top: 2px;\n  }\n  .nation-more-btn {\n    display: grid;\n    place-items: center;\n    width: 34px;\n    height: 34px;\n    padding: 0;\n    font-size: 18px;\n  }\n  .nation-more-btn[aria-expanded='true'] {\n    border-color: var(--gold);\n    color: var(--gold);\n  }\n  .agenda {\n    grid-column: 1/-1;\n    grid-template-columns: minmax(0, 1fr);\n    padding: 5px 10px;\n  }\n  .agenda-icon,\n  .agenda-copy small,\n  .agenda-meta > span + span {\n    display: none;\n  }\n  .agenda-copy {\n    grid-template-columns: minmax(0, auto) minmax(40px, 1fr) auto;\n    align-items: center;\n    column-gap: 8px;\n  }\n  .agenda-copy strong {\n    font-size: 14px;\n  }\n  .agenda-bar {\n    margin: 0;\n    height: 5px;\n  }\n  .empty-agenda .agenda-copy {\n    grid-template-columns: auto minmax(0, 1fr);\n  }\n  .empty-agenda .agenda-meta > span {\n    display: block;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .nation-actions {\n    display: none;\n  }\n  .nation-bar.more-open .nation-actions {\n    display: flex;\n  }\n}\n\n/* v0.13.3: settings and details additions */\n.notice {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 12px;\n  background: rgba(230, 169, 80, 0.08);\n  color: #f0c49a;\n  font-size: 13px;\n}\n.api-actions.confirm-row {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 10px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.block-note.model-hint {\n  color: #f0c49a;\n}\n.source-scope {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px 12px;\n  padding: 8px 12px;\n  margin: 4px 0 6px;\n  border: 1px solid var(--line-strong);\n  border-radius: 8px;\n  background: var(--raised);\n}\n.source-scope.custom {\n  border-color: var(--gold);\n}\n.source-scope b {\n  color: var(--gold);\n}\n.source-scope label {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\ndetails.fold > summary {\n  cursor: pointer;\n  color: var(--muted);\n  font-size: 12.5px;\n  list-style: none;\n}\ndetails.fold > summary::before {\n  content: '▸ ';\n}\ndetails.fold[open] > summary::before {\n  content: '▾ ';\n}\ndetails.detail-section.fold > summary h4 {\n  display: inline;\n  margin: 0;\n}\ndetails.detail-section.fold > summary::before {\n  color: var(--gold);\n}\n.source-modes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;\n  gap: 10px;\n  align-items: end;\n}\n@media (max-width: 760px) {\n  .source-modes {\n    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  }\n  .source-modes > button {\n    grid-column: 1/-1;\n  }\n}\n.api-actions.api-save {\n  align-items: center;\n  position: sticky;\n  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */\n  bottom: -18px;\n  margin-bottom: -18px;\n  padding-bottom: 18px !important;\n  z-index: 2;\n  padding: 10px 0;\n  background: var(--panel);\n  border-top: 1px solid var(--line);\n}\n.api-actions.api-save .api-status {\n  margin: 0;\n  flex: 1 1 200px;\n}\n@media (max-width: 760px) {\n  .api-actions.api-save {\n    bottom: -14px;\n    margin-bottom: -14px;\n    padding-bottom: 14px !important;\n  }\n}\n\n/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */\n.period-strip {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  padding: 8px 18px;\n  border-bottom: 1px solid var(--line);\n  background: var(--panel);\n  flex-shrink: 0;\n}\n.period-copy {\n  flex: 1;\n  min-width: 0;\n}\n.period-copy strong {\n  display: block;\n  color: var(--gold);\n  font-size: 13px;\n}\n.period-copy small {\n  display: block;\n  color: var(--muted);\n  font-size: 11px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.period-toggle {\n  white-space: nowrap;\n  font-size: 12px;\n}\n.period-strip button {\n  font-size: 12px;\n  white-space: nowrap;\n}\n.period-anchor-note {\n  display: flex;\n  flex-direction: column;\n  gap: 5px;\n  margin-bottom: 14px;\n  border-left: 2px solid var(--blue);\n  padding: 10px 12px;\n  background: var(--raised);\n  font-size: 12px;\n}\n.period-anchor-note strong {\n  color: var(--blue);\n}\n.period-anchor-badge {\n  position: absolute;\n  top: -18px;\n  right: 0;\n  font-size: 10px;\n  line-height: 16px;\n  padding: 0 5px;\n  color: var(--blue);\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 3px;\n}\n.period-history {\n  margin: 14px 0;\n  border-left: 2px solid var(--gold-deep);\n  padding: 4px 16px;\n}\n.period-history time {\n  color: var(--gold);\n  font-size: 12px;\n}\n.period-history p {\n  line-height: 1.95;\n}\n@media (max-width: 760px) {\n  .period-strip {\n    gap: 8px;\n    padding: 8px 12px;\n    flex-wrap: wrap;\n  }\n  .period-copy {\n    flex-basis: 100%;\n  }\n  .period-copy small {\n    white-space: normal;\n  }\n  .period-strip button {\n    margin-left: auto;\n  }\n}\n";
+  var style_default = "/* 國策檔案 v0.4 · 戰情檔案館介面\n * Tokens first; every colour below derives from them so states stay consistent. */\n:host {\n  all: initial;\n  --ink: #0d1310;\n  --bg: #131a16;\n  --panel: #19221d;\n  --raised: #212b25;\n  --raised-2: #29352e;\n  --line: rgba(217, 191, 120, 0.14);\n  --line-strong: rgba(217, 191, 120, 0.32);\n  --gold: #dcc27c;\n  --gold-deep: #a88d4c;\n  --text: #ece6d4;\n  --muted: #a8b0a1;\n  --faint: #7d867a;\n  --green: #72c492;\n  --amber: #e6a950;\n  --blue: #8fb0d6;\n  --red: #d9705f;\n  --cross: #7fa6cf;\n  --radius: 10px;\n  --drawer: 392px;\n  --serif: 'Noto Serif TC', 'Source Han Serif TC', 'PMingLiU', Georgia, serif;\n  font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;\n  color: var(--text);\n  font-size: 14px;\n  line-height: 1.6;\n  -webkit-font-smoothing: antialiased;\n}\n* {\n  box-sizing: border-box;\n}\nbutton,\ninput,\nselect,\ntextarea {\n  font: inherit;\n  color: inherit;\n}\nbutton {\n  cursor: pointer;\n  border: 1px solid var(--line-strong);\n  background: var(--raised);\n  padding: 7px 12px;\n  border-radius: 7px;\n  line-height: 1.3;\n  transition:\n    background 0.15s,\n    border-color 0.15s,\n    color 0.15s;\n}\nbutton:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: var(--raised-2);\n}\nbutton:disabled {\n  opacity: 0.4;\n  cursor: not-allowed;\n}\nbutton:focus-visible,\ninput:focus-visible,\nselect:focus-visible,\ntextarea:focus-visible,\nsummary:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: 2px;\n}\ninput,\nselect,\ntextarea {\n  color: var(--text);\n  background: var(--ink);\n  border: 1px solid rgba(217, 191, 120, 0.24);\n  border-radius: 7px;\n  padding: 8px 10px;\n  max-width: 100%;\n}\ninput::placeholder,\ntextarea::placeholder {\n  color: var(--faint);\n}\nselect option {\n  background: var(--panel);\n}\ninput[type='checkbox'] {\n  accent-color: var(--gold);\n  width: 16px;\n  height: 16px;\n}\nsvg {\n  width: 24px;\n  height: 24px;\n  flex-shrink: 0;\n}\na {\n  color: var(--gold);\n}\np {\n  margin: 0 0 12px;\n}\nh1,\nh2,\nh3,\nh4 {\n  font-family: var(--serif);\n  font-weight: 600;\n  margin: 0;\n}\nsmall {\n  color: var(--muted);\n}\ncode {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n}\n.muted {\n  color: var(--muted);\n}\n.gold {\n  color: var(--gold);\n}\n.row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n}\n.between {\n  justify-content: space-between;\n}\n.primary {\n  background: linear-gradient(180deg, #7a6a37, #5b4f28);\n  border-color: var(--gold);\n  color: #fff4d0;\n  font-weight: 600;\n}\n.primary:hover:not(:disabled) {\n  background: linear-gradient(180deg, #8d7b41, #6a5c2f);\n}\n.ghost {\n  background: transparent;\n  border-color: transparent;\n}\n.danger {\n  color: #f0a898;\n}\n.tag {\n  font-size: 11px;\n  letter-spacing: 0.18em;\n  color: var(--gold);\n}\n.pill {\n  display: inline-flex;\n  align-items: center;\n  border: 1px solid var(--line-strong);\n  padding: 2px 8px;\n  font-size: 12px;\n  border-radius: 99px;\n}\n.separator {\n  height: 1px;\n  background: var(--line);\n  margin: 16px 0;\n}\n.sr {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}\n.spinner {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border: 2px solid rgba(220, 194, 124, 0.3);\n  border-top-color: var(--gold);\n  border-radius: 50%;\n  animation: spin 0.9s linear infinite;\n  vertical-align: -2px;\n}\n@keyframes spin {\n  to {\n    transform: rotate(360deg);\n  }\n}\n\n/* ---------- Floating orb ---------- */\n.orb {\n  position: fixed;\n  right: 24px;\n  bottom: 24px;\n  width: 60px;\n  height: 60px;\n  padding: 12px;\n  border-radius: 50%;\n  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);\n  border: 2px solid var(--gold-deep);\n  box-shadow:\n    0 8px 28px rgba(0, 0, 0, 0.55),\n    inset 0 0 0 3px rgba(0, 0, 0, 0.35);\n  color: var(--gold);\n  z-index: 2147482999;\n}\n.orb:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);\n}\n.orb svg {\n  width: 100%;\n  height: 100%;\n}\n.orb .count {\n  position: absolute;\n  top: -3px;\n  right: -3px;\n  min-width: 20px;\n  height: 20px;\n  padding: 0 5px;\n  border-radius: 10px;\n  background: var(--gold);\n  color: #1a1d12;\n  font-size: 11px;\n  font-weight: 700;\n  line-height: 20px;\n}\n\n/* ---------- Shell ---------- */\n.shell {\n  position: fixed;\n  inset: 16px;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: var(--bg);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.shell[hidden],\n.modal-backdrop[hidden],\n.orb[hidden] {\n  display: none;\n}\n\n/* Command bar */\n.command {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-height: 58px;\n  padding: 8px 14px;\n  background: linear-gradient(180deg, #1c2620, #151d18);\n  border-bottom: 1px solid var(--line);\n}\n.brand-mark {\n  width: 38px;\n  height: 38px;\n  display: grid;\n  place-items: center;\n  color: var(--gold);\n  border: 1px solid var(--line-strong);\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.07);\n  flex-shrink: 0;\n}\n.brand-mark svg {\n  width: 26px;\n  height: 26px;\n}\n.brand {\n  display: grid;\n  line-height: 1.15;\n  flex-shrink: 0;\n}\n.brand h1 {\n  font-size: 17px;\n  letter-spacing: 0.12em;\n}\n.brand small {\n  font-size: 9.5px;\n  letter-spacing: 0.3em;\n  color: var(--gold-deep);\n}\n.nation-tabs {\n  display: flex;\n  gap: 6px;\n  overflow-x: auto;\n  scrollbar-width: none;\n  margin-left: 10px;\n  min-width: 0;\n}\n.nation-tabs::-webkit-scrollbar {\n  display: none;\n}\n.nation-tab {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 5px 12px 5px 6px;\n  border-radius: 9px;\n  border-color: transparent;\n  background: transparent;\n  white-space: nowrap;\n  flex-shrink: 0;\n}\n.nation-tab.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.tab-crest {\n  width: 30px;\n  height: 30px;\n  display: grid;\n  place-items: center;\n  border-radius: 7px;\n  background: rgba(255, 255, 255, 0.04);\n  color: var(--blue);\n}\n.nation-tab.player .tab-crest {\n  color: var(--gold);\n}\n.tab-crest svg {\n  width: 20px;\n  height: 20px;\n}\n.tab-copy {\n  display: grid;\n  text-align: left;\n  line-height: 1.2;\n}\n.tab-copy strong {\n  font-size: 13.5px;\n  font-weight: 600;\n}\n.tab-copy small {\n  font-size: 11px;\n}\n.nation-tab.add {\n  width: 38px;\n  justify-content: center;\n  padding: 6px;\n  border: 1px dashed var(--line-strong);\n  color: var(--gold);\n}\n.nation-picker {\n  display: none;\n  min-width: 0;\n  flex: 1;\n}\n.nation-picker select {\n  width: 100%;\n}\n.command-spacer {\n  flex: 1;\n}\n.test-label {\n  font-size: 11px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  padding: 3px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n}\n.date-chip {\n  display: grid;\n  line-height: 1.15;\n  text-align: right;\n  padding: 0 6px;\n}\n.date-chip small {\n  font-size: 10.5px;\n}\n.date-chip strong {\n  font-family: var(--serif);\n  font-size: 17px;\n  color: var(--gold);\n}\n.cmd-btn {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  height: 38px;\n  flex-shrink: 0;\n  white-space: nowrap;\n}\n.date-chip,\n.test-label,\n.nation-tab.add {\n  flex-shrink: 0;\n}\n.cmd-btn.busy {\n  border-color: var(--gold);\n}\n.cmd-btn.close {\n  width: 38px;\n  justify-content: center;\n  font-size: 20px;\n  padding: 0;\n}\n.error-banner {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  justify-content: space-between;\n  padding: 9px 16px;\n  background: rgba(217, 112, 95, 0.14);\n  border-bottom: 1px solid rgba(217, 112, 95, 0.4);\n  color: #f6c6ba;\n  font-size: 13px;\n}\n\n/* Nation bar */\n.nation-bar {\n  display: grid;\n  grid-template-columns: minmax(200px, 1.1fr) auto minmax(260px, 1.25fr) auto;\n  align-items: center;\n  gap: 20px;\n  padding: 12px 18px;\n  background: var(--panel);\n  border-bottom: 1px solid var(--line);\n}\n.nation-id {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-width: 0;\n}\n.nation-crest {\n  width: 48px;\n  height: 48px;\n  display: grid;\n  place-items: center;\n  border-radius: 12px;\n  border: 1px solid var(--line-strong);\n  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));\n  color: var(--gold);\n  flex-shrink: 0;\n}\n.nation-crest svg {\n  width: 32px;\n  height: 32px;\n}\n.nation-copy {\n  min-width: 0;\n}\n.nation-copy h2 {\n  font-size: 22px;\n  line-height: 1.25;\n  letter-spacing: 0.04em;\n}\n.nation-copy p {\n  margin: 2px 0 0;\n  color: var(--muted);\n  font-size: 12.5px;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.gauges {\n  display: flex;\n  gap: 16px;\n}\n.gauge {\n  width: 132px;\n}\n.gauge-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n}\n.gauge-head small {\n  font-size: 12px;\n}\n.gauge-head strong {\n  font-family: var(--serif);\n  font-size: 22px;\n  line-height: 1.1;\n}\n.gauge-track {\n  height: 6px;\n  border-radius: 3px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n  margin-top: 4px;\n}\n.gauge-track i {\n  display: block;\n  height: 100%;\n  border-radius: 3px;\n}\n.gauge.stability .gauge-track i {\n  background: linear-gradient(90deg, #5f9e75, var(--green));\n}\n.gauge.war .gauge-track i {\n  background: linear-gradient(90deg, #b75a49, var(--amber));\n}\n.agenda {\n  display: grid;\n  grid-template-columns: 46px 1fr;\n  gap: 12px;\n  align-items: center;\n  text-align: left;\n  padding: 9px 14px 9px 10px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line-strong);\n  min-width: 0;\n}\n.agenda.active {\n  border-color: rgba(114, 196, 146, 0.6);\n}\n.agenda.waiting {\n  border-color: rgba(230, 169, 80, 0.6);\n}\n.agenda.paused {\n  border-color: rgba(143, 176, 214, 0.6);\n}\n.agenda-icon {\n  width: 46px;\n  height: 46px;\n  display: grid;\n  place-items: center;\n  border-radius: 10px;\n  background: rgba(220, 194, 124, 0.1);\n  color: var(--gold);\n}\n.agenda.active .agenda-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n}\n.agenda.waiting .agenda-icon {\n  color: var(--amber);\n  background: rgba(230, 169, 80, 0.12);\n}\n.agenda-icon svg {\n  width: 28px;\n  height: 28px;\n}\n.agenda-copy {\n  display: grid;\n  gap: 2px;\n  min-width: 0;\n}\n.agenda-copy small {\n  font-size: 11.5px;\n  letter-spacing: 0.08em;\n}\n.agenda-copy strong {\n  font-family: var(--serif);\n  font-size: 16px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.agenda-bar {\n  height: 7px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n  margin-top: 3px;\n}\n.agenda-bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n  border-radius: 4px;\n}\n.agenda.waiting .agenda-bar i {\n  background: linear-gradient(90deg, #b67c2f, var(--amber));\n}\n.agenda.paused .agenda-bar i {\n  background: linear-gradient(90deg, #5c7ca3, var(--blue));\n}\n.agenda-meta {\n  display: flex;\n  justify-content: space-between;\n  gap: 10px;\n  font-size: 12px;\n  color: var(--muted);\n}\n.empty-agenda {\n  border-style: dashed;\n}\n.nation-actions {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.control-select select {\n  height: 36px;\n  padding: 0 8px;\n}\n.toggle {\n  height: 36px;\n  white-space: nowrap;\n}\n.toggle.on {\n  color: var(--gold);\n  border-color: var(--gold-deep);\n  background: rgba(220, 194, 124, 0.1);\n}\n.nation-actions .primary {\n  height: 36px;\n  white-space: nowrap;\n}\n\n/* ---------- Stage ---------- */\n.stage {\n  position: relative;\n  flex: 1;\n  min-height: 0;\n  overflow: hidden;\n  background:\n    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),\n    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    var(--ink);\n}\n.canvas {\n  position: absolute;\n  inset: 0;\n  overflow: hidden;\n  cursor: grab;\n  touch-action: none;\n  user-select: none;\n}\n.canvas:active {\n  cursor: grabbing;\n}\n.canvas:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: -4px;\n}\n.tree {\n  position: absolute;\n  left: 0;\n  top: 0;\n  transform-origin: 0 0;\n}\n.connectors {\n  position: absolute;\n  inset: 0;\n  width: auto;\n  height: auto;\n  overflow: visible;\n  pointer-events: none;\n}\n.connector {\n  fill: none;\n  stroke: rgba(220, 194, 124, 0.3);\n  stroke-width: 2.4;\n}\n.connector.done {\n  stroke: var(--gold);\n  stroke-width: 3;\n}\n.connector.alternative {\n  stroke-dasharray: 8 6;\n}\n.connector.cross-branch {\n  stroke: rgba(127, 166, 207, 0.55);\n}\n.connector.cross-branch.done {\n  stroke: var(--cross);\n}\n.connector.mutex {\n  stroke: var(--red);\n  stroke-width: 2;\n  stroke-dasharray: 2 6;\n  stroke-linecap: round;\n}\n.branch-banner {\n  position: absolute;\n  top: 16px;\n  height: 34px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  border-bottom: 1px solid var(--line-strong);\n  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));\n  pointer-events: none;\n}\n.branch-banner span {\n  font-family: var(--serif);\n  font-size: 15px;\n  letter-spacing: 0.3em;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  padding: 0 8px;\n}\n.branch-banner.active {\n  border-bottom-color: var(--gold);\n}\n.branch-summary {\n  position: absolute;\n  height: 66px;\n  display: grid;\n  align-content: center;\n  text-align: left;\n  border: 1px dashed var(--gold-deep);\n  background: rgba(220, 194, 124, 0.06);\n  border-radius: var(--radius);\n  padding: 8px 14px;\n}\n.branch-summary strong {\n  font-family: var(--serif);\n  color: var(--gold);\n}\n.branch-summary span {\n  font-size: 12px;\n  color: var(--muted);\n}\n\n/* Nodes */\n.node {\n  position: absolute;\n  display: grid;\n  grid-template-columns: 44px 1fr;\n  gap: 10px;\n  align-items: center;\n  padding: 8px 12px 8px 10px;\n  text-align: left;\n  border-radius: var(--radius);\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: linear-gradient(180deg, #25302a, #1b231f);\n  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);\n  transition:\n    transform 0.12s,\n    box-shadow 0.12s,\n    border-color 0.12s,\n    opacity 0.15s;\n}\n.node:hover:not(:disabled) {\n  transform: translateY(-2px);\n  border-color: var(--gold);\n  background: linear-gradient(180deg, #2c3830, #1e2722);\n}\n.node-icon {\n  width: 44px;\n  height: 44px;\n  display: grid;\n  place-items: center;\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid rgba(220, 194, 124, 0.2);\n  color: var(--gold);\n}\n.node-icon svg {\n  width: 26px;\n  height: 26px;\n}\n.node-text {\n  display: grid;\n  gap: 1px;\n  min-width: 0;\n}\n.node-name {\n  font-size: 14px;\n  font-weight: 600;\n  line-height: 1.3;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.node-meta {\n  font-size: 11.5px;\n  color: var(--muted);\n  white-space: nowrap;\n}\n.node-flag {\n  position: absolute;\n  top: 4px;\n  right: 7px;\n  font-size: 12px;\n  color: var(--red);\n}\n.node-progress {\n  position: absolute;\n  left: 10px;\n  right: 10px;\n  bottom: 5px;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.node-progress i {\n  display: block;\n  height: 100%;\n  background: var(--green);\n}\n.node.available .node-name {\n  color: #fffaf0;\n}\n.node.locked {\n  opacity: 0.58;\n  border-style: dashed;\n  border-color: rgba(236, 230, 212, 0.26);\n  box-shadow: none;\n}\n.node.locked .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.node.completed .node-icon {\n  background: rgba(255, 240, 200, 0.18);\n  border-color: rgba(255, 240, 200, 0.35);\n  color: #fff3c9;\n}\n.node.completed .node-name {\n  color: #fff7dc;\n}\n.node.completed .node-meta {\n  color: #f1dfa6;\n}\n.node.active {\n  border: 1.5px solid var(--green);\n  box-shadow:\n    0 0 0 3px rgba(114, 196, 146, 0.16),\n    0 0 26px rgba(114, 196, 146, 0.24);\n}\n.node.active .node-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n  border-color: rgba(114, 196, 146, 0.35);\n}\n.node.active .node-meta {\n  color: #a7e3bd;\n}\n.node.waiting {\n  border: 1.5px solid var(--amber);\n  box-shadow:\n    0 0 0 3px rgba(230, 169, 80, 0.14),\n    0 0 22px rgba(230, 169, 80, 0.2);\n}\n.node.waiting .node-icon,\n.node.waiting .node-meta {\n  color: var(--amber);\n}\n.node.waiting .node-progress i {\n  background: var(--amber);\n}\n.node.paused {\n  border: 1.5px solid var(--blue);\n}\n.node.paused .node-icon,\n.node.paused .node-meta {\n  color: var(--blue);\n}\n.node.paused .node-progress i {\n  background: var(--blue);\n}\n.node.sealed,\n.node.terminated {\n  opacity: 0.7;\n  border-color: rgba(217, 112, 95, 0.6);\n  background:\n    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.1) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #2a2522, #1f1c1a);\n}\n.node.sealed .node-icon,\n.node.terminated .node-icon {\n  color: var(--red);\n  background: rgba(217, 112, 95, 0.08);\n  border-color: rgba(217, 112, 95, 0.25);\n}\n.node.sealed .node-meta,\n.node.terminated .node-meta {\n  color: #f0a898;\n}\n.node.unknown {\n  border-color: rgba(236, 230, 212, 0.18);\n  background:\n    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #202824, #181f1b);\n}\n.node.unknown .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.current {\n  animation: current-pulse 2.6s ease-in-out infinite;\n}\n@keyframes current-pulse {\n  50% {\n    box-shadow:\n      0 0 0 6px rgba(114, 196, 146, 0.1),\n      0 0 34px rgba(114, 196, 146, 0.32);\n  }\n}\n.node.selected {\n  outline: 2px solid var(--gold);\n  outline-offset: 4px;\n}\n.node.dim {\n  opacity: 0.16;\n}\n\n/* Overlays on the stage */\n.routes {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  bottom: 12px;\n  width: 268px;\n  display: none;\n  flex-direction: column;\n  background: rgba(19, 26, 22, 0.94);\n  backdrop-filter: blur(8px);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);\n  z-index: 3;\n  max-height: calc(100% - 24px);\n}\n.routes.open {\n  display: flex;\n}\n.routes-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 8px 6px 14px;\n}\n.routes-head strong {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n}\n.routes-head small {\n  flex: 1;\n  font-size: 12px;\n}\n.routes-head button {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  font-size: 18px;\n}\n.search-row {\n  display: flex;\n  gap: 6px;\n  padding: 4px 10px 8px;\n}\n.search-row label {\n  flex: 1;\n  min-width: 0;\n}\n.search-row input {\n  width: 100%;\n  height: 34px;\n}\n.search-row button {\n  height: 34px;\n  white-space: nowrap;\n  font-size: 12.5px;\n}\n.route-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 6px;\n  overflow: auto;\n  flex: 1;\n  border-top: 1px solid var(--line);\n  border-bottom: 1px solid var(--line);\n}\n.route-list li {\n  display: flex;\n  align-items: stretch;\n  gap: 4px;\n  margin: 2px 0;\n}\n.route-jump {\n  flex: 1;\n  display: grid;\n  grid-template-columns: 1fr auto;\n  gap: 2px 8px;\n  text-align: left;\n  padding: 7px 10px;\n  border-color: transparent;\n  background: transparent;\n  min-width: 0;\n}\n.route-list li.active .route-jump {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n}\n.route-list li.folded .route-name {\n  color: var(--faint);\n}\n.route-name {\n  font-size: 13.5px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\n.route-live {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  box-shadow: 0 0 8px var(--green);\n  flex-shrink: 0;\n}\n.route-count {\n  font-size: 12px;\n  color: var(--muted);\n  font-variant-numeric: tabular-nums;\n}\n.route-bar {\n  grid-column: 1/-1;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n}\n.route-bar i {\n  display: block;\n  height: 100%;\n  background: var(--gold);\n}\n.route-fold {\n  width: 30px;\n  padding: 0;\n  border-color: transparent;\n  background: transparent;\n  color: var(--muted);\n}\n.route-actions {\n  display: flex;\n  gap: 6px;\n  padding: 8px 10px 10px;\n}\n.route-actions button {\n  flex: 1;\n  font-size: 12.5px;\n}\n.routes-tab {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  z-index: 3;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);\n}\n.routes-tab small {\n  color: var(--gold);\n}\n.stage-hint {\n  position: absolute;\n  left: 50%;\n  bottom: 12px;\n  transform: translateX(-50%);\n  font-size: 12px;\n  color: var(--faint);\n  pointer-events: none;\n  white-space: nowrap;\n}\n.stage-tools {\n  position: absolute;\n  right: 12px;\n  bottom: 12px;\n  display: flex;\n  align-items: flex-end;\n  gap: 8px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage-tools > button,\n.zoom-controls,\n.legend-pop > summary {\n  height: 36px;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);\n}\n.zoom-controls {\n  display: flex;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n  overflow: hidden;\n}\n.zoom-controls button {\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  min-width: 36px;\n}\n.zoom-controls button + button {\n  border-left: 1px solid var(--line);\n}\n.zoom-value {\n  font-variant-numeric: tabular-nums;\n  font-size: 12.5px;\n}\n.legend-pop {\n  position: relative;\n}\n.legend-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  padding: 0 12px;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n}\n.legend-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.legend-list {\n  position: absolute;\n  right: 0;\n  bottom: 44px;\n  width: 210px;\n  margin: 0;\n  padding: 10px 14px;\n  list-style: none;\n  display: grid;\n  gap: 6px;\n  font-size: 12.5px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);\n}\n.legend-list li {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n}\n.sw {\n  width: 22px;\n  height: 14px;\n  border-radius: 4px;\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: #232d27;\n  flex-shrink: 0;\n}\n.sw.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.sw.active {\n  border: 2px solid var(--green);\n}\n.sw.waiting {\n  border: 2px solid var(--amber);\n}\n.sw.paused {\n  border: 2px solid var(--blue);\n}\n.sw.locked {\n  border-style: dashed;\n  opacity: 0.6;\n}\n.sw.terminated {\n  border-color: var(--red);\n  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);\n}\n.sw.unknown {\n  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);\n}\n.ln {\n  width: 22px;\n  height: 0;\n  border-top: 2.5px solid rgba(220, 194, 124, 0.6);\n  flex-shrink: 0;\n}\n.ln.dashed {\n  border-top-style: dashed;\n}\n.ln.cross {\n  border-top-color: var(--cross);\n}\n.ln.mutex {\n  border-top: 2.5px dotted var(--red);\n}\n.minimap {\n  position: absolute;\n  right: 12px;\n  bottom: 58px;\n  width: 190px;\n  height: 120px;\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  background: rgba(13, 19, 16, 0.92);\n  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\n  z-index: 2;\n  padding: 6px;\n  cursor: crosshair;\n  touch-action: none;\n  transition: right 0.22s ease;\n}\n.minimap-svg {\n  width: 100%;\n  height: 100%;\n}\n.mm {\n  fill: rgba(236, 230, 212, 0.28);\n}\n.mm.completed {\n  fill: var(--gold);\n}\n.mm.active,\n.mm.current {\n  fill: var(--green);\n}\n.mm.waiting {\n  fill: var(--amber);\n}\n.mm.paused {\n  fill: var(--blue);\n}\n.mm.locked,\n.mm.unknown {\n  fill: rgba(236, 230, 212, 0.12);\n}\n.mm.sealed,\n.mm.terminated {\n  fill: rgba(217, 112, 95, 0.55);\n}\n.mm.folded {\n  fill: rgba(220, 194, 124, 0.25);\n}\n.mm-view {\n  fill: rgba(220, 194, 124, 0.08);\n  stroke: var(--gold);\n  stroke-width: 1.5;\n  vector-effect: non-scaling-stroke;\n}\n.stage.with-drawer .stage-tools {\n  right: calc(var(--drawer) + 12px);\n}\n/* The drawer already covers part of the tree; the minimap would cover more. */\n.stage.with-drawer .minimap {\n  display: none;\n}\n.demo-pop {\n  position: absolute;\n  top: 12px;\n  right: 12px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage.with-drawer .demo-pop {\n  right: calc(var(--drawer) + 12px);\n}\n.demo-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  background: rgba(19, 26, 22, 0.94);\n  padding: 6px 10px;\n  border-radius: 7px;\n}\n.demo-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.demo-pop[open] {\n  display: grid;\n  gap: 6px;\n  width: 200px;\n  padding: 10px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n}\n.demo-pop[open] > summary {\n  border: 0;\n  padding: 0;\n  background: none;\n}\n\n/* Drawer */\n.drawer {\n  position: absolute;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  width: var(--drawer);\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border-left: 1px solid var(--line-strong);\n  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);\n  transform: translateX(100%);\n  transition: transform 0.22s ease;\n  z-index: 4;\n}\n.drawer.open {\n  transform: none;\n}\n.drawer-head {\n  position: relative;\n  display: grid;\n  grid-template-columns: 58px 1fr;\n  gap: 14px;\n  align-items: center;\n  padding: 18px 44px 16px 18px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n  box-shadow: inset 4px 0 0 var(--line-strong);\n}\n.drawer-head.completed {\n  box-shadow: inset 4px 0 0 var(--gold);\n}\n.drawer-head.active {\n  box-shadow: inset 4px 0 0 var(--green);\n}\n.drawer-head.waiting {\n  box-shadow: inset 4px 0 0 var(--amber);\n}\n.drawer-head.paused {\n  box-shadow: inset 4px 0 0 var(--blue);\n}\n.drawer-head.sealed,\n.drawer-head.terminated {\n  box-shadow: inset 4px 0 0 var(--red);\n}\n.drawer-close {\n  position: absolute;\n  top: 10px;\n  right: 10px;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n  font-size: 20px;\n}\n.drawer-emblem {\n  width: 58px;\n  height: 58px;\n  display: grid;\n  place-items: center;\n  border-radius: 13px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid var(--line-strong);\n  color: var(--gold);\n}\n.drawer-emblem svg {\n  width: 34px;\n  height: 34px;\n}\n.drawer-branch {\n  display: block;\n  font-size: 11.5px;\n  letter-spacing: 0.2em;\n  color: var(--gold);\n}\n.drawer-head h3 {\n  font-size: 20px;\n  line-height: 1.3;\n  margin: 2px 0 6px;\n}\n.state-pill,\n.days-pill {\n  display: inline-block;\n  font-size: 12px;\n  padding: 1px 9px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  margin-right: 6px;\n}\n.state-pill.completed {\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.22);\n  border-color: var(--gold);\n}\n.state-pill.active {\n  color: #a7e3bd;\n  border-color: var(--green);\n}\n.state-pill.waiting {\n  color: var(--amber);\n  border-color: var(--amber);\n}\n.state-pill.paused {\n  color: var(--blue);\n  border-color: var(--blue);\n}\n.state-pill.available {\n  color: #fffaf0;\n  border-color: rgba(236, 230, 212, 0.6);\n}\n.state-pill.locked,\n.state-pill.unknown {\n  color: var(--muted);\n}\n.state-pill.sealed,\n.state-pill.terminated {\n  color: #f0a898;\n  border-color: var(--red);\n}\n.days-pill {\n  color: var(--muted);\n}\n.drawer-body {\n  flex: 1;\n  overflow: auto;\n  padding: 16px 18px 24px;\n}\n.drawer-progress {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 14px;\n}\n.drawer-progress strong {\n  font-variant-numeric: tabular-nums;\n  color: var(--gold);\n}\n.bar {\n  height: 8px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n}\n.drawer-action {\n  display: grid;\n  gap: 8px;\n  padding: 12px;\n  margin-bottom: 16px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line);\n}\n.drawer-action .primary {\n  height: 40px;\n  font-size: 14.5px;\n}\n.blockers {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: #f0c49a;\n}\n.description {\n  font-size: 14px;\n  line-height: 1.8;\n}\n.detail-section {\n  padding: 14px 0;\n  border-top: 1px solid var(--line);\n}\n.detail-section h4 {\n  font-size: 13px;\n  letter-spacing: 0.12em;\n  color: var(--gold);\n  margin-bottom: 8px;\n}\n.detail-section ul {\n  margin: 0;\n  padding-left: 18px;\n  display: grid;\n  gap: 4px;\n  font-size: 13.5px;\n}\n.detail-section p {\n  font-size: 13.5px;\n}\n.reason {\n  color: var(--muted);\n  font-size: 13px;\n  margin: 8px 0 0;\n}\n.prereqs {\n  display: grid;\n  gap: 6px;\n}\n.prereq-group {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n}\n.chip {\n  font-size: 12.5px;\n  padding: 3px 10px;\n  border-radius: 99px;\n}\n.chip.done {\n  border-color: var(--gold);\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.15);\n}\n.or,\n.and {\n  font-size: 11.5px;\n  color: var(--faint);\n}\n.and {\n  display: block;\n  padding-left: 4px;\n}\n.conditions {\n  list-style: none;\n  padding: 0 !important;\n}\n.conditions li {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n}\n.cond-kind {\n  flex-shrink: 0;\n  font-size: 11px;\n  padding: 0 7px;\n  border-radius: 4px;\n  background: rgba(220, 194, 124, 0.12);\n  color: var(--gold);\n}\n.mutex-note {\n  border-left: 3px solid var(--red);\n  padding-left: 12px;\n}\n.route-facts {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  gap: 6px 12px;\n  margin: 8px 0 0;\n  font-size: 13px;\n}\n.route-facts dt {\n  color: var(--muted);\n}\n.route-facts dd {\n  margin: 0;\n}\n\n/* Status line and empty state */\n.statusline {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  min-height: 32px;\n  padding: 4px 16px;\n  border-top: 1px solid var(--line);\n  background: #111814;\n  font-size: 12px;\n  color: var(--muted);\n}\n.status-dot {\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  margin-right: 8px;\n  vertical-align: 1px;\n}\n.status-dot.busy {\n  background: var(--gold);\n  box-shadow: 0 0 8px var(--gold);\n}\n.linkish {\n  border: 0;\n  background: none;\n  padding: 2px 4px;\n  color: var(--gold);\n  font-size: 12px;\n}\n.empty {\n  flex: 1;\n  display: grid;\n  place-items: center;\n  padding: 24px;\n  background: var(--ink);\n}\n.empty-card {\n  max-width: 440px;\n  text-align: center;\n  display: grid;\n  justify-items: center;\n  gap: 12px;\n}\n.empty-card svg {\n  width: 72px;\n  height: 72px;\n  color: var(--gold);\n}\n.empty-card p {\n  color: var(--muted);\n}\n\n/* ---------- Modals and settings ---------- */\n.modal-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 2147483001;\n  background: rgba(5, 9, 7, 0.78);\n  backdrop-filter: blur(3px);\n  display: grid;\n  place-items: center;\n  padding: 24px;\n}\n.modal {\n  width: min(880px, 100%);\n  max-height: 90vh;\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.modal-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 16px 20px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);\n}\n.modal-header h2 {\n  font-size: 20px;\n  letter-spacing: 0.06em;\n}\n.modal-header button {\n  width: 34px;\n  height: 34px;\n  padding: 0;\n  font-size: 19px;\n}\n.modal-body {\n  padding: 18px 22px;\n  overflow: auto;\n}\n.modal-footer {\n  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n  padding: 12px 20px;\n  border-top: 1px solid var(--line);\n  background: #161e1a;\n}\n.modal-error {\n  color: #f6b3a4;\n  font-size: 13px;\n  white-space: pre-wrap;\n}\n.modal-body h3 {\n  font-size: 17px;\n  color: var(--gold);\n  margin-bottom: 6px;\n}\n.modal-body h4 {\n  font-size: 14px;\n  margin: 14px 0 6px;\n}\n.tabs {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-bottom: 18px;\n  padding-bottom: 10px;\n  border-bottom: 1px solid var(--line);\n}\n.tabs button {\n  border-color: transparent;\n  background: transparent;\n}\n.tabs button.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  color: var(--gold);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.settings-section[hidden] {\n  display: none;\n}\n.form-grid {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 14px 18px;\n}\n.form-grid > .wide {\n  grid-column: 1/-1;\n  min-width: 0;\n}\n.field {\n  display: grid;\n  gap: 6px;\n  font-size: 13px;\n  color: #d5d0bf;\n  min-width: 0;\n}\n.field.wide {\n  grid-column: 1/-1;\n}\n.field small {\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.field textarea {\n  min-height: 80px;\n  resize: vertical;\n}\n.check {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  color: #d5d0bf;\n}\n.check.wide,\n.check:has(> small) {\n  flex-wrap: wrap;\n}\n.check small {\n  flex-basis: 100%;\n  font-size: 11.5px;\n  line-height: 1.7;\n  padding-left: 24px;\n}\n.api-row,\n.job-card,\n.candidate,\n.event-card {\n  padding: 14px 16px;\n  border: 1px solid var(--line);\n  background: var(--raised);\n  border-radius: var(--radius);\n  margin-bottom: 12px;\n}\n.job-card .job-title {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n  margin-bottom: 12px;\n}\n.candidate {\n  display: flex;\n  gap: 12px;\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n.candidate strong {\n  display: block;\n  margin-bottom: 2px;\n}\n.candidate p {\n  font-size: 13px;\n  color: var(--muted);\n  margin: 0;\n}\n.event-card h3 {\n  margin: 6px 0;\n}\n.event-card p {\n  font-size: 13.5px;\n}\n.job-log {\n  display: grid;\n  grid-template-columns: 110px 1fr auto;\n  gap: 12px;\n  align-items: start;\n  border-bottom: 1px solid var(--line);\n  padding: 12px 0;\n  font-size: 13px;\n}\n.job-log > div:last-child {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n}\n.job-log .success {\n  color: var(--green);\n}\n.job-log .failed {\n  color: var(--red);\n}\n.job-log .running,\n.job-log .queued {\n  color: var(--gold);\n}\n.job-log .cancelled {\n  color: var(--muted);\n}\n.api-actions {\n  display: flex;\n  align-items: end;\n  flex-wrap: wrap;\n  gap: 10px;\n  margin: 12px 0;\n}\n.segment-max {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: end;\n  gap: 8px 12px;\n}\n.segment-max .field {\n  flex: 0 1 220px;\n}\n.segment-max-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  padding-bottom: 4px;\n}\n.segment-max small {\n  flex-basis: 100%;\n}\n.api-picker {\n  flex: 1;\n  min-width: 180px;\n}\n.api-editor {\n  margin-top: 16px;\n}\n.api-status {\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--gold);\n  font-size: 13px;\n}\n#source-panel fieldset {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  margin: 16px 0;\n  padding: 14px;\n  min-width: 0;\n}\n#source-panel legend {\n  color: var(--gold);\n  padding: 0 6px;\n  font-size: 13.5px;\n}\n#source-panel fieldset:disabled {\n  opacity: 0.55;\n}\n.source-list {\n  max-height: 300px;\n  overflow: auto;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 6px 12px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.source-group {\n  position: sticky;\n  top: -6px;\n  margin: 8px -12px 4px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--gold);\n  background: var(--ink);\n  border-bottom: 1px solid var(--line);\n}\n.source-entry {\n  display: flex;\n  align-items: start;\n  gap: 10px;\n  padding: 6px 0;\n  font-size: 13px;\n}\n.source-entry small {\n  display: block;\n  font-size: 11.5px;\n}\n.source-disabled span {\n  opacity: 0.65;\n}\n.source-book[hidden],\n.source-entry[hidden] {\n  display: none;\n}\n.source-rule {\n  display: grid;\n  grid-template-columns: 1fr 1fr auto;\n  gap: 8px;\n  margin: 8px 0;\n}\n.source-rule input {\n  min-width: 0;\n}\n.source-toggles {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px 18px;\n}\n.segment {\n  display: grid;\n  gap: 8px;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 10px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.segment-head {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.segment-head input[data-seg='name'] {\n  flex: 1;\n  min-width: 120px;\n}\n.segment textarea {\n  min-height: 70px;\n  resize: vertical;\n  width: 100%;\n}\n.legend {\n  margin-bottom: 14px;\n  font-size: 13px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend code {\n  color: var(--gold);\n}\n\n/* ---------- Responsive ---------- */\n@media (max-width: 1280px) {\n  .nation-bar {\n    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1.2fr);\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: flex-end;\n    margin-top: -4px;\n  }\n  .nation-copy p {\n    -webkit-line-clamp: 1;\n  }\n}\n@media (max-width: 1100px) {\n  .brand,\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n}\n@media (max-width: 1000px) {\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    gap: 12px 16px;\n  }\n  .agenda {\n    grid-column: 1/-1;\n    order: 3;\n  }\n  .nation-actions {\n    order: 4;\n  }\n  :host {\n    --drawer: 340px;\n  }\n}\n@media (max-width: 760px) {\n  .shell {\n    inset: 0;\n    border-radius: 0;\n    border: 0;\n  }\n  .command {\n    gap: 8px;\n    padding: 6px 8px;\n    min-height: 52px;\n  }\n  .brand-mark {\n    width: 34px;\n    height: 34px;\n  }\n  .nation-tabs,\n  .date-chip,\n  .test-label {\n    display: none;\n  }\n  .nation-picker {\n    display: block;\n  }\n  .command-spacer {\n    display: none;\n  }\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n  .cmd-btn.busy {\n    width: auto;\n    padding: 0 8px;\n  }\n  .cmd-btn.busy .cmd-text {\n    display: inline;\n  }\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    padding: 10px 12px;\n    gap: 10px;\n  }\n  .nation-crest {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-copy h2 {\n    font-size: 18px;\n  }\n  .nation-copy p {\n    display: none;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: 72px;\n  }\n  .gauge-head {\n    display: grid;\n  }\n  .gauge-head small {\n    font-size: 10.5px;\n    white-space: nowrap;\n  }\n  .gauge-head strong {\n    font-size: 18px;\n  }\n  .agenda {\n    padding: 7px 10px 7px 8px;\n    grid-template-columns: 38px 1fr;\n  }\n  .agenda-icon {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: stretch;\n    margin: 0;\n  }\n  .nation-actions > * {\n    flex: 1;\n  }\n  .control-select select {\n    width: 100%;\n  }\n  .routes {\n    top: 0;\n    left: 0;\n    bottom: 0;\n    width: min(320px, 86%);\n    max-height: none;\n    border-radius: 0 12px 12px 0;\n  }\n  .minimap,\n  .stage-hint {\n    display: none;\n  }\n  .stage.with-drawer .demo-pop {\n    right: 12px;\n  }\n  .drawer {\n    top: auto;\n    left: 0;\n    width: auto;\n    height: 72%;\n    border-left: 0;\n    border-top: 1px solid var(--line-strong);\n    border-radius: 16px 16px 0 0;\n    transform: translateY(100%);\n    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);\n  }\n  .drawer::before {\n    content: '';\n    display: block;\n    width: 44px;\n    height: 4px;\n    border-radius: 2px;\n    background: var(--line-strong);\n    margin: 8px auto 0;\n  }\n  .drawer.open {\n    transform: none;\n  }\n  .stage.with-drawer .stage-tools {\n    right: 12px;\n  }\n  .statusline .status-mid {\n    display: none;\n  }\n  .modal-backdrop {\n    padding: 0;\n    place-items: end stretch;\n  }\n  .modal {\n    max-height: 94dvh;\n    border-radius: 16px 16px 0 0;\n  }\n  .modal-body {\n    padding: 14px;\n  }\n  .form-grid,\n  .source-toggles {\n    grid-template-columns: 1fr;\n  }\n  .job-log {\n    grid-template-columns: 80px 1fr;\n  }\n  .job-log > div:last-child {\n    grid-column: 1/-1;\n    justify-content: flex-start;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  *,\n  *::before {\n    animation: none !important;\n    transition: none !important;\n  }\n}\n@media (max-width: 1200px) {\n  .stage.with-drawer .minimap {\n    display: none;\n  }\n}\n.demo-pop[open] button {\n  width: 100%;\n  text-align: left;\n}\n\n/* ---------- Tasks tab (任務) ---------- */\n.preset-bar {\n  padding: 14px 16px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));\n  margin-bottom: 14px;\n}\n.preset-title {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.preset-title h3 {\n  margin: 0;\n}\n.preset-title small {\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n}\n.preset-row {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.preset-row select {\n  flex: 1 1 200px;\n  min-width: 0;\n}\n.preset-row input[data-preset-name] {\n  flex: 1 1 160px;\n  min-width: 0;\n}\n.preset-bar .api-status:empty {\n  display: none;\n}\n.preset-bar .api-status {\n  margin: 8px 0 0;\n}\n.task-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 8px;\n  margin-bottom: 14px;\n}\n.task-tab {\n  display: grid;\n  gap: 3px;\n  text-align: left;\n  padding: 10px 12px;\n  background: var(--raised);\n  border-color: var(--line);\n  min-width: 0;\n}\n.task-tab strong {\n  font-family: var(--serif);\n  font-size: 14.5px;\n  font-weight: 600;\n}\n.task-tab small {\n  color: var(--faint);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.task-tab.active {\n  border-color: var(--gold);\n  background: var(--raised-2);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.task-tab.active strong {\n  color: var(--gold);\n}\n.task-editor[hidden] {\n  display: none;\n}\n.task-head {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.task-head h3 {\n  margin: 0;\n}\n.task-head small {\n  color: var(--muted);\n  font-size: 12.5px;\n}\n.task-block {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  background: var(--raised);\n  padding: 0 14px;\n  margin-bottom: 12px;\n}\n.task-block > summary {\n  cursor: pointer;\n  padding: 11px 0;\n  font-weight: 600;\n  color: var(--gold);\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.task-block > summary::-webkit-details-marker {\n  display: none;\n}\n.task-block > summary::before {\n  content: '▸';\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.task-block[open] > summary::before {\n  transform: rotate(90deg);\n}\n.task-block[open] {\n  padding-bottom: 14px;\n}\n.task-block .summary-note {\n  margin-left: auto;\n  font-weight: 400;\n  font-size: 12px;\n  color: var(--muted);\n}\n.block-note {\n  display: block;\n  margin-top: 8px;\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.route-row {\n  display: grid;\n  grid-template-columns: 1fr 120px auto;\n  gap: 10px;\n  align-items: end;\n  margin-bottom: 10px;\n}\n.route-row > .field:first-child:last-of-type {\n  grid-column: 1/3;\n}\n.route-row button {\n  height: 36px;\n}\n.prompt-toolbar {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n  margin-bottom: 10px;\n}\n.prompt-toolbar .spacer {\n  flex: 1;\n}\n.prompt-toolbar small {\n  color: var(--muted);\n  font-size: 12px;\n}\n.prompt-list {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 10px;\n}\n.prompt-card {\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  background: #1b2420;\n  transition:\n    border-color 0.15s,\n    opacity 0.15s;\n}\n.prompt-card.open {\n  border-color: var(--line-strong);\n}\n.prompt-card[data-kind='data'] {\n  border-left: 3px solid var(--blue);\n}\n.prompt-card[data-kind='guide'],\n.prompt-card[data-kind='task'] {\n  border-left: 3px solid var(--gold-deep);\n}\n.prompt-card[data-kind='custom'] {\n  border-left: 3px solid var(--green);\n}\n.prompt-card.off {\n  opacity: 0.55;\n}\n.prompt-card.off .pname {\n  text-decoration: line-through;\n  text-decoration-color: var(--faint);\n}\n.prompt-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 4px 6px 4px 4px;\n}\n.prompt-toggle {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 0;\n  background: transparent;\n  padding: 6px 8px;\n  text-align: left;\n}\n.prompt-toggle:hover:not(:disabled) {\n  background: rgba(255, 255, 255, 0.03);\n}\n.prompt-toggle .chev {\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.prompt-card.open .chev {\n  transform: rotate(90deg);\n}\n.pname {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-weight: 600;\n}\n.role-tag,\n.kind-tag {\n  flex: none;\n  font-size: 10.5px;\n  padding: 1px 7px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  color: var(--muted);\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n}\n.kind-tag {\n  font-family: inherit;\n}\n.kind-tag.data {\n  color: var(--blue);\n  border-color: rgba(143, 176, 214, 0.4);\n}\n.kind-tag.custom {\n  color: var(--green);\n  border-color: rgba(114, 196, 146, 0.4);\n}\n.kind-tag.modified {\n  color: var(--amber);\n  border-color: rgba(230, 169, 80, 0.45);\n}\n.pchars {\n  flex: none;\n  margin-left: auto;\n  font-size: 11px;\n  color: var(--faint);\n}\n.switch {\n  flex: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 12px;\n  color: var(--muted);\n  cursor: pointer;\n}\n.switch input {\n  appearance: none;\n  width: 30px;\n  height: 17px;\n  border-radius: 99px;\n  background: #0f1512;\n  border: 1px solid var(--line-strong);\n  position: relative;\n  margin: 0;\n  padding: 0;\n  cursor: pointer;\n  transition: background 0.15s;\n}\n.switch input::after {\n  content: '';\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 11px;\n  height: 11px;\n  border-radius: 50%;\n  background: var(--faint);\n  transition:\n    transform 0.15s,\n    background 0.15s;\n}\n.switch input:checked {\n  background: rgba(114, 196, 146, 0.25);\n  border-color: var(--green);\n}\n.switch input:checked::after {\n  transform: translateX(13px);\n  background: var(--green);\n}\n.switch input:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.switch span {\n  display: none;\n}\nbutton.icon {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  display: inline-grid;\n  place-items: center;\n  flex: none;\n}\n.prompt-body {\n  padding: 4px 12px 12px;\n  display: grid;\n  gap: 8px;\n}\n.prompt-body[hidden] {\n  display: none;\n}\n.prompt-fields {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n.prompt-fields input {\n  flex: 1 1 180px;\n  min-width: 0;\n}\n.prompt-fields select {\n  flex: 0 0 120px;\n}\n.prompt-body textarea {\n  width: 100%;\n  resize: vertical;\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12.5px;\n  line-height: 1.6;\n}\n.prompt-body small {\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.prompt-preview {\n  margin-top: 12px;\n}\n.prompt-preview textarea {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.55;\n  min-height: 260px;\n}\n.legend {\n  font-size: 12.5px;\n  color: var(--muted);\n  margin-bottom: 10px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend ul {\n  margin: 8px 0 0;\n  padding-left: 18px;\n  line-height: 1.8;\n}\n.legend code {\n  color: var(--text);\n}\n\n/* ---------- Progress window above the orb ---------- */\n.hud {\n  position: fixed;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: rgba(22, 30, 26, 0.96);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow:\n    0 14px 40px rgba(0, 0, 0, 0.55),\n    inset 0 1px 0 rgba(220, 194, 124, 0.08);\n  backdrop-filter: blur(6px);\n  color: var(--text);\n  font-size: 13px;\n  overflow: hidden;\n}\n.hud[hidden] {\n  display: none;\n}\n.hud.enter {\n  animation: hud-in 0.18s ease-out;\n}\n@keyframes hud-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n}\n.hud[data-side='below'].enter {\n  animation-name: hud-in-below;\n}\n@keyframes hud-in-below {\n  from {\n    opacity: 0;\n    transform: translateY(-6px);\n  }\n}\n.hud-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 7px 8px 7px 12px;\n  cursor: grab;\n  user-select: none;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n}\n.hud-head:active {\n  cursor: grabbing;\n}\n.hud-head .status-dot {\n  margin-right: 2px;\n  flex: none;\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.hud-head strong {\n  font-family: var(--serif);\n  color: var(--gold);\n  letter-spacing: 0.06em;\n  flex: none;\n}\n.hud-count {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--muted);\n  font-size: 12px;\n}\n.hud-actions {\n  margin-left: auto;\n  display: flex;\n  gap: 4px;\n  flex: none;\n}\n.hud-actions button {\n  padding: 3px 8px;\n  font-size: 12px;\n}\n.hud-actions button.icon {\n  width: 26px;\n  height: 26px;\n  padding: 0;\n}\n.hud-actions button[hidden] {\n  display: none;\n}\n.hud-bar {\n  height: 3px;\n  background: rgba(220, 194, 124, 0.12);\n  position: relative;\n  overflow: hidden;\n  flex: none;\n}\n.hud-bar i {\n  position: absolute;\n  inset: 0 auto 0 0;\n  background: var(--gold);\n  transition: width 0.3s;\n}\n.hud-bar.indeterminate i {\n  width: 35% !important;\n  animation: hud-slide 1.3s ease-in-out infinite;\n}\n@keyframes hud-slide {\n  from {\n    left: -35%;\n  }\n  to {\n    left: 100%;\n  }\n}\n.hud-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 0;\n  overflow: auto;\n  min-height: 0;\n}\n.hud-list[hidden] {\n  display: none;\n}\n.hud-item {\n  display: grid;\n  grid-template-columns: 18px minmax(0, 1fr) auto auto;\n  gap: 8px;\n  align-items: center;\n  padding: 6px 8px 6px 12px;\n  animation: hud-in 0.18s ease-out;\n}\n.hud-item + .hud-item {\n  border-top: 1px solid rgba(217, 191, 120, 0.07);\n}\n.hud-item .spinner {\n  width: 13px;\n  height: 13px;\n}\n.hud-sym {\n  font-style: normal;\n  font-weight: 700;\n  text-align: center;\n  width: 16px;\n  height: 16px;\n  line-height: 16px;\n  border-radius: 50%;\n  font-size: 11px;\n}\n.hud-sym.ok {\n  color: #0f1512;\n  background: var(--green);\n}\n.hud-sym.bad {\n  color: #0f1512;\n  background: var(--red);\n}\n.hud-sym.wait,\n.hud-sym.off {\n  color: var(--muted);\n  border: 1px solid var(--line-strong);\n  line-height: 14px;\n}\n.hud-text {\n  min-width: 0;\n  display: grid;\n}\n.hud-text b {\n  font-weight: 600;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-text small {\n  color: var(--muted);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-item.failed .hud-text small {\n  color: #f0a898;\n  white-space: normal;\n  display: -webkit-box;\n  -webkit-line-clamp: 3;\n  -webkit-box-orient: vertical;\n}\n.hud-item.success .hud-text b {\n  color: var(--green);\n}\n.hud-item.cancelled {\n  opacity: 0.7;\n}\n.hud-item time {\n  font-variant-numeric: tabular-nums;\n  color: var(--faint);\n  font-size: 11.5px;\n}\n.hud-item button.icon {\n  width: 22px;\n  height: 22px;\n  border-color: transparent;\n  background: transparent;\n  color: var(--faint);\n}\n.hud.collapsed .hud-head {\n  border-bottom: 0;\n}\n\n@media (max-width: 760px) {\n  .task-tabs {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n  .route-row {\n    grid-template-columns: 1fr 90px;\n  }\n  .route-row > button {\n    grid-column: 1/-1;\n  }\n  .route-row > .field:first-child:last-of-type {\n    grid-column: 1/-1;\n  }\n  .pchars,\n  .role-tag {\n    display: none;\n  }\n  .hud-actions button[data-hud='log'] {\n    display: none;\n  }\n}\n.task-block.prompts-block {\n  padding: 12px 14px 14px;\n}\n.prompt-toolbar h4 {\n  margin: 0;\n  color: var(--gold);\n  font-size: 14px;\n}\n.prompts-block > .muted {\n  font-size: 12.5px;\n  margin: 0 0 8px;\n}\n.task-editor input:not([type='checkbox']),\n.task-editor select,\n.preset-row input,\n.preset-row select,\n.preset-row button,\n.route-row button {\n  height: 38px;\n}\n.task-editor .prompt-body input {\n  height: 36px;\n}\n\n/* ---------- Country manager: delete tree ---------- */\n.country-row {\n  align-items: center;\n}\n.country-row .row-spacer {\n  flex: 1;\n}\n.remove-confirm {\n  flex-basis: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 12px;\n  border: 1px solid rgba(217, 112, 95, 0.45);\n  border-radius: 8px;\n  background: rgba(217, 112, 95, 0.08);\n}\n.remove-confirm small {\n  flex: 1 1 260px;\n  color: #f0c2b8;\n  line-height: 1.6;\n}\n\n/* ---------- Country manager: tree files ---------- */\n.tree-io h3 {\n  margin-bottom: 4px;\n}\n.tree-io > small {\n  display: block;\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n  margin-bottom: 10px;\n}\n.tree-io-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.tree-io .api-status {\n  margin: 8px 0 0;\n}\n.import-panel {\n  margin-top: 12px;\n  padding: 12px 14px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: var(--raised);\n  display: grid;\n  gap: 10px;\n}\n.import-panel h4 {\n  margin: 0;\n  color: var(--gold);\n}\n.import-panel ul {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.8;\n}\n.import-panel code {\n  font-size: 11.5px;\n  color: var(--muted);\n}\n.import-panel .warn {\n  color: var(--amber);\n}\n.tree-io {\n  margin-bottom: 18px;\n}\n\n/* ---------- News window (國際快訊) ---------- */\n.event-timeline {\n  margin: 6px 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.7;\n  color: var(--muted);\n}\n.event-timeline b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-current {\n  font-size: 13px;\n}\n.event-current b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-steps {\n  list-style: none;\n  margin: 6px 0;\n  padding: 0;\n  font-size: 13px;\n  line-height: 1.7;\n}\n.event-steps li::before {\n  display: inline-block;\n  width: 1.4em;\n  color: var(--muted);\n}\n.event-steps li.done {\n  color: var(--muted);\n  text-decoration: line-through;\n}\n.event-steps li.done::before {\n  content: '✓';\n}\n.event-steps li.active {\n  color: var(--gold);\n  font-weight: 700;\n}\n.event-steps li.active::before {\n  content: '▶';\n}\n.event-steps li.pending::before {\n  content: '○';\n}\n.event-steps li.planned {\n  font-style: italic;\n}\n.event-steps li.planned::before {\n  content: '◷';\n}\n.event-effects {\n  display: block;\n  color: var(--gold);\n}\n.node-pivot {\n  position: absolute;\n  top: 3px;\n  right: 22px;\n  font-size: 12px;\n  color: var(--gold);\n  text-shadow: 0 0 6px rgba(220, 194, 124, 0.6);\n}\n.pivotal-note {\n  border-left: 3px solid var(--gold);\n  padding-left: 10px;\n}\n.rel-core {\n  border: 1px solid var(--gold);\n  border-radius: 10px;\n  padding: 10px 14px;\n  margin: 10px 0 14px;\n  background: rgba(220, 194, 124, 0.08);\n}\n.rel-core h3,\n.rel-independent h3 {\n  margin: 0 0 6px;\n  font-size: 15px;\n}\n.rel-list {\n  list-style: none;\n  padding: 0;\n  margin: 0;\n  display: grid;\n  gap: 10px;\n}\n.rel-card {\n  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));\n  border-radius: 10px;\n  padding: 10px 12px;\n}\n.rel-card p {\n  margin: 6px 0;\n}\n.rel-pair {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-top: 6px;\n}\n.rel-branch {\n  color: var(--muted);\n}\n.rel-arrow {\n  color: var(--gold);\n}\n.rel-via {\n  margin: 4px 0 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: var(--muted);\n}\n.rel-independent {\n  margin-top: 14px;\n}\n.rel-independent dt {\n  font-weight: 600;\n}\n.rel-independent dd {\n  margin: 0 0 8px;\n  color: var(--muted);\n}\n\n.job-message {\n  white-space: pre-line;\n  overflow-wrap: anywhere;\n}\n\n/* v0.13.1 UI review */\n.status-jobs {\n  color: var(--muted);\n  display: inline-flex;\n  align-items: center;\n}\n.status-jobs.failed {\n  color: var(--red);\n}\n.status-jobs.busy {\n  color: var(--gold);\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.cmd-btn {\n  position: relative;\n}\n.alert-dot {\n  position: absolute;\n  top: 4px;\n  right: 4px;\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  background: var(--red);\n  box-shadow: 0 0 0 2px var(--bg);\n}\n.lock-confirm {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.lock-confirm p {\n  margin: 0 0 8px;\n  font-size: 13px;\n}\n.lock-confirm strong {\n  color: var(--amber);\n}\n.lock-confirm .row {\n  display: flex;\n  gap: 8px;\n}\n.job-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  padding-bottom: 12px;\n  margin-bottom: 8px;\n  border-bottom: 1px solid var(--line);\n}\n.job-buttons {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  justify-content: flex-end;\n}\n.job-detail summary {\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--muted);\n}\n.job-detail p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n.event-filters {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-bottom: 12px;\n}\n.event-filters select {\n  width: auto;\n  min-width: 140px;\n}\n.event-filters small {\n  margin-left: auto;\n  color: var(--muted);\n}\n.chip.active {\n  border-color: var(--gold);\n  color: var(--gold);\n  background: rgba(220, 194, 124, 0.1);\n}\n.country-row {\n  flex-wrap: wrap;\n  gap: 10px 14px;\n}\n.country-name {\n  min-width: 7em;\n}\n.switch-label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13px;\n}\n.tree-io > summary {\n  cursor: pointer;\n  color: var(--gold);\n  font-weight: 700;\n  margin-bottom: 8px;\n}\n.task-head {\n  flex-wrap: wrap;\n}\n.task-head .spacer {\n  flex: 1;\n}\n.last-run {\n  color: var(--muted);\n}\n.field .static {\n  margin: 6px 0 0;\n  font-size: 13px;\n  color: var(--muted);\n}\n.unsaved {\n  margin-right: auto;\n  color: var(--amber);\n  font-size: 13px;\n}\n.field[hidden] {\n  display: none;\n}\n.modal-jobs {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  margin: 0 12px 0 auto;\n  min-width: 0;\n  max-width: 55%;\n  font-size: 12px;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.modal-jobs[hidden] {\n  display: none;\n}\n.modal-jobs.failed {\n  color: var(--red);\n}\n.modal-jobs .spinner {\n  flex: none;\n  width: 12px;\n  height: 12px;\n}\n.modal-jobs .status-dot {\n  margin-right: 0;\n}\n.status-jobs {\n  max-width: 60vw;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;\n   the control select and 更新局勢 open from ⋯ (the top picker lists names only). */\n.nation-more-btn,\n.control-tag {\n  display: none;\n}\n@media (max-width: 760px) {\n  .nation-bar {\n    grid-template-columns: minmax(0, 1fr) auto auto;\n    padding: 6px 10px 8px;\n    gap: 6px 10px;\n  }\n  .nation-crest {\n    display: none;\n  }\n  .nation-copy h2 {\n    font-size: 16px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .control-tag {\n    display: block;\n    font-size: 11px;\n    color: var(--muted);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: auto;\n    min-width: 44px;\n  }\n  .gauge-head {\n    display: grid;\n    line-height: 1.1;\n  }\n  .gauge-head small {\n    font-size: 10px;\n  }\n  .gauge-head strong {\n    font-size: 16px;\n  }\n  .gauge-track {\n    height: 3px;\n    margin-top: 2px;\n  }\n  .nation-more-btn {\n    display: grid;\n    place-items: center;\n    width: 34px;\n    height: 34px;\n    padding: 0;\n    font-size: 18px;\n  }\n  .nation-more-btn[aria-expanded='true'] {\n    border-color: var(--gold);\n    color: var(--gold);\n  }\n  .agenda {\n    grid-column: 1/-1;\n    grid-template-columns: minmax(0, 1fr);\n    padding: 5px 10px;\n  }\n  .agenda-icon,\n  .agenda-copy small,\n  .agenda-meta > span + span {\n    display: none;\n  }\n  .agenda-copy {\n    grid-template-columns: minmax(0, auto) minmax(40px, 1fr) auto;\n    align-items: center;\n    column-gap: 8px;\n  }\n  .agenda-copy strong {\n    font-size: 14px;\n  }\n  .agenda-bar {\n    margin: 0;\n    height: 5px;\n  }\n  .empty-agenda .agenda-copy {\n    grid-template-columns: auto minmax(0, 1fr);\n  }\n  .empty-agenda .agenda-meta > span {\n    display: block;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .nation-actions {\n    display: none;\n  }\n  .nation-bar.more-open .nation-actions {\n    display: flex;\n  }\n}\n\n/* v0.13.3: settings and details additions */\n.notice {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 12px;\n  background: rgba(230, 169, 80, 0.08);\n  color: #f0c49a;\n  font-size: 13px;\n}\n.api-actions.confirm-row {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 10px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.block-note.model-hint {\n  color: #f0c49a;\n}\n.source-scope {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px 12px;\n  padding: 8px 12px;\n  margin: 4px 0 6px;\n  border: 1px solid var(--line-strong);\n  border-radius: 8px;\n  background: var(--raised);\n}\n.source-scope.custom {\n  border-color: var(--gold);\n}\n.source-scope b {\n  color: var(--gold);\n}\n.source-scope label {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\ndetails.fold > summary {\n  cursor: pointer;\n  color: var(--muted);\n  font-size: 12.5px;\n  list-style: none;\n}\ndetails.fold > summary::before {\n  content: '▸ ';\n}\ndetails.fold[open] > summary::before {\n  content: '▾ ';\n}\ndetails.detail-section.fold > summary h4 {\n  display: inline;\n  margin: 0;\n}\ndetails.detail-section.fold > summary::before {\n  color: var(--gold);\n}\n.source-modes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;\n  gap: 10px;\n  align-items: end;\n}\n@media (max-width: 760px) {\n  .source-modes {\n    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  }\n  .source-modes > button {\n    grid-column: 1/-1;\n  }\n}\n.api-actions.api-save {\n  align-items: center;\n  position: sticky;\n  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */\n  bottom: -18px;\n  margin-bottom: -18px;\n  padding-bottom: 18px !important;\n  z-index: 2;\n  padding: 10px 0;\n  background: var(--panel);\n  border-top: 1px solid var(--line);\n}\n.api-actions.api-save .api-status {\n  margin: 0;\n  flex: 1 1 200px;\n}\n@media (max-width: 760px) {\n  .api-actions.api-save {\n    bottom: -14px;\n    margin-bottom: -14px;\n    padding-bottom: 14px !important;\n  }\n}\n\n/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */\n.period-strip {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  padding: 8px 18px;\n  border-bottom: 1px solid var(--line);\n  background: var(--panel);\n  flex-shrink: 0;\n}\n.period-copy {\n  flex: 1;\n  min-width: 0;\n}\n.period-copy strong {\n  display: block;\n  color: var(--gold);\n  font-size: 13px;\n}\n.period-copy small {\n  display: block;\n  color: var(--muted);\n  font-size: 11px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.period-toggle {\n  white-space: nowrap;\n  font-size: 12px;\n}\n.period-strip button {\n  font-size: 12px;\n  white-space: nowrap;\n}\n.period-anchor-note {\n  display: flex;\n  flex-direction: column;\n  gap: 5px;\n  margin-bottom: 14px;\n  border-left: 2px solid var(--blue);\n  padding: 10px 12px;\n  background: var(--raised);\n  font-size: 12px;\n}\n.period-anchor-note strong {\n  color: var(--blue);\n}\n.period-anchor-badge {\n  position: absolute;\n  top: -18px;\n  right: 0;\n  font-size: 10px;\n  line-height: 16px;\n  padding: 0 5px;\n  color: var(--blue);\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 3px;\n}\n.period-history {\n  margin: 14px 0;\n  border-left: 2px solid var(--gold-deep);\n  padding: 4px 16px;\n}\n.period-history time {\n  color: var(--gold);\n  font-size: 12px;\n}\n.period-history p {\n  line-height: 1.95;\n}\n@media (max-width: 760px) {\n  .period-strip {\n    gap: 8px;\n    padding: 8px 12px;\n    flex-wrap: wrap;\n  }\n  .period-copy {\n    flex-basis: 100%;\n  }\n  .period-copy small {\n    white-space: normal;\n  }\n  .period-strip button {\n    margin-left: auto;\n  }\n}\n";
 
   // src/api-panel.ts
   var escape4 = (value) => String(value ?? "").replace(
@@ -34170,8 +34210,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
     running: "執行中",
     success: "完成",
     failed: "失敗",
-    cancelled: "已取消",
-    stale: "已過期"
+    cancelled: "已取消"
   };
   var checked = (value) => value ? "checked" : "";
   var NODE_W = 188;
@@ -34203,6 +34242,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
     const shell = root.querySelector(".shell");
     const orb = root.querySelector(".orb");
     const backdrop = root.querySelector(".modal-backdrop");
+    let rendered;
     let countryId2 = "";
     let nodeId = "";
     let query = "";
@@ -34374,7 +34414,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
         };
       });
     }
-    function render() {
+    function render(jobsOnly = false) {
       shell.hidden = !open2;
       orb.hidden = open2;
       const busy = controller2.jobs.filter((j) => ["running", "queued"].includes(j.state)).length;
@@ -34388,6 +34428,24 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       }
       const country = currentCountry();
       const state = controller2.state;
+      if (jobsOnly && rendered?.state === state && rendered.config === controller2.config && rendered.error === controller2.error) {
+        const taskButton = shell.querySelector('.command [data-action="jobs"]');
+        if (taskButton) {
+          taskButton.outerHTML = renderTaskButton(busy);
+        }
+        const status = shell.querySelector(".status-jobs");
+        if (status) {
+          status.outerHTML = renderTaskSummary();
+        }
+        const note = shell.querySelector(".period-copy small");
+        if (country && note) {
+          const text = periodNote(country, controller2.jobs);
+          note.textContent = text;
+          note.title = text;
+        }
+        updateTaskWindows();
+        return;
+      }
       const countries = state ? Object.values(state.countries) : [];
       if (country && centeredCountry && centeredCountry !== `${country.id}:${country.period.number}`) {
         query = "";
@@ -34401,7 +34459,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const tabs = countries.map(
         (c) => `<button class="nation-tab ${c.id === countryId2 ? "active" : ""} ${c.control}" data-country="${escape6(c.id)}" title="${escape6(c.name)}" aria-pressed="${c.id === countryId2}"><span class="tab-crest">${icon(c.control === "player" ? "eagle" : "crown")}</span><span class="tab-copy"><strong>${escape6(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`
       ).join("");
-      const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape6(c.id)}" ${selected(c.id === countryId2)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller2.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ""}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : "—"}</strong></div><button class="cmd-btn ${busy ? "busy" : ""}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ""}${unseenFailures().length ? `，${unseenFailures().length} 項失敗` : ""}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : "☰"}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ""}</span>${unseenFailures().length ? '<i class="alert-dot" aria-hidden="true"></i>' : ""}</button><button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
+      const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape6(c.id)}" ${selected(c.id === countryId2)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller2.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ""}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : "—"}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
       const error62 = controller2.error ? `<div class="error-banner" role="alert"><span>${escape6(controller2.error)}</span><button data-action="refresh">重新讀取</button></div>` : "";
       let body;
       if (country && state) {
@@ -34423,8 +34481,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       } else {
         body = `<section class="empty"><div class="empty-card">${icon("eagle")}<h2>${state ? "為這個世界選擇方向" : "連接你的故事"}</h2><p>${state ? "先辨識本局國家，再勾選要啟用的對象。國策內容會依你選擇的世界書與劇情生成。" : "國策樹需要一則已完成的正文，以及本樓可讀取的 MVU 變數。你仍可先設定 API 與來源。"}</p><div class="row"><button class="primary" data-action="countries">選擇啟用國家</button><button data-action="settings">設定來源與 API</button></div></div></section>`;
       }
-      const summary = taskSummary();
-      shell.innerHTML = `${command}${error62}${body}<footer class="statusline"><button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape6(summary.text)}</button><span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ""}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
+      shell.innerHTML = `${command}${error62}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ""}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
       if (country) {
         drawTree(country);
         bindCanvas();
@@ -34440,6 +34497,10 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
           body2.innerHTML = historyBody(country);
         }
       }
+      rendered = { state, config: controller2.config, error: controller2.error };
+      updateTaskWindows();
+    }
+    function updateTaskWindows() {
       if (modal === "jobs") {
         showJobs();
       }
@@ -34447,6 +34508,14 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
         showCountries(false);
       }
       updateModalJobs();
+    }
+    function renderTaskButton(busy) {
+      const failures = unseenFailures().length;
+      return `<button class="cmd-btn ${busy ? "busy" : ""}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ""}${failures ? `，${failures} 項失敗` : ""}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : "☰"}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ""}</span>${failures ? '<i class="alert-dot" aria-hidden="true"></i>' : ""}</button>`;
+    }
+    function renderTaskSummary() {
+      const summary = taskSummary();
+      return `<button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape6(summary.text)}</button>`;
     }
     function unseenFailures() {
       return controller2.jobs.filter((job) => job.state === "failed" && !failuresSeen.has(job.id));
@@ -34975,7 +35044,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
         return text.length > 140 ? `<details class="job-detail"><summary>${escape6(text.slice(0, 120))}…</summary><p>${escape6(text)}</p></details>` : `<small class="job-message">${escape6(text)}</small>`;
       };
       const rows = controller2.jobs.map(
-        (j) => `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape6(j.time)}</small>${j.inputCharacters !== void 0 ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ""}</div><div>${escape6(jobNames[j.kind] ?? j.kind)}${j.label ? ` · ${escape6(j.label)}` : ""}${j.route ? ` · ${escape6(j.route)}` : ""}<br>${message(j)}</div><div class="job-buttons">${["running", "queued"].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ""}${["failed", "stale"].includes(j.state) ? `<button data-retry="${j.id}">重試</button>` : ""}${controller2.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ""}</div></div>`
+        (j) => `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape6(j.time)}</small>${j.inputCharacters !== void 0 ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ""}</div><div>${escape6(jobNames[j.kind] ?? j.kind)}${j.label ? ` · ${escape6(j.label)}` : ""}${j.route ? ` · ${escape6(j.route)}` : ""}<br>${message(j)}</div><div class="job-buttons">${["running", "queued"].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ""}${j.state === "failed" ? `<button data-retry="${j.id}">重試</button>` : ""}${controller2.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ""}</div></div>`
       ).join("");
       const body = `<div class="job-actions"><button data-modal="run-reshape" title="劇情大幅改變時，修改尚未開始的國策">評估重大改樹</button><button class="danger" data-modal="cancel-all" ${busy ? "" : "disabled"}>取消全部任務</button></div>${rows || '<p class="muted">尚無任務紀錄。正文與一般變數更新完成後，國策任務會在背景執行，不會鎖住聊天；進度顯示在懸浮球上方。</p>'}${controller2.config.runLog ? '<p class="muted">執行紀錄已開啟：請求內容只保存在此頁記憶體，重新整理即清除。</p>' : ""}`;
       if (modal === "jobs") {
@@ -35641,11 +35710,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
           if (target.dataset.retry) {
             const job = controller2.jobs.find((j) => j.id === target.dataset.retry);
             if (job) {
-              if (job.periodWork && job.state === "stale") {
-                await controller2.run("update");
-              } else {
-                await controller2.run(job.kind, job.candidate, job.periodWork);
-              }
+              await controller2.run(job.kind, job.candidate, job.periodWork);
             }
             return;
           }
@@ -35764,7 +35829,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       }
     });
     unsub = controller2.subscribe(() => {
-      render();
+      render(true);
     });
     const stopNews = controller2.platform.onNewsRequest?.((_messageId, action2) => {
       if (modal) {
@@ -35823,29 +35888,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-@noble/hashes
-The MIT License (MIT)
-
-Copyright (c) 2022 Paul Miller (https://paulmillr.com)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 
 yaml
 Copyright Eemeli Aro <eemeli@gmail.com>

@@ -13,7 +13,6 @@ const linger: Record<JobStatus['state'], number> = {
   running: Infinity,
   success: 6000,
   cancelled: 6000,
-  stale: 8000,
   failed: 20000,
 };
 const symbols: Record<JobStatus['state'], string> = {
@@ -22,7 +21,6 @@ const symbols: Record<JobStatus['state'], string> = {
   success: '<i class="hud-sym ok">✓</i>',
   failed: '<i class="hud-sym bad">!</i>',
   cancelled: '<i class="hud-sym off">–</i>',
-  stale: '<i class="hud-sym off">↺</i>',
 };
 const HUD_WIDTH = 320;
 const GAP = 10;

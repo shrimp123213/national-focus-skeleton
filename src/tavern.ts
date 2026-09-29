@@ -1,4 +1,3 @@
-import { sha256 } from '@noble/hashes/sha2.js';
 import { customRequest, extractApiResult, hasAdvancedApi, readStream, redactApiError } from './api-config';
 import {
   extractSecrets,
@@ -8,7 +7,7 @@ import {
   TavernSecretStore,
   type SecretStore,
 } from './secrets';
-import { createState, floorNews, NEWS_EVENT, NEWS_TAG, stampNews, stripNewsTag } from './engine';
+import { createState, floorNews, NEWS_EVENT, NEWS_TAG, stampNews } from './engine';
 import {
   ConfigSchema,
   defaultConfig,
@@ -177,8 +176,8 @@ export class TavernPlatform implements Platform {
   private annotating: Promise<void> | null = null;
   private generating = false;
   private mvuBusy = false;
-  private readyFingerprint = '';
-  private signalVersion = 0;
+  private readyIdentity = '';
+  private sourceRun = new AbortController();
   private stops: (() => void)[] = [];
   private readyListeners = new Set<() => void>();
   private changeListeners = new Set<() => void>();
@@ -204,14 +203,15 @@ export class TavernPlatform implements Platform {
         this.stops.push(() => listener.stop());
       }
     };
-    for (const name of ['CHAT_CHANGED', 'MESSAGE_SWIPED', 'MESSAGE_DELETED', 'MESSAGE_EDITED']) {
+    for (const name of ['CHAT_CHANGED', 'MESSAGE_SWIPED', 'MESSAGE_DELETED']) {
       listen(api.tavern_events[name], () => {
         this.pending = null;
-        this.readyFingerprint = '';
+        this.readyIdentity = '';
         this.generating = false;
         this.mvuBusy = false;
         api.uninjectPrompts([injectionId]);
-        this.signalVersion++;
+        this.sourceRun.abort();
+        this.sourceRun = new AbortController();
         this.bookEpoch++;
         for (const callback of this.changeListeners) {
           callback();
@@ -223,8 +223,9 @@ export class TavernPlatform implements Platform {
         return;
       }
       this.generating = true;
-      this.readyFingerprint = '';
-      this.signalVersion++;
+      this.readyIdentity = '';
+      this.sourceRun.abort();
+      this.sourceRun = new AbortController();
     });
     listen(api.tavern_events.GENERATION_STOPPED, () => {
       this.generating = false;
@@ -297,15 +298,15 @@ export class TavernPlatform implements Platform {
         return;
       }
       if (pending.received && pending.ended && pending.mvu && !this.annotating) {
+        const signal = this.sourceRun.signal;
         this.pending = null;
-        this.readyFingerprint = pending.identity;
-        // The newspaper data goes in before any background task reads this floor, so their
-        // snapshot already includes it and their commit is not taken for a stale source.
+        this.readyIdentity = pending.identity;
+        // Publish the newspaper before background tasks collect their input.
         this.annotating = this.annotate()
           .catch((error) => console.warn('[國策檔案] 無法更新快訊條資料：', error))
           .finally(() => {
             this.annotating = null;
-            if (this.disposed) {
+            if (this.disposed || signal.aborted) {
               return;
             }
             for (const callback of this.readyListeners) {
@@ -421,21 +422,7 @@ export class TavernPlatform implements Platform {
   }
   private identity(): string {
     const message = this.current();
-    return stamp([
-      this.api.SillyTavern.getCurrentChatId(),
-      this.api.getLastMessageId(),
-      message?.swipe_id,
-      stripNewsTag(message?.swipes?.[message.swipe_id ?? 0] ?? ''),
-    ]);
-  }
-  private async historyHash(until: number): Promise<string> {
-    const history = this.api
-      .getChatMessages(`0-${until}`)
-      // The news tag this script appends is not a story edit.
-      .map((message) => [message.message_id, message.role, stripNewsTag(message.message ?? '')]);
-    const bytes = new TextEncoder().encode(stamp(history));
-    // LAN HTTP installations do not expose SubtleCrypto, so use a bundled implementation.
-    return [...sha256(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    return stamp([this.api.SillyTavern.getCurrentChatId(), this.api.getLastMessageId(), message?.swipe_id]);
   }
   private pendingForCurrent() {
     const message = this.current();
@@ -443,14 +430,19 @@ export class TavernPlatform implements Platform {
       return null;
     }
     const identity = this.identity();
+    if (this.readyIdentity === identity) {
+      return null;
+    }
     if (this.pending?.identity !== identity) {
       this.pending = { identity, received: false, ended: false, mvu: false, since: Date.now() };
     }
     return this.pending;
   }
   async read(config: Config, job?: JobKind): Promise<Snapshot> {
+    const signal = this.sourceRun.signal;
     // Wait for the newspaper data of a just finished floor, so the snapshot includes it.
     await this.annotating;
+    signal.throwIfAborted();
     const mvu = this.api.Mvu;
     if (!mvu) {
       throw new Error('尚未偵測到 MVU，請先啟用 MVU 變數框架');
@@ -458,7 +450,7 @@ export class TavernPlatform implements Platform {
     if (this.generating || this.mvuBusy || mvu.isDuringExtraAnalysis()) {
       throw new Error('正文或一般 MVU 更新尚未完成，請稍後重試');
     }
-    if (this.pending && !this.readyFingerprint) {
+    if (this.pending && !this.readyIdentity) {
       throw new Error('等待本樓正文完成及 MVU 寫入事件；若已等待過久，請檢查 MVU 工作狀態後重新載入腳本');
     }
     const message = this.current();
@@ -466,7 +458,6 @@ export class TavernPlatform implements Platform {
       throw new Error('請在一則已完成且具有 MVU 變數的 AI 回覆後使用');
     }
     const identity = this.identity();
-    const sourceRevision = this.signalVersion;
     const data = mvu.getMvuData({ type: 'message', message_id: message.message_id });
     if (!data.stat_data) {
       throw new Error('本樓尚無 MVU stat_data，不能建立另一份聊天存檔替代');
@@ -487,17 +478,8 @@ export class TavernPlatform implements Platform {
     this.config = config;
     this.promptSaved = Boolean((data.国策 as { prompt?: unknown } | undefined)?.prompt);
     const state = saved === undefined ? createState(day) : StateSchema.parse(saved);
-    if (
-      state.basis &&
-      (state.basis.messageId > message.message_id ||
-        (await this.historyHash(state.basis.messageId)) !== state.basis.hash)
-    ) {
-      throw new Error(
-        '國策依據的舊正文已被編輯。請從受影響樓層重新生成或建立分支；目前不會把既有後續存檔當作已同步。',
-      );
-    }
-    const historyHash = await this.historyHash(message.message_id);
-    const fingerprint = stamp([data.stat_data, data.国策]);
+    // Reuse this chat read for context and turn counting; do not hash story text.
+    const messages = this.api.getChatMessages(`0-${message.message_id}`);
     let sourceData: Awaited<ReturnType<typeof buildSourceContext>> | undefined;
     if (job) {
       const settings = config.sources;
@@ -518,7 +500,6 @@ export class TavernPlatform implements Platform {
           : [],
         needCharacterText ? this.characterDescription() : '',
       ]);
-      const messages = this.api.getChatMessages(`0-${message.message_id}`);
       sourceData = await buildSourceContext({
         config,
         job,
@@ -534,16 +515,12 @@ export class TavernPlatform implements Platform {
         renderEntry: this.renderer(message.message_id),
       });
     }
-    if (this.identity() !== identity || sourceRevision !== this.signalVersion) {
-      throw new Error('STALE:讀取來源期間聊天已改變');
-    }
-    const lastId = message.message_id;
+    signal.throwIfAborted();
     return {
-      identity: stamp([identity, sourceRevision]),
-      fingerprint,
-      storyFingerprint: stamp(data.stat_data),
-      historyHash,
-      turn: this.api.getChatMessages(`0-${lastId}`).filter((m) => m.role === 'assistant').length,
+      identity,
+      messageId: message.message_id,
+      signal,
+      turn: messages.filter((m) => m.role === 'assistant').length,
       day,
       state,
       context: sourceData?.context ?? {},
@@ -553,37 +530,19 @@ export class TavernPlatform implements Platform {
   }
   async commit(snapshot: Snapshot, state: State): Promise<void> {
     if (this.disposed) {
-      throw new Error('STALE:腳本已卸載');
+      throw new Error('腳本已卸載');
     }
-    if (
-      !this.api.Mvu ||
-      this.generating ||
-      this.mvuBusy ||
-      this.api.Mvu.isDuringExtraAnalysis() ||
-      stamp([this.identity(), this.signalVersion]) !== snapshot.identity
-    ) {
-      throw new Error('STALE:樓層已改變或開始新生成');
+    snapshot.signal?.throwIfAborted();
+    const mvu = this.api.Mvu;
+    if (!mvu) {
+      throw new Error('尚未偵測到 MVU');
     }
-    const message = this.current()!;
-    const historyHash = await this.historyHash(message.message_id);
-    if (
-      this.disposed ||
-      historyHash !== snapshot.historyHash ||
-      this.generating ||
-      this.mvuBusy ||
-      this.api.Mvu.isDuringExtraAnalysis() ||
-      stamp([this.identity(), this.signalVersion]) !== snapshot.identity
-    ) {
-      throw new Error('STALE:正文來源已改變');
+    const message = this.api.getChatMessages(snapshot.messageId)[0];
+    if (!message || message.role !== 'assistant') {
+      throw new Error('目標 AI 樓層不存在');
     }
-    const latest = this.api.Mvu.getMvuData({ type: 'message', message_id: message.message_id });
-    if (stamp([latest.stat_data, latest.国策]) !== snapshot.fingerprint) {
-      throw new Error('STALE:來源 MVU 已改變');
-    }
-    const saved = StateSchema.parse({
-      ...state,
-      basis: { messageId: message.message_id, hash: historyHash },
-    });
+    const latest = mvu.getMvuData({ type: 'message', message_id: snapshot.messageId });
+    const saved = StateSchema.parse(state);
     stampNews(saved, message.message_id);
     // The newspaper data of this floor stays; who the player may hear from follows the new state.
     const bar = (latest.国策 as { 快讯?: NewsBar } | undefined)?.快讯;
@@ -598,10 +557,11 @@ export class TavernPlatform implements Platform {
     // Read and mutate the latest full envelope; preserve schema and every other namespace.
     this.writing = true;
     try {
-      await this.api.Mvu.replaceMvuData(latest, { type: 'message', message_id: message.message_id });
+      await mvu.replaceMvuData(latest, { type: 'message', message_id: message.message_id });
     } finally {
       this.writing = false;
     }
+    snapshot.signal?.throwIfAborted();
     await this.appendNewsTag(message.message_id);
   }
   /**
@@ -610,6 +570,7 @@ export class TavernPlatform implements Platform {
    * left alone. Only this script's `国策` is written; the card's own news is read, never changed.
    */
   private async annotate(): Promise<void> {
+    const signal = this.sourceRun.signal;
     const mvu = this.api.Mvu;
     const message = this.current();
     const config = this.config ?? this.loadConfig();
@@ -653,7 +614,9 @@ export class TavernPlatform implements Platform {
         this.writing = false;
       }
     }
-    await this.appendNewsTag(id);
+    if (!signal.aborted) {
+      await this.appendNewsTag(id);
+    }
   }
   async readNews(messageId: number) {
     const data = this.api.Mvu?.getMvuData({ type: 'message', message_id: messageId });
@@ -985,6 +948,7 @@ export class TavernPlatform implements Platform {
       });
   }
   dispose(): void {
+    this.sourceRun.abort();
     if (this.disposed) {
       return;
     }

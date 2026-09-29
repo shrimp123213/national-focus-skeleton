@@ -14,7 +14,7 @@ import {
 } from './model';
 import { defaultSegmentMax, generateCountry, generationPlan, isSegmented, workingState } from './generation';
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
-import { checkTransition, periodAnchor, periodBasis, PeriodReplySchema, transitionPeriod } from './periods';
+import { checkTransition, periodAnchor, PeriodReplySchema, transitionPeriod } from './periods';
 import { DATA_TOKEN, promptText } from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
@@ -48,6 +48,8 @@ export class FocusController {
   private listeners = new Set<() => void>();
   private aborters = new Map<string, AbortController>();
   private active = 0;
+  private runEpoch = 0;
+  private writes: Promise<unknown> = Promise.resolve();
   private waiters: (() => void)[] = [];
   private automatic: Promise<void> | null = null;
   private pendingReady = false;
@@ -72,6 +74,7 @@ export class FocusController {
   async initialize(): Promise<void> {
     this.stops.push(
       this.platform.onReady(() => {
+        this.cancelAll();
         this.pendingReady = true;
         if (!this.automatic) {
           this.automatic = (async () => {
@@ -133,22 +136,43 @@ export class FocusController {
     }
     this.notify();
   }
+  /** Serialize local saves so concurrent API replies apply to the latest committed state. */
+  private writeState(operation: (snapshot: Snapshot) => State, signal?: AbortSignal): Promise<State> {
+    const epoch = this.runEpoch;
+    const save = this.writes.then(async () => {
+      const checkCancelled = () => {
+        signal?.throwIfAborted();
+        if (this.disposed || epoch !== this.runEpoch) {
+          throw new DOMException('任務已取消', 'AbortError');
+        }
+      };
+      checkCancelled();
+      const snapshot = await this.platform.read(this.config);
+      checkCancelled();
+      const next = operation(snapshot);
+      await this.platform.commit(snapshot, next);
+      return next;
+    });
+    this.writes = save.catch(() => {});
+    return save;
+  }
   async mutate(operation: (state: State) => State, changesTimeline = false): Promise<void> {
-    const snapshot = await this.platform.read(this.config);
     if (this.disposed) {
       return;
     }
-    if (
-      changesTimeline &&
-      Object.values(snapshot.state.countries).some(
-        (c) => c.enabled && !c.calibration && c.cursor !== snapshot.day,
-      )
-    ) {
-      throw new Error(
-        '故事時間已前進，請先完成「更新局勢」，再開始、暫停或交接國策；避免把新操作倒填至過去。',
-      );
-    }
-    await this.platform.commit(snapshot, operation(snapshot.state));
+    await this.writeState((snapshot) => {
+      if (
+        changesTimeline &&
+        Object.values(snapshot.state.countries).some(
+          (c) => c.enabled && !c.calibration && c.cursor !== snapshot.day,
+        )
+      ) {
+        throw new Error(
+          '故事時間已前進，請先完成「更新局勢」，再開始、暫停或交接國策；避免把新操作倒填至過去。',
+        );
+      }
+      return operation(snapshot.state);
+    });
     await this.refresh();
   }
   saveSettings(config: unknown): void {
@@ -180,17 +204,26 @@ export class FocusController {
     this.aborters.get(id)?.abort();
   }
   cancelAll(): void {
+    this.runEpoch++;
+    this.progress.clear();
     for (const aborter of this.aborters.values()) {
       aborter.abort();
     }
   }
   async runScheduled(): Promise<void> {
+    const epoch = this.runEpoch;
     for (const kind of ['identify', 'update', 'reshape'] as const) {
-      if (this.disposed) {
+      if (this.disposed || epoch !== this.runEpoch) {
         return;
       }
-      const snapshot = await this.platform.read(this.config);
       const job = this.config.jobs[kind];
+      if (job.schedule === 'manual') {
+        continue;
+      }
+      const snapshot = await this.platform.read(this.config);
+      if (this.disposed || epoch !== this.runEpoch) {
+        return;
+      }
       const last = snapshot.state.schedules[kind];
       const due =
         job.schedule === 'reply'
@@ -236,16 +269,28 @@ export class FocusController {
     this.notify();
   }
   async enable(candidates: Candidate[]): Promise<void> {
+    const epoch = this.runEpoch;
     // Each successful country takes a fresh snapshot. Failure keeps previous successes.
     for (const candidate of candidates) {
       await this.run('generate', candidate);
-      if (this.disposed || !this.state?.countries[candidate.id]) {
+      if (this.disposed || epoch !== this.runEpoch || !this.state?.countries[candidate.id]) {
         break;
       }
     }
   }
   async run(kind: JobKind, candidate?: Candidate, periodWork?: PeriodWork): Promise<void> {
     if (this.disposed) {
+      return;
+    }
+    if (
+      this.jobs.some(
+        (job) =>
+          job.kind === kind &&
+          job.candidate?.id === candidate?.id &&
+          ['queued', 'running'].includes(job.state) &&
+          !this.aborters.get(job.id)?.signal.aborted,
+      )
+    ) {
       return;
     }
     const id = requestId('job');
@@ -264,6 +309,8 @@ export class FocusController {
     this.aborters.set(id, aborter);
     this.notify();
     let acquired = false;
+    let sourceSignal: AbortSignal | undefined;
+    const cancelSource = () => aborter.abort();
     const periods: { candidate: Candidate; work: PeriodWork }[] = [];
     try {
       while (this.active >= this.config.concurrency) {
@@ -288,17 +335,14 @@ export class FocusController {
       status.message = '正在分析本樓資料';
       this.notify();
       const snapshot = await this.platform.read(this.config, kind);
+      sourceSignal = snapshot.signal;
+      sourceSignal?.addEventListener('abort', cancelSource, { once: true });
+      if (sourceSignal?.aborted) {
+        aborter.abort();
+      }
+      aborter.signal.throwIfAborted();
       if (periodWork) {
         checkTransition(snapshot.state, periodWork.transition);
-        if (
-          snapshot.identity !== periodWork.identity ||
-          snapshot.historyHash !== periodWork.historyHash ||
-          snapshot.storyFingerprint !== periodWork.storyFingerprint ||
-          snapshot.day !== periodWork.day ||
-          periodBasis(snapshot.state, candidate!.id) !== periodWork.basis
-        ) {
-          throw new Error('STALE:換期依據已改變，請更新局勢重新判定');
-        }
       }
       if (kind === 'generate' && !candidate) {
         throw new Error('請先選擇要生成的候選國家');
@@ -312,15 +356,6 @@ export class FocusController {
         shown?: z.ZodType,
       ): Promise<z.output<S>> => {
         aborter.signal.throwIfAborted();
-        const current = await this.platform.read(this.config);
-        if (
-          current.identity !== snapshot.identity ||
-          (!periodWork && current.fingerprint !== snapshot.fingerprint) ||
-          current.historyHash !== snapshot.historyHash ||
-          current.day !== snapshot.day
-        ) {
-          throw new Error('STALE:生成期間來源已改變');
-        }
         status.message = label ?? (kind === 'generate' ? '單次生成完整國策樹' : '分析本樓局勢');
         this.notify();
         return this.request(
@@ -336,14 +371,7 @@ export class FocusController {
       const segmentMax = this.segmentMax();
       const progressKey =
         kind === 'generate'
-          ? [
-              snapshot.identity,
-              snapshot.fingerprint,
-              snapshot.historyHash,
-              snapshot.day,
-              snapshot.state.settings.size,
-              candidate!.id,
-            ].join('\0')
+          ? [snapshot.identity, snapshot.state.settings.size, candidate!.id].join('\0')
           : '';
       const progress: SkeletonProgress = this.progress.get(progressKey) ?? { filled: {} };
       if (kind === 'generate') {
@@ -422,25 +450,14 @@ export class FocusController {
               },
             );
       aborter.signal.throwIfAborted();
-      let commitSource = snapshot;
-      if (periodWork) {
-        commitSource = await this.platform.read(this.config);
-        if (
-          commitSource.identity !== snapshot.identity ||
-          commitSource.historyHash !== snapshot.historyHash ||
-          commitSource.storyFingerprint !== snapshot.storyFingerprint ||
-          JSON.stringify(commitSource.state.countries) !== JSON.stringify(snapshot.state.countries) ||
-          commitSource.day !== snapshot.day ||
-          periodBasis(commitSource.state, candidate!.id) !== periodWork.basis
-        ) {
-          throw new Error('STALE:換期期間國策或局勢已改變');
-        }
-      }
-      const next = periodWork
-        ? transitionPeriod(commitSource.state, periodWork.transition, PeriodReplySchema.parse(result))
-        : this.proposedState(kind, snapshot, result, candidate);
-      next.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
-      await this.platform.commit(commitSource, next);
+      // Apply to current data in save order, without comparing it to the request input.
+      const next = await this.writeState((current) => {
+        const state = periodWork
+          ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result))
+          : this.proposedState(kind, current, result, candidate);
+        state.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
+        return state;
+      }, aborter.signal);
       if (kind === 'update' && !snapshot.state.receipts.includes(ProposalSchema.parse(result).id)) {
         for (const transition of ProposalSchema.parse(result).transitions) {
           const country = next.countries[transition.country];
@@ -456,11 +473,6 @@ export class FocusController {
             },
             work: {
               transition,
-              identity: snapshot.identity,
-              historyHash: snapshot.historyHash,
-              storyFingerprint: snapshot.storyFingerprint,
-              day: snapshot.day,
-              basis: periodBasis(next, country.id),
             },
           });
         }
@@ -476,17 +488,15 @@ export class FocusController {
       await this.refresh();
     } catch (error) {
       const message = redactApiError(error, this.config.apis);
-      status.state = aborter.signal.aborted ? 'cancelled' : message.startsWith('STALE:') ? 'stale' : 'failed';
+      status.state =
+        aborter.signal.aborted || (error instanceof Error && error.name === 'AbortError')
+          ? 'cancelled'
+          : 'failed';
       // Logs omit model output and credentials; private proposal details stay in MVU.
       status.message =
-        status.state === 'cancelled'
-          ? '已取消，未套用結果'
-          : status.state === 'stale'
-            ? periodWork
-              ? '換期來源已改變，請更新局勢重新判定；按重試會執行更新局勢'
-              : '來源樓層或變數已改變，請依目前樓層重試'
-            : `未提交：${message.slice(0, 1500)}`;
+        status.state === 'cancelled' ? '已取消，未套用結果' : `未提交：${message.slice(0, 1500)}`;
     } finally {
+      sourceSignal?.removeEventListener('abort', cancelSource);
       status.finished = Date.now();
       if (acquired) {
         this.active--;
