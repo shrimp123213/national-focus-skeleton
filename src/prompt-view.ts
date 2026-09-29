@@ -121,7 +121,17 @@ export function promptView(state: State, news = true): PromptView {
     overview,
     countries: Object.fromEntries(
       countries.map((country) => {
-        const sections: string[] = [`【${country.name}】`];
+        const sections: string[] = [
+          `【${country.name}】`,
+          `第 ${country.period.number} 期：${country.periodTitle}。${country.agenda}`,
+        ];
+        const lastPeriod = country.period.history.at(-1);
+        if (lastPeriod) {
+          sections.push(`前期（故事日 ${lastPeriod.start}–${lastPeriod.end}）：${lastPeriod.summary}`);
+        }
+        if (country.longTerm.length) {
+          sections.push(`長期方向：${country.longTerm.map((goal) => goal.text).join('；')}`);
+        }
         const current = country.current ? country.nodes[country.current] : undefined;
         if (current) {
           sections.push(`推進中：${progressText(country)}：${clip(current.description, limits.description)}`);

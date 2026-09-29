@@ -14,6 +14,7 @@ import {
 } from './model';
 import { defaultSegmentMax, generateCountry, generationPlan, isSegmented, workingState } from './generation';
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
+import { checkTransition, periodAnchor, periodBasis, PeriodReplySchema, transitionPeriod } from './periods';
 import { DATA_TOKEN, promptText } from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
@@ -26,6 +27,7 @@ import {
   type PromptMessage,
   type RunLogEntry,
   type Snapshot,
+  type PeriodWork,
 } from './platform';
 
 function taskData(snapshot: Snapshot, full: boolean) {
@@ -242,7 +244,7 @@ export class FocusController {
       }
     }
   }
-  async run(kind: JobKind, candidate?: Candidate): Promise<void> {
+  async run(kind: JobKind, candidate?: Candidate, periodWork?: PeriodWork): Promise<void> {
     if (this.disposed) {
       return;
     }
@@ -255,12 +257,14 @@ export class FocusController {
       message: '等待任務空位',
       time: new Date().toLocaleTimeString(),
       ...(candidate ? { label: candidate.name, candidate } : {}),
+      ...(periodWork ? { periodWork, label: `${candidate?.name} · 換期` } : {}),
     };
     this.jobs.unshift(status);
     this.jobs = this.jobs.slice(0, 40);
     this.aborters.set(id, aborter);
     this.notify();
     let acquired = false;
+    const periods: { candidate: Candidate; work: PeriodWork }[] = [];
     try {
       while (this.active >= this.config.concurrency) {
         await new Promise<void>((resolve, reject) => {
@@ -284,6 +288,18 @@ export class FocusController {
       status.message = '正在分析本樓資料';
       this.notify();
       const snapshot = await this.platform.read(this.config, kind);
+      if (periodWork) {
+        checkTransition(snapshot.state, periodWork.transition);
+        if (
+          snapshot.identity !== periodWork.identity ||
+          snapshot.historyHash !== periodWork.historyHash ||
+          snapshot.storyFingerprint !== periodWork.storyFingerprint ||
+          snapshot.day !== periodWork.day ||
+          periodBasis(snapshot.state, candidate!.id) !== periodWork.basis
+        ) {
+          throw new Error('STALE:換期依據已改變，請更新局勢重新判定');
+        }
+      }
       if (kind === 'generate' && !candidate) {
         throw new Error('請先選擇要生成的候選國家');
       }
@@ -299,7 +315,7 @@ export class FocusController {
         const current = await this.platform.read(this.config);
         if (
           current.identity !== snapshot.identity ||
-          current.fingerprint !== snapshot.fingerprint ||
+          (!periodWork && current.fingerprint !== snapshot.fingerprint) ||
           current.historyHash !== snapshot.historyHash ||
           current.day !== snapshot.day
         ) {
@@ -341,8 +357,54 @@ export class FocusController {
           this.notify();
         }
       }
-      const result =
-        kind === 'generate'
+      const result = periodWork
+        ? await ask(
+            'period',
+            {
+              now: snapshot.day,
+              context: snapshot.context,
+              world: Object.values(snapshot.state.countries)
+                .filter((country) => country.enabled && country.id !== candidate!.id)
+                .map((country) => ({
+                  id: country.id,
+                  name: country.name,
+                  agenda: country.agenda || country.analysis,
+                  current: country.nodes[country.current]?.name,
+                  capabilities: Object.values(country.capabilities).filter((c) => c.active),
+                })),
+              state: workingState(
+                {
+                  ...snapshot.state,
+                  countries: { [candidate!.id]: snapshot.state.countries[candidate!.id] },
+                  events: Object.fromEntries(
+                    Object.entries(snapshot.state.events).filter(([, event]) =>
+                      event.countries.includes(candidate!.id),
+                    ),
+                  ),
+                },
+                true,
+              ),
+              candidate,
+              transition: periodWork.transition,
+              anchor: periodAnchor(
+                snapshot.state.countries[candidate!.id],
+                periodWork.transition.invalidateActive,
+              ),
+              prefix: `p${snapshot.state.countries[candidate!.id].period.number + 1}_`,
+              limits: {
+                min: sizeLimits[snapshot.state.settings.size][0],
+                max: sizeLimits[snapshot.state.settings.size][1],
+              },
+              instructions:
+                '生成下一期與舊期摘要。tree.nodes 只輸出新節點，承接節點由程式原樣保留；新節點可引用 anchor 作必要前置，不相關議程可獨立推進。節點與互斥組使用 prefix。不得生成 historical 或改變既有能力、數值、事實及事件。保留仍有效的 longTerm 的 id 與原文，修訂理由寫 analysis。summary 只敘述已發生事實與舊期終止原因，不把新計畫當成果。總數含 anchor，以 limits 為篇幅目標，不湊數。',
+            },
+            PeriodReplySchema,
+            (value) => {
+              transitionPeriod(snapshot.state, periodWork.transition, value);
+            },
+            '生成下一期與舊期摘要',
+          )
+        : kind === 'generate'
           ? await generateCountry(
               snapshot,
               candidate!,
@@ -360,9 +422,49 @@ export class FocusController {
               },
             );
       aborter.signal.throwIfAborted();
-      const next = this.proposedState(kind, snapshot, result, candidate);
+      let commitSource = snapshot;
+      if (periodWork) {
+        commitSource = await this.platform.read(this.config);
+        if (
+          commitSource.identity !== snapshot.identity ||
+          commitSource.historyHash !== snapshot.historyHash ||
+          commitSource.storyFingerprint !== snapshot.storyFingerprint ||
+          JSON.stringify(commitSource.state.countries) !== JSON.stringify(snapshot.state.countries) ||
+          commitSource.day !== snapshot.day ||
+          periodBasis(commitSource.state, candidate!.id) !== periodWork.basis
+        ) {
+          throw new Error('STALE:換期期間國策或局勢已改變');
+        }
+      }
+      const next = periodWork
+        ? transitionPeriod(commitSource.state, periodWork.transition, PeriodReplySchema.parse(result))
+        : this.proposedState(kind, snapshot, result, candidate);
       next.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
-      await this.platform.commit(snapshot, next);
+      await this.platform.commit(commitSource, next);
+      if (kind === 'update' && !snapshot.state.receipts.includes(ProposalSchema.parse(result).id)) {
+        for (const transition of ProposalSchema.parse(result).transitions) {
+          const country = next.countries[transition.country];
+          if (!country.enabled || !country.autoPeriod || country.calibration) {
+            continue;
+          }
+          periods.push({
+            candidate: {
+              id: country.id,
+              name: country.name,
+              description: country.description,
+              evidence: country.evidence,
+            },
+            work: {
+              transition,
+              identity: snapshot.identity,
+              historyHash: snapshot.historyHash,
+              storyFingerprint: snapshot.storyFingerprint,
+              day: snapshot.day,
+              basis: periodBasis(next, country.id),
+            },
+          });
+        }
+      }
       if (kind === 'identify') {
         this.candidates = CandidatesSchema.parse(result).countries.filter((c) => !next.countries[c.id]);
       }
@@ -380,7 +482,9 @@ export class FocusController {
         status.state === 'cancelled'
           ? '已取消，未套用結果'
           : status.state === 'stale'
-            ? '來源樓層或變數已改變，請依目前樓層重試'
+            ? periodWork
+              ? '換期來源已改變，請更新局勢重新判定；按重試會執行更新局勢'
+              : '來源樓層或變數已改變，請依目前樓層重試'
             : `未提交：${message.slice(0, 1500)}`;
     } finally {
       status.finished = Date.now();
@@ -390,6 +494,13 @@ export class FocusController {
       this.aborters.delete(id);
       this.waiters.shift()?.();
       this.notify();
+    }
+    // Release the update job's slot before starting its per-country background generation.
+    for (const period of periods) {
+      if (this.disposed || aborter.signal.aborted) {
+        break;
+      }
+      await this.run('generate', period.candidate, period.work);
     }
   }
   /**
@@ -628,15 +739,33 @@ export class FocusController {
       }
       const limits = sizeLimits;
       const [min, max] = limits[snapshot.state.settings.size];
-      if (tree.nodes.length < min || tree.nodes.length > max) {
+      if (!tree.nodes.length || tree.nodes.length > max) {
         throw new Error(`生成規模須為 ${min}–${max} 節點`);
       }
-      return installCountry(snapshot.state, tree, snapshot.day);
+      return installCountry(snapshot.state, { ...tree, autoPeriod: true }, snapshot.day);
     }
     const proposal = ProposalSchema.parse(result);
     if (proposal.until !== snapshot.day) {
       throw new Error('更新終點必須等於來源故事時間');
     }
-    return applyProposal(snapshot.state, proposal, kind === 'reshape');
+    const next = applyProposal(snapshot.state, proposal, kind === 'reshape');
+    if (proposal.transitions.length && kind !== 'update') {
+      throw new Error('只有局勢更新可發起換期');
+    }
+    const countries = new Set<string>();
+    for (const transition of proposal.transitions) {
+      const country = next.countries[transition.country];
+      if (!country) {
+        throw new Error('換期引用不存在的國家');
+      }
+      if (country.enabled && country.autoPeriod && !country.calibration) {
+        checkTransition(next, transition);
+      }
+      if (countries.has(transition.country)) {
+        throw new Error('同一次更新不可對同國重複換期');
+      }
+      countries.add(transition.country);
+    }
+    return next;
   }
 }

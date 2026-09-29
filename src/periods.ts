@@ -1,0 +1,166 @@
+import { z } from 'zod';
+import { installCountry, validateGraph } from './engine';
+import { GeneratedTreeSchema, validateTopology } from './generation';
+import { layoutTree } from './layout';
+import { sizeLimits, StateSchema, TreeSchema, type Country, type Proposal, type State } from './model';
+import { assertCapabilityOrder } from './reachability';
+
+export type Transition = Proposal['transitions'][number];
+export const PeriodReplySchema = z
+  .object({
+    summary: z.string().min(1).max(1200),
+    tree: GeneratedTreeSchema.extend({
+      periodTitle: z.string().min(1).max(80),
+      agenda: z.string().min(1).max(800),
+    }),
+  })
+  .strict();
+export type PeriodReply = z.output<typeof PeriodReplySchema>;
+
+/** Only a still-active focus is carried; paused and waiting focuses do not take precedence. */
+export function periodAnchor(country: Country, invalidateActive = false): string {
+  if (!invalidateActive && country.progress[country.current]?.status === 'active') {
+    return country.current;
+  }
+  return (
+    Object.entries(country.progress)
+      .filter(([, progress]) => progress.status === 'completed')
+      .sort((a, b) => (b[1].completed ?? -1) - (a[1].completed ?? -1))[0]?.[0] ?? ''
+  );
+}
+
+/** Compare policy state while allowing newer event text and other countries to be retained. */
+export function periodBasis(state: State, country: string): string {
+  return JSON.stringify([state.countries[country], state.settings.size, state.settings.pace, state.day]);
+}
+
+export function checkTransition(state: State, transition: Transition): void {
+  const country = state.countries[transition.country];
+  if (!country?.enabled || !country.autoPeriod || country.calibration) {
+    throw new Error('此國未啟用自動換期，或尚待校準');
+  }
+  if (transition.invalidateActive && transition.cause !== 'incompatible') {
+    throw new Error('只有局勢不適配可停止承接進行中國策');
+  }
+}
+
+/** Replace just the policy tree. Events and all already-applied results belong to the live state. */
+export function transitionPeriod(input: State, transition: Transition, reply: PeriodReply): State {
+  checkTransition(input, transition);
+  const old = input.countries[transition.country];
+  const anchor = periodAnchor(old, transition.invalidateActive);
+  const number = old.period.number + 1;
+  const prefix = `p${number}_`;
+  const generated = reply.tree;
+  if (generated.id !== old.id) {
+    throw new Error('下一期國家 ID 不一致');
+  }
+  if (generated.historical.length) {
+    throw new Error('新一期不得生成已完成國策；承接節點由程式保留');
+  }
+  if (generated.nodes.length + Number(Boolean(anchor)) > sizeLimits[input.settings.size][1]) {
+    throw new Error('新一期超過所選規模上限（包含承接節點）');
+  }
+  const oldGroups = new Set(Object.values(old.nodes).flatMap((n) => (n.mutex ? [n.mutex.group] : [])));
+  const nodes = generated.nodes.map((node) => {
+    if (!node.id.startsWith(prefix) || old.nodes[node.id]) {
+      throw new Error(`新國策 ID 必須使用 ${prefix} 前綴，且不可重用舊 ID`);
+    }
+    if (node.mutex && (!node.mutex.group.startsWith(prefix) || oldGroups.has(node.mutex.group))) {
+      throw new Error(`新互斥組必須使用 ${prefix} 前綴`);
+    }
+    if (node.impact === 'pivotal' && !node.news) {
+      throw new Error(`重要國策 ${node.id} 缺少新聞`);
+    }
+    return node;
+  });
+  if (
+    new Set(generated.branches.map((b) => b.id)).size !== generated.branches.length ||
+    new Set(generated.branches.map((b) => b.name)).size !== generated.branches.length ||
+    nodes.some((n) => !generated.branches.some((b) => b.name === n.branch))
+  ) {
+    throw new Error('新期分支不可重複，節點必須屬於已定義分支');
+  }
+  if (anchor) {
+    // The old routes are no longer choices. Preserve work/effects, not obsolete graph edges.
+    nodes.unshift({ ...old.nodes[anchor], prerequisites: [], mutex: null });
+  }
+  const branches = [...generated.branches];
+  if (anchor && !branches.some((b) => b.name === old.nodes[anchor].branch)) {
+    const branch = old.branches.find((b) => b.name === old.nodes[anchor].branch);
+    if (branch) {
+      branches.unshift({ ...branch, core: false });
+    }
+  }
+  if (new Set(branches.map((b) => b.id)).size !== branches.length) {
+    throw new Error('新分支 ID 與承接分支衝突');
+  }
+  validateTopology(nodes, input.settings.size);
+  const tree = TreeSchema.parse({
+    ...generated,
+    branches,
+    nodes: layoutTree(nodes),
+    capabilities: Object.values(old.capabilities),
+  });
+  assertCapabilityOrder(
+    tree.nodes,
+    Object.values(old.capabilities)
+      .filter((c) => c.active)
+      .map((c) => c.id),
+    anchor && old.progress[anchor].status === 'completed' ? [anchor] : [],
+  );
+  const ids = new Set(tree.nodes.map((n) => n.id));
+  if (tree.relations?.some((r) => !ids.has(r.from) || !ids.has(r.to))) {
+    throw new Error('新期關係引用不存在的節點');
+  }
+  const base = structuredClone(input);
+  delete base.countries[old.id];
+  const installed = installCountry(base, tree, input.day).countries[old.id];
+  const state = structuredClone(input);
+  state.countries[old.id] = {
+    ...old,
+    periodTitle: tree.periodTitle,
+    agenda: tree.agenda,
+    longTerm: tree.longTerm,
+    analysis: tree.analysis,
+    branches: tree.branches,
+    relations: tree.relations,
+    nodes: installed.nodes,
+    progress: installed.progress,
+    current: anchor && old.progress[anchor].status === 'active' ? anchor : '',
+    // Old route groups belong to the removed graph; their actual results remain in national state.
+    locks: {},
+    treeRevision: old.treeRevision + 1,
+    period: {
+      number,
+      started: input.day,
+      anchor,
+      history: [
+        ...old.period.history,
+        {
+          start:
+            old.period.started ??
+            Math.min(
+              old.cursor,
+              ...Object.values(old.progress).flatMap((p) =>
+                [p.started, p.completed].filter((day): day is number => day !== null),
+              ),
+            ),
+          end: input.day,
+          summary: reply.summary,
+        },
+      ],
+    },
+  };
+  if (anchor) {
+    state.countries[old.id].progress[anchor] = structuredClone(old.progress[anchor]);
+  }
+  for (const event of Object.values(state.events)) {
+    if (event.source.country === old.id && event.source.node && !event.source.name) {
+      event.source.name = old.nodes[event.source.node]?.name ?? event.source.node;
+    }
+  }
+  validateGraph(state.countries[old.id].nodes);
+  state.revision++;
+  return StateSchema.parse(state);
+}

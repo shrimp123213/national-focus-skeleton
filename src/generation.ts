@@ -3,7 +3,6 @@ import { assertReachable, assertCapabilityOrder, assertMutexChoices } from './re
 import { z } from 'zod';
 import {
   BranchSchema,
-  Id,
   NodeSchema,
   TreeSchema,
   sizeLimits,
@@ -17,25 +16,24 @@ import { generateBySkeleton, type SkeletonProgress } from './skeleton';
 
 export const GeneratedTreeSchema = TreeSchema.extend({
   analysis: z.string().min(1),
-  branches: z.array(BranchSchema).min(3).max(16),
+  branches: z.array(BranchSchema).min(1).max(16),
   nodes: z
     .array(NodeSchema.omit({ x: true, y: true }))
     .min(1)
     .max(300),
 });
-/** Forks and joins scale with depth; cross-branch links stay modest because branches are few. */
-const topologyMinimums = { small: 1, standard: 3, large: 4, epic: 5 } as const;
-const crossLinkMinimums = { small: 1, standard: 2, large: 3, epic: 3 } as const;
-/**
- * Few, deep branches at every size (v0.10.0): a size adds depth and alternative routes, not more
- * parallel columns. Text budgets apply to single-reply generation (small).
- */
-const brevity = {
-  small: { description: 120, reason: 60, duration: 40, branches: [3, 5], perBranch: [4, 7] },
-  standard: { description: 80, reason: 40, duration: 24, branches: [4, 6], perBranch: [8, 15] },
-  large: { description: 50, reason: 24, duration: 16, branches: [4, 6], perBranch: [12, 25] },
-  epic: { description: 36, reason: 18, duration: 12, branches: [5, 6], perBranch: [18, 30] },
+/** Periods follow their agendas; graph shapes have no quotas. */
+const topologyMinimums = { small: 0, standard: 0, large: 0, epic: 0 } as const;
+const crossLinkMinimums = { small: 0, standard: 0, large: 0, epic: 0 } as const;
+const standardBudget = {
+  description: 300,
+  reason: 120,
+  duration: 60,
+  branches: [1, 4],
+  perBranch: [2, 8],
 } as const;
+const largeBudget = { ...standardBudget, branches: [1, 6], perBranch: [2, 10] } as const;
+const brevity = { small: standardBudget, standard: standardBudget, large: largeBudget, epic: largeBudget };
 /**
  * Focuses per fill request. The maximum comes from the generate task (`segmentMax`; before
  * v0.13.3 from its API preset), 0 = no limit, that is one batch for the whole skeleton.
@@ -96,7 +94,7 @@ export function dropSelfConditions<
   return { nodes: result, removed };
 }
 
-/** Each branch needs 1–3 turning points (the prompt asks for 1–2), and each carries its news. */
+/** Important focuses carry news, but a branch does not need to contain one. */
 export function assertTurningPoints(
   nodes: Pick<FocusNode, 'id' | 'branch' | 'impact' | 'news'>[],
   branches: string[],
@@ -105,15 +103,6 @@ export function assertTurningPoints(
     requireThat(
       node.impact !== 'pivotal' || node.news,
       `重要國策 ${node.id} 缺少 news（headline、body、option）`,
-    );
-  }
-  for (const branch of branches) {
-    const count = nodes.filter((node) => node.branch === branch && node.impact === 'pivotal').length;
-    requireThat(
-      count >= 1 && count <= 3,
-      count
-        ? `分支「${branch}」有 ${count} 個重要國策，最多 3 個`
-        : `分支「${branch}」沒有重要國策（impact=pivotal）；每支需要 1–2 個影響重大、值得公告的國策`,
     );
   }
 }
@@ -141,39 +130,6 @@ export function validateTopology(
   size: State['settings']['size'],
 ): void {
   layoutTree(nodes); // Reject missing references, duplicate IDs and cycles before inspecting edges.
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  const childCounts = new Map<string, number>();
-  const choices = new Map<string, Set<string>>();
-  let joins = 0;
-  let crossLinks = 0;
-  for (const node of nodes) {
-    if (node.prerequisites.flat().length > 1) {
-      joins++;
-    }
-    for (const parent of new Set(node.prerequisites.flat())) {
-      childCounts.set(parent, (childCounts.get(parent) ?? 0) + 1);
-      if (byId.get(parent)!.branch !== node.branch) {
-        crossLinks++;
-      }
-    }
-    if (node.mutex) {
-      const routes = choices.get(node.mutex.group) ?? new Set<string>();
-      routes.add(node.mutex.route);
-      choices.set(node.mutex.group, routes);
-    }
-  }
-  const minimum = topologyMinimums[size];
-  requireThat(
-    [...childCounts.values()].filter((v) => v > 1).length >= minimum,
-    `全圖至少需要 ${minimum} 處分岔`,
-  );
-  requireThat(joins >= minimum, `全圖至少需要 ${minimum} 處匯流或共同前置`);
-  requireThat(crossLinks >= crossLinkMinimums[size], `全圖至少需要 ${crossLinkMinimums[size]} 條跨分支依賴`);
-  requireThat(
-    [...choices.values()].some((routes) => routes.size > 1),
-    '需要至少一組具有不同選擇的互斥路線',
-  );
-
   assertMutexChoices(nodes);
   assertReachable(nodes);
 }
@@ -276,15 +232,10 @@ export function validateTree(
     const raw = normalizeGenerated(reply);
     requireThat(raw.id === candidate.id, '生成的國家 ID 與選取國家不一致');
     requireThat(
-      (options.allowShort || raw.nodes.length >= min) && raw.nodes.length <= max,
+      raw.nodes.length >= 1 && raw.nodes.length <= max,
       raw.nodes.length < min
         ? `生成規模須為 ${min}–${max} 節點，本次只有 ${raw.nodes.length} 項。請依建議分支數與每支項數補足，並精簡每個節點的文字，讓整棵樹能在一次回應內輸出完畢`
         : `生成規模須為 ${min}–${max} 節點，本次有 ${raw.nodes.length} 項，請合併或刪減`,
-    );
-    const [fewest, most] = brevity[size].branches;
-    requireThat(
-      raw.branches.length >= fewest && raw.branches.length <= most,
-      `分支數須為 ${fewest}–${most}，本次有 ${raw.branches.length} 支；規模靠分支的深度與互斥路線，而不是更多分支`,
     );
     for (const key of ['id', 'name'] as const) {
       requireThat(
@@ -303,6 +254,14 @@ export function validateTree(
     );
     validateTopology(raw.nodes, size);
     const tree = TreeSchema.parse({ ...raw, nodes: layoutTree(raw.nodes) });
+    if (
+      tree.relations?.some(
+        (relation) =>
+          !tree.nodes.some((n) => n.id === relation.from) || !tree.nodes.some((n) => n.id === relation.to),
+      )
+    ) {
+      throw new Error('關係引用不存在的國策');
+    }
     requireThat(
       new Set(tree.nodes.map((n) => n.description.trim())).size === tree.nodes.length,
       '國策描述完全重複',
@@ -358,6 +317,14 @@ export function workingState(state: State, fullDefinitions = false): object {
         facts: c.facts,
         capabilities: c.capabilities,
         commitments: c.commitments,
+        period: {
+          number: c.period.number,
+          title: c.periodTitle,
+          agenda: c.agenda || c.analysis,
+          auto: c.autoPeriod,
+          history: c.period.history.slice(-3),
+        },
+        longTerm: c.longTerm,
         nodes: Object.values(c.nodes).map((n) =>
           fullDefinitions
             ? n
@@ -367,6 +334,7 @@ export function workingState(state: State, fullDefinitions = false): object {
                   id: n.id,
                   name: n.name,
                   branch: n.branch,
+                  description: n.description,
                   days: n.days,
                   prerequisites: n.prerequisites,
                   mutex: n.mutex,
@@ -408,7 +376,7 @@ export function workingState(state: State, fullDefinitions = false): object {
             public: event.public,
             settle: event.settle,
             ...(event.source.node
-              ? { focus: { country: event.source.country, node: event.source.node } }
+              ? { focus: { country: event.source.country, node: event.source.node, name: event.source.name } }
               : {}),
             ...(event.current ? { current: event.current } : {}),
             ...(event.steps ? { steps: event.steps } : {}),

@@ -541,6 +541,7 @@ export class TavernPlatform implements Platform {
     return {
       identity: stamp([identity, sourceRevision]),
       fingerprint,
+      storyFingerprint: stamp(data.stat_data),
       historyHash,
       turn: this.api.getChatMessages(`0-${lastId}`).filter((m) => m.role === 'assistant').length,
       day,

@@ -120,9 +120,8 @@ export function mountTaskPanel(
       </div></div>`;
   }
 
-  /** `inherited`: the task has no value yet and shows the older API preset value. */
-  function segmentField(value: number, inherited: boolean): string {
-    return `<div class="wide segment-max"><label class="field">每批填寫國策數<input data-t="segmentMax" type="number" min="0" max="300" step="1" value="${value}" ${inherited ? `data-inherited="${value}"` : ''}></label><div class="segment-max-chips">${[15, 25, 40, 60, 0].map((chip) => `<button type="button" class="chip ${value === chip ? 'done' : ''}" data-task-action="segment-max" data-value="${chip}">${chip === 0 ? '不限' : chip}</button>`).join('')}</div><small>先生成骨架，再分批填寫各國策內容。數值越大請求越少，但單次輸出越長，容易截斷或逾時；模型常失敗時請調低。0 為不限（一批填完）。</small></div>`;
+  function generationNote(): string {
+    return '<p class="muted wide">分期版每國一次生成當期內容，換期時同次產生新樹與舊期摘要。每期規模在「一般」設定；本任務的 API、重試與逾時也用於換期。</p>';
   }
   /** Compare the recommended model with the primary connection's model. */
   function modelNote(kind: JobKind, config: Config): string {
@@ -192,7 +191,7 @@ export function mountTaskPanel(
         }
         <label class="field" data-interval ${kind !== 'generate' && ['rounds', 'days'].includes(job.schedule) ? '' : 'hidden'}>${job.schedule === 'days' ? '間隔（故事日）' : '間隔（則正文）'}<input type="number" min="1" max="1000" data-t="interval" value="${job.interval}"></label>
         <small class="wide" data-days-note ${kind !== 'generate' && job.schedule === 'days' ? '' : 'hidden'}>故事日取自「世界書與上下文 › 故事時間路徑」。讀不到時間時，國策進度無法計算，所有任務（包括此項）都不執行，面板顯示原因與路徑；時間恢復後，下一則正文照常判斷間隔。</small>
-        ${kind === 'generate' ? segmentField(job.segmentMax ?? controller.segmentMax(config), job.segmentMax === undefined) : ''}
+        ${kind === 'generate' ? generationNote() : ''}
         <label class="field">每條連線重試次數<input type="number" min="0" max="10" data-t="retries" value="${job.retries}"><small>失敗原因會回饋給模型再試（0–10）。</small></label>
         <label class="field">逾時秒數<input type="number" min="10" max="600" data-t="timeout" value="${job.timeout}"></label>
         <label class="field wide">建議模型<input data-t="recommendedModel" maxlength="200" value="${escape(job.recommendedModel)}" placeholder="例如 deepseek-chat；只是備註，不影響連線"><small>隨任務預設保存，分享預設時讓對方知道這組提示詞適合哪個模型。</small></label>
@@ -264,14 +263,6 @@ export function mountTaskPanel(
       job.retries = Number(field<HTMLInputElement>('retries').value);
       job.timeout = Number(field<HTMLInputElement>('timeout').value);
       job.recommendedModel = field<HTMLInputElement>('recommendedModel').value.trim();
-      if (kind === 'generate') {
-        const input = field<HTMLInputElement>('segmentMax');
-        const value = Number(input.value);
-        // Leave an untouched inherited value unset, so opening the window changes nothing.
-        if (!(job.segmentMax === undefined && input.dataset.inherited === String(value))) {
-          job.segmentMax = value;
-        }
-      }
       job.prompts = [...section.querySelectorAll<HTMLElement>('[data-prompt-row]')].map((row) => {
         const kindOf = row.dataset.kind as PromptItem['kind'];
         const value = (key: string) =>
@@ -419,14 +410,6 @@ export function mountTaskPanel(
     const job = getDraft().jobs[kind];
     const index = job.prompts.findIndex((item) => item.id === id);
     switch (action) {
-      case 'segment-max': {
-        const input = section.querySelector<HTMLInputElement>('[data-t="segmentMax"]')!;
-        input.value = button.dataset.value!;
-        for (const chip of section.querySelectorAll<HTMLElement>('[data-task-action="segment-max"]')) {
-          chip.classList.toggle('done', chip === button);
-        }
-        return;
-      }
       case 'edit-sources':
         hooks?.edit(kind);
         return;
@@ -576,13 +559,6 @@ export function mountTaskPanel(
         section.dataset.taskEditor as JobKind,
         getDraft(),
       );
-      return;
-    }
-    if (input.dataset.t === 'segmentMax') {
-      const section = input.closest<HTMLElement>('[data-task-editor]')!;
-      for (const chip of section.querySelectorAll<HTMLElement>('[data-task-action="segment-max"]')) {
-        chip.classList.toggle('done', chip.dataset.value === String(Number(input.value)));
-      }
       return;
     }
     const row = input.closest<HTMLElement>('[data-prompt-row]');

@@ -12,6 +12,7 @@ import { repairReply } from './repair';
 export const TREE_FILE_KIND = 'national-focus-tree';
 type Tree = z.output<typeof TreeSchema>;
 const StatusSchema = CountrySchema.pick({
+  period: true,
   enabled: true,
   control: true,
   skipDelegate: true,
@@ -32,6 +33,13 @@ const HISTORY = '歷史承接：';
 
 /** Definition of a country as a tree file entry; x/y are omitted because import lays out again. */
 export function countryTree(country: Country): Record<string, unknown> {
+  const completedAnchor =
+    country.progress[country.period.anchor]?.status === 'completed' ? country.period.anchor : '';
+  const inheritedProducts = new Set(
+    (country.nodes[completedAnchor]?.effects ?? []).flatMap((effect) =>
+      effect.kind === 'capability' ? [effect.key] : [],
+    ),
+  );
   const produced = new Set(
     Object.values(country.nodes).flatMap((node) =>
       node.effects.flatMap((effect) => (effect.kind === 'capability' ? [effect.key] : [])),
@@ -46,13 +54,28 @@ export function countryTree(country: Country): Record<string, unknown> {
     evidence: country.evidence,
     ...(country.keywords ? { keywords: country.keywords } : {}),
     analysis: country.analysis,
+    periodTitle: country.periodTitle,
+    agenda: country.agenda,
+    longTerm: country.longTerm,
+    autoPeriod: country.autoPeriod,
     branches: country.branches,
     ...(country.relations ? { relations: country.relations } : {}),
     // Base capabilities only: the ones no focus in this tree produces.
-    capabilities: Object.values(country.capabilities).filter((capability) => !produced.has(capability.id)),
+    capabilities: Object.values(country.capabilities).filter(
+      (capability) => !produced.has(capability.id) || inheritedProducts.has(capability.id),
+    ),
     historical: Object.entries(country.progress)
-      .filter(([, progress]) => progress.status === 'completed' && progress.evidence.startsWith(HISTORY))
-      .map(([node, progress]) => ({ node, evidence: progress.evidence.slice(HISTORY.length) })),
+      .filter(
+        ([id, progress]) =>
+          progress.status === 'completed' &&
+          (progress.evidence.startsWith(HISTORY) || id === completedAnchor),
+      )
+      .map(([node, progress]) => ({
+        node,
+        evidence: progress.evidence.startsWith(HISTORY)
+          ? progress.evidence.slice(HISTORY.length)
+          : progress.evidence || '前期已完成的承接國策',
+      })),
     nodes: Object.values(country.nodes).map(({ x: _x, y: _y, ...node }) => node),
   };
 }
@@ -72,6 +95,7 @@ export function exportTrees(state: State, ids?: string[]): string {
       countries: countries.map((country) => ({
         tree: countryTree(country),
         status: {
+          period: country.period,
           enabled: country.enabled,
           control: country.control,
           skipDelegate: country.skipDelegate,
@@ -253,7 +277,7 @@ export function importTrees(
       }
       state = removeCountry(state, id);
     }
-    state = installCountry(state, entry.tree, state.day);
+    state = installCountry(state, { ...entry.tree, autoPeriod: entry.tree.autoPeriod ?? false }, state.day);
     if (options.withProgress && entry.status) {
       state = structuredClone(state);
       const country = state.countries[id];

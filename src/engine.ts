@@ -70,6 +70,8 @@ export function installCountry(input: State, raw: unknown, day: number): State {
     treeRevision: 0,
     cursor: day,
     current: '',
+    autoPeriod: tree.autoPeriod ?? true,
+    period: { number: 1, started: day, anchor: '', history: [] },
     locks: {},
     facts: {},
     commitments: {},
@@ -706,7 +708,7 @@ function pruneRelations(country: Country, rewritten: Set<string>): void {
 export function changeCountry(
   input: State,
   id: string,
-  patch: Partial<Pick<Country, 'enabled' | 'control' | 'skipDelegate'>>,
+  patch: Partial<Pick<Country, 'enabled' | 'control' | 'skipDelegate' | 'autoPeriod'>>,
 ): State {
   const state = structuredClone(input);
   const country = state.countries[id];

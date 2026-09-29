@@ -20290,45 +20290,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     identify: `任務：辨識國家。
 依資料中的 context（世界書、正文、紀要）列出本局實際存在、能自主決定長期方向的國家或政權，作為候選。只列有正文或世界書依據者，evidence 寫出依據；不列已在 state.countries 中的國家，也不虛構勢力。
 description 用一兩句說明其現狀與主要矛盾。id 使用英文字母開頭的英數底線/連字號，同一國家在不同回合應使用相同 id。`,
-    generate: `任務：生成國策樹。國家 id 必須等於 candidate.id。依資料中的 stage 執行：
-- stage=generate：一次輸出完整國策樹（branches 與全部 nodes），全樹合計 limits.min–limits.max 項。節點數不足會整份退回，輸出前逐支計數。
-- stage=skeleton：輸出整棵樹的骨架，國策數落在 limits.min–limits.max。每個國策只寫結構與規則：id、name、branch、gist（limits.gist 字內的核心行動與預期成果）、prerequisites、mutex（group、route、lock）、impact、action（pivotal 才填，是新聞要報導的國家行動）、execution（完成後仍需持續執行的工程或改革寫 ongoing，例如分批清丈、長期工程，完成時系統會建立執行事件追蹤進度；一次完成的省略）、provides、revokes、stats、conditional、requirements／sustain／outcomes（條件不寫 label；capability 與 fact 條件可加 negate=true 表示「必須沒有」）。不寫 description、reason、工期與新聞內文，這些在 fill 階段補上。能力 key 列在 capabilityCatalog（初始能力列在 capabilities）；跨國策共用的劇情事實列在 facts，fact 條件只能引用 facts 的 id。歷史已完成的國策列在 historical，並與初始能力一致。keywords 寫 3–8 個正文中用來指稱本國的詞（簡稱、首都、統治者、代表地名），逐字照正文或世界書的寫法（簡繁一致），用來判斷劇情與玩家所在地是否涉及本國；不放「帝國」「王國」這類通用詞。branches 恰好一支 core=true 並寫 coreReason；relations 記錄國策之間的關係（見下方「國策之間的關係」）。所有結構規則都在這一階段檢查，有問題時會以 skeleton-fix 局部修正。previousProblems 不為空時，表示上一份骨架修正多輪後仍無法解決這些問題，這次重新設計時要從結構上避開。
-- stage=fill：只為 batch 中的國策撰寫內容，每個 batch 項目輸出一筆，id 必須相同。結構已由骨架決定，不可更改也不要輸出 prerequisites、mutex、條件或能力。依 gist、條件、provides、revokes、stats、conditional、relations 與 context 撰寫：description 寫具體行動、利益衝突與取捨；有 relations 時寫出它如何改變另一方的選項、收益、代價或時機；conditional 寫出不同情況下的不同結果；revokes 與負面 stats 寫出誰受損；reason 區分設定依據與新設計；days 與 durationReason 依 pace 估算；investments 1–2 項短名詞；commitments 只寫只影響本國策的承諾；有 mutex 時填 mutexReason；pivotal 填 news（headline 報導 action，body 寫世界如何反應，option 為唯一選項）。previousError 不為 null 時，表示上次這一項被退回的原因，請修正。文字字數上限見 limits.text。
-- stage=skeleton-fix：skeleton 是目前的骨架，issues 列出它的全部問題。只輸出 {"patch":[…]}，用操作修正 issues 列出的問題；不要重寫整份骨架，也不要改動沒有問題的部分。操作有三種：insert 新增（路徑末端寫 - 表示加在陣列最後）、replace 取代、remove 刪除；insert 與 replace 必須有 value。路徑以 / 分隔：nodes 與 facts 用 id、branches 用 id、capabilityCatalog 用 key、choices 用 group 定位（例如 /nodes/pol_crown/impact），其他陣列用 0 起算的位置（例如 /relations/2/kind）。國策數不足時，用 insert /nodes/- 新增完整的國策（id 不重複、前置接在既有國策之後、優先補在較短的分支），新國策用到的新能力也要 insert 到 /capabilityCatalog/-；刪除國策時一併移除指向它的前置與關係。skippedOperations 不為空時，列出上一輪無法套用的操作與原因。
-每一階段都一次輸出該階段的完整 JSON，不可使用省略號、只給大綱或要求下一次續寫。
-依世界書、正文與選定 MVU 分析國家現狀、特有矛盾、利益群體、資源依賴與外部威脅，寫入 analysis；區分設定事實與推測，不套用固定帝國或二戰意識形態。
-分支要少而深：通常一支國體或政治路線（內含 2–4 條互斥路線，是整棵樹的核心抉擇）、一至兩支對外（外交與戰爭）、一至兩支內政發展，視國家情況再加一支專屬分支；規模越大，分支越深、互斥路線越多，而不是分支越多。分支數落在 limits.branches，每支約 limits.perBranch 項。每支寫目的、支持者、反對者、取捨及終點，名稱/ID 唯一；每個 node.branch 使用對應分支 name，每支至少有一項國策。全樹至少有 limits.minimumForks 處分岔、limits.minimumJoins 處匯流或共同前置、limits.minimumCrossBranchLinks 條跨分支依賴，及一組真正不同選擇的互斥路線；每支（5 項以上時）至少一處分岔與一處匯流。總量包含不同選擇，玩家不必完成全部國策。各路線有制度取捨與長期配套，不以純直線和通用數值獎勵灌水。
-國策之間的關係（stage=skeleton）：設計順序是先確認本國的主要問題、參與者與路線目標，再安排重要政策之間的因果，然後決定用哪條規則實現，最後才是文字。關係有六類：exchange 利益交換（為取得某方支持願意讓出什麼）、synergy 政策配合（哪些政策共同支援目標，或同一建設因前期選擇而有不同成果）、opportunity 機會成本（現在優先處理什麼、錯過什麼時機）、context 情境差異（危機仍在或已解決時同一政策的用途不同）、deferred 延後兌現（前期承諾如何影響後期）、replacement 制度替代（哪些制度確實無法並存）。每條 relation 寫 from、to、kind 與 change（選了 from 之後，to 的哪些選項、收益、代價或時機會改變），並必須由實際規則實現：能力條件（包括 negate=true 的「必須沒有」）、conditional 條件式成果、穩定度或戰爭支持度門檻、互斥，或前置。可用的做法：有規則效力的承諾寫成能力（例如「承諾：保障地方分成」），以 negate 條件限制與承諾衝突的國策，毀約則以 revokes 撤銷並付出 stats 代價；共用建設以 conditional 依已取得的路線能力給不同成果。core=true 的分支是本國最主要戰略問題所在（不限政治，也可以是國防、重建或商業），它必須透過「會改變選擇」的關係（條件、negate、conditional、數值門檻或互斥；單純前置不算）影響至少 limits.coreMinimumBranches 支其他分支。其他分支原則上參與至少一條跨分支關係；確實可以獨立推進的分支寫 independent，說明它在本樹涵蓋的時期與議題內為何不受其他分支影響；它不可參與跨分支關係，也不可和其他分支有能力或互斥上的規則連結，跨分支前置只能是共同的起點國策（沒有前置的國策）；穩定度、戰爭支持度這類全國數值的一般影響不算，但刻意設計的數值交換仍應寫進 relations。不要為了湊數編出牽強的關係；普通建設可以單純有用，重大政策才需要交代受益者、受損者及取捨。只由 conditional 提供的能力，不能作為其他國策的 requirements／sustain／outcomes。同一國策不可同時要求有與沒有同一能力；「沒有 K 才能建立 K」可以。negate 條件要確保有國策能在它之前撤銷該能力，而且走那條路不會鎖掉它自己的路線，否則會被退回。撤銷能力用於廢除制度、終止條約、撤回授權；需要被撤銷能力的國策必須與撤銷者互斥、或是撤銷者的必經前置、或另有一個以撤銷者為必經前置的國策重新提供該能力；「有意關閉一條路線」請用互斥表達。
-prerequisites 為 AND of OR groups：[[a,b]] 表示 a 或 b，[[a],[b]] 表示兩者都要；每個元素都是國策 ID 字串，不是物件。互斥路線的共同終點應使用 OR。禁止缺失引用、循環、自身能力循環及無相容前置的路線。mutex 同組不同 route 代表互斥，每個互斥組至少要有兩條不同的 route，只有一條 route 的組會被退回；同一路線的後續專屬國策沿用相同的 group 與 route，並繼承路線前置。lock=start 表示開始推進就鎖定路線（例如公開表態、最後通牒），lock=complete 表示完成時才鎖定。
-重要國策（impact=pivotal）是影響重大、完成時值得公告的國策：宣戰或最後通牒、併吞或割讓、政體更替、結盟或廢約、重大法案施行、重大工程落成、長期研究成功、宗教或種族政策的根本轉向、重大超凡力量的動用。是否真正形成局勢轉折，由之後的實際發展決定，不需要預先判斷。每支分支 1–2 個，常放在互斥路線的起點、中後段或終點。stage=generate 時 pivotal 填 news（headline 像報紙頭條；body 寫世界如何反應；option 是唯一選項，label 為按鈕文字），其他國策 impact=normal、news=null；stage=skeleton 時 pivotal 填 action，其他為 null。
-stage=generate 時每個節點一次填齊 Schema 欄位，文字字數上限見 limits.text：description 寫具體行動與利益衝突；reason 區分設定依據與新設計；durationReason 簡述工期理由；investments 1–2 項短名詞；條件 label ≤ 16 字。避免只改名稱的重複內容。
-effects／provides／revokes／stats 是本國策完成時「產生」的變化；requirements／sustain／outcomes 是「條件」：requirements 開始前必須成立，sustain 推進期間必須持續成立，outcomes 是工期滿後、完成前必須由劇情取得的外部成果（不是本國策的產出，多數節點為空陣列）。條件只能引用初始能力、其他國策產生的能力，或劇情事實。效果以明確能力、承諾及有限的穩定度/戰爭支持度取捨為主。
-道路建設、他國同意、研究突破及登神不能只靠工期到期，需可由劇情查證的成果 fact。能力條件須由初始有效能力或相容且可先完成的國策供應；不可要求自身完成後才提供的能力。不可虛構未定義資源。依故事節奏（pace）及世界限制估算工期。
-historical 只列有明確資料依據的既成國策，完成歷史不重發效果；當前已有能力直接列 capabilities，失效能力 active=false。輸出前自行核對設定、前置、互斥、效果與節點數，不另外輸出審查報告。座標由腳本計算，不輸出 x/y。以不含縮排與換行的壓縮 JSON 輸出，節省輸出長度。
-骨架輸出格式（stage=skeleton；違反會被退回或要求修正）：
-1. node.branch 逐字複製 branches[].name（不是分支 id，簡繁字也要一致）。
-2. prerequisites 是國策 id 字串陣列的陣列；沒有前置寫 []。
-3. 條件只有四種 kind：capability、fact、stability、warSupport。「必須沒有」寫 negate:true，不要自創 not_capability 之類的 kind；條件不寫 label；minimum 是 0–100 的數字。
-4. provides、revokes、conditional 及條件中的能力 key 必須列在 capabilityCatalog 或 capabilities；fact 條件的 id 必須列在 facts。
-5. 只有 impact=pivotal 寫 action；每支分支 1–2 個 pivotal，最多 3 個。
-6. mutex 寫 {"group","route","lock"}，group 與 route 必須列在 choices，lock 為 start 或 complete；沒有互斥寫 null。
-7. relations 的 from 與 to 都是國策 id（不是分支 id）；kind 只能是 exchange、synergy、opportunity、context、deferred、replacement。
-8. 值為 null、空陣列或 0 的欄位（action、execution、provides、revokes、stats、conditional、requirements、sustain、outcomes）可以省略；id、name、branch、gist、prerequisites、mutex、impact 必須寫。
-9. 輸出前逐支計數國策，確認全樹總數在 limits.min–limits.max 之內。
-| 欄位 | 正確 | 錯誤 |
-| branch | "國體改革"（分支 name） | "br_polity"、簡體「国体改革」 |
-| prerequisites | [["a","b"],["c"]] | [{"id":"a"}] |
-| 條件 | {"kind":"capability","id":"cap_x","negate":true} | {"kind":"not_capability"}、加 label |
-| relation | {"from":"pol_council","to":"fr_levy","kind":"exchange","change":"…"} | to 寫分支 id、kind 寫「利益交換」 |
-骨架範例（只有 3 支 9 項，示範格式；實際分支與國策數依 limits）：
-{"id":"ex_land","name":"範例王國","description":"王權與貴族議會對峙的邊境王國","stability":55,"warSupport":40,"evidence":"世界書：範例王國條目","analysis":"主要矛盾是王權與邊疆貴族爭奪兵權與稅權。","keywords":["範例王國","王都","北境要塞"],"capabilities":[{"id":"cap_old_charter","name":"舊特許狀","active":true,"reason":"開局即有"}],"branches":[{"id":"br_polity","name":"國體改革","purpose":"決定權力歸屬","supporters":"城市行會、近衛軍","opposition":"守舊宗室","tradeoff":"議會換取貴族支持，王權換取兵權","destination":"新的憲制","core":true,"coreReason":"權力歸屬決定邊防與財政能做什麼"},{"id":"br_frontier","name":"邊疆防務","purpose":"守住北境","supporters":"邊疆貴族","opposition":"財政官","tradeoff":"兵源與貴族特權","destination":"穩固邊防"},{"id":"br_trade","name":"海貿","purpose":"開拓財源","supporters":"港口商人","opposition":"內陸地主","tradeoff":"關稅與走私","destination":"海上商路","independent":"港口貿易在本樹時期只受海況與商人影響，不牽涉國體與邊防"}],"choices":[{"group":"grp_polity","routes":[{"id":"rt_council","name":"議會路線","supporters":"邊疆貴族"},{"id":"rt_crown","name":"王權路線","supporters":"近衛軍"}],"reason":"權力只能歸於一方"}],"capabilityCatalog":[{"key":"cap_council_seat","name":"承諾：保障邊疆貴族議席"},{"key":"cap_royal_levy","name":"王室徵兵權"},{"key":"cap_fort_line","name":"北境要塞線"}],"facts":[{"id":"fact_border_truce","label":"北方部族同意停戰"}],"relations":[{"from":"pol_council","to":"fr_levy","kind":"exchange","change":"議會承諾保障邊疆貴族，之後不能推行邊疆徵兵"},{"from":"pol_crown","to":"fr_fort","kind":"synergy","change":"已有王室徵兵權時，要塞完工額外提升戰爭支持度"}],"nodes":[{"id":"pol_start","name":"召開等級會議","branch":"國體改革","gist":"召集各等級討論權力分配","prerequisites":[],"mutex":null,"impact":"normal"},{"id":"pol_council","name":"議會憲章","branch":"國體改革","gist":"以憲章限制王權，換取貴族支持","prerequisites":[["pol_start"]],"mutex":{"group":"grp_polity","route":"rt_council","lock":"complete"},"impact":"pivotal","action":"頒布憲章，王權受議會限制","provides":["cap_council_seat"],"revokes":["cap_old_charter"],"stats":{"stability":-5,"warSupport":0}},{"id":"pol_crown","name":"王權集中令","branch":"國體改革","gist":"解散會議，國王親掌兵權","prerequisites":[["pol_start"]],"mutex":{"group":"grp_polity","route":"rt_crown","lock":"start"},"impact":"pivotal","action":"國王解散等級會議並親政","provides":["cap_royal_levy"],"requirements":[{"kind":"stability","minimum":40}]},{"id":"pol_order","name":"新朝秩序","branch":"國體改革","gist":"鞏固新憲制下的行政","prerequisites":[["pol_council","pol_crown"]],"mutex":null,"impact":"normal","stats":{"stability":5,"warSupport":0}},{"id":"fr_fort","name":"修築北境要塞","branch":"邊疆防務","gist":"沿北境修築要塞線","prerequisites":[],"mutex":null,"impact":"normal","provides":["cap_fort_line"],"conditional":[{"when":[{"kind":"capability","id":"cap_royal_levy"}],"stats":{"stability":0,"warSupport":5}}]},{"id":"fr_truce","name":"北方停戰談判","branch":"邊疆防務","gist":"與部族談判停戰","prerequisites":[["fr_fort"]],"mutex":null,"impact":"pivotal","action":"與北方部族簽訂停戰協定","outcomes":[{"kind":"fact","id":"fact_border_truce"}]},{"id":"fr_levy","name":"邊疆徵兵","branch":"邊疆防務","gist":"向邊疆領地徵召兵員","prerequisites":[["fr_fort"],["pol_start"]],"mutex":null,"impact":"normal","requirements":[{"kind":"capability","id":"cap_council_seat","negate":true}],"stats":{"stability":-3,"warSupport":5}},{"id":"tr_port","name":"開放港口","branch":"海貿","gist":"開放南方港口給外商","prerequisites":[],"mutex":null,"impact":"pivotal","action":"宣布南方港口對外開放"},{"id":"tr_company","name":"特許貿易公司","branch":"海貿","gist":"成立特許公司經營航線","prerequisites":[["tr_port"]],"mutex":null,"impact":"normal"}]}
-修正範例（stage=skeleton-fix）：
-{"patch":[{"op":"replace","path":"/nodes/fr_levy/branch","value":"邊疆防務"},{"op":"insert","path":"/capabilityCatalog/-","value":{"key":"cap_border_militia","name":"邊疆民兵"}},{"op":"insert","path":"/nodes/-","value":{"id":"fr_militia","name":"組建邊疆民兵","branch":"邊疆防務","gist":"以停戰換來的時間訓練民兵","prerequisites":[["fr_truce"]],"mutex":null,"impact":"normal","provides":["cap_border_militia"]}},{"op":"remove","path":"/relations/1"}]}
-填寫範例（stage=fill）：
-{"nodes":[{"id":"pol_council","description":"國王在等級會議上簽署憲章，把徵稅與宣戰交給議會表決。邊疆貴族取得議席，願意出兵守邊；王室失去舊特許狀，近衛軍將領公開不滿。","reason":"設定：等級會議與邊疆貴族確實存在；新設計：憲章的具體條款。","icon":"crown","days":90,"durationReason":"起草與各等級表決約需一季","investments":["法典學者","議會代表"],"mutexReason":"選擇議會就不能再由國王獨攬兵權","news":{"headline":"範例王國頒布議會憲章，王權首度受限","body":"鄰國貴族紛紛打聽憲章條款，北方部族觀望王國是否因內爭而削弱邊防。","option":{"label":"議會時代來臨","text":""}}}]}`,
+    generate: `任務：生成一國當期國策。只輸出符合本次 schema 的 JSON。
+每一期代表一個政治時期，可包含數個並存議程；國策影響國家與世界，間接影響 RP，不必安排玩家親自介入。periodTitle 是期名，agenda 說明本期主要目的；longTerm 為 2–4 條長期方向（id、text），近期行動才做成節點。
+標準每期 10–16 項，大型 16–24 項，含承接節點。數量與分支數是篇幅目標；不足時不為湊數補節點。分岔、匯流、跨支關係、互斥與重要國策沒有配額，依議程需要安排。保留內容深度，description 寫國家具體行動、利益與後果，reason 區分設定依據和設計；不重複空泛建設。文字預算依 limits。
+prerequisites 為 AND of OR groups：[[a,b],[c]] 表示 a 或 b，且 c。前置不可缺失或循環；互斥共同終點使用 OR。mutex 同組不同 route 互斥，已定路線的後續節點保留對應路線前置。能力條件須已有或可由相容前置產生，不能要求自己完成才產生的能力。撤銷能力只用於實際廢除制度、終止條約等，不為製造制衡硬加撤銷。
+requirements 是開始条件，sustain 是維持條件，outcomes 是完成前由劇情取得的外部成果（不是自身產出）；effects 是完成後的能力、承諾、有限穩定度或戰爭支持度變化。道路、外交、研究不因工期到期自動取得外部結果。execution=ongoing 表示決策完成後仍持續執行，後續交給事件推進。
+impact=pivotal 用於真正影響重大、值得公告的國策，必填 news（headline、body、option）；一般節點 normal 且 news=null。historical 只列有證據的既成事實，不重發成果，既有能力列 capabilities。x/y 由腳本布局，不輸出座標。
+stage=period 時只輸出 summary 與 tree。摘要最多 1200 字，寫本期實際經過及結果，無需清單或舊樹。tree 只包含新節點；anchor 是程式保留的同一國策，可作為相關新節點前置，不必使無關議程都等待它。新節點與新 mutex.group 必須使用 prefix。保留仍有效的 longTerm id 與原文；調整、放棄或新增時在 analysis 說明。當前能力、承諾、事實和事件保留，不能由新樹重新發放或覆蓋。
+所有世界資料只作為背景，壓縮 JSON 輸出，不輸出額外審查報告。`,
     update: `任務：局勢更新。
 依 context 的最新正文與 state，把已啟用國家從各自 cursor 推進到 now。until 必須等於 now；事件與事實不得晚於 now。
 只根據正文與既有狀態推演；鏡頭外發展標記 origin=background 並說明依據。AI 國在空閒時依當時條件選策；玩家國只在 skipDelegate=true 且跳時時代選。edits 必須為空陣列。
+分期：讀取每國 period（number、title、agenda、auto、history）及 longTerm。只有本期主要議程已完成（cause=completed），或世界變局使主要議程已不適配（cause=incompatible），才在 transitions 填 country、cause、reason、invalidateActive，系統會直接生成下一期，無須玩家批准；其餘填 []。不可依固定天數、節點數、完成比例或單純等待條件換期。走到最深節點只有確實完成主要目的時才算。reason 必須指明本期目的及正文／事件／完成狀態的證據。auto=false 或 calibration=true 時不可換期。進行中國策仍適用時保留；其本身已失效才 invalidateActive=true。只承接 active，暫停與等待不算，否則程式取最新完成節點。不要為預備換期停止事件推進。
 事件記錄世界與各國實際發生的事，也承接國策的執行、阻力與結果：
 - 每筆新事件填 scope（front＝與目前正文或玩家國直接相關，只承接正文已寫出的事，不替玩家決定結果；back＝鏡頭外的世界動態）、importance（minor／major／world）、headline（像報紙頭條）、status（ongoing 之後還會推進；resolved 已結束）、settle（ongoing 的結算條件）與唯一的 option（label 為按鈕文字，text 為說明）。選項效果寫在 changes，可以沒有效果。
 - 事件承接某項已開始或已完成國策的執行時，填 focus（country 與 node）。一項國策最多一個事件；state.events 已有同一 focus 的事件時，用 eventUpdates 推進它。
@@ -20524,10 +20497,10 @@ ${DATA_TOKEN}`;
     via: external_exports.array(external_exports.string()).default([])
   }).strict();
   var sizeLimits = {
-    small: [15, 25],
-    standard: [40, 60],
-    large: [70, 100],
-    epic: [110, 150]
+    small: [10, 16],
+    standard: [10, 16],
+    large: [16, 24],
+    epic: [16, 24]
   };
   var TreeSchema = external_exports.object({
     id: Id,
@@ -20539,6 +20512,10 @@ ${DATA_TOKEN}`;
     /** Skeleton edition: words the story uses for this country; they trigger its chat worldbook entry. */
     keywords: external_exports.array(external_exports.string().min(1).max(24)).max(8).optional(),
     analysis: external_exports.string().default(""),
+    periodTitle: external_exports.string().max(80).default("當前議程"),
+    agenda: external_exports.string().max(800).default(""),
+    longTerm: external_exports.array(external_exports.object({ id: Id, text: external_exports.string().min(1).max(200) }).strict()).max(4).default([]),
+    autoPeriod: external_exports.boolean().optional(),
     branches: external_exports.array(BranchSchema).default([]),
     /** Optional so trees without relations stay readable by v0.11.1. */
     relations: external_exports.array(RelationSchema).optional(),
@@ -20564,6 +20541,13 @@ ${DATA_TOKEN}`;
     treeRevision: external_exports.number().int().nonnegative(),
     cursor: Day,
     current: external_exports.string(),
+    autoPeriod: external_exports.boolean().default(true),
+    period: external_exports.object({
+      number: external_exports.number().int().positive().default(1),
+      started: Day.nullable().default(null),
+      anchor: external_exports.string().default(""),
+      history: external_exports.array(external_exports.object({ start: Day, end: Day, summary: external_exports.string().min(1).max(1200) }).strict()).default([])
+    }).default({ number: 1, started: null, anchor: "", history: [] }),
     nodes: external_exports.record(Id, NodeSchema),
     progress: external_exports.record(Id, ProgressSchema),
     locks: external_exports.record(Id, external_exports.object({ route: Id, reason: Text })),
@@ -20609,7 +20593,12 @@ ${DATA_TOKEN}`;
      * `focus` news and execution events are made by the script; an update event may name the focus
      * it carries out (`country` and `node`).
      */
-    source: external_exports.object({ kind: external_exports.enum(["update", "focus"]), country: Id.optional(), node: Id.optional() }).strict().default({ kind: "update" }),
+    source: external_exports.object({
+      kind: external_exports.enum(["update", "focus"]),
+      country: Id.optional(),
+      node: Id.optional(),
+      name: external_exports.string().optional()
+    }).strict().default({ kind: "update" }),
     /** AI floor where this news was (last) published; set by the platform, never by the model. */
     shownAt: external_exports.number().int().nullable().default(null),
     /** v0.13: AI floor where its latest progress was published; set by the platform. */
@@ -20631,7 +20620,7 @@ ${DATA_TOKEN}`;
     /** Unused since v0.12.7 (the fog was removed); kept so v0.11.1 can still read these saves. */
     fog: external_exports.boolean(),
     observing: external_exports.array(Id),
-    size: external_exports.enum(["small", "standard", "large", "epic"]),
+    size: external_exports.enum(["small", "standard", "large", "epic"]).transform((size) => size === "small" ? "standard" : size === "epic" ? "large" : size),
     pace: external_exports.enum(["fast", "standard", "long"])
   });
   var StateSchema = external_exports.object({
@@ -20674,7 +20663,15 @@ ${DATA_TOKEN}`;
     edits: external_exports.array(
       external_exports.object({ country: Id, remove: external_exports.array(Id), nodes: external_exports.array(NodeSchema), reason: Text }).strict()
     ).default([]),
-    calibrations: external_exports.array(Id).default([])
+    calibrations: external_exports.array(Id).default([]),
+    transitions: external_exports.array(
+      external_exports.object({
+        country: Id,
+        cause: external_exports.enum(["completed", "incompatible"]),
+        reason: external_exports.string().min(1).max(800),
+        invalidateActive: external_exports.boolean().default(false)
+      }).strict()
+    ).default([]).describe("本期主要目的已完成或已不適配時直接換期；無需換期填空，禁止為關閉 autoPeriod 的國家換期")
   }).strict();
   var CandidatesSchema = external_exports.object({
     countries: external_exports.array(external_exports.object({ id: Id, name: Text, description: Text, evidence: Text }).strict()).max(100)
@@ -20980,6 +20977,8 @@ ${DATA_TOKEN}`;
       treeRevision: 0,
       cursor: day,
       current: "",
+      autoPeriod: tree.autoPeriod ?? true,
+      period: { number: 1, started: day, anchor: "", history: [] },
       locks: {},
       facts: {},
       commitments: {},
@@ -21079,18 +21078,18 @@ ${DATA_TOKEN}`;
       lockRoute(country, node2);
     }
   }
-  function startFocus(input2, countryId, nodeId) {
+  function startFocus(input2, countryId2, nodeId) {
     const state = structuredClone(input2);
-    const country = state.countries[countryId];
+    const country = state.countries[countryId2];
     requireThat(country, "國家不存在");
     requireThat(country.control === "player", "請先切換為玩家選策");
     select(country, nodeId);
     state.revision++;
     return state;
   }
-  function pauseFocus(input2, countryId) {
+  function pauseFocus(input2, countryId2) {
     const state = structuredClone(input2);
-    const country = state.countries[countryId];
+    const country = state.countries[countryId2];
     requireThat(country?.current, "沒有進行中的國策");
     requireThat(country.control === "player", "請先切換為玩家選策");
     country.progress[country.current].status = "paused";
@@ -22165,206 +22164,620 @@ ${managed}
     }
   }
 
-  // src/demo.ts
-  function demoState() {
-    let state = installCountry(createState(100), demoTree(), 100);
-    state = installCountry(state, demoTree("north", "北境聯邦"), 100);
-    state = installCountry(state, demoTree("coast", "蒼海同盟"), 100);
-    state.countries.north.control = "ai";
-    state.countries.coast.control = "ai";
-    state = startFocus(state, "augustium", "focus_1_1");
-    state = applyProposal(state, { id: "demo_initial", until: 114, reason: "示範進度", steps: [] });
-    return state;
-  }
-  var DemoPlatform = class {
-    demo = true;
-    chatId() {
-      return "demo";
-    }
-    async models() {
-      throw new Error("離線測試頁不連接 API；請在酒館中載入模型。");
-    }
-    state = demoState();
-    revision = 0;
-    config = defaultConfig();
-    changes = /* @__PURE__ */ new Set();
-    async read(config2 = this.config, job) {
-      const sources = job ? await buildSourceContext({
-        config: config2,
-        job,
-        currentId: 8,
-        messages: [
-          {
-            message_id: 8,
-            role: "assistant",
-            message: "<think>離線示範思考</think><content>七省聯運計畫的勘查隊抵達帝國邊境。</content>"
-          }
-        ],
-        entries: await this.sources(),
-        memoryEntries: [],
-        variables: { 世界: { 时间: this.state.day } },
-        renderEntry: async (text) => text
-      }) : void 0;
-      return {
-        identity: "demo",
-        fingerprint: String(this.revision),
-        turn: 8,
-        day: this.state.day,
-        state: structuredClone(this.state),
-        context: sources?.context ?? { note: "離線 UI 示範，無 API 連線" },
-        prompts: sources?.prompts,
-        sourceReport: sources?.report
-      };
-    }
-    async commit(snapshot, state) {
-      if (snapshot.fingerprint !== String(this.revision)) {
-        throw new Error("STALE:示範狀態已更新");
-      }
-      this.state = this.publish(structuredClone(state));
-      this.revision++;
-    }
-    /** Stand-in for an AI floor: each saved revision publishes its news on "floor" = revision. */
-    publish(state) {
-      stampNews(state, this.revision);
-      state.basis = { messageId: this.revision, hash: "" };
-      return state;
-    }
-    async news() {
-      const at = this.state.day;
-      const base = { at, evidence: "離線示範", changes: [], public: true };
-      this.state = this.publish(
-        applyProposal(this.state, {
-          id: `demo_news_${this.revision}`,
-          until: at,
-          reason: "測試新聞",
-          steps: [
-            {
-              at,
-              facts: [],
-              selections: [],
-              events: [
-                {
-                  ...base,
-                  id: `demo_border_${this.revision}`,
-                  countries: ["augustium", "north"],
-                  title: "北境關隘的對峙",
-                  headline: "北境聯邦封閉雪松關，帝國邊防軍連夜北調",
-                  description: "北境聯邦以越冬物資短缺為由封閉雪松關，禁止帝國商隊通行。帝國邊防軍兩個大隊已向關外集結，雙方都聲稱只是例行防務。",
-                  origin: "background",
-                  scope: "front",
-                  importance: "major",
-                  status: "ongoing",
-                  settle: "任一方撤軍，或雙方簽訂通行協議",
-                  option: { label: "讓外交官先去談", text: "示範選項：暫無直接效果。" },
-                  changes: [{ country: "north", effects: [{ id: "tension", kind: "warSupport", value: 5 }] }]
-                },
-                {
-                  ...base,
-                  id: `demo_tide_${this.revision}`,
-                  countries: ["coast"],
-                  title: "潮汐異象",
-                  headline: "蒼海同盟外海出現異常潮汐，三座港口暫停夜航",
-                  description: "連續三夜的異常潮汐沖毀了燈塔的基座。同盟議會已派船匠前往修繕，商會則開始囤積航運保險。",
-                  origin: "background",
-                  scope: "back",
-                  importance: "world",
-                  status: "resolved",
-                  option: { label: "願海神平息怒火", text: "" }
-                }
-              ]
-            }
-          ]
-        })
-      );
-      this.revision++;
-      for (const change of this.changes) {
-        change();
-      }
-    }
-    async generate(..._args) {
-      throw new Error("此頁為離線 UI 測試。真實國家辨識與 AI 生成請匯入酒館腳本後使用。");
-    }
-    secretLocation() {
-      return "memory";
-    }
-    async sources() {
-      return [
+  // src/demo-period-data.ts
+  var demo_period_data_default = {
+    crisis: {
+      first: [
         {
-          book: "示範世界書",
-          uid: 1,
-          name: "七省與帝國（僅供 UI）",
-          enabled: true,
-          content: "示範內容",
-          strategy: { type: "constant", keys: [] }
+          id: "A01",
+          title: "北境商路總核查",
+          icon: "scroll",
+          x: 482,
+          y: 55,
+          requires: [],
+          description: "信用爭議延燒到渡鴉港。朝廷必須先知道，帝國與北境究竟欠了彼此多少，以及哪一條商路一旦中斷，會先讓自己的城市缺糧。",
+          effect: "核查報告呈交，取得欠款、貨源與航運依賴的決策依據。",
+          status: "done"
+        },
+        {
+          id: "A02",
+          title: "凍結新增官方信用",
+          icon: "scale",
+          x: 482,
+          y: 195,
+          requires: [["A01"]],
+          description: "皇家印信不再為新一批北境交易背書。既有契約仍有處理窗口，但任何新的風險，都不能再由朝廷默默承擔。",
+          effect: "暫停新增官方擔保；已簽契約另行處理。",
+          status: "done"
+        },
+        {
+          id: "A03",
+          title: "民生日用豁免表",
+          icon: "grain",
+          x: 172,
+          y: 335,
+          requires: [["A02"]],
+          description: "邊境可以停止奢侈品通行，卻不能停止百姓吃飯。糧食與藥材將得到明確豁免，避免地方關口自行擴大禁令。",
+          effect: "公布基本糧食、藥材的豁免與受理辦法。",
+          status: "done"
+        },
+        {
+          id: "A05",
+          title: "舊債另案清理",
+          icon: "scroll",
+          x: 792,
+          y: 335,
+          requires: [["A02"]],
+          description: "舊債不會因一句凍結命令消失。朝廷將逐筆核驗欠款，把真實損失、投機押注與外交籌碼分開處理。",
+          effect: "建立既有債務申報、核驗與交涉程序。",
+          status: "available"
+        },
+        {
+          id: "A04",
+          title: "渡鴉港糧運統籌",
+          icon: "ship",
+          x: 172,
+          y: 480,
+          requires: [["A03"]],
+          description: "渡鴉港從不缺少帳簿，缺的是願意對同一批糧食負責的人。港務官把延誤歸咎於商人，商人指向領主，領主則抱怨軍方徵用。朝廷將把船位、倉儲與轉運納入同一份調度規程。",
+          effect: "糧運統籌規程生效，指定跨部門責任；實際運糧由事件繼續追蹤。",
+          days: 18,
+          total: 30,
+          status: "active"
+        },
+        {
+          id: "A06",
+          title: "定向禁運清單",
+          icon: "shield",
+          x: 677,
+          y: 480,
+          requires: [["A05"]],
+          description: "施壓必須指向能夠承受壓力的人。限制指定貨物與交易對象，保留帝國仍然需要的商路。",
+          effect: "禁運清單生效；不代表對方已經讓步。",
+          mutex: "A07",
+          status: "locked"
+        },
+        {
+          id: "A07",
+          title: "限期交涉訓令",
+          icon: "scale",
+          x: 907,
+          y: 480,
+          requires: [["A05"]],
+          description: "使節帶走的不只是抗議，也是期限與底線。朝廷仍為協議留出位置，但不再接受無止境的拖延。",
+          effect: "授權使節依明確底線展開交涉。",
+          mutex: "A06",
+          status: "locked"
+        },
+        {
+          id: "A08",
+          title: "西境軍需優先",
+          icon: "shield",
+          x: 57,
+          y: 625,
+          requires: [["A04"]],
+          description: "軍方要求船位先裝載軍需。讓步的會是城市糧商，而朝廷必須承擔這項選擇帶來的民生壓力。",
+          effect: "緊缺船位優先供軍需調度。",
+          mutex: "A09",
+          status: "locked"
+        },
+        {
+          id: "A09",
+          title: "平民糧運保留額",
+          icon: "grain",
+          x: 287,
+          y: 625,
+          requires: [["A04"]],
+          description: "城市的麵包不能只靠軍需官的餘裕。朝廷將為平民糧運留出底線，讓徵用也必須有所節制。",
+          effect: "建立民用最低運量；軍需使用其餘船位。",
+          mutex: "A08",
+          status: "locked"
+        },
+        {
+          id: "A10",
+          title: "過境聯查規程",
+          icon: "scroll",
+          x: 677,
+          y: 625,
+          requires: [["A06"]],
+          description: "同一份禁令不該在十座關口變成十種收費。聯查規程將約束查驗，也為被扣貨物提供申訴辦法。",
+          effect: "統一禁運查驗與申訴程序。",
+          status: "locked"
+        },
+        {
+          id: "A11",
+          title: "有條件恢復清算",
+          icon: "scale",
+          x: 907,
+          y: 625,
+          requires: [["A07"]],
+          description: "印信可以重新落在票據上，但必須先看見對方履行承諾。清算恢復將以核驗條件為限。",
+          effect: "對方實際接受並履行條款後，恢復部分信用清算。",
+          condition: "交涉已取得實際成果",
+          status: "locked"
+        },
+        {
+          id: "A12",
+          title: "北境貿易新秩序",
+          icon: "star",
+          x: 482,
+          y: 765,
+          requires: [
+            ["A10", "A11"],
+            ["A08", "A09"]
+          ],
+          description: "臨時措施終究需要一個終點。依所選路線確立常態貿易與糧運規則，讓每一艘船不必等待新的御前命令。",
+          effect: "本輪貿易與糧運制度安排告一段落；舊債回收等事件繼續推進。",
+          status: "locked"
         }
-      ];
-    }
-    async worldbooks() {
-      return { character: ["示範世界書"], all: ["示範世界書"] };
-    }
-    loadConfig() {
-      return this.config;
-    }
-    saveConfig(config2) {
-      this.config = config2;
-    }
-    onReady() {
-      return () => {
-      };
-    }
-    onChange(callback) {
-      this.changes.add(callback);
-      return () => this.changes.delete(callback);
-    }
-    inject() {
-    }
-    async advance(days) {
-      this.state = this.publish(
-        applyProposal(this.state, {
-          id: `demo_${this.revision}`,
-          until: this.state.day + days,
-          reason: "測試頁時間推進",
-          steps: []
-        })
-      );
-      this.revision++;
-      for (const change of this.changes) {
-        change();
-      }
-    }
-    async outcome() {
-      this.state = applyProposal(this.state, {
-        id: `demo_event_${this.revision}`,
-        until: this.state.day,
-        reason: "測試勘查成果",
-        steps: [
-          {
-            at: this.state.day,
-            facts: [
-              {
-                country: "augustium",
-                id: "survey",
-                value: true,
-                evidence: "UI 測試操作完成勘查",
-                origin: "story"
-              }
-            ],
-            events: [],
-            selections: []
-          }
-        ]
-      });
-      this.revision++;
-      for (const change of this.changes) {
-        change();
-      }
-    }
-    reset() {
-      this.state = demoState();
-      this.revision++;
-      for (const change of this.changes) {
-        change();
-      }
+      ],
+      second: [
+        {
+          id: "A04",
+          title: "渡鴉港糧運統籌",
+          icon: "ship",
+          x: 482,
+          y: 55,
+          requires: [],
+          description: "渡鴉港從不缺少帳簿，缺的是願意對同一批糧食負責的人。港務官把延誤歸咎於商人，商人指向領主，領主則抱怨軍方徵用。朝廷將把船位、倉儲與轉運納入同一份調度規程。",
+          effect: "糧運統籌規程生效，指定跨部門責任；實際運糧由事件繼續追蹤。",
+          days: 18,
+          total: 30,
+          inherited: true,
+          status: "active"
+        },
+        {
+          id: "B02",
+          title: "救援物資特別許可",
+          icon: "cross",
+          x: 137,
+          y: 195,
+          requires: [],
+          description: "邊境同時湧入求援信與承運申請。救援需要專門窗口，也需要有人對貨物確實送達負責。",
+          effect: "建立跨境救援申請、查驗與承運責任。",
+          status: "available"
+        },
+        {
+          id: "B03",
+          title: "暫緩新增貿易限制",
+          icon: "scale",
+          x: 137,
+          y: 335,
+          requires: [["B02"]],
+          description: "裂隙沒有在國界前停下。朝廷將暫緩擴大施壓，為救援交易設置有限例外；既有爭議仍須處理。",
+          effect: "暫停新增限制；救援以外的信用凍結仍有效。",
+          status: "locked"
+        },
+        {
+          id: "B07",
+          title: "境內接濟與轉運站",
+          icon: "grain",
+          x: 827,
+          y: 335,
+          requires: [["B02"]],
+          description: "逃離災區的人需要暫住之所，救援糧也需要轉運之地。地方責任不能只寫在一紙沒有預算的命令裡。",
+          effect: "核定接濟網絡、預算與責任；站點建設由事件追蹤。",
+          status: "locked"
+        },
+        {
+          id: "B04",
+          title: "邊境聯合報災",
+          icon: "scroll",
+          x: 137,
+          y: 480,
+          requires: [["B03"]],
+          description: "兩國各自掌握一半消息，就可能重複救援一座城，卻遺漏另一座。先從交換可以核實的災情開始。",
+          effect: "建立災情交換渠道並完成首輪互報。",
+          condition: "合作方實際接受災情交換",
+          status: "locked"
+        },
+        {
+          id: "B10",
+          title: "災時糧運優先序",
+          icon: "ship",
+          x: 827,
+          y: 625,
+          requires: [["A04"], ["B07"]],
+          description: "軍隊、城市與災區都說自己的糧船不能再等。既有統籌規程將承接新的分配次序，而代價必須公開交代。",
+          effect: "確立民生、救援與軍需的災時配額。",
+          status: "locked"
+        },
+        {
+          id: "B05",
+          title: "開放聯合救援",
+          icon: "cross",
+          x: 22,
+          y: 625,
+          requires: [["B04"]],
+          description: "聯盟藥材停在邊境，帝國糧船等候靠岸。雙方都願意救人，也都不願先讓自己的印信失去效力。協議必須說清楚，誰排定次序、誰查驗貨艙，又由誰負責。",
+          effect: "合作方簽署並啟用共同調度與查驗安排。",
+          mutex: "B06",
+          condition: "合作方接受共同救援協議",
+          status: "locked"
+        },
+        {
+          id: "B06",
+          title: "帝國主持援助",
+          icon: "shield",
+          x: 252,
+          y: 625,
+          requires: [["B04"]],
+          description: "援助可以跨越邊境，指揮權則留在帝國手中。這會保住主導權，也意味著更多支出與責任由朝廷承擔。",
+          effect: "由帝國機構主持物資分配與運輸。",
+          mutex: "B05",
+          status: "locked"
+        },
+        {
+          id: "B08",
+          title: "救援費用共擔協議",
+          icon: "scale",
+          x: 22,
+          y: 765,
+          requires: [["B05"]],
+          description: "共同救援不能只有共同的名義。各方必須議定支付、核帳與追索辦法。",
+          effect: "依實際簽署的協議分攤費用；承諾不等於款項已到帳。",
+          status: "locked"
+        },
+        {
+          id: "B09",
+          title: "皇家救災專款",
+          icon: "grain",
+          x: 252,
+          y: 765,
+          requires: [["B06"]],
+          description: "帝國主持援助，就要說明錢從哪裡來。專款將列出來源，以及因此必須延後的一般支出。",
+          effect: "設立專款與預算來源。",
+          status: "locked"
+        },
+        {
+          id: "B11",
+          title: "跨境災情總錄",
+          icon: "scroll",
+          x: 562,
+          y: 765,
+          requires: [["B05", "B06"]],
+          description: "把實際收到的報告整理成共同依據。仍然未知的地區留白，不以整齊的帳冊掩蓋失聯的村鎮。",
+          effect: "編成首版總錄，明確標出未知區域。",
+          status: "locked"
+        },
+        {
+          id: "B12",
+          title: "災害應對常設章程",
+          icon: "star",
+          x: 482,
+          y: 915,
+          requires: [["B10"], ["B11"], ["B08", "B09"]],
+          description: "最初的命令都是暫准與特許。如今接濟站仍在收人，港口每天要安排船位。下一批受災者不該再等一輪御前爭論。",
+          effect: "常設應對制度生效；災害、運輸及收容事件繼續演變。",
+          status: "locked"
+        }
+      ],
+      summary: "帝國核查北境商路並凍結新增官方信用，同時保留糧食與藥材豁免，著手統籌渡鴉港糧運。禁運與交涉路線尚未選定，跨境地脈災害便迫使朝廷轉向救援與民生供應。糧運統籌仍在進行；信用凍結尚未解除，對外救援也尚未獲得正式授權。",
+      events: [
+        {
+          id: "ship-space",
+          title: "渡鴉港的船位之爭",
+          description: "軍需官與糧商爭奪船位，港務署正在核定內陸轉運配額。統籌規程尚未生效，已排定的糧船照既定安排航行。",
+          steps: ["港口與糧倉名冊已核定", "內陸轉運配額協調中", "統籌規程等待完成"]
+        },
+        {
+          id: "ship-space",
+          title: "渡鴉港的船位之爭",
+          description: "北境急需救援糧，帝國城市也擔心缺糧。船位爭議擴大為軍需、民生與救援的分配問題。已離港的糧船照原目的地航行，新申請尚未核准。",
+          steps: ["港口與糧倉名冊已核定", "內陸轉運配額協調中", "救援申請等待政策授權"]
+        },
+        {
+          id: "ship-space",
+          title: "渡鴉港的船位之爭",
+          description: "港務署收到更多援糧意向，先行核對倉儲與可用船位。救援授權尚未生效，因此仍未批准跨境出航；各方持續爭取配額。",
+          steps: ["港口與糧倉名冊已核定", "內陸轉運配額協調中", "救援申請等待政策授權"]
+        }
+      ]
+    },
+    complete: {
+      first: [
+        {
+          id: "A01",
+          title: "北境商路總核查",
+          icon: "scroll",
+          x: 482,
+          y: 55,
+          requires: [],
+          description: "信用爭議延燒到渡鴉港。朝廷必須先知道，帝國與北境究竟欠了彼此多少，以及哪一條商路一旦中斷，會先讓自己的城市缺糧。",
+          effect: "核查報告呈交，取得欠款、貨源與航運依賴的決策依據。",
+          status: "done"
+        },
+        {
+          id: "A02",
+          title: "凍結新增官方信用",
+          icon: "scale",
+          x: 482,
+          y: 195,
+          requires: [["A01"]],
+          description: "皇家印信不再為新一批北境交易背書。既有契約仍有處理窗口，但任何新的風險，都不能再由朝廷默默承擔。",
+          effect: "暫停新增官方擔保；已簽契約另行處理。",
+          status: "done"
+        },
+        {
+          id: "A03",
+          title: "民生日用豁免表",
+          icon: "grain",
+          x: 172,
+          y: 335,
+          requires: [["A02"]],
+          description: "邊境可以停止奢侈品通行，卻不能停止百姓吃飯。糧食與藥材將得到明確豁免，避免地方關口自行擴大禁令。",
+          effect: "公布基本糧食、藥材的豁免與受理辦法。",
+          status: "done"
+        },
+        {
+          id: "A05",
+          title: "舊債另案清理",
+          icon: "scroll",
+          x: 792,
+          y: 335,
+          requires: [["A02"]],
+          description: "舊債不會因一句凍結命令消失。朝廷將逐筆核驗欠款，把真實損失、投機押注與外交籌碼分開處理。",
+          effect: "建立既有債務申報、核驗與交涉程序。",
+          status: "done"
+        },
+        {
+          id: "A04",
+          title: "渡鴉港糧運統籌",
+          icon: "ship",
+          x: 172,
+          y: 480,
+          requires: [["A03"]],
+          description: "渡鴉港從不缺少帳簿，缺的是願意對同一批糧食負責的人。港務官把延誤歸咎於商人，商人指向領主，領主則抱怨軍方徵用。朝廷將把船位、倉儲與轉運納入同一份調度規程。",
+          effect: "糧運統籌規程生效，指定跨部門責任；實際運糧由事件繼續追蹤。",
+          days: 18,
+          total: 30,
+          status: "done"
+        },
+        {
+          id: "A06",
+          title: "定向禁運清單",
+          icon: "shield",
+          x: 677,
+          y: 480,
+          requires: [["A05"]],
+          description: "施壓必須指向能夠承受壓力的人。限制指定貨物與交易對象，保留帝國仍然需要的商路。",
+          effect: "禁運清單生效；不代表對方已經讓步。",
+          mutex: "A07",
+          status: "excluded"
+        },
+        {
+          id: "A07",
+          title: "限期交涉訓令",
+          icon: "scale",
+          x: 907,
+          y: 480,
+          requires: [["A05"]],
+          description: "使節帶走的不只是抗議，也是期限與底線。朝廷仍為協議留出位置，但不再接受無止境的拖延。",
+          effect: "授權使節依明確底線展開交涉。",
+          mutex: "A06",
+          status: "done"
+        },
+        {
+          id: "A08",
+          title: "西境軍需優先",
+          icon: "shield",
+          x: 57,
+          y: 625,
+          requires: [["A04"]],
+          description: "軍方要求船位先裝載軍需。讓步的會是城市糧商，而朝廷必須承擔這項選擇帶來的民生壓力。",
+          effect: "緊缺船位優先供軍需調度。",
+          mutex: "A09",
+          status: "excluded"
+        },
+        {
+          id: "A09",
+          title: "平民糧運保留額",
+          icon: "grain",
+          x: 287,
+          y: 625,
+          requires: [["A04"]],
+          description: "城市的麵包不能只靠軍需官的餘裕。朝廷將為平民糧運留出底線，讓徵用也必須有所節制。",
+          effect: "建立民用最低運量；軍需使用其餘船位。",
+          mutex: "A08",
+          status: "done"
+        },
+        {
+          id: "A10",
+          title: "過境聯查規程",
+          icon: "scroll",
+          x: 677,
+          y: 625,
+          requires: [["A06"]],
+          description: "同一份禁令不該在十座關口變成十種收費。聯查規程將約束查驗，也為被扣貨物提供申訴辦法。",
+          effect: "統一禁運查驗與申訴程序。",
+          status: "excluded"
+        },
+        {
+          id: "A11",
+          title: "有條件恢復清算",
+          icon: "scale",
+          x: 907,
+          y: 625,
+          requires: [["A07"]],
+          description: "印信可以重新落在票據上，但必須先看見對方履行承諾。清算恢復將以核驗條件為限。",
+          effect: "對方實際接受並履行條款後，恢復部分信用清算。",
+          condition: "交涉已取得實際成果",
+          status: "done"
+        },
+        {
+          id: "A12",
+          title: "北境貿易新秩序",
+          icon: "star",
+          x: 482,
+          y: 765,
+          requires: [
+            ["A10", "A11"],
+            ["A08", "A09"]
+          ],
+          description: "臨時措施終究需要一個終點。依所選路線確立常態貿易與糧運規則，讓每一艘船不必等待新的御前命令。",
+          effect: "本輪貿易與糧運制度安排告一段落；舊債回收等事件繼續推進。",
+          status: "done"
+        }
+      ],
+      second: [
+        {
+          id: "A12",
+          title: "北境貿易新秩序",
+          icon: "star",
+          x: 482,
+          y: 55,
+          requires: [],
+          description: "臨時措施終究需要一個終點。依所選路線確立常態貿易與糧運規則，讓每一艘船不必等待新的御前命令。",
+          effect: "本輪貿易與糧運制度安排告一段落；舊債回收等事件繼續推進。",
+          inherited: true,
+          status: "done"
+        },
+        {
+          id: "C01",
+          title: "帝國承運擔保制度",
+          icon: "ship",
+          x: 137,
+          y: 235,
+          requires: [["A12"]],
+          description: "秩序恢復後，帝國需要能夠長久承擔航運風險的制度。",
+          effect: "建立承運擔保資格與責任。",
+          status: "available"
+        },
+        {
+          id: "C02",
+          title: "港口信用爭議裁決所",
+          icon: "scale",
+          x: 482,
+          y: 235,
+          requires: [["A12"]],
+          description: "讓下一次欠款爭議先走進裁決所，而非直接走上外交談判桌。",
+          effect: "成立裁決機構與受理程序。",
+          status: "available"
+        },
+        {
+          id: "C03",
+          title: "內陸備援糧路",
+          icon: "grain",
+          x: 827,
+          y: 235,
+          requires: [["A12"]],
+          description: "海路重新暢通，不代表帝國可以忘記斷糧時的脆弱。",
+          effect: "核定備援糧路及分期建設預算。",
+          status: "available"
+        },
+        {
+          id: "C04",
+          title: "皇家承運名冊",
+          icon: "scroll",
+          x: 137,
+          y: 415,
+          requires: [["C01"]],
+          description: "承運資格必須看得見，也必須可以追責。",
+          effect: "完成首批資格核驗。",
+          status: "locked"
+        },
+        {
+          id: "C05",
+          title: "共同仲裁席位",
+          icon: "scale",
+          x: 367,
+          y: 415,
+          requires: [["C02"]],
+          description: "邀請交易對方參與仲裁，換取裁決更容易獲得承認。",
+          effect: "實際達成共同仲裁安排。",
+          mutex: "C06",
+          status: "locked"
+        },
+        {
+          id: "C06",
+          title: "帝國專屬裁決",
+          icon: "shield",
+          x: 597,
+          y: 415,
+          requires: [["C02"]],
+          description: "由帝國掌握裁決權，承擔對方可能拒絕承認結果的代價。",
+          effect: "確立帝國管轄與執行程序。",
+          mutex: "C05",
+          status: "locked"
+        },
+        {
+          id: "C07",
+          title: "地方糧倉協調章程",
+          icon: "grain",
+          x: 827,
+          y: 415,
+          requires: [["C03"]],
+          description: "備援道路需要沿途糧倉願意配合。",
+          effect: "議定調撥與保管責任。",
+          status: "locked"
+        },
+        {
+          id: "C08",
+          title: "承運風險準備金",
+          icon: "ship",
+          x: 137,
+          y: 595,
+          requires: [["C04"]],
+          description: "擔保需要資金，不能只靠皇家名義。",
+          effect: "設立準備金與賠付邊界。",
+          status: "locked"
+        },
+        {
+          id: "C09",
+          title: "跨境票據核驗",
+          icon: "scroll",
+          x: 482,
+          y: 595,
+          requires: [["C05", "C06"]],
+          description: "將所選裁決安排落實到每張票據的核驗上。",
+          effect: "形成票據核驗程序。",
+          status: "locked"
+        },
+        {
+          id: "C10",
+          title: "啟用備援調糧",
+          icon: "grain",
+          x: 827,
+          y: 595,
+          requires: [["C07"]],
+          description: "在道路與糧倉具備實際條件後，執行首輪備援調糧。",
+          effect: "完成首輪調度驗證。",
+          condition: "道路與糧倉已具備運作條件",
+          status: "locked"
+        },
+        {
+          id: "C11",
+          title: "帝國供應韌性章程",
+          icon: "star",
+          x: 482,
+          y: 775,
+          requires: [["C08"], ["C09"], ["C10"]],
+          description: "把本期建立的擔保、裁決與備援調度納入常態運作。",
+          effect: "確立多路供應與風險分擔制度。",
+          status: "locked"
+        }
+      ],
+      summary: "帝國以新增信用凍結促成北境清算交涉，最終在核驗條件下恢復部分交易，並保留平民糧運最低配額。貿易與糧運常態規則已生效，本輪爭議的制度安排告一段落；舊債實際回收與承運商履約仍持續追蹤。",
+      events: [
+        {
+          id: "old-debts",
+          title: "港口帳簿上的舊債",
+          description: "清算制度已經恢復，第一批到期債款仍在核驗。裁決程序生效，不代表款項已經入庫。",
+          steps: ["既有欠款申報完成", "核驗與清償交涉持續", "依實際到帳更新回收結果"]
+        },
+        {
+          id: "old-debts",
+          title: "港口帳簿上的舊債",
+          description: "第一批核驗結果已送達商館。部分債務人承諾分期清償，欠款仍待實際收回；事件持續追蹤。",
+          steps: ["既有欠款申報完成", "核驗與清償交涉持續", "依實際到帳更新回收結果"]
+        },
+        {
+          id: "old-debts",
+          title: "港口帳簿上的舊債",
+          description: "商館補交了第二批抵押資料，核驗範圍擴大。部分款項仍未到帳，既有追索工作繼續。",
+          steps: ["既有欠款申報完成", "核驗與清償交涉持續", "依實際到帳更新回收結果"]
+        }
+      ]
     }
   };
 
@@ -22728,325 +23141,6 @@ ${managed}
       });
     }
     return tree;
-  }
-
-  // src/tree-io.ts
-  var TREE_FILE_KIND = "national-focus-tree";
-  var StatusSchema = CountrySchema.pick({
-    enabled: true,
-    control: true,
-    skipDelegate: true,
-    calibration: true,
-    cursor: true,
-    current: true,
-    stability: true,
-    warSupport: true,
-    progress: true,
-    locks: true,
-    capabilities: true,
-    commitments: true,
-    facts: true
-  }).partial();
-  var HISTORY = "歷史承接：";
-  function countryTree(country) {
-    const produced = new Set(
-      Object.values(country.nodes).flatMap(
-        (node2) => node2.effects.flatMap((effect2) => effect2.kind === "capability" ? [effect2.key] : [])
-      )
-    );
-    return {
-      id: country.id,
-      name: country.name,
-      description: country.description,
-      stability: country.stability,
-      warSupport: country.warSupport,
-      evidence: country.evidence,
-      ...country.keywords ? { keywords: country.keywords } : {},
-      analysis: country.analysis,
-      branches: country.branches,
-      ...country.relations ? { relations: country.relations } : {},
-      // Base capabilities only: the ones no focus in this tree produces.
-      capabilities: Object.values(country.capabilities).filter((capability) => !produced.has(capability.id)),
-      historical: Object.entries(country.progress).filter(([, progress]) => progress.status === "completed" && progress.evidence.startsWith(HISTORY)).map(([node2, progress]) => ({ node: node2, evidence: progress.evidence.slice(HISTORY.length) })),
-      nodes: Object.values(country.nodes).map(({ x: _x, y: _y, ...node2 }) => node2)
-    };
-  }
-  function exportTrees(state, ids) {
-    const countries = Object.values(state.countries).filter((country) => !ids || ids.includes(country.id));
-    if (!countries.length) {
-      throw new Error("沒有可匯出的國策樹");
-    }
-    return JSON.stringify(
-      {
-        kind: TREE_FILE_KIND,
-        version: 1,
-        exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        day: state.day,
-        settings: { size: state.settings.size, pace: state.settings.pace },
-        countries: countries.map((country) => ({
-          tree: countryTree(country),
-          status: {
-            enabled: country.enabled,
-            control: country.control,
-            skipDelegate: country.skipDelegate,
-            calibration: country.calibration,
-            cursor: country.cursor,
-            current: country.current,
-            stability: country.stability,
-            warSupport: country.warSupport,
-            progress: country.progress,
-            locks: country.locks,
-            capabilities: country.capabilities,
-            commitments: country.commitments,
-            facts: country.facts
-          },
-          // For reports only; events are not imported.
-          events: Object.values(state.events).filter((event) => event.countries.includes(country.id))
-        }))
-      },
-      null,
-      2
-    );
-  }
-  function issuesText(error62, nodes = []) {
-    return error62.issues.slice(0, 8).map((issue2) => {
-      const [head, index, ...rest] = issue2.path;
-      const node2 = head === "nodes" && typeof index === "number" ? nodes[index] : void 0;
-      const where = node2 && typeof node2.id === "string" ? `國策 ${node2.id}（nodes.${String(index)}）${rest.length ? `的 ${rest.map(String).join(".")}` : ""}` : issue2.path.map(String).join(".") || "（根）";
-      return `${where}：${issue2.message}`;
-    }).join("\n");
-  }
-  function withDefaults(raw) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-      throw new Error("國策樹必須是 JSON 物件");
-    }
-    const repaired = repairReply(raw);
-    const nodes = Array.isArray(repaired.nodes) ? repaired.nodes : [];
-    return {
-      description: repaired.name,
-      stability: 50,
-      warSupport: 50,
-      evidence: "匯入的國策樹",
-      analysis: "",
-      branches: [],
-      capabilities: [],
-      historical: [],
-      ...repaired,
-      nodes: nodes.map((value) => {
-        const node2 = { ...value };
-        delete node2.x;
-        delete node2.y;
-        return {
-          icon: "crown",
-          reason: "匯入的國策",
-          durationReason: "依匯入設定",
-          ...node2
-        };
-      })
-    };
-  }
-  function parseTree(raw) {
-    const input2 = withDefaults(raw);
-    const nodes = input2.nodes;
-    const laid = (() => {
-      try {
-        return layoutTree(nodes);
-      } catch (error62) {
-        throw new Error(
-          `國策樹「${String(input2.name ?? input2.id ?? "")}」：${error62 instanceof Error ? error62.message : error62}`
-        );
-      }
-    })();
-    const result = TreeSchema.safeParse({ ...input2, nodes: laid });
-    if (!result.success) {
-      throw new Error(
-        `國策樹「${String(input2.name ?? input2.id ?? "")}」格式有誤：
-${issuesText(result.error, nodes)}`
-      );
-    }
-    const tree = result.data;
-    try {
-      const ids = new Set(tree.nodes.map((node2) => node2.id));
-      for (const item of tree.historical) {
-        if (!ids.has(item.node)) {
-          throw new Error(`historical 引用不存在的國策：${item.node}`);
-        }
-      }
-      for (const branch of tree.branches) {
-        if (!tree.nodes.some((node2) => node2.branch === branch.name)) {
-          throw new Error(`分支「${branch.name}」沒有任何國策`);
-        }
-      }
-      for (const relation of tree.relations ?? []) {
-        if (!ids.has(relation.from) || !ids.has(relation.to)) {
-          throw new Error(`關係 ${relation.from} → ${relation.to} 引用不存在的國策`);
-        }
-      }
-      for (const node2 of tree.nodes) {
-        if (node2.impact === "pivotal" && !node2.news) {
-          throw new Error(`重要國策 ${node2.id} 缺少 news（headline、body、option）`);
-        }
-      }
-      assertMutexChoices(tree.nodes);
-      assertReachable(tree.nodes);
-      assertCapabilityOrder(
-        tree.nodes,
-        tree.capabilities.filter((capability) => capability.active).map((capability) => capability.id),
-        tree.historical.map((item) => item.node)
-      );
-    } catch (error62) {
-      throw new Error(`國策樹「${tree.name}」無法遊玩：${error62 instanceof Error ? error62.message : error62}`);
-    }
-    return tree;
-  }
-  function parseTreeFile(raw) {
-    if (Array.isArray(raw?.tasks)) {
-      throw new Error("這是工作流助手的預設檔，不是國策樹檔案。");
-    }
-    if (raw?.kind === "national-focus-task-presets") {
-      throw new Error("這是任務預設檔，請到「設定 → 任務 → 任務預設」匯入。");
-    }
-    const list = raw?.kind === TREE_FILE_KIND ? raw.countries ?? [] : Array.isArray(raw) ? raw : [raw];
-    if (!list.length) {
-      throw new Error("檔案中沒有國策樹");
-    }
-    const entries = list.map((item) => {
-      const entry = item;
-      const tree = parseTree(entry && typeof entry === "object" && "tree" in entry ? entry.tree : item);
-      let status;
-      if (entry && typeof entry === "object" && entry.status !== void 0) {
-        const parsed = StatusSchema.safeParse(entry.status);
-        if (!parsed.success) {
-          throw new Error(`國策樹「${tree.name}」的進度資料有誤：
-${issuesText(parsed.error)}`);
-        }
-        status = parsed.data;
-      }
-      return { tree, status, eventCount: Array.isArray(entry?.events) ? entry.events.length : 0 };
-    });
-    const ids = entries.map((entry) => entry.tree.id);
-    const duplicate = ids.find((id, index) => ids.indexOf(id) !== index);
-    if (duplicate) {
-      throw new Error(`檔案中有兩棵 id 相同的國策樹：${duplicate}`);
-    }
-    return entries;
-  }
-  function importTrees(input2, entries, options) {
-    let state = input2;
-    for (const entry of entries) {
-      const id = entry.tree.id;
-      if (state.countries[id]) {
-        if (!options.replace) {
-          throw new Error(`國家 ${id}（${state.countries[id].name}）已存在；勾選「取代同 id 的國家」才能匯入`);
-        }
-        state = removeCountry(state, id);
-      }
-      state = installCountry(state, entry.tree, state.day);
-      if (options.withProgress && entry.status) {
-        state = structuredClone(state);
-        const country = state.countries[id];
-        const { progress, cursor: _cursor, calibration: _calibration, current, ...rest } = entry.status;
-        Object.assign(country, rest);
-        for (const [nodeId, value] of Object.entries(progress ?? {})) {
-          if (country.nodes[nodeId]) {
-            country.progress[nodeId] = value;
-          }
-        }
-        country.current = current && country.nodes[current] ? current : "";
-        country.calibration = true;
-        country.cursor = state.day;
-        state = StateSchema.parse(state);
-      }
-    }
-    return state;
-  }
-  function treeTemplate() {
-    const node2 = (id, name, branch, prerequisites, extra = {}) => ({
-      id,
-      name,
-      branch,
-      description: `${name}：寫出具體行動、受益者與受損者。`,
-      reason: "設定依據或設計理由",
-      icon: "crown",
-      days: 35,
-      durationReason: "工期理由",
-      prerequisites,
-      requirements: [],
-      sustain: [],
-      outcomes: [],
-      investments: ["投入的人力或物資"],
-      effects: [],
-      mutex: null,
-      ...extra
-    });
-    const route = (id) => ({
-      group: "reform_path",
-      route: id,
-      lock: "complete",
-      reason: "兩種改革方向只能擇一"
-    });
-    return JSON.stringify(
-      {
-        kind: TREE_FILE_KIND,
-        version: 1,
-        countries: [
-          {
-            tree: {
-              id: "example_realm",
-              name: "範例王國",
-              description: "示範國策樹的所有欄位；複製後改寫即可。",
-              stability: 55,
-              warSupport: 40,
-              evidence: "玩家自訂",
-              analysis: "核心矛盾：王權與地方貴族。",
-              branches: [
-                {
-                  id: "crown",
-                  name: "王權與貴族",
-                  purpose: "決定權力歸屬",
-                  supporters: "王室與城市",
-                  opposition: "地方貴族",
-                  tradeoff: "效率與穩定",
-                  destination: "新的權力平衡"
-                }
-              ],
-              capabilities: [{ id: "royal_guard", name: "王室近衛", active: true, reason: "開局即有" }],
-              historical: [],
-              nodes: [
-                node2("census", "全國戶籍普查", "王權與貴族", [], {
-                  effects: [
-                    { id: "gain", kind: "capability", key: "census_data", name: "戶籍資料", active: true }
-                  ]
-                }),
-                node2("royal_tax", "王室直轄稅", "王權與貴族", [["census"]], {
-                  mutex: route("centralize"),
-                  requirements: [{ kind: "capability", id: "census_data", label: "需要戶籍資料" }],
-                  effects: [{ id: "stab", kind: "stability", value: -5 }]
-                }),
-                node2("noble_charter", "貴族特許狀", "王權與貴族", [["census"]], {
-                  mutex: route("charter"),
-                  effects: [{ id: "stab", kind: "stability", value: 5 }]
-                }),
-                node2("new_order", "新秩序", "王權與貴族", [["royal_tax", "noble_charter"]], {
-                  icon: "diplomacy",
-                  days: 60,
-                  outcomes: [{ kind: "fact", id: "estates_agree", label: "三級會議同意" }],
-                  // A turning point: completing it publishes this news (a single option).
-                  impact: "pivotal",
-                  news: {
-                    headline: "範例王國召開三級會議，宣布新秩序",
-                    body: "鄰國使節連夜回報：王國的權力格局已經改寫。",
-                    option: { label: "新的時代開始了", text: "" }
-                  }
-                })
-              ]
-            }
-          }
-        ]
-      },
-      null,
-      2
-    );
   }
 
   // src/skeleton-patch.ts
@@ -24042,6 +24136,9 @@ ${formatIssues(problems)}`);
       warSupport: skeleton.warSupport,
       evidence: skeleton.evidence,
       ...skeleton.keywords.length ? { keywords: skeleton.keywords } : {},
+      periodTitle: skeleton.name,
+      agenda: skeleton.analysis,
+      longTerm: [],
       analysis: skeleton.analysis,
       capabilities: skeleton.capabilities,
       branches: skeleton.branches,
@@ -24144,17 +24241,20 @@ ${formatIssues(checked2.problems)}`
   // src/generation.ts
   var GeneratedTreeSchema = TreeSchema.extend({
     analysis: external_exports.string().min(1),
-    branches: external_exports.array(BranchSchema).min(3).max(16),
+    branches: external_exports.array(BranchSchema).min(1).max(16),
     nodes: external_exports.array(NodeSchema.omit({ x: true, y: true })).min(1).max(300)
   });
-  var topologyMinimums = { small: 1, standard: 3, large: 4, epic: 5 };
-  var crossLinkMinimums = { small: 1, standard: 2, large: 3, epic: 3 };
-  var brevity = {
-    small: { description: 120, reason: 60, duration: 40, branches: [3, 5], perBranch: [4, 7] },
-    standard: { description: 80, reason: 40, duration: 24, branches: [4, 6], perBranch: [8, 15] },
-    large: { description: 50, reason: 24, duration: 16, branches: [4, 6], perBranch: [12, 25] },
-    epic: { description: 36, reason: 18, duration: 12, branches: [5, 6], perBranch: [18, 30] }
+  var topologyMinimums = { small: 0, standard: 0, large: 0, epic: 0 };
+  var crossLinkMinimums = { small: 0, standard: 0, large: 0, epic: 0 };
+  var standardBudget = {
+    description: 300,
+    reason: 120,
+    duration: 60,
+    branches: [1, 4],
+    perBranch: [2, 8]
   };
+  var largeBudget = { ...standardBudget, branches: [1, 6], perBranch: [2, 10] };
+  var brevity = { small: standardBudget, standard: standardBudget, large: largeBudget, epic: largeBudget };
   var segmentMin = 3;
   var defaultSegmentMax = 25;
   function segmentCap(size, segmentMax) {
@@ -24200,13 +24300,6 @@ ${formatIssues(checked2.problems)}`
         `重要國策 ${node2.id} 缺少 news（headline、body、option）`
       );
     }
-    for (const branch of branches2) {
-      const count = nodes.filter((node2) => node2.branch === branch && node2.impact === "pivotal").length;
-      requireThat3(
-        count >= 1 && count <= 3,
-        count ? `分支「${branch}」有 ${count} 個重要國策，最多 3 個` : `分支「${branch}」沒有重要國策（impact=pivotal）；每支需要 1–2 個影響重大、值得公告的國策`
-      );
-    }
   }
   function requireThat3(value, reason) {
     if (!value) {
@@ -24218,38 +24311,6 @@ ${formatIssues(checked2.problems)}`
   var crossLinkMinimumOf = (size) => crossLinkMinimums[size];
   function validateTopology(nodes, size) {
     layoutTree(nodes);
-    const byId = new Map(nodes.map((n) => [n.id, n]));
-    const childCounts = /* @__PURE__ */ new Map();
-    const choices = /* @__PURE__ */ new Map();
-    let joins = 0;
-    let crossLinks = 0;
-    for (const node2 of nodes) {
-      if (node2.prerequisites.flat().length > 1) {
-        joins++;
-      }
-      for (const parent of new Set(node2.prerequisites.flat())) {
-        childCounts.set(parent, (childCounts.get(parent) ?? 0) + 1);
-        if (byId.get(parent).branch !== node2.branch) {
-          crossLinks++;
-        }
-      }
-      if (node2.mutex) {
-        const routes = choices.get(node2.mutex.group) ?? /* @__PURE__ */ new Set();
-        routes.add(node2.mutex.route);
-        choices.set(node2.mutex.group, routes);
-      }
-    }
-    const minimum = topologyMinimums[size];
-    requireThat3(
-      [...childCounts.values()].filter((v) => v > 1).length >= minimum,
-      `全圖至少需要 ${minimum} 處分岔`
-    );
-    requireThat3(joins >= minimum, `全圖至少需要 ${minimum} 處匯流或共同前置`);
-    requireThat3(crossLinks >= crossLinkMinimums[size], `全圖至少需要 ${crossLinkMinimums[size]} 條跨分支依賴`);
-    requireThat3(
-      [...choices.values()].some((routes) => routes.size > 1),
-      "需要至少一組具有不同選擇的互斥路線"
-    );
     assertMutexChoices(nodes);
     assertReachable(nodes);
   }
@@ -24323,13 +24384,8 @@ ${formatIssues(checked2.problems)}`
       const raw = normalizeGenerated(reply);
       requireThat3(raw.id === candidate.id, "生成的國家 ID 與選取國家不一致");
       requireThat3(
-        (options.allowShort || raw.nodes.length >= min) && raw.nodes.length <= max,
+        raw.nodes.length >= 1 && raw.nodes.length <= max,
         raw.nodes.length < min ? `生成規模須為 ${min}–${max} 節點，本次只有 ${raw.nodes.length} 項。請依建議分支數與每支項數補足，並精簡每個節點的文字，讓整棵樹能在一次回應內輸出完畢` : `生成規模須為 ${min}–${max} 節點，本次有 ${raw.nodes.length} 項，請合併或刪減`
-      );
-      const [fewest, most] = brevity[size].branches;
-      requireThat3(
-        raw.branches.length >= fewest && raw.branches.length <= most,
-        `分支數須為 ${fewest}–${most}，本次有 ${raw.branches.length} 支；規模靠分支的深度與互斥路線，而不是更多分支`
       );
       for (const key of ["id", "name"]) {
         requireThat3(
@@ -24347,6 +24403,11 @@ ${formatIssues(checked2.problems)}`
       );
       validateTopology(raw.nodes, size);
       const tree = TreeSchema.parse({ ...raw, nodes: layoutTree(raw.nodes) });
+      if (tree.relations?.some(
+        (relation) => !tree.nodes.some((n) => n.id === relation.from) || !tree.nodes.some((n) => n.id === relation.to)
+      )) {
+        throw new Error("關係引用不存在的國策");
+      }
       requireThat3(
         new Set(tree.nodes.map((n) => n.description.trim())).size === tree.nodes.length,
         "國策描述完全重複"
@@ -24385,11 +24446,20 @@ ${formatIssues(checked2.problems)}`
         facts: c.facts,
         capabilities: c.capabilities,
         commitments: c.commitments,
+        period: {
+          number: c.period.number,
+          title: c.periodTitle,
+          agenda: c.agenda || c.analysis,
+          auto: c.autoPeriod,
+          history: c.period.history.slice(-3)
+        },
+        longTerm: c.longTerm,
         nodes: Object.values(c.nodes).map(
           (n) => fullDefinitions ? n : c.progress[n.id].status === "completed" ? { id: n.id, name: n.name, branch: n.branch } : {
             id: n.id,
             name: n.name,
             branch: n.branch,
+            description: n.description,
             days: n.days,
             prerequisites: n.prerequisites,
             mutex: n.mutex,
@@ -24426,7 +24496,7 @@ ${formatIssues(checked2.problems)}`
             importance: event.importance,
             public: event.public,
             settle: event.settle,
-            ...event.source.node ? { focus: { country: event.source.country, node: event.source.node } } : {},
+            ...event.source.node ? { focus: { country: event.source.country, node: event.source.node, name: event.source.name } } : {},
             ...event.current ? { current: event.current } : {},
             ...event.steps ? { steps: event.steps } : {},
             timeline: event.timeline.slice(-3),
@@ -24447,6 +24517,902 @@ ${formatIssues(checked2.problems)}`
       },
       instructions: "未列 progress 的節點均 idle。保留所有節點的可執行條件以支援長跳時；未列國家均停用，禁止更新。"
     };
+  }
+
+  // src/periods.ts
+  var PeriodReplySchema = external_exports.object({
+    summary: external_exports.string().min(1).max(1200),
+    tree: GeneratedTreeSchema.extend({
+      periodTitle: external_exports.string().min(1).max(80),
+      agenda: external_exports.string().min(1).max(800)
+    })
+  }).strict();
+  function periodAnchor(country, invalidateActive = false) {
+    if (!invalidateActive && country.progress[country.current]?.status === "active") {
+      return country.current;
+    }
+    return Object.entries(country.progress).filter(([, progress]) => progress.status === "completed").sort((a, b) => (b[1].completed ?? -1) - (a[1].completed ?? -1))[0]?.[0] ?? "";
+  }
+  function periodBasis(state, country) {
+    return JSON.stringify([state.countries[country], state.settings.size, state.settings.pace, state.day]);
+  }
+  function checkTransition(state, transition) {
+    const country = state.countries[transition.country];
+    if (!country?.enabled || !country.autoPeriod || country.calibration) {
+      throw new Error("此國未啟用自動換期，或尚待校準");
+    }
+    if (transition.invalidateActive && transition.cause !== "incompatible") {
+      throw new Error("只有局勢不適配可停止承接進行中國策");
+    }
+  }
+  function transitionPeriod(input2, transition, reply) {
+    checkTransition(input2, transition);
+    const old = input2.countries[transition.country];
+    const anchor2 = periodAnchor(old, transition.invalidateActive);
+    const number4 = old.period.number + 1;
+    const prefix = `p${number4}_`;
+    const generated = reply.tree;
+    if (generated.id !== old.id) {
+      throw new Error("下一期國家 ID 不一致");
+    }
+    if (generated.historical.length) {
+      throw new Error("新一期不得生成已完成國策；承接節點由程式保留");
+    }
+    if (generated.nodes.length + Number(Boolean(anchor2)) > sizeLimits[input2.settings.size][1]) {
+      throw new Error("新一期超過所選規模上限（包含承接節點）");
+    }
+    const oldGroups = new Set(Object.values(old.nodes).flatMap((n) => n.mutex ? [n.mutex.group] : []));
+    const nodes = generated.nodes.map((node2) => {
+      if (!node2.id.startsWith(prefix) || old.nodes[node2.id]) {
+        throw new Error(`新國策 ID 必須使用 ${prefix} 前綴，且不可重用舊 ID`);
+      }
+      if (node2.mutex && (!node2.mutex.group.startsWith(prefix) || oldGroups.has(node2.mutex.group))) {
+        throw new Error(`新互斥組必須使用 ${prefix} 前綴`);
+      }
+      if (node2.impact === "pivotal" && !node2.news) {
+        throw new Error(`重要國策 ${node2.id} 缺少新聞`);
+      }
+      return node2;
+    });
+    if (new Set(generated.branches.map((b) => b.id)).size !== generated.branches.length || new Set(generated.branches.map((b) => b.name)).size !== generated.branches.length || nodes.some((n) => !generated.branches.some((b) => b.name === n.branch))) {
+      throw new Error("新期分支不可重複，節點必須屬於已定義分支");
+    }
+    if (anchor2) {
+      nodes.unshift({ ...old.nodes[anchor2], prerequisites: [], mutex: null });
+    }
+    const branches2 = [...generated.branches];
+    if (anchor2 && !branches2.some((b) => b.name === old.nodes[anchor2].branch)) {
+      const branch = old.branches.find((b) => b.name === old.nodes[anchor2].branch);
+      if (branch) {
+        branches2.unshift({ ...branch, core: false });
+      }
+    }
+    if (new Set(branches2.map((b) => b.id)).size !== branches2.length) {
+      throw new Error("新分支 ID 與承接分支衝突");
+    }
+    validateTopology(nodes, input2.settings.size);
+    const tree = TreeSchema.parse({
+      ...generated,
+      branches: branches2,
+      nodes: layoutTree(nodes),
+      capabilities: Object.values(old.capabilities)
+    });
+    assertCapabilityOrder(
+      tree.nodes,
+      Object.values(old.capabilities).filter((c) => c.active).map((c) => c.id),
+      anchor2 && old.progress[anchor2].status === "completed" ? [anchor2] : []
+    );
+    const ids = new Set(tree.nodes.map((n) => n.id));
+    if (tree.relations?.some((r) => !ids.has(r.from) || !ids.has(r.to))) {
+      throw new Error("新期關係引用不存在的節點");
+    }
+    const base = structuredClone(input2);
+    delete base.countries[old.id];
+    const installed = installCountry(base, tree, input2.day).countries[old.id];
+    const state = structuredClone(input2);
+    state.countries[old.id] = {
+      ...old,
+      periodTitle: tree.periodTitle,
+      agenda: tree.agenda,
+      longTerm: tree.longTerm,
+      analysis: tree.analysis,
+      branches: tree.branches,
+      relations: tree.relations,
+      nodes: installed.nodes,
+      progress: installed.progress,
+      current: anchor2 && old.progress[anchor2].status === "active" ? anchor2 : "",
+      // Old route groups belong to the removed graph; their actual results remain in national state.
+      locks: {},
+      treeRevision: old.treeRevision + 1,
+      period: {
+        number: number4,
+        started: input2.day,
+        anchor: anchor2,
+        history: [
+          ...old.period.history,
+          {
+            start: old.period.started ?? Math.min(
+              old.cursor,
+              ...Object.values(old.progress).flatMap(
+                (p) => [p.started, p.completed].filter((day) => day !== null)
+              )
+            ),
+            end: input2.day,
+            summary: reply.summary
+          }
+        ]
+      }
+    };
+    if (anchor2) {
+      state.countries[old.id].progress[anchor2] = structuredClone(old.progress[anchor2]);
+    }
+    for (const event of Object.values(state.events)) {
+      if (event.source.country === old.id && event.source.node && !event.source.name) {
+        event.source.name = old.nodes[event.source.node]?.name ?? event.source.node;
+      }
+    }
+    validateGraph(state.countries[old.id].nodes);
+    state.revision++;
+    return StateSchema.parse(state);
+  }
+
+  // src/demo-period.ts
+  var countryId = "augustium";
+  var icons = {
+    scroll: "science",
+    ship: "trade",
+    shield: "army",
+    scale: "diplomacy",
+    grain: "industry",
+    cross: "diplomacy",
+    star: "crown"
+  };
+  function branchFor(id) {
+    if (["A03", "A04", "A08", "A09", "B07", "B10", "C03", "C07", "C10"].includes(id)) {
+      return "糧運與民生";
+    }
+    if ([
+      "A05",
+      "A06",
+      "A07",
+      "A10",
+      "A11",
+      "B03",
+      "B04",
+      "B05",
+      "B06",
+      "B08",
+      "B09",
+      "C02",
+      "C05",
+      "C06",
+      "C09"
+    ].includes(id)) {
+      return "對外安排";
+    }
+    return "國家議程";
+  }
+  function makeNodes(rows) {
+    return layoutTree(
+      rows.map((raw) => {
+        const other = raw.mutex ?? "";
+        const group = other ? [raw.id, other].sort().join("_") : "";
+        return {
+          id: raw.id,
+          name: raw.title,
+          branch: branchFor(raw.id),
+          description: raw.description,
+          reason: "分期 UI 樣品的虛構劇情，非世界書既有事實。",
+          icon: icons[raw.icon],
+          x: 0,
+          y: 0,
+          days: raw.id === "A04" ? 30 : 21,
+          durationReason: "樣品用協商與行政工期；正式生成仍依世界情境決定。",
+          prerequisites: raw.requires,
+          requirements: [],
+          sustain: [],
+          outcomes: raw.condition ? [{ kind: "fact", id: `outcome_${raw.id}`, label: raw.condition }] : [],
+          investments: ["協商、行政與執行人力"],
+          effects: [
+            { id: "policy", kind: "capability", key: `policy_${raw.id}`, name: raw.effect, active: true }
+          ],
+          mutex: other ? { group, route: raw.id, lock: "start", reason: "採取不同的國家政策安排" } : null,
+          impact: "normal",
+          execution: "once",
+          news: null
+        };
+      })
+    );
+  }
+  function treeDefinition(rows, name) {
+    const nodes = makeNodes(rows);
+    return {
+      id: countryId,
+      name: "奧古斯提姆帝國",
+      description: name,
+      stability: 68,
+      warSupport: 42,
+      evidence: "分期 UI 樣品",
+      analysis: "以最新議程承接國家發展。",
+      relations: [],
+      capabilities: [],
+      historical: [],
+      nodes,
+      branches: [...new Set(nodes.map((n) => n.branch))].map((branch, index) => ({
+        id: `agenda_${index}`,
+        name: branch,
+        purpose: `本期的${branch}安排`,
+        supporters: "相關行政部門與利益群體",
+        opposition: "資源分配及權責爭議",
+        tradeoff: "政策收益伴隨新的責任與成本",
+        destination: "建立當期可執行的安排"
+      }))
+    };
+  }
+  function makeSampleState(scenario) {
+    const sample = demo_period_data_default[scenario];
+    const definition = treeDefinition(sample.first, "北境的帳，帝國的糧");
+    const completed = sample.first.filter((n) => n.status === "done");
+    let state = installCountry(
+      createState(100),
+      {
+        ...definition,
+        historical: completed.map((n) => ({ node: n.id, evidence: "樣品已發生的政策成果" })),
+        capabilities: completed.map((n) => ({
+          id: `policy_${n.id}`,
+          name: n.effect,
+          active: true,
+          reason: "樣品既有成果"
+        }))
+      },
+      100
+    );
+    const country = state.countries[countryId];
+    country.periodTitle = "北境的帳，帝國的糧";
+    country.agenda = "處理北境信用爭議，同時保障民生糧運。";
+    country.period.started = 70;
+    completed.forEach((row, index) => {
+      country.progress[row.id].completed = 80 + index;
+    });
+    for (const row of sample.first) {
+      if (row.status === "active") {
+        country.current = row.id;
+        country.progress[row.id] = {
+          ...country.progress[row.id],
+          status: "active",
+          days: 18,
+          started: 82,
+          investments: ["已投入港務協調人力"],
+          evidence: "港口與糧倉名冊已核定，內陸配額協調中。"
+        };
+      }
+    }
+    const event = sample.events[0];
+    state.events[event.id] = EventSchema.parse({
+      id: event.id,
+      at: 100,
+      countries: [countryId],
+      title: event.title,
+      description: event.description,
+      current: event.description,
+      evidence: "樣品事件紀錄",
+      origin: "story",
+      public: true,
+      changes: [],
+      scope: "front",
+      importance: "major",
+      status: "ongoing",
+      settle: "依實際局勢確認運作成果",
+      steps: event.steps.map((text, i) => ({ text, state: i === 0 ? "done" : i === 1 ? "active" : "pending" })),
+      timeline: [{ at: 100, text: event.description }],
+      source: { kind: "update", country: countryId, node: scenario === "crisis" ? "A04" : "A05" }
+    });
+    state = StateSchema.parse(state);
+    return state;
+  }
+  function advancePeriodSample(input2, scenario) {
+    const state = structuredClone(input2);
+    const country = state.countries[countryId];
+    if (!country) {
+      throw new Error("請先載入分期示範");
+    }
+    const sample = demo_period_data_default[scenario];
+    const event = state.events[sample.events[0].id];
+    if (event) {
+      event.current = sample.events[1].description;
+      event.timeline.push({ at: state.day, text: event.current });
+    }
+    if (!country.autoPeriod || !country.enabled || country.period.number > 1) {
+      return state;
+    }
+    const anchor2 = periodAnchor(country);
+    const expected = scenario === "crisis" ? "A04" : "A12";
+    if (anchor2 !== expected) {
+      throw new Error("已改變示範路線，請重新載入分期示範");
+    }
+    const definition = treeDefinition(sample.second, "下一期");
+    const prefix = `p${country.period.number + 1}_`;
+    const nodes = definition.nodes.filter((n) => n.id !== anchor2).map(({ x, y, ...n }) => ({
+      ...n,
+      id: prefix + n.id,
+      prerequisites: n.prerequisites.map((group) => group.map((id) => id === anchor2 ? id : prefix + id)),
+      mutex: n.mutex ? { ...n.mutex, group: prefix + n.mutex.group } : null
+    }));
+    return transitionPeriod(
+      state,
+      {
+        country: countryId,
+        cause: scenario === "crisis" ? "incompatible" : "completed",
+        reason: "離線示範：局勢或主要議程已改變",
+        invalidateActive: false
+      },
+      PeriodReplySchema.parse({
+        summary: sample.summary,
+        tree: {
+          ...definition,
+          nodes,
+          periodTitle: scenario === "crisis" ? "災厄越過國境" : "秩序之後的遠見",
+          agenda: scenario === "crisis" ? "跨國協作應對災害" : "鞏固新秩序與對外關係"
+        }
+      })
+    );
+  }
+
+  // src/demo.ts
+  function demoState() {
+    let state = installCountry(createState(100), demoTree(), 100);
+    state = installCountry(state, demoTree("north", "北境聯邦"), 100);
+    state = installCountry(state, demoTree("coast", "蒼海同盟"), 100);
+    state.countries.north.control = "ai";
+    state.countries.coast.control = "ai";
+    state = startFocus(state, "augustium", "focus_1_1");
+    state = applyProposal(state, { id: "demo_initial", until: 114, reason: "示範進度", steps: [] });
+    return state;
+  }
+  var DemoPlatform = class {
+    demo = true;
+    chatId() {
+      return "demo";
+    }
+    async models() {
+      throw new Error("離線測試頁不連接 API；請在酒館中載入模型。");
+    }
+    state = demoState();
+    revision = 0;
+    config = defaultConfig();
+    changes = /* @__PURE__ */ new Set();
+    scenario = "crisis";
+    async periodSample(completed) {
+      this.scenario = completed ? "complete" : "crisis";
+      this.state = makeSampleState(this.scenario);
+      this.revision++;
+      for (const change of this.changes) {
+        change();
+      }
+    }
+    async nextPeriod() {
+      this.state = advancePeriodSample(this.state, this.scenario);
+      this.revision++;
+      for (const change of this.changes) {
+        change();
+      }
+    }
+    async read(config2 = this.config, job) {
+      const sources = job ? await buildSourceContext({
+        config: config2,
+        job,
+        currentId: 8,
+        messages: [
+          {
+            message_id: 8,
+            role: "assistant",
+            message: "<think>離線示範思考</think><content>七省聯運計畫的勘查隊抵達帝國邊境。</content>"
+          }
+        ],
+        entries: await this.sources(),
+        memoryEntries: [],
+        variables: { 世界: { 时间: this.state.day } },
+        renderEntry: async (text) => text
+      }) : void 0;
+      return {
+        identity: "demo",
+        fingerprint: String(this.revision),
+        turn: 8,
+        day: this.state.day,
+        state: structuredClone(this.state),
+        context: sources?.context ?? { note: "離線 UI 示範，無 API 連線" },
+        prompts: sources?.prompts,
+        sourceReport: sources?.report
+      };
+    }
+    async commit(snapshot, state) {
+      if (snapshot.fingerprint !== String(this.revision)) {
+        throw new Error("STALE:示範狀態已更新");
+      }
+      this.state = this.publish(structuredClone(state));
+      this.revision++;
+    }
+    /** Stand-in for an AI floor: each saved revision publishes its news on "floor" = revision. */
+    publish(state) {
+      stampNews(state, this.revision);
+      state.basis = { messageId: this.revision, hash: "" };
+      return state;
+    }
+    async news() {
+      const at = this.state.day;
+      const base = { at, evidence: "離線示範", changes: [], public: true };
+      this.state = this.publish(
+        applyProposal(this.state, {
+          id: `demo_news_${this.revision}`,
+          until: at,
+          reason: "測試新聞",
+          steps: [
+            {
+              at,
+              facts: [],
+              selections: [],
+              events: [
+                {
+                  ...base,
+                  id: `demo_border_${this.revision}`,
+                  countries: ["augustium", "north"],
+                  title: "北境關隘的對峙",
+                  headline: "北境聯邦封閉雪松關，帝國邊防軍連夜北調",
+                  description: "北境聯邦以越冬物資短缺為由封閉雪松關，禁止帝國商隊通行。帝國邊防軍兩個大隊已向關外集結，雙方都聲稱只是例行防務。",
+                  origin: "background",
+                  scope: "front",
+                  importance: "major",
+                  status: "ongoing",
+                  settle: "任一方撤軍，或雙方簽訂通行協議",
+                  option: { label: "讓外交官先去談", text: "示範選項：暫無直接效果。" },
+                  changes: [{ country: "north", effects: [{ id: "tension", kind: "warSupport", value: 5 }] }]
+                },
+                {
+                  ...base,
+                  id: `demo_tide_${this.revision}`,
+                  countries: ["coast"],
+                  title: "潮汐異象",
+                  headline: "蒼海同盟外海出現異常潮汐，三座港口暫停夜航",
+                  description: "連續三夜的異常潮汐沖毀了燈塔的基座。同盟議會已派船匠前往修繕，商會則開始囤積航運保險。",
+                  origin: "background",
+                  scope: "back",
+                  importance: "world",
+                  status: "resolved",
+                  option: { label: "願海神平息怒火", text: "" }
+                }
+              ]
+            }
+          ]
+        })
+      );
+      this.revision++;
+      for (const change of this.changes) {
+        change();
+      }
+    }
+    async generate(..._args) {
+      throw new Error("此頁為離線 UI 測試。真實國家辨識與 AI 生成請匯入酒館腳本後使用。");
+    }
+    secretLocation() {
+      return "memory";
+    }
+    async sources() {
+      return [
+        {
+          book: "示範世界書",
+          uid: 1,
+          name: "七省與帝國（僅供 UI）",
+          enabled: true,
+          content: "示範內容",
+          strategy: { type: "constant", keys: [] }
+        }
+      ];
+    }
+    async worldbooks() {
+      return { character: ["示範世界書"], all: ["示範世界書"] };
+    }
+    loadConfig() {
+      return this.config;
+    }
+    saveConfig(config2) {
+      this.config = config2;
+    }
+    onReady() {
+      return () => {
+      };
+    }
+    onChange(callback) {
+      this.changes.add(callback);
+      return () => this.changes.delete(callback);
+    }
+    inject() {
+    }
+    async advance(days) {
+      this.state = this.publish(
+        applyProposal(this.state, {
+          id: `demo_${this.revision}`,
+          until: this.state.day + days,
+          reason: "測試頁時間推進",
+          steps: []
+        })
+      );
+      this.revision++;
+      for (const change of this.changes) {
+        change();
+      }
+    }
+    async outcome() {
+      this.state = applyProposal(this.state, {
+        id: `demo_event_${this.revision}`,
+        until: this.state.day,
+        reason: "測試勘查成果",
+        steps: [
+          {
+            at: this.state.day,
+            facts: [
+              {
+                country: "augustium",
+                id: "survey",
+                value: true,
+                evidence: "UI 測試操作完成勘查",
+                origin: "story"
+              }
+            ],
+            events: [],
+            selections: []
+          }
+        ]
+      });
+      this.revision++;
+      for (const change of this.changes) {
+        change();
+      }
+    }
+    reset() {
+      this.state = demoState();
+      this.revision++;
+      for (const change of this.changes) {
+        change();
+      }
+    }
+  };
+
+  // src/tree-io.ts
+  var TREE_FILE_KIND = "national-focus-tree";
+  var StatusSchema = CountrySchema.pick({
+    period: true,
+    enabled: true,
+    control: true,
+    skipDelegate: true,
+    calibration: true,
+    cursor: true,
+    current: true,
+    stability: true,
+    warSupport: true,
+    progress: true,
+    locks: true,
+    capabilities: true,
+    commitments: true,
+    facts: true
+  }).partial();
+  var HISTORY = "歷史承接：";
+  function countryTree(country) {
+    const completedAnchor = country.progress[country.period.anchor]?.status === "completed" ? country.period.anchor : "";
+    const inheritedProducts = new Set(
+      (country.nodes[completedAnchor]?.effects ?? []).flatMap(
+        (effect2) => effect2.kind === "capability" ? [effect2.key] : []
+      )
+    );
+    const produced = new Set(
+      Object.values(country.nodes).flatMap(
+        (node2) => node2.effects.flatMap((effect2) => effect2.kind === "capability" ? [effect2.key] : [])
+      )
+    );
+    return {
+      id: country.id,
+      name: country.name,
+      description: country.description,
+      stability: country.stability,
+      warSupport: country.warSupport,
+      evidence: country.evidence,
+      ...country.keywords ? { keywords: country.keywords } : {},
+      analysis: country.analysis,
+      periodTitle: country.periodTitle,
+      agenda: country.agenda,
+      longTerm: country.longTerm,
+      autoPeriod: country.autoPeriod,
+      branches: country.branches,
+      ...country.relations ? { relations: country.relations } : {},
+      // Base capabilities only: the ones no focus in this tree produces.
+      capabilities: Object.values(country.capabilities).filter(
+        (capability) => !produced.has(capability.id) || inheritedProducts.has(capability.id)
+      ),
+      historical: Object.entries(country.progress).filter(
+        ([id, progress]) => progress.status === "completed" && (progress.evidence.startsWith(HISTORY) || id === completedAnchor)
+      ).map(([node2, progress]) => ({
+        node: node2,
+        evidence: progress.evidence.startsWith(HISTORY) ? progress.evidence.slice(HISTORY.length) : progress.evidence || "前期已完成的承接國策"
+      })),
+      nodes: Object.values(country.nodes).map(({ x: _x, y: _y, ...node2 }) => node2)
+    };
+  }
+  function exportTrees(state, ids) {
+    const countries = Object.values(state.countries).filter((country) => !ids || ids.includes(country.id));
+    if (!countries.length) {
+      throw new Error("沒有可匯出的國策樹");
+    }
+    return JSON.stringify(
+      {
+        kind: TREE_FILE_KIND,
+        version: 1,
+        exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        day: state.day,
+        settings: { size: state.settings.size, pace: state.settings.pace },
+        countries: countries.map((country) => ({
+          tree: countryTree(country),
+          status: {
+            period: country.period,
+            enabled: country.enabled,
+            control: country.control,
+            skipDelegate: country.skipDelegate,
+            calibration: country.calibration,
+            cursor: country.cursor,
+            current: country.current,
+            stability: country.stability,
+            warSupport: country.warSupport,
+            progress: country.progress,
+            locks: country.locks,
+            capabilities: country.capabilities,
+            commitments: country.commitments,
+            facts: country.facts
+          },
+          // For reports only; events are not imported.
+          events: Object.values(state.events).filter((event) => event.countries.includes(country.id))
+        }))
+      },
+      null,
+      2
+    );
+  }
+  function issuesText(error62, nodes = []) {
+    return error62.issues.slice(0, 8).map((issue2) => {
+      const [head, index, ...rest] = issue2.path;
+      const node2 = head === "nodes" && typeof index === "number" ? nodes[index] : void 0;
+      const where = node2 && typeof node2.id === "string" ? `國策 ${node2.id}（nodes.${String(index)}）${rest.length ? `的 ${rest.map(String).join(".")}` : ""}` : issue2.path.map(String).join(".") || "（根）";
+      return `${where}：${issue2.message}`;
+    }).join("\n");
+  }
+  function withDefaults(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new Error("國策樹必須是 JSON 物件");
+    }
+    const repaired = repairReply(raw);
+    const nodes = Array.isArray(repaired.nodes) ? repaired.nodes : [];
+    return {
+      description: repaired.name,
+      stability: 50,
+      warSupport: 50,
+      evidence: "匯入的國策樹",
+      analysis: "",
+      branches: [],
+      capabilities: [],
+      historical: [],
+      ...repaired,
+      nodes: nodes.map((value) => {
+        const node2 = { ...value };
+        delete node2.x;
+        delete node2.y;
+        return {
+          icon: "crown",
+          reason: "匯入的國策",
+          durationReason: "依匯入設定",
+          ...node2
+        };
+      })
+    };
+  }
+  function parseTree(raw) {
+    const input2 = withDefaults(raw);
+    const nodes = input2.nodes;
+    const laid = (() => {
+      try {
+        return layoutTree(nodes);
+      } catch (error62) {
+        throw new Error(
+          `國策樹「${String(input2.name ?? input2.id ?? "")}」：${error62 instanceof Error ? error62.message : error62}`
+        );
+      }
+    })();
+    const result = TreeSchema.safeParse({ ...input2, nodes: laid });
+    if (!result.success) {
+      throw new Error(
+        `國策樹「${String(input2.name ?? input2.id ?? "")}」格式有誤：
+${issuesText(result.error, nodes)}`
+      );
+    }
+    const tree = result.data;
+    try {
+      const ids = new Set(tree.nodes.map((node2) => node2.id));
+      for (const item of tree.historical) {
+        if (!ids.has(item.node)) {
+          throw new Error(`historical 引用不存在的國策：${item.node}`);
+        }
+      }
+      for (const branch of tree.branches) {
+        if (!tree.nodes.some((node2) => node2.branch === branch.name)) {
+          throw new Error(`分支「${branch.name}」沒有任何國策`);
+        }
+      }
+      for (const relation of tree.relations ?? []) {
+        if (!ids.has(relation.from) || !ids.has(relation.to)) {
+          throw new Error(`關係 ${relation.from} → ${relation.to} 引用不存在的國策`);
+        }
+      }
+      for (const node2 of tree.nodes) {
+        if (node2.impact === "pivotal" && !node2.news) {
+          throw new Error(`重要國策 ${node2.id} 缺少 news（headline、body、option）`);
+        }
+      }
+      assertMutexChoices(tree.nodes);
+      assertReachable(tree.nodes);
+      assertCapabilityOrder(
+        tree.nodes,
+        tree.capabilities.filter((capability) => capability.active).map((capability) => capability.id),
+        tree.historical.map((item) => item.node)
+      );
+    } catch (error62) {
+      throw new Error(`國策樹「${tree.name}」無法遊玩：${error62 instanceof Error ? error62.message : error62}`);
+    }
+    return tree;
+  }
+  function parseTreeFile(raw) {
+    if (Array.isArray(raw?.tasks)) {
+      throw new Error("這是工作流助手的預設檔，不是國策樹檔案。");
+    }
+    if (raw?.kind === "national-focus-task-presets") {
+      throw new Error("這是任務預設檔，請到「設定 → 任務 → 任務預設」匯入。");
+    }
+    const list = raw?.kind === TREE_FILE_KIND ? raw.countries ?? [] : Array.isArray(raw) ? raw : [raw];
+    if (!list.length) {
+      throw new Error("檔案中沒有國策樹");
+    }
+    const entries = list.map((item) => {
+      const entry = item;
+      const tree = parseTree(entry && typeof entry === "object" && "tree" in entry ? entry.tree : item);
+      let status;
+      if (entry && typeof entry === "object" && entry.status !== void 0) {
+        const parsed = StatusSchema.safeParse(entry.status);
+        if (!parsed.success) {
+          throw new Error(`國策樹「${tree.name}」的進度資料有誤：
+${issuesText(parsed.error)}`);
+        }
+        status = parsed.data;
+      }
+      return { tree, status, eventCount: Array.isArray(entry?.events) ? entry.events.length : 0 };
+    });
+    const ids = entries.map((entry) => entry.tree.id);
+    const duplicate = ids.find((id, index) => ids.indexOf(id) !== index);
+    if (duplicate) {
+      throw new Error(`檔案中有兩棵 id 相同的國策樹：${duplicate}`);
+    }
+    return entries;
+  }
+  function importTrees(input2, entries, options) {
+    let state = input2;
+    for (const entry of entries) {
+      const id = entry.tree.id;
+      if (state.countries[id]) {
+        if (!options.replace) {
+          throw new Error(`國家 ${id}（${state.countries[id].name}）已存在；勾選「取代同 id 的國家」才能匯入`);
+        }
+        state = removeCountry(state, id);
+      }
+      state = installCountry(state, { ...entry.tree, autoPeriod: entry.tree.autoPeriod ?? false }, state.day);
+      if (options.withProgress && entry.status) {
+        state = structuredClone(state);
+        const country = state.countries[id];
+        const { progress, cursor: _cursor, calibration: _calibration, current, ...rest } = entry.status;
+        Object.assign(country, rest);
+        for (const [nodeId, value] of Object.entries(progress ?? {})) {
+          if (country.nodes[nodeId]) {
+            country.progress[nodeId] = value;
+          }
+        }
+        country.current = current && country.nodes[current] ? current : "";
+        country.calibration = true;
+        country.cursor = state.day;
+        state = StateSchema.parse(state);
+      }
+    }
+    return state;
+  }
+  function treeTemplate() {
+    const node2 = (id, name, branch, prerequisites, extra = {}) => ({
+      id,
+      name,
+      branch,
+      description: `${name}：寫出具體行動、受益者與受損者。`,
+      reason: "設定依據或設計理由",
+      icon: "crown",
+      days: 35,
+      durationReason: "工期理由",
+      prerequisites,
+      requirements: [],
+      sustain: [],
+      outcomes: [],
+      investments: ["投入的人力或物資"],
+      effects: [],
+      mutex: null,
+      ...extra
+    });
+    const route = (id) => ({
+      group: "reform_path",
+      route: id,
+      lock: "complete",
+      reason: "兩種改革方向只能擇一"
+    });
+    return JSON.stringify(
+      {
+        kind: TREE_FILE_KIND,
+        version: 1,
+        countries: [
+          {
+            tree: {
+              id: "example_realm",
+              name: "範例王國",
+              description: "示範國策樹的所有欄位；複製後改寫即可。",
+              stability: 55,
+              warSupport: 40,
+              evidence: "玩家自訂",
+              analysis: "核心矛盾：王權與地方貴族。",
+              branches: [
+                {
+                  id: "crown",
+                  name: "王權與貴族",
+                  purpose: "決定權力歸屬",
+                  supporters: "王室與城市",
+                  opposition: "地方貴族",
+                  tradeoff: "效率與穩定",
+                  destination: "新的權力平衡"
+                }
+              ],
+              capabilities: [{ id: "royal_guard", name: "王室近衛", active: true, reason: "開局即有" }],
+              historical: [],
+              nodes: [
+                node2("census", "全國戶籍普查", "王權與貴族", [], {
+                  effects: [
+                    { id: "gain", kind: "capability", key: "census_data", name: "戶籍資料", active: true }
+                  ]
+                }),
+                node2("royal_tax", "王室直轄稅", "王權與貴族", [["census"]], {
+                  mutex: route("centralize"),
+                  requirements: [{ kind: "capability", id: "census_data", label: "需要戶籍資料" }],
+                  effects: [{ id: "stab", kind: "stability", value: -5 }]
+                }),
+                node2("noble_charter", "貴族特許狀", "王權與貴族", [["census"]], {
+                  mutex: route("charter"),
+                  effects: [{ id: "stab", kind: "stability", value: 5 }]
+                }),
+                node2("new_order", "新秩序", "王權與貴族", [["royal_tax", "noble_charter"]], {
+                  icon: "diplomacy",
+                  days: 60,
+                  outcomes: [{ kind: "fact", id: "estates_agree", label: "三級會議同意" }],
+                  // A turning point: completing it publishes this news (a single option).
+                  impact: "pivotal",
+                  news: {
+                    headline: "範例王國召開三級會議，宣布新秩序",
+                    body: "鄰國使節連夜回報：王國的權力格局已經改寫。",
+                    option: { label: "新的時代開始了", text: "" }
+                  }
+                })
+              ]
+            }
+          }
+        ]
+      },
+      null,
+      2
+    );
   }
 
   // ../national-focus/node_modules/yaml/browser/dist/nodes/identity.js
@@ -31226,7 +32192,7 @@ ${end.comment}` : end.comment;
         }
       }
     }
-    async run(kind, candidate) {
+    async run(kind, candidate, periodWork) {
       if (this.disposed) {
         return;
       }
@@ -31238,13 +32204,15 @@ ${end.comment}` : end.comment;
         state: "queued",
         message: "等待任務空位",
         time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
-        ...candidate ? { label: candidate.name, candidate } : {}
+        ...candidate ? { label: candidate.name, candidate } : {},
+        ...periodWork ? { periodWork, label: `${candidate?.name} · 換期` } : {}
       };
       this.jobs.unshift(status);
       this.jobs = this.jobs.slice(0, 40);
       this.aborters.set(id, aborter);
       this.notify();
       let acquired = false;
+      const periods = [];
       try {
         while (this.active >= this.config.concurrency) {
           await new Promise((resolve, reject) => {
@@ -31268,13 +32236,19 @@ ${end.comment}` : end.comment;
         status.message = "正在分析本樓資料";
         this.notify();
         const snapshot = await this.platform.read(this.config, kind);
+        if (periodWork) {
+          checkTransition(snapshot.state, periodWork.transition);
+          if (snapshot.identity !== periodWork.identity || snapshot.historyHash !== periodWork.historyHash || snapshot.storyFingerprint !== periodWork.storyFingerprint || snapshot.day !== periodWork.day || periodBasis(snapshot.state, candidate.id) !== periodWork.basis) {
+            throw new Error("STALE:換期依據已改變，請更新局勢重新判定");
+          }
+        }
         if (kind === "generate" && !candidate) {
           throw new Error("請先選擇要生成的候選國家");
         }
         const ask = async (stage, data, schema4, validate2, label2, shown) => {
           aborter.signal.throwIfAborted();
           const current = await this.platform.read(this.config);
-          if (current.identity !== snapshot.identity || current.fingerprint !== snapshot.fingerprint || current.historyHash !== snapshot.historyHash || current.day !== snapshot.day) {
+          if (current.identity !== snapshot.identity || !periodWork && current.fingerprint !== snapshot.fingerprint || current.historyHash !== snapshot.historyHash || current.day !== snapshot.day) {
             throw new Error("STALE:生成期間來源已改變");
           }
           status.message = label2 ?? (kind === "generate" ? "單次生成完整國策樹" : "分析本樓局勢");
@@ -31310,7 +32284,49 @@ ${end.comment}` : end.comment;
             this.notify();
           }
         }
-        const result = kind === "generate" ? await generateCountry(
+        const result = periodWork ? await ask(
+          "period",
+          {
+            now: snapshot.day,
+            context: snapshot.context,
+            world: Object.values(snapshot.state.countries).filter((country) => country.enabled && country.id !== candidate.id).map((country) => ({
+              id: country.id,
+              name: country.name,
+              agenda: country.agenda || country.analysis,
+              current: country.nodes[country.current]?.name,
+              capabilities: Object.values(country.capabilities).filter((c) => c.active)
+            })),
+            state: workingState(
+              {
+                ...snapshot.state,
+                countries: { [candidate.id]: snapshot.state.countries[candidate.id] },
+                events: Object.fromEntries(
+                  Object.entries(snapshot.state.events).filter(
+                    ([, event]) => event.countries.includes(candidate.id)
+                  )
+                )
+              },
+              true
+            ),
+            candidate,
+            transition: periodWork.transition,
+            anchor: periodAnchor(
+              snapshot.state.countries[candidate.id],
+              periodWork.transition.invalidateActive
+            ),
+            prefix: `p${snapshot.state.countries[candidate.id].period.number + 1}_`,
+            limits: {
+              min: sizeLimits[snapshot.state.settings.size][0],
+              max: sizeLimits[snapshot.state.settings.size][1]
+            },
+            instructions: "生成下一期與舊期摘要。tree.nodes 只輸出新節點，承接節點由程式原樣保留；新節點可引用 anchor 作必要前置，不相關議程可獨立推進。節點與互斥組使用 prefix。不得生成 historical 或改變既有能力、數值、事實及事件。保留仍有效的 longTerm 的 id 與原文，修訂理由寫 analysis。summary 只敘述已發生事實與舊期終止原因，不把新計畫當成果。總數含 anchor，以 limits 為篇幅目標，不湊數。"
+          },
+          PeriodReplySchema,
+          (value) => {
+            transitionPeriod(snapshot.state, periodWork.transition, value);
+          },
+          "生成下一期與舊期摘要"
+        ) : kind === "generate" ? await generateCountry(
           snapshot,
           candidate,
           ask,
@@ -31326,9 +32342,40 @@ ${end.comment}` : end.comment;
           }
         );
         aborter.signal.throwIfAborted();
-        const next = this.proposedState(kind, snapshot, result, candidate);
+        let commitSource = snapshot;
+        if (periodWork) {
+          commitSource = await this.platform.read(this.config);
+          if (commitSource.identity !== snapshot.identity || commitSource.historyHash !== snapshot.historyHash || commitSource.storyFingerprint !== snapshot.storyFingerprint || JSON.stringify(commitSource.state.countries) !== JSON.stringify(snapshot.state.countries) || commitSource.day !== snapshot.day || periodBasis(commitSource.state, candidate.id) !== periodWork.basis) {
+            throw new Error("STALE:換期期間國策或局勢已改變");
+          }
+        }
+        const next = periodWork ? transitionPeriod(commitSource.state, periodWork.transition, PeriodReplySchema.parse(result)) : this.proposedState(kind, snapshot, result, candidate);
         next.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
-        await this.platform.commit(snapshot, next);
+        await this.platform.commit(commitSource, next);
+        if (kind === "update" && !snapshot.state.receipts.includes(ProposalSchema.parse(result).id)) {
+          for (const transition of ProposalSchema.parse(result).transitions) {
+            const country = next.countries[transition.country];
+            if (!country.enabled || !country.autoPeriod || country.calibration) {
+              continue;
+            }
+            periods.push({
+              candidate: {
+                id: country.id,
+                name: country.name,
+                description: country.description,
+                evidence: country.evidence
+              },
+              work: {
+                transition,
+                identity: snapshot.identity,
+                historyHash: snapshot.historyHash,
+                storyFingerprint: snapshot.storyFingerprint,
+                day: snapshot.day,
+                basis: periodBasis(next, country.id)
+              }
+            });
+          }
+        }
         if (kind === "identify") {
           this.candidates = CandidatesSchema.parse(result).countries.filter((c) => !next.countries[c.id]);
         }
@@ -31341,7 +32388,7 @@ ${end.comment}` : end.comment;
       } catch (error62) {
         const message = redactApiError(error62, this.config.apis);
         status.state = aborter.signal.aborted ? "cancelled" : message.startsWith("STALE:") ? "stale" : "failed";
-        status.message = status.state === "cancelled" ? "已取消，未套用結果" : status.state === "stale" ? "來源樓層或變數已改變，請依目前樓層重試" : `未提交：${message.slice(0, 1500)}`;
+        status.message = status.state === "cancelled" ? "已取消，未套用結果" : status.state === "stale" ? periodWork ? "換期來源已改變，請更新局勢重新判定；按重試會執行更新局勢" : "來源樓層或變數已改變，請依目前樓層重試" : `未提交：${message.slice(0, 1500)}`;
       } finally {
         status.finished = Date.now();
         if (acquired) {
@@ -31350,6 +32397,12 @@ ${end.comment}` : end.comment;
         this.aborters.delete(id);
         this.waiters.shift()?.();
         this.notify();
+      }
+      for (const period of periods) {
+        if (this.disposed || aborter.signal.aborted) {
+          break;
+        }
+        await this.run("generate", period.candidate, period.work);
       }
     }
     /**
@@ -31538,9 +32591,9 @@ ${json2}`
     }
     proposedState(kind, snapshot, result, candidate) {
       if (kind === "identify") {
-        const next = structuredClone(snapshot.state);
-        next.revision++;
-        return next;
+        const next2 = structuredClone(snapshot.state);
+        next2.revision++;
+        return next2;
       }
       if (kind === "generate") {
         const tree = TreeSchema.parse(result);
@@ -31549,18 +32602,67 @@ ${json2}`
         }
         const limits = sizeLimits;
         const [min, max] = limits[snapshot.state.settings.size];
-        if (tree.nodes.length < min || tree.nodes.length > max) {
+        if (!tree.nodes.length || tree.nodes.length > max) {
           throw new Error(`生成規模須為 ${min}–${max} 節點`);
         }
-        return installCountry(snapshot.state, tree, snapshot.day);
+        return installCountry(snapshot.state, { ...tree, autoPeriod: true }, snapshot.day);
       }
       const proposal = ProposalSchema.parse(result);
       if (proposal.until !== snapshot.day) {
         throw new Error("更新終點必須等於來源故事時間");
       }
-      return applyProposal(snapshot.state, proposal, kind === "reshape");
+      const next = applyProposal(snapshot.state, proposal, kind === "reshape");
+      if (proposal.transitions.length && kind !== "update") {
+        throw new Error("只有局勢更新可發起換期");
+      }
+      const countries = /* @__PURE__ */ new Set();
+      for (const transition of proposal.transitions) {
+        const country = next.countries[transition.country];
+        if (!country) {
+          throw new Error("換期引用不存在的國家");
+        }
+        if (country.enabled && country.autoPeriod && !country.calibration) {
+          checkTransition(next, transition);
+        }
+        if (countries.has(transition.country)) {
+          throw new Error("同一次更新不可對同國重複換期");
+        }
+        countries.add(transition.country);
+      }
+      return next;
     }
   };
+
+  // src/period-ui.ts
+  var escape = (value) => value.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+  );
+  var time3 = (day) => {
+    const date5 = new Date((day - 719528) * 864e5);
+    return day < 366 ? `故事日 ${day.toFixed(1)}` : `${date5.getUTCFullYear()}年${date5.getUTCMonth() + 1}月${date5.getUTCDate()}日`;
+  };
+  function periodControl(country) {
+    return `<label class="switch-label period-toggle" title="關閉後保留當前樹，事件仍繼續推進"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod ? "checked" : ""}>自動換期</label>`;
+  }
+  function periodBar(country, jobs) {
+    const generating = jobs.some(
+      (job) => job.periodWork?.transition.country === country.id && ["queued", "running"].includes(job.state)
+    );
+    const note = generating ? "下一期生成中；事件繼續更新，成功後才換樹" : country.autoPeriod ? country.agenda || "本期目的完成或局勢不再適配時自動換期" : "保留當前國策樹；事件仍繼續更新";
+    return `<section class="period-strip" aria-label="當前期別"><div class="period-copy"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}</strong><small role="status" title="${escape(note)}">${escape(note)}</small></div>${periodControl(country)}<button data-action="period-history">往期摘要${country.period.history.length ? ` · ${country.period.history.length}` : ""}</button></section>`;
+  }
+  function anchorBadge(country, node2) {
+    return country.period.anchor === node2.id ? '<span class="period-anchor-badge">前期承接</span>' : "";
+  }
+  function anchorNotice(country, node2) {
+    return country.period.anchor === node2.id ? '<div class="period-anchor-note"><strong>前期承接</strong><span>保留原國策的狀態、工期及已生效成果，相關事件繼續更新。</span></div>' : "";
+  }
+  function historyBody(country) {
+    return `<p class="muted">${escape(country.name)} · 往期只保留時間與摘要</p>${country.period.history.length ? [...country.period.history].reverse().map(
+      (h) => `<article class="period-history"><time>${time3(h.start)} — ${time3(h.end)}</time><p>${escape(h.summary)}</p></article>`
+    ).join("") : '<p class="muted">尚未換期。</p>'}`;
+  }
 
   // src/icons.ts
   var paths = {
@@ -31707,7 +32809,7 @@ ${json2}`
   }
 
   // src/task-panel.ts
-  var escape = (value) => String(value ?? "").replace(
+  var escape2 = (value) => String(value ?? "").replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
@@ -31738,7 +32840,7 @@ ${json2}`
     let confirmDelete = false;
     let disposed = false;
     const options = (values, value) => values.map(
-      ([id, label2]) => `<option value="${escape(id)}" ${selectedAttr(id === value)}>${escape(label2)}</option>`
+      ([id, label2]) => `<option value="${escape2(id)}" ${selectedAttr(id === value)}>${escape2(label2)}</option>`
     ).join("");
     function lastRun(kind) {
       const job = controller2.jobs.find(
@@ -31749,7 +32851,7 @@ ${json2}`
       );
       const saved = controller2.state?.schedules[kind];
       const text = running ? "執行中" : job ? `上次：${job.state === "success" ? "成功" : job.state === "failed" ? "失敗" : job.state === "stale" ? "來源已改變" : "已取消"} · ${job.time}` : saved ? `上次成功：第 ${saved.turn} 則正文 · 故事日 ${Math.floor(saved.day)}` : "尚未執行";
-      return `<small class="last-run">${escape(text)}</small>`;
+      return `<small class="last-run">${escape2(text)}</small>`;
     }
     const promptCount = (items) => `${items.length} 段 · 送出 ${items.filter((item) => item.enabled || item.kind === "data").length} 段`;
     function promptCard(kind, item, index, count) {
@@ -31758,11 +32860,11 @@ ${json2}`
       const text = promptText(item, kind);
       const modified = isModified(item);
       const badge = item.kind === "custom" ? "自訂" : modified ? `${kindLabels[item.kind]}·已修改` : kindLabels[item.kind];
-      return `<div class="prompt-card ${item.enabled || item.kind === "data" ? "" : "off"} ${open2 ? "open" : ""}" data-prompt-row data-id="${escape(item.id)}" data-kind="${item.kind}">
-      <div class="prompt-head"><button class="prompt-toggle" data-task-action="toggle" aria-expanded="${open2}"><span class="chev">▸</span><span class="pname">${escape(item.name || "未命名段")}</span><span class="role-tag">${item.role}</span><span class="kind-tag ${item.kind} ${modified ? "modified" : ""}">${badge}</span><span class="pchars">${text.length.toLocaleString()} 字</span></button>
+      return `<div class="prompt-card ${item.enabled || item.kind === "data" ? "" : "off"} ${open2 ? "open" : ""}" data-prompt-row data-id="${escape2(item.id)}" data-kind="${item.kind}">
+      <div class="prompt-head"><button class="prompt-toggle" data-task-action="toggle" aria-expanded="${open2}"><span class="chev">▸</span><span class="pname">${escape2(item.name || "未命名段")}</span><span class="role-tag">${item.role}</span><span class="kind-tag ${item.kind} ${modified ? "modified" : ""}">${badge}</span><span class="pchars">${text.length.toLocaleString()} 字</span></button>
       <label class="switch" title="${item.kind === "data" ? "任務資料必須送出" : "啟用本段"}"><input type="checkbox" data-p="enabled" ${item.enabled || item.kind === "data" ? "checked" : ""} ${item.kind === "data" ? "disabled" : ""}><span>啟用</span></label>
       <button class="icon" data-task-action="up" ${index === 0 ? "disabled" : ""} aria-label="上移" title="上移">↑</button><button class="icon" data-task-action="down" ${index === count - 1 ? "disabled" : ""} aria-label="下移" title="下移">↓</button></div>
-      <div class="prompt-body" ${open2 ? "" : "hidden"}><div class="prompt-fields"><input data-p="name" value="${escape(item.name)}" placeholder="段落名稱" aria-label="段落名稱"><select data-p="role" aria-label="角色">${options(
+      <div class="prompt-body" ${open2 ? "" : "hidden"}><div class="prompt-fields"><input data-p="name" value="${escape2(item.name)}" placeholder="段落名稱" aria-label="段落名稱"><select data-p="role" aria-label="角色">${options(
         [
           ["system", "system"],
           ["user", "user"],
@@ -31770,11 +32872,11 @@ ${json2}`
         ],
         item.role
       )}</select>${modified ? '<button data-task-action="restore">還原預設內容</button>' : ""}${item.kind === "custom" ? '<button class="danger" data-task-action="delete">刪除</button>' : ""}</div>
-      <textarea data-p="content" rows="${Math.min(18, Math.max(4, text.split("\n").length + 1))}" aria-label="段落內容">${escape(text)}</textarea>
+      <textarea data-p="content" rows="${Math.min(18, Math.max(4, text.split("\n").length + 1))}" aria-label="段落內容">${escape2(text)}</textarea>
       </div></div>`;
     }
-    function segmentField(value, inherited) {
-      return `<div class="wide segment-max"><label class="field">每批填寫國策數<input data-t="segmentMax" type="number" min="0" max="300" step="1" value="${value}" ${inherited ? `data-inherited="${value}"` : ""}></label><div class="segment-max-chips">${[15, 25, 40, 60, 0].map((chip) => `<button type="button" class="chip ${value === chip ? "done" : ""}" data-task-action="segment-max" data-value="${chip}">${chip === 0 ? "不限" : chip}</button>`).join("")}</div><small>先生成骨架，再分批填寫各國策內容。數值越大請求越少，但單次輸出越長，容易截斷或逾時；模型常失敗時請調低。0 為不限（一批填完）。</small></div>`;
+    function generationNote() {
+      return '<p class="muted wide">分期版每國一次生成當期內容，換期時同次產生新樹與舊期摘要。每期規模在「一般」設定；本任務的 API、重試與逾時也用於換期。</p>';
     }
     function modelNote(kind, config2) {
       const job = config2.jobs[kind];
@@ -31784,7 +32886,7 @@ ${json2}`
       const name = job.api || currentApiName(config2, controller2.platform.chatId());
       const model = config2.apis.find((api) => api.name === name)?.model ?? "";
       const same = Boolean(model) && model.toLowerCase().includes(job.recommendedModel.toLowerCase());
-      return `<small class="block-note ${same ? "" : "model-hint"}">建議模型：${escape(job.recommendedModel)}；${model ? `主要連線「${escape(name)}」目前是 ${escape(model)}。` : `主要連線「${escape(name)}」沿用酒館目前的模型，請自行確認。`}</small>`;
+      return `<small class="block-note ${same ? "" : "model-hint"}">建議模型：${escape2(job.recommendedModel)}；${model ? `主要連線「${escape2(name)}」目前是 ${escape2(model)}。` : `主要連線「${escape2(name)}」沿用酒館目前的模型，請自行確認。`}</small>`;
     }
     function sourcesBlock(kind, config2) {
       if (!hooks) {
@@ -31834,10 +32936,10 @@ ${json2}`
       )}</select></label>`}
         <label class="field" data-interval ${kind !== "generate" && ["rounds", "days"].includes(job.schedule) ? "" : "hidden"}>${job.schedule === "days" ? "間隔（故事日）" : "間隔（則正文）"}<input type="number" min="1" max="1000" data-t="interval" value="${job.interval}"></label>
         <small class="wide" data-days-note ${kind !== "generate" && job.schedule === "days" ? "" : "hidden"}>故事日取自「世界書與上下文 › 故事時間路徑」。讀不到時間時，國策進度無法計算，所有任務（包括此項）都不執行，面板顯示原因與路徑；時間恢復後，下一則正文照常判斷間隔。</small>
-        ${kind === "generate" ? segmentField(job.segmentMax ?? controller2.segmentMax(config2), job.segmentMax === void 0) : ""}
+        ${kind === "generate" ? generationNote() : ""}
         <label class="field">每條連線重試次數<input type="number" min="0" max="10" data-t="retries" value="${job.retries}"><small>失敗原因會回饋給模型再試（0–10）。</small></label>
         <label class="field">逾時秒數<input type="number" min="10" max="600" data-t="timeout" value="${job.timeout}"></label>
-        <label class="field wide">建議模型<input data-t="recommendedModel" maxlength="200" value="${escape(job.recommendedModel)}" placeholder="例如 deepseek-chat；只是備註，不影響連線"><small>隨任務預設保存，分享預設時讓對方知道這組提示詞適合哪個模型。</small></label>
+        <label class="field wide">建議模型<input data-t="recommendedModel" maxlength="200" value="${escape2(job.recommendedModel)}" placeholder="例如 deepseek-chat；只是備註，不影響連線"><small>隨任務預設保存，分享預設時讓對方知道這組提示詞適合哪個模型。</small></label>
       </div></details>
       ${sourcesBlock(kind, config2)}
       <section class="task-block prompts-block"><div class="prompt-toolbar"><h4>提示詞串</h4><small>${promptCount(job.prompts)}</small><span class="spacer"></span><button data-task-action="expand-all">全部展開</button><button data-task-action="collapse-all">全部收合</button><button data-task-action="preview">預覽完整提示詞串</button></div>
@@ -31847,7 +32949,7 @@ ${json2}`
       )}</ul><p class="muted">$1 以 &lt;worldbook_context&gt; 包裹、$2 以 &lt;worldbook_extra&gt; 包裹；$7 為提取後 AI 正文。先替換佔位符，再執行酒館巨集、正則與 EJS。$2／$5／$U／$C 在「世界書與上下文」未開啟時，只在提示詞段使用時讀取。</p></details>
         <div class="prompt-list" data-prompts="${kind}">${job.prompts.map((item, index) => promptCard(kind, item, index, job.prompts.length)).join("")}</div>
         <button data-task-action="add-prompt">＋ 提示詞段</button>
-        ${previews.has(kind) ? `<label class="field prompt-preview">完整提示詞串預覽（未呼叫 API）<textarea readonly rows="16">${escape(previews.get(kind))}</textarea></label>` : ""}
+        ${previews.has(kind) ? `<label class="field prompt-preview">完整提示詞串預覽（未呼叫 API）<textarea readonly rows="16">${escape2(previews.get(kind))}</textarea></label>` : ""}
       </section>
     </section>`;
     }
@@ -31856,11 +32958,11 @@ ${json2}`
       const presets = config2.taskPresets;
       host.innerHTML = `<section class="preset-bar"><div class="preset-title"><h3>任務預設</h3><small>保存四項任務的提示詞串、排程、重試、每批國策數與建議模型，以及世界書與上下文；不含 API 連線與金鑰。預設操作會一併保存目前的任務設定。</small></div>
       <div class="preset-row"><select data-preset-select aria-label="任務預設"><option value="">${presets.length ? "選擇預設以套用…" : "尚無任務預設"}</option>${presets.map(
-        (preset) => `<option value="${escape(preset.name)}" ${selectedAttr(preset.name === config2.activeTaskPreset)}>${escape(preset.name)}</option>`
+        (preset) => `<option value="${escape2(preset.name)}" ${selectedAttr(preset.name === config2.activeTaskPreset)}>${escape2(preset.name)}</option>`
       ).join(
         ""
-      )}</select><input data-preset-name placeholder="預設名稱" value="${escape(config2.activeTaskPreset)}" aria-label="預設名稱"><button class="primary" data-preset="save">保存</button><button data-preset="saveas">另存新預設</button><button data-preset="import">匯入</button><button data-preset="export">匯出</button>${confirmDelete ? `<button class="danger" data-preset="confirm-delete">確認刪除「${escape(config2.activeTaskPreset)}」</button><button data-preset="cancel-delete">取消</button>` : `<button class="danger" data-preset="delete" ${config2.activeTaskPreset ? "" : "disabled"}>刪除</button>`}<input type="file" accept=".json,application/json" data-preset-file hidden></div>
-      <p class="api-status" role="status">${escape(status)}</p></section>
+      )}</select><input data-preset-name placeholder="預設名稱" value="${escape2(config2.activeTaskPreset)}" aria-label="預設名稱"><button class="primary" data-preset="save">保存</button><button data-preset="saveas">另存新預設</button><button data-preset="import">匯入</button><button data-preset="export">匯出</button>${confirmDelete ? `<button class="danger" data-preset="confirm-delete">確認刪除「${escape2(config2.activeTaskPreset)}」</button><button data-preset="cancel-delete">取消</button>` : `<button class="danger" data-preset="delete" ${config2.activeTaskPreset ? "" : "disabled"}>刪除</button>`}<input type="file" accept=".json,application/json" data-preset-file hidden></div>
+      <p class="api-status" role="status">${escape2(status)}</p></section>
       <nav class="task-tabs" aria-label="任務">${jobKinds.map((kind) => {
         const job = config2.jobs[kind];
         const custom2 = job.prompts.filter((item) => item.kind === "custom").length;
@@ -31892,13 +32994,6 @@ ${json2}`
         job.retries = Number(field("retries").value);
         job.timeout = Number(field("timeout").value);
         job.recommendedModel = field("recommendedModel").value.trim();
-        if (kind === "generate") {
-          const input2 = field("segmentMax");
-          const value = Number(input2.value);
-          if (!(job.segmentMax === void 0 && input2.dataset.inherited === String(value))) {
-            job.segmentMax = value;
-          }
-        }
         job.prompts = [...section.querySelectorAll("[data-prompt-row]")].map((row) => {
           const kindOf = row.dataset.kind;
           const value = (key) => row.querySelector(`[data-p="${key}"]`);
@@ -32038,14 +33133,6 @@ ${json2}`
       const job = getDraft().jobs[kind];
       const index = job.prompts.findIndex((item) => item.id === id);
       switch (action) {
-        case "segment-max": {
-          const input2 = section.querySelector('[data-t="segmentMax"]');
-          input2.value = button.dataset.value;
-          for (const chip of section.querySelectorAll('[data-task-action="segment-max"]')) {
-            chip.classList.toggle("done", chip === button);
-          }
-          return;
-        }
         case "edit-sources":
           hooks?.edit(kind);
           return;
@@ -32195,13 +33282,6 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
         );
         return;
       }
-      if (input2.dataset.t === "segmentMax") {
-        const section = input2.closest("[data-task-editor]");
-        for (const chip of section.querySelectorAll('[data-task-action="segment-max"]')) {
-          chip.classList.toggle("done", chip.dataset.value === String(Number(input2.value)));
-        }
-        return;
-      }
       const row = input2.closest("[data-prompt-row]");
       if (row && input2.dataset.p === "enabled") {
         row.classList.toggle("off", !input2.checked);
@@ -32238,7 +33318,7 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
   }
 
   // src/hud.ts
-  var escape2 = (value) => String(value ?? "").replace(
+  var escape3 = (value) => String(value ?? "").replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
@@ -32353,9 +33433,9 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
       list.hidden = collapsed;
       list.innerHTML = jobs.map((job) => {
         const name = options.names[job.kind] ?? job.kind;
-        const time3 = job.state === "running" && job.started ? elapsed(now - job.started) : job.started && job.finished ? elapsed(job.finished - job.started) : "";
+        const time4 = job.state === "running" && job.started ? elapsed(now - job.started) : job.started && job.finished ? elapsed(job.finished - job.started) : "";
         const detail = options.message(job);
-        return `<li class="hud-item ${job.state}">${symbols[job.state]}<div class="hud-text"><b>${escape2(name)}${job.label ? ` · ${escape2(job.label)}` : ""}</b><small title="${escape2(detail)}">${escape2(detail)}${job.route && job.state === "success" ? ` · ${escape2(job.route)}` : ""}</small></div><time>${time3}</time>${job.state !== "queued" && job.state !== "running" ? `<button class="icon" data-hud-dismiss="${escape2(job.id)}" aria-label="關閉此項">×</button>` : ""}</li>`;
+        return `<li class="hud-item ${job.state}">${symbols[job.state]}<div class="hud-text"><b>${escape3(name)}${job.label ? ` · ${escape3(job.label)}` : ""}</b><small title="${escape3(detail)}">${escape3(detail)}${job.route && job.state === "success" ? ` · ${escape3(job.route)}` : ""}</small></div><time>${time4}</time>${job.state !== "queued" && job.state !== "running" ? `<button class="icon" data-hud-dismiss="${escape3(job.id)}" aria-label="關閉此項">×</button>` : ""}</li>`;
       }).join("");
       const wasHidden = hud.hidden;
       hud.hidden = false;
@@ -32431,10 +33511,10 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
   }
 
   // src/style.css
-  var style_default = "/* 國策檔案 v0.4 · 戰情檔案館介面\n * Tokens first; every colour below derives from them so states stay consistent. */\n:host {\n  all: initial;\n  --ink: #0d1310;\n  --bg: #131a16;\n  --panel: #19221d;\n  --raised: #212b25;\n  --raised-2: #29352e;\n  --line: rgba(217, 191, 120, 0.14);\n  --line-strong: rgba(217, 191, 120, 0.32);\n  --gold: #dcc27c;\n  --gold-deep: #a88d4c;\n  --text: #ece6d4;\n  --muted: #a8b0a1;\n  --faint: #7d867a;\n  --green: #72c492;\n  --amber: #e6a950;\n  --blue: #8fb0d6;\n  --red: #d9705f;\n  --cross: #7fa6cf;\n  --radius: 10px;\n  --drawer: 392px;\n  --serif: 'Noto Serif TC', 'Source Han Serif TC', 'PMingLiU', Georgia, serif;\n  font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;\n  color: var(--text);\n  font-size: 14px;\n  line-height: 1.6;\n  -webkit-font-smoothing: antialiased;\n}\n* {\n  box-sizing: border-box;\n}\nbutton,\ninput,\nselect,\ntextarea {\n  font: inherit;\n  color: inherit;\n}\nbutton {\n  cursor: pointer;\n  border: 1px solid var(--line-strong);\n  background: var(--raised);\n  padding: 7px 12px;\n  border-radius: 7px;\n  line-height: 1.3;\n  transition:\n    background 0.15s,\n    border-color 0.15s,\n    color 0.15s;\n}\nbutton:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: var(--raised-2);\n}\nbutton:disabled {\n  opacity: 0.4;\n  cursor: not-allowed;\n}\nbutton:focus-visible,\ninput:focus-visible,\nselect:focus-visible,\ntextarea:focus-visible,\nsummary:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: 2px;\n}\ninput,\nselect,\ntextarea {\n  color: var(--text);\n  background: var(--ink);\n  border: 1px solid rgba(217, 191, 120, 0.24);\n  border-radius: 7px;\n  padding: 8px 10px;\n  max-width: 100%;\n}\ninput::placeholder,\ntextarea::placeholder {\n  color: var(--faint);\n}\nselect option {\n  background: var(--panel);\n}\ninput[type='checkbox'] {\n  accent-color: var(--gold);\n  width: 16px;\n  height: 16px;\n}\nsvg {\n  width: 24px;\n  height: 24px;\n  flex-shrink: 0;\n}\na {\n  color: var(--gold);\n}\np {\n  margin: 0 0 12px;\n}\nh1,\nh2,\nh3,\nh4 {\n  font-family: var(--serif);\n  font-weight: 600;\n  margin: 0;\n}\nsmall {\n  color: var(--muted);\n}\ncode {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n}\n.muted {\n  color: var(--muted);\n}\n.gold {\n  color: var(--gold);\n}\n.row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n}\n.between {\n  justify-content: space-between;\n}\n.primary {\n  background: linear-gradient(180deg, #7a6a37, #5b4f28);\n  border-color: var(--gold);\n  color: #fff4d0;\n  font-weight: 600;\n}\n.primary:hover:not(:disabled) {\n  background: linear-gradient(180deg, #8d7b41, #6a5c2f);\n}\n.ghost {\n  background: transparent;\n  border-color: transparent;\n}\n.danger {\n  color: #f0a898;\n}\n.tag {\n  font-size: 11px;\n  letter-spacing: 0.18em;\n  color: var(--gold);\n}\n.pill {\n  display: inline-flex;\n  align-items: center;\n  border: 1px solid var(--line-strong);\n  padding: 2px 8px;\n  font-size: 12px;\n  border-radius: 99px;\n}\n.separator {\n  height: 1px;\n  background: var(--line);\n  margin: 16px 0;\n}\n.sr {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}\n.spinner {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border: 2px solid rgba(220, 194, 124, 0.3);\n  border-top-color: var(--gold);\n  border-radius: 50%;\n  animation: spin 0.9s linear infinite;\n  vertical-align: -2px;\n}\n@keyframes spin {\n  to {\n    transform: rotate(360deg);\n  }\n}\n\n/* ---------- Floating orb ---------- */\n.orb {\n  position: fixed;\n  right: 24px;\n  bottom: 24px;\n  width: 60px;\n  height: 60px;\n  padding: 12px;\n  border-radius: 50%;\n  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);\n  border: 2px solid var(--gold-deep);\n  box-shadow:\n    0 8px 28px rgba(0, 0, 0, 0.55),\n    inset 0 0 0 3px rgba(0, 0, 0, 0.35);\n  color: var(--gold);\n  z-index: 2147482999;\n}\n.orb:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);\n}\n.orb svg {\n  width: 100%;\n  height: 100%;\n}\n.orb .count {\n  position: absolute;\n  top: -3px;\n  right: -3px;\n  min-width: 20px;\n  height: 20px;\n  padding: 0 5px;\n  border-radius: 10px;\n  background: var(--gold);\n  color: #1a1d12;\n  font-size: 11px;\n  font-weight: 700;\n  line-height: 20px;\n}\n\n/* ---------- Shell ---------- */\n.shell {\n  position: fixed;\n  inset: 16px;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: var(--bg);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.shell[hidden],\n.modal-backdrop[hidden],\n.orb[hidden] {\n  display: none;\n}\n\n/* Command bar */\n.command {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-height: 58px;\n  padding: 8px 14px;\n  background: linear-gradient(180deg, #1c2620, #151d18);\n  border-bottom: 1px solid var(--line);\n}\n.brand-mark {\n  width: 38px;\n  height: 38px;\n  display: grid;\n  place-items: center;\n  color: var(--gold);\n  border: 1px solid var(--line-strong);\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.07);\n  flex-shrink: 0;\n}\n.brand-mark svg {\n  width: 26px;\n  height: 26px;\n}\n.brand {\n  display: grid;\n  line-height: 1.15;\n  flex-shrink: 0;\n}\n.brand h1 {\n  font-size: 17px;\n  letter-spacing: 0.12em;\n}\n.brand small {\n  font-size: 9.5px;\n  letter-spacing: 0.3em;\n  color: var(--gold-deep);\n}\n.nation-tabs {\n  display: flex;\n  gap: 6px;\n  overflow-x: auto;\n  scrollbar-width: none;\n  margin-left: 10px;\n  min-width: 0;\n}\n.nation-tabs::-webkit-scrollbar {\n  display: none;\n}\n.nation-tab {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 5px 12px 5px 6px;\n  border-radius: 9px;\n  border-color: transparent;\n  background: transparent;\n  white-space: nowrap;\n  flex-shrink: 0;\n}\n.nation-tab.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.tab-crest {\n  width: 30px;\n  height: 30px;\n  display: grid;\n  place-items: center;\n  border-radius: 7px;\n  background: rgba(255, 255, 255, 0.04);\n  color: var(--blue);\n}\n.nation-tab.player .tab-crest {\n  color: var(--gold);\n}\n.tab-crest svg {\n  width: 20px;\n  height: 20px;\n}\n.tab-copy {\n  display: grid;\n  text-align: left;\n  line-height: 1.2;\n}\n.tab-copy strong {\n  font-size: 13.5px;\n  font-weight: 600;\n}\n.tab-copy small {\n  font-size: 11px;\n}\n.nation-tab.add {\n  width: 38px;\n  justify-content: center;\n  padding: 6px;\n  border: 1px dashed var(--line-strong);\n  color: var(--gold);\n}\n.nation-picker {\n  display: none;\n  min-width: 0;\n  flex: 1;\n}\n.nation-picker select {\n  width: 100%;\n}\n.command-spacer {\n  flex: 1;\n}\n.test-label {\n  font-size: 11px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  padding: 3px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n}\n.date-chip {\n  display: grid;\n  line-height: 1.15;\n  text-align: right;\n  padding: 0 6px;\n}\n.date-chip small {\n  font-size: 10.5px;\n}\n.date-chip strong {\n  font-family: var(--serif);\n  font-size: 17px;\n  color: var(--gold);\n}\n.cmd-btn {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  height: 38px;\n  flex-shrink: 0;\n  white-space: nowrap;\n}\n.date-chip,\n.test-label,\n.nation-tab.add {\n  flex-shrink: 0;\n}\n.cmd-btn.busy {\n  border-color: var(--gold);\n}\n.cmd-btn.close {\n  width: 38px;\n  justify-content: center;\n  font-size: 20px;\n  padding: 0;\n}\n.error-banner {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  justify-content: space-between;\n  padding: 9px 16px;\n  background: rgba(217, 112, 95, 0.14);\n  border-bottom: 1px solid rgba(217, 112, 95, 0.4);\n  color: #f6c6ba;\n  font-size: 13px;\n}\n\n/* Nation bar */\n.nation-bar {\n  display: grid;\n  grid-template-columns: minmax(200px, 1.1fr) auto minmax(260px, 1.25fr) auto;\n  align-items: center;\n  gap: 20px;\n  padding: 12px 18px;\n  background: var(--panel);\n  border-bottom: 1px solid var(--line);\n}\n.nation-id {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-width: 0;\n}\n.nation-crest {\n  width: 48px;\n  height: 48px;\n  display: grid;\n  place-items: center;\n  border-radius: 12px;\n  border: 1px solid var(--line-strong);\n  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));\n  color: var(--gold);\n  flex-shrink: 0;\n}\n.nation-crest svg {\n  width: 32px;\n  height: 32px;\n}\n.nation-copy {\n  min-width: 0;\n}\n.nation-copy h2 {\n  font-size: 22px;\n  line-height: 1.25;\n  letter-spacing: 0.04em;\n}\n.nation-copy p {\n  margin: 2px 0 0;\n  color: var(--muted);\n  font-size: 12.5px;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.gauges {\n  display: flex;\n  gap: 16px;\n}\n.gauge {\n  width: 132px;\n}\n.gauge-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n}\n.gauge-head small {\n  font-size: 12px;\n}\n.gauge-head strong {\n  font-family: var(--serif);\n  font-size: 22px;\n  line-height: 1.1;\n}\n.gauge-track {\n  height: 6px;\n  border-radius: 3px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n  margin-top: 4px;\n}\n.gauge-track i {\n  display: block;\n  height: 100%;\n  border-radius: 3px;\n}\n.gauge.stability .gauge-track i {\n  background: linear-gradient(90deg, #5f9e75, var(--green));\n}\n.gauge.war .gauge-track i {\n  background: linear-gradient(90deg, #b75a49, var(--amber));\n}\n.agenda {\n  display: grid;\n  grid-template-columns: 46px 1fr;\n  gap: 12px;\n  align-items: center;\n  text-align: left;\n  padding: 9px 14px 9px 10px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line-strong);\n  min-width: 0;\n}\n.agenda.active {\n  border-color: rgba(114, 196, 146, 0.6);\n}\n.agenda.waiting {\n  border-color: rgba(230, 169, 80, 0.6);\n}\n.agenda.paused {\n  border-color: rgba(143, 176, 214, 0.6);\n}\n.agenda-icon {\n  width: 46px;\n  height: 46px;\n  display: grid;\n  place-items: center;\n  border-radius: 10px;\n  background: rgba(220, 194, 124, 0.1);\n  color: var(--gold);\n}\n.agenda.active .agenda-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n}\n.agenda.waiting .agenda-icon {\n  color: var(--amber);\n  background: rgba(230, 169, 80, 0.12);\n}\n.agenda-icon svg {\n  width: 28px;\n  height: 28px;\n}\n.agenda-copy {\n  display: grid;\n  gap: 2px;\n  min-width: 0;\n}\n.agenda-copy small {\n  font-size: 11.5px;\n  letter-spacing: 0.08em;\n}\n.agenda-copy strong {\n  font-family: var(--serif);\n  font-size: 16px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.agenda-bar {\n  height: 7px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n  margin-top: 3px;\n}\n.agenda-bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n  border-radius: 4px;\n}\n.agenda.waiting .agenda-bar i {\n  background: linear-gradient(90deg, #b67c2f, var(--amber));\n}\n.agenda.paused .agenda-bar i {\n  background: linear-gradient(90deg, #5c7ca3, var(--blue));\n}\n.agenda-meta {\n  display: flex;\n  justify-content: space-between;\n  gap: 10px;\n  font-size: 12px;\n  color: var(--muted);\n}\n.empty-agenda {\n  border-style: dashed;\n}\n.nation-actions {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.control-select select {\n  height: 36px;\n  padding: 0 8px;\n}\n.toggle {\n  height: 36px;\n  white-space: nowrap;\n}\n.toggle.on {\n  color: var(--gold);\n  border-color: var(--gold-deep);\n  background: rgba(220, 194, 124, 0.1);\n}\n.nation-actions .primary {\n  height: 36px;\n  white-space: nowrap;\n}\n\n/* ---------- Stage ---------- */\n.stage {\n  position: relative;\n  flex: 1;\n  min-height: 0;\n  overflow: hidden;\n  background:\n    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),\n    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    var(--ink);\n}\n.canvas {\n  position: absolute;\n  inset: 0;\n  overflow: hidden;\n  cursor: grab;\n  touch-action: none;\n  user-select: none;\n}\n.canvas:active {\n  cursor: grabbing;\n}\n.canvas:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: -4px;\n}\n.tree {\n  position: absolute;\n  left: 0;\n  top: 0;\n  transform-origin: 0 0;\n}\n.connectors {\n  position: absolute;\n  inset: 0;\n  width: auto;\n  height: auto;\n  overflow: visible;\n  pointer-events: none;\n}\n.connector {\n  fill: none;\n  stroke: rgba(220, 194, 124, 0.3);\n  stroke-width: 2.4;\n}\n.connector.done {\n  stroke: var(--gold);\n  stroke-width: 3;\n}\n.connector.alternative {\n  stroke-dasharray: 8 6;\n}\n.connector.cross-branch {\n  stroke: rgba(127, 166, 207, 0.55);\n}\n.connector.cross-branch.done {\n  stroke: var(--cross);\n}\n.connector.mutex {\n  stroke: var(--red);\n  stroke-width: 2;\n  stroke-dasharray: 2 6;\n  stroke-linecap: round;\n}\n.branch-banner {\n  position: absolute;\n  top: 16px;\n  height: 34px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  border-bottom: 1px solid var(--line-strong);\n  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));\n  pointer-events: none;\n}\n.branch-banner span {\n  font-family: var(--serif);\n  font-size: 15px;\n  letter-spacing: 0.3em;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  padding: 0 8px;\n}\n.branch-banner.active {\n  border-bottom-color: var(--gold);\n}\n.branch-summary {\n  position: absolute;\n  height: 66px;\n  display: grid;\n  align-content: center;\n  text-align: left;\n  border: 1px dashed var(--gold-deep);\n  background: rgba(220, 194, 124, 0.06);\n  border-radius: var(--radius);\n  padding: 8px 14px;\n}\n.branch-summary strong {\n  font-family: var(--serif);\n  color: var(--gold);\n}\n.branch-summary span {\n  font-size: 12px;\n  color: var(--muted);\n}\n\n/* Nodes */\n.node {\n  position: absolute;\n  display: grid;\n  grid-template-columns: 44px 1fr;\n  gap: 10px;\n  align-items: center;\n  padding: 8px 12px 8px 10px;\n  text-align: left;\n  border-radius: var(--radius);\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: linear-gradient(180deg, #25302a, #1b231f);\n  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);\n  transition:\n    transform 0.12s,\n    box-shadow 0.12s,\n    border-color 0.12s,\n    opacity 0.15s;\n}\n.node:hover:not(:disabled) {\n  transform: translateY(-2px);\n  border-color: var(--gold);\n  background: linear-gradient(180deg, #2c3830, #1e2722);\n}\n.node-icon {\n  width: 44px;\n  height: 44px;\n  display: grid;\n  place-items: center;\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid rgba(220, 194, 124, 0.2);\n  color: var(--gold);\n}\n.node-icon svg {\n  width: 26px;\n  height: 26px;\n}\n.node-text {\n  display: grid;\n  gap: 1px;\n  min-width: 0;\n}\n.node-name {\n  font-size: 14px;\n  font-weight: 600;\n  line-height: 1.3;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.node-meta {\n  font-size: 11.5px;\n  color: var(--muted);\n  white-space: nowrap;\n}\n.node-flag {\n  position: absolute;\n  top: 4px;\n  right: 7px;\n  font-size: 12px;\n  color: var(--red);\n}\n.node-progress {\n  position: absolute;\n  left: 10px;\n  right: 10px;\n  bottom: 5px;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.node-progress i {\n  display: block;\n  height: 100%;\n  background: var(--green);\n}\n.node.available .node-name {\n  color: #fffaf0;\n}\n.node.locked {\n  opacity: 0.58;\n  border-style: dashed;\n  border-color: rgba(236, 230, 212, 0.26);\n  box-shadow: none;\n}\n.node.locked .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.node.completed .node-icon {\n  background: rgba(255, 240, 200, 0.18);\n  border-color: rgba(255, 240, 200, 0.35);\n  color: #fff3c9;\n}\n.node.completed .node-name {\n  color: #fff7dc;\n}\n.node.completed .node-meta {\n  color: #f1dfa6;\n}\n.node.active {\n  border: 1.5px solid var(--green);\n  box-shadow:\n    0 0 0 3px rgba(114, 196, 146, 0.16),\n    0 0 26px rgba(114, 196, 146, 0.24);\n}\n.node.active .node-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n  border-color: rgba(114, 196, 146, 0.35);\n}\n.node.active .node-meta {\n  color: #a7e3bd;\n}\n.node.waiting {\n  border: 1.5px solid var(--amber);\n  box-shadow:\n    0 0 0 3px rgba(230, 169, 80, 0.14),\n    0 0 22px rgba(230, 169, 80, 0.2);\n}\n.node.waiting .node-icon,\n.node.waiting .node-meta {\n  color: var(--amber);\n}\n.node.waiting .node-progress i {\n  background: var(--amber);\n}\n.node.paused {\n  border: 1.5px solid var(--blue);\n}\n.node.paused .node-icon,\n.node.paused .node-meta {\n  color: var(--blue);\n}\n.node.paused .node-progress i {\n  background: var(--blue);\n}\n.node.sealed,\n.node.terminated {\n  opacity: 0.7;\n  border-color: rgba(217, 112, 95, 0.6);\n  background:\n    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.1) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #2a2522, #1f1c1a);\n}\n.node.sealed .node-icon,\n.node.terminated .node-icon {\n  color: var(--red);\n  background: rgba(217, 112, 95, 0.08);\n  border-color: rgba(217, 112, 95, 0.25);\n}\n.node.sealed .node-meta,\n.node.terminated .node-meta {\n  color: #f0a898;\n}\n.node.unknown {\n  border-color: rgba(236, 230, 212, 0.18);\n  background:\n    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #202824, #181f1b);\n}\n.node.unknown .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.current {\n  animation: current-pulse 2.6s ease-in-out infinite;\n}\n@keyframes current-pulse {\n  50% {\n    box-shadow:\n      0 0 0 6px rgba(114, 196, 146, 0.1),\n      0 0 34px rgba(114, 196, 146, 0.32);\n  }\n}\n.node.selected {\n  outline: 2px solid var(--gold);\n  outline-offset: 4px;\n}\n.node.dim {\n  opacity: 0.16;\n}\n\n/* Overlays on the stage */\n.routes {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  bottom: 12px;\n  width: 268px;\n  display: none;\n  flex-direction: column;\n  background: rgba(19, 26, 22, 0.94);\n  backdrop-filter: blur(8px);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);\n  z-index: 3;\n  max-height: calc(100% - 24px);\n}\n.routes.open {\n  display: flex;\n}\n.routes-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 8px 6px 14px;\n}\n.routes-head strong {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n}\n.routes-head small {\n  flex: 1;\n  font-size: 12px;\n}\n.routes-head button {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  font-size: 18px;\n}\n.search-row {\n  display: flex;\n  gap: 6px;\n  padding: 4px 10px 8px;\n}\n.search-row label {\n  flex: 1;\n  min-width: 0;\n}\n.search-row input {\n  width: 100%;\n  height: 34px;\n}\n.search-row button {\n  height: 34px;\n  white-space: nowrap;\n  font-size: 12.5px;\n}\n.route-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 6px;\n  overflow: auto;\n  flex: 1;\n  border-top: 1px solid var(--line);\n  border-bottom: 1px solid var(--line);\n}\n.route-list li {\n  display: flex;\n  align-items: stretch;\n  gap: 4px;\n  margin: 2px 0;\n}\n.route-jump {\n  flex: 1;\n  display: grid;\n  grid-template-columns: 1fr auto;\n  gap: 2px 8px;\n  text-align: left;\n  padding: 7px 10px;\n  border-color: transparent;\n  background: transparent;\n  min-width: 0;\n}\n.route-list li.active .route-jump {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n}\n.route-list li.folded .route-name {\n  color: var(--faint);\n}\n.route-name {\n  font-size: 13.5px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\n.route-live {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  box-shadow: 0 0 8px var(--green);\n  flex-shrink: 0;\n}\n.route-count {\n  font-size: 12px;\n  color: var(--muted);\n  font-variant-numeric: tabular-nums;\n}\n.route-bar {\n  grid-column: 1/-1;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n}\n.route-bar i {\n  display: block;\n  height: 100%;\n  background: var(--gold);\n}\n.route-fold {\n  width: 30px;\n  padding: 0;\n  border-color: transparent;\n  background: transparent;\n  color: var(--muted);\n}\n.route-actions {\n  display: flex;\n  gap: 6px;\n  padding: 8px 10px 10px;\n}\n.route-actions button {\n  flex: 1;\n  font-size: 12.5px;\n}\n.routes-tab {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  z-index: 3;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);\n}\n.routes-tab small {\n  color: var(--gold);\n}\n.stage-hint {\n  position: absolute;\n  left: 50%;\n  bottom: 12px;\n  transform: translateX(-50%);\n  font-size: 12px;\n  color: var(--faint);\n  pointer-events: none;\n  white-space: nowrap;\n}\n.stage-tools {\n  position: absolute;\n  right: 12px;\n  bottom: 12px;\n  display: flex;\n  align-items: flex-end;\n  gap: 8px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage-tools > button,\n.zoom-controls,\n.legend-pop > summary {\n  height: 36px;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);\n}\n.zoom-controls {\n  display: flex;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n  overflow: hidden;\n}\n.zoom-controls button {\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  min-width: 36px;\n}\n.zoom-controls button + button {\n  border-left: 1px solid var(--line);\n}\n.zoom-value {\n  font-variant-numeric: tabular-nums;\n  font-size: 12.5px;\n}\n.legend-pop {\n  position: relative;\n}\n.legend-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  padding: 0 12px;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n}\n.legend-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.legend-list {\n  position: absolute;\n  right: 0;\n  bottom: 44px;\n  width: 210px;\n  margin: 0;\n  padding: 10px 14px;\n  list-style: none;\n  display: grid;\n  gap: 6px;\n  font-size: 12.5px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);\n}\n.legend-list li {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n}\n.sw {\n  width: 22px;\n  height: 14px;\n  border-radius: 4px;\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: #232d27;\n  flex-shrink: 0;\n}\n.sw.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.sw.active {\n  border: 2px solid var(--green);\n}\n.sw.waiting {\n  border: 2px solid var(--amber);\n}\n.sw.paused {\n  border: 2px solid var(--blue);\n}\n.sw.locked {\n  border-style: dashed;\n  opacity: 0.6;\n}\n.sw.terminated {\n  border-color: var(--red);\n  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);\n}\n.sw.unknown {\n  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);\n}\n.ln {\n  width: 22px;\n  height: 0;\n  border-top: 2.5px solid rgba(220, 194, 124, 0.6);\n  flex-shrink: 0;\n}\n.ln.dashed {\n  border-top-style: dashed;\n}\n.ln.cross {\n  border-top-color: var(--cross);\n}\n.ln.mutex {\n  border-top: 2.5px dotted var(--red);\n}\n.minimap {\n  position: absolute;\n  right: 12px;\n  bottom: 58px;\n  width: 190px;\n  height: 120px;\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  background: rgba(13, 19, 16, 0.92);\n  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\n  z-index: 2;\n  padding: 6px;\n  cursor: crosshair;\n  touch-action: none;\n  transition: right 0.22s ease;\n}\n.minimap-svg {\n  width: 100%;\n  height: 100%;\n}\n.mm {\n  fill: rgba(236, 230, 212, 0.28);\n}\n.mm.completed {\n  fill: var(--gold);\n}\n.mm.active,\n.mm.current {\n  fill: var(--green);\n}\n.mm.waiting {\n  fill: var(--amber);\n}\n.mm.paused {\n  fill: var(--blue);\n}\n.mm.locked,\n.mm.unknown {\n  fill: rgba(236, 230, 212, 0.12);\n}\n.mm.sealed,\n.mm.terminated {\n  fill: rgba(217, 112, 95, 0.55);\n}\n.mm.folded {\n  fill: rgba(220, 194, 124, 0.25);\n}\n.mm-view {\n  fill: rgba(220, 194, 124, 0.08);\n  stroke: var(--gold);\n  stroke-width: 1.5;\n  vector-effect: non-scaling-stroke;\n}\n.stage.with-drawer .stage-tools {\n  right: calc(var(--drawer) + 12px);\n}\n/* The drawer already covers part of the tree; the minimap would cover more. */\n.stage.with-drawer .minimap {\n  display: none;\n}\n.demo-pop {\n  position: absolute;\n  top: 12px;\n  right: 12px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage.with-drawer .demo-pop {\n  right: calc(var(--drawer) + 12px);\n}\n.demo-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  background: rgba(19, 26, 22, 0.94);\n  padding: 6px 10px;\n  border-radius: 7px;\n}\n.demo-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.demo-pop[open] {\n  display: grid;\n  gap: 6px;\n  width: 200px;\n  padding: 10px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n}\n.demo-pop[open] > summary {\n  border: 0;\n  padding: 0;\n  background: none;\n}\n\n/* Drawer */\n.drawer {\n  position: absolute;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  width: var(--drawer);\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border-left: 1px solid var(--line-strong);\n  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);\n  transform: translateX(100%);\n  transition: transform 0.22s ease;\n  z-index: 4;\n}\n.drawer.open {\n  transform: none;\n}\n.drawer-head {\n  position: relative;\n  display: grid;\n  grid-template-columns: 58px 1fr;\n  gap: 14px;\n  align-items: center;\n  padding: 18px 44px 16px 18px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n  box-shadow: inset 4px 0 0 var(--line-strong);\n}\n.drawer-head.completed {\n  box-shadow: inset 4px 0 0 var(--gold);\n}\n.drawer-head.active {\n  box-shadow: inset 4px 0 0 var(--green);\n}\n.drawer-head.waiting {\n  box-shadow: inset 4px 0 0 var(--amber);\n}\n.drawer-head.paused {\n  box-shadow: inset 4px 0 0 var(--blue);\n}\n.drawer-head.sealed,\n.drawer-head.terminated {\n  box-shadow: inset 4px 0 0 var(--red);\n}\n.drawer-close {\n  position: absolute;\n  top: 10px;\n  right: 10px;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n  font-size: 20px;\n}\n.drawer-emblem {\n  width: 58px;\n  height: 58px;\n  display: grid;\n  place-items: center;\n  border-radius: 13px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid var(--line-strong);\n  color: var(--gold);\n}\n.drawer-emblem svg {\n  width: 34px;\n  height: 34px;\n}\n.drawer-branch {\n  display: block;\n  font-size: 11.5px;\n  letter-spacing: 0.2em;\n  color: var(--gold);\n}\n.drawer-head h3 {\n  font-size: 20px;\n  line-height: 1.3;\n  margin: 2px 0 6px;\n}\n.state-pill,\n.days-pill {\n  display: inline-block;\n  font-size: 12px;\n  padding: 1px 9px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  margin-right: 6px;\n}\n.state-pill.completed {\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.22);\n  border-color: var(--gold);\n}\n.state-pill.active {\n  color: #a7e3bd;\n  border-color: var(--green);\n}\n.state-pill.waiting {\n  color: var(--amber);\n  border-color: var(--amber);\n}\n.state-pill.paused {\n  color: var(--blue);\n  border-color: var(--blue);\n}\n.state-pill.available {\n  color: #fffaf0;\n  border-color: rgba(236, 230, 212, 0.6);\n}\n.state-pill.locked,\n.state-pill.unknown {\n  color: var(--muted);\n}\n.state-pill.sealed,\n.state-pill.terminated {\n  color: #f0a898;\n  border-color: var(--red);\n}\n.days-pill {\n  color: var(--muted);\n}\n.drawer-body {\n  flex: 1;\n  overflow: auto;\n  padding: 16px 18px 24px;\n}\n.drawer-progress {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 14px;\n}\n.drawer-progress strong {\n  font-variant-numeric: tabular-nums;\n  color: var(--gold);\n}\n.bar {\n  height: 8px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n}\n.drawer-action {\n  display: grid;\n  gap: 8px;\n  padding: 12px;\n  margin-bottom: 16px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line);\n}\n.drawer-action .primary {\n  height: 40px;\n  font-size: 14.5px;\n}\n.blockers {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: #f0c49a;\n}\n.description {\n  font-size: 14px;\n  line-height: 1.8;\n}\n.detail-section {\n  padding: 14px 0;\n  border-top: 1px solid var(--line);\n}\n.detail-section h4 {\n  font-size: 13px;\n  letter-spacing: 0.12em;\n  color: var(--gold);\n  margin-bottom: 8px;\n}\n.detail-section ul {\n  margin: 0;\n  padding-left: 18px;\n  display: grid;\n  gap: 4px;\n  font-size: 13.5px;\n}\n.detail-section p {\n  font-size: 13.5px;\n}\n.reason {\n  color: var(--muted);\n  font-size: 13px;\n  margin: 8px 0 0;\n}\n.prereqs {\n  display: grid;\n  gap: 6px;\n}\n.prereq-group {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n}\n.chip {\n  font-size: 12.5px;\n  padding: 3px 10px;\n  border-radius: 99px;\n}\n.chip.done {\n  border-color: var(--gold);\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.15);\n}\n.or,\n.and {\n  font-size: 11.5px;\n  color: var(--faint);\n}\n.and {\n  display: block;\n  padding-left: 4px;\n}\n.conditions {\n  list-style: none;\n  padding: 0 !important;\n}\n.conditions li {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n}\n.cond-kind {\n  flex-shrink: 0;\n  font-size: 11px;\n  padding: 0 7px;\n  border-radius: 4px;\n  background: rgba(220, 194, 124, 0.12);\n  color: var(--gold);\n}\n.mutex-note {\n  border-left: 3px solid var(--red);\n  padding-left: 12px;\n}\n.route-facts {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  gap: 6px 12px;\n  margin: 8px 0 0;\n  font-size: 13px;\n}\n.route-facts dt {\n  color: var(--muted);\n}\n.route-facts dd {\n  margin: 0;\n}\n\n/* Status line and empty state */\n.statusline {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  min-height: 32px;\n  padding: 4px 16px;\n  border-top: 1px solid var(--line);\n  background: #111814;\n  font-size: 12px;\n  color: var(--muted);\n}\n.status-dot {\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  margin-right: 8px;\n  vertical-align: 1px;\n}\n.status-dot.busy {\n  background: var(--gold);\n  box-shadow: 0 0 8px var(--gold);\n}\n.linkish {\n  border: 0;\n  background: none;\n  padding: 2px 4px;\n  color: var(--gold);\n  font-size: 12px;\n}\n.empty {\n  flex: 1;\n  display: grid;\n  place-items: center;\n  padding: 24px;\n  background: var(--ink);\n}\n.empty-card {\n  max-width: 440px;\n  text-align: center;\n  display: grid;\n  justify-items: center;\n  gap: 12px;\n}\n.empty-card svg {\n  width: 72px;\n  height: 72px;\n  color: var(--gold);\n}\n.empty-card p {\n  color: var(--muted);\n}\n\n/* ---------- Modals and settings ---------- */\n.modal-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 2147483001;\n  background: rgba(5, 9, 7, 0.78);\n  backdrop-filter: blur(3px);\n  display: grid;\n  place-items: center;\n  padding: 24px;\n}\n.modal {\n  width: min(880px, 100%);\n  max-height: 90vh;\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.modal-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 16px 20px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);\n}\n.modal-header h2 {\n  font-size: 20px;\n  letter-spacing: 0.06em;\n}\n.modal-header button {\n  width: 34px;\n  height: 34px;\n  padding: 0;\n  font-size: 19px;\n}\n.modal-body {\n  padding: 18px 22px;\n  overflow: auto;\n}\n.modal-footer {\n  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n  padding: 12px 20px;\n  border-top: 1px solid var(--line);\n  background: #161e1a;\n}\n.modal-error {\n  color: #f6b3a4;\n  font-size: 13px;\n  white-space: pre-wrap;\n}\n.modal-body h3 {\n  font-size: 17px;\n  color: var(--gold);\n  margin-bottom: 6px;\n}\n.modal-body h4 {\n  font-size: 14px;\n  margin: 14px 0 6px;\n}\n.tabs {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-bottom: 18px;\n  padding-bottom: 10px;\n  border-bottom: 1px solid var(--line);\n}\n.tabs button {\n  border-color: transparent;\n  background: transparent;\n}\n.tabs button.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  color: var(--gold);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.settings-section[hidden] {\n  display: none;\n}\n.form-grid {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 14px 18px;\n}\n.form-grid > .wide {\n  grid-column: 1/-1;\n  min-width: 0;\n}\n.field {\n  display: grid;\n  gap: 6px;\n  font-size: 13px;\n  color: #d5d0bf;\n  min-width: 0;\n}\n.field.wide {\n  grid-column: 1/-1;\n}\n.field small {\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.field textarea {\n  min-height: 80px;\n  resize: vertical;\n}\n.check {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  color: #d5d0bf;\n}\n.check.wide,\n.check:has(> small) {\n  flex-wrap: wrap;\n}\n.check small {\n  flex-basis: 100%;\n  font-size: 11.5px;\n  line-height: 1.7;\n  padding-left: 24px;\n}\n.api-row,\n.job-card,\n.candidate,\n.event-card {\n  padding: 14px 16px;\n  border: 1px solid var(--line);\n  background: var(--raised);\n  border-radius: var(--radius);\n  margin-bottom: 12px;\n}\n.job-card .job-title {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n  margin-bottom: 12px;\n}\n.candidate {\n  display: flex;\n  gap: 12px;\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n.candidate strong {\n  display: block;\n  margin-bottom: 2px;\n}\n.candidate p {\n  font-size: 13px;\n  color: var(--muted);\n  margin: 0;\n}\n.event-card h3 {\n  margin: 6px 0;\n}\n.event-card p {\n  font-size: 13.5px;\n}\n.job-log {\n  display: grid;\n  grid-template-columns: 110px 1fr auto;\n  gap: 12px;\n  align-items: start;\n  border-bottom: 1px solid var(--line);\n  padding: 12px 0;\n  font-size: 13px;\n}\n.job-log > div:last-child {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n}\n.job-log .success {\n  color: var(--green);\n}\n.job-log .failed {\n  color: var(--red);\n}\n.job-log .running,\n.job-log .queued {\n  color: var(--gold);\n}\n.job-log .stale,\n.job-log .cancelled {\n  color: var(--muted);\n}\n.api-actions {\n  display: flex;\n  align-items: end;\n  flex-wrap: wrap;\n  gap: 10px;\n  margin: 12px 0;\n}\n.segment-max {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: end;\n  gap: 8px 12px;\n}\n.segment-max .field {\n  flex: 0 1 220px;\n}\n.segment-max-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  padding-bottom: 4px;\n}\n.segment-max small {\n  flex-basis: 100%;\n}\n.api-picker {\n  flex: 1;\n  min-width: 180px;\n}\n.api-editor {\n  margin-top: 16px;\n}\n.api-status {\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--gold);\n  font-size: 13px;\n}\n#source-panel fieldset {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  margin: 16px 0;\n  padding: 14px;\n  min-width: 0;\n}\n#source-panel legend {\n  color: var(--gold);\n  padding: 0 6px;\n  font-size: 13.5px;\n}\n#source-panel fieldset:disabled {\n  opacity: 0.55;\n}\n.source-list {\n  max-height: 300px;\n  overflow: auto;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 6px 12px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.source-group {\n  position: sticky;\n  top: -6px;\n  margin: 8px -12px 4px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--gold);\n  background: var(--ink);\n  border-bottom: 1px solid var(--line);\n}\n.source-entry {\n  display: flex;\n  align-items: start;\n  gap: 10px;\n  padding: 6px 0;\n  font-size: 13px;\n}\n.source-entry small {\n  display: block;\n  font-size: 11.5px;\n}\n.source-disabled span {\n  opacity: 0.65;\n}\n.source-book[hidden],\n.source-entry[hidden] {\n  display: none;\n}\n.source-rule {\n  display: grid;\n  grid-template-columns: 1fr 1fr auto;\n  gap: 8px;\n  margin: 8px 0;\n}\n.source-rule input {\n  min-width: 0;\n}\n.source-toggles {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px 18px;\n}\n.segment {\n  display: grid;\n  gap: 8px;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 10px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.segment-head {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.segment-head input[data-seg='name'] {\n  flex: 1;\n  min-width: 120px;\n}\n.segment textarea {\n  min-height: 70px;\n  resize: vertical;\n  width: 100%;\n}\n.legend {\n  margin-bottom: 14px;\n  font-size: 13px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend code {\n  color: var(--gold);\n}\n\n/* ---------- Responsive ---------- */\n@media (max-width: 1280px) {\n  .nation-bar {\n    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1.2fr);\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: flex-end;\n    margin-top: -4px;\n  }\n  .nation-copy p {\n    -webkit-line-clamp: 1;\n  }\n}\n@media (max-width: 1100px) {\n  .brand,\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n}\n@media (max-width: 1000px) {\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    gap: 12px 16px;\n  }\n  .agenda {\n    grid-column: 1/-1;\n    order: 3;\n  }\n  .nation-actions {\n    order: 4;\n  }\n  :host {\n    --drawer: 340px;\n  }\n}\n@media (max-width: 760px) {\n  .shell {\n    inset: 0;\n    border-radius: 0;\n    border: 0;\n  }\n  .command {\n    gap: 8px;\n    padding: 6px 8px;\n    min-height: 52px;\n  }\n  .brand-mark {\n    width: 34px;\n    height: 34px;\n  }\n  .nation-tabs,\n  .date-chip,\n  .test-label {\n    display: none;\n  }\n  .nation-picker {\n    display: block;\n  }\n  .command-spacer {\n    display: none;\n  }\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n  .cmd-btn.busy {\n    width: auto;\n    padding: 0 8px;\n  }\n  .cmd-btn.busy .cmd-text {\n    display: inline;\n  }\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    padding: 10px 12px;\n    gap: 10px;\n  }\n  .nation-crest {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-copy h2 {\n    font-size: 18px;\n  }\n  .nation-copy p {\n    display: none;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: 72px;\n  }\n  .gauge-head {\n    display: grid;\n  }\n  .gauge-head small {\n    font-size: 10.5px;\n    white-space: nowrap;\n  }\n  .gauge-head strong {\n    font-size: 18px;\n  }\n  .agenda {\n    padding: 7px 10px 7px 8px;\n    grid-template-columns: 38px 1fr;\n  }\n  .agenda-icon {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: stretch;\n    margin: 0;\n  }\n  .nation-actions > * {\n    flex: 1;\n  }\n  .control-select select {\n    width: 100%;\n  }\n  .routes {\n    top: 0;\n    left: 0;\n    bottom: 0;\n    width: min(320px, 86%);\n    max-height: none;\n    border-radius: 0 12px 12px 0;\n  }\n  .minimap,\n  .stage-hint {\n    display: none;\n  }\n  .stage.with-drawer .demo-pop {\n    right: 12px;\n  }\n  .drawer {\n    top: auto;\n    left: 0;\n    width: auto;\n    height: 72%;\n    border-left: 0;\n    border-top: 1px solid var(--line-strong);\n    border-radius: 16px 16px 0 0;\n    transform: translateY(100%);\n    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);\n  }\n  .drawer::before {\n    content: '';\n    display: block;\n    width: 44px;\n    height: 4px;\n    border-radius: 2px;\n    background: var(--line-strong);\n    margin: 8px auto 0;\n  }\n  .drawer.open {\n    transform: none;\n  }\n  .stage.with-drawer .stage-tools {\n    right: 12px;\n  }\n  .statusline .status-mid {\n    display: none;\n  }\n  .modal-backdrop {\n    padding: 0;\n    place-items: end stretch;\n  }\n  .modal {\n    max-height: 94dvh;\n    border-radius: 16px 16px 0 0;\n  }\n  .modal-body {\n    padding: 14px;\n  }\n  .form-grid,\n  .source-toggles {\n    grid-template-columns: 1fr;\n  }\n  .job-log {\n    grid-template-columns: 80px 1fr;\n  }\n  .job-log > div:last-child {\n    grid-column: 1/-1;\n    justify-content: flex-start;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  *,\n  *::before {\n    animation: none !important;\n    transition: none !important;\n  }\n}\n@media (max-width: 1200px) {\n  .stage.with-drawer .minimap {\n    display: none;\n  }\n}\n.demo-pop[open] button {\n  width: 100%;\n  text-align: left;\n}\n\n/* ---------- Tasks tab (任務) ---------- */\n.preset-bar {\n  padding: 14px 16px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));\n  margin-bottom: 14px;\n}\n.preset-title {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.preset-title h3 {\n  margin: 0;\n}\n.preset-title small {\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n}\n.preset-row {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.preset-row select {\n  flex: 1 1 200px;\n  min-width: 0;\n}\n.preset-row input[data-preset-name] {\n  flex: 1 1 160px;\n  min-width: 0;\n}\n.preset-bar .api-status:empty {\n  display: none;\n}\n.preset-bar .api-status {\n  margin: 8px 0 0;\n}\n.task-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 8px;\n  margin-bottom: 14px;\n}\n.task-tab {\n  display: grid;\n  gap: 3px;\n  text-align: left;\n  padding: 10px 12px;\n  background: var(--raised);\n  border-color: var(--line);\n  min-width: 0;\n}\n.task-tab strong {\n  font-family: var(--serif);\n  font-size: 14.5px;\n  font-weight: 600;\n}\n.task-tab small {\n  color: var(--faint);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.task-tab.active {\n  border-color: var(--gold);\n  background: var(--raised-2);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.task-tab.active strong {\n  color: var(--gold);\n}\n.task-editor[hidden] {\n  display: none;\n}\n.task-head {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.task-head h3 {\n  margin: 0;\n}\n.task-head small {\n  color: var(--muted);\n  font-size: 12.5px;\n}\n.task-block {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  background: var(--raised);\n  padding: 0 14px;\n  margin-bottom: 12px;\n}\n.task-block > summary {\n  cursor: pointer;\n  padding: 11px 0;\n  font-weight: 600;\n  color: var(--gold);\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.task-block > summary::-webkit-details-marker {\n  display: none;\n}\n.task-block > summary::before {\n  content: '▸';\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.task-block[open] > summary::before {\n  transform: rotate(90deg);\n}\n.task-block[open] {\n  padding-bottom: 14px;\n}\n.task-block .summary-note {\n  margin-left: auto;\n  font-weight: 400;\n  font-size: 12px;\n  color: var(--muted);\n}\n.block-note {\n  display: block;\n  margin-top: 8px;\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.route-row {\n  display: grid;\n  grid-template-columns: 1fr 120px auto;\n  gap: 10px;\n  align-items: end;\n  margin-bottom: 10px;\n}\n.route-row > .field:first-child:last-of-type {\n  grid-column: 1/3;\n}\n.route-row button {\n  height: 36px;\n}\n.prompt-toolbar {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n  margin-bottom: 10px;\n}\n.prompt-toolbar .spacer {\n  flex: 1;\n}\n.prompt-toolbar small {\n  color: var(--muted);\n  font-size: 12px;\n}\n.prompt-list {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 10px;\n}\n.prompt-card {\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  background: #1b2420;\n  transition:\n    border-color 0.15s,\n    opacity 0.15s;\n}\n.prompt-card.open {\n  border-color: var(--line-strong);\n}\n.prompt-card[data-kind='data'] {\n  border-left: 3px solid var(--blue);\n}\n.prompt-card[data-kind='guide'],\n.prompt-card[data-kind='task'] {\n  border-left: 3px solid var(--gold-deep);\n}\n.prompt-card[data-kind='custom'] {\n  border-left: 3px solid var(--green);\n}\n.prompt-card.off {\n  opacity: 0.55;\n}\n.prompt-card.off .pname {\n  text-decoration: line-through;\n  text-decoration-color: var(--faint);\n}\n.prompt-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 4px 6px 4px 4px;\n}\n.prompt-toggle {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 0;\n  background: transparent;\n  padding: 6px 8px;\n  text-align: left;\n}\n.prompt-toggle:hover:not(:disabled) {\n  background: rgba(255, 255, 255, 0.03);\n}\n.prompt-toggle .chev {\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.prompt-card.open .chev {\n  transform: rotate(90deg);\n}\n.pname {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-weight: 600;\n}\n.role-tag,\n.kind-tag {\n  flex: none;\n  font-size: 10.5px;\n  padding: 1px 7px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  color: var(--muted);\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n}\n.kind-tag {\n  font-family: inherit;\n}\n.kind-tag.data {\n  color: var(--blue);\n  border-color: rgba(143, 176, 214, 0.4);\n}\n.kind-tag.custom {\n  color: var(--green);\n  border-color: rgba(114, 196, 146, 0.4);\n}\n.kind-tag.modified {\n  color: var(--amber);\n  border-color: rgba(230, 169, 80, 0.45);\n}\n.pchars {\n  flex: none;\n  margin-left: auto;\n  font-size: 11px;\n  color: var(--faint);\n}\n.switch {\n  flex: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 12px;\n  color: var(--muted);\n  cursor: pointer;\n}\n.switch input {\n  appearance: none;\n  width: 30px;\n  height: 17px;\n  border-radius: 99px;\n  background: #0f1512;\n  border: 1px solid var(--line-strong);\n  position: relative;\n  margin: 0;\n  padding: 0;\n  cursor: pointer;\n  transition: background 0.15s;\n}\n.switch input::after {\n  content: '';\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 11px;\n  height: 11px;\n  border-radius: 50%;\n  background: var(--faint);\n  transition:\n    transform 0.15s,\n    background 0.15s;\n}\n.switch input:checked {\n  background: rgba(114, 196, 146, 0.25);\n  border-color: var(--green);\n}\n.switch input:checked::after {\n  transform: translateX(13px);\n  background: var(--green);\n}\n.switch input:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.switch span {\n  display: none;\n}\nbutton.icon {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  display: inline-grid;\n  place-items: center;\n  flex: none;\n}\n.prompt-body {\n  padding: 4px 12px 12px;\n  display: grid;\n  gap: 8px;\n}\n.prompt-body[hidden] {\n  display: none;\n}\n.prompt-fields {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n.prompt-fields input {\n  flex: 1 1 180px;\n  min-width: 0;\n}\n.prompt-fields select {\n  flex: 0 0 120px;\n}\n.prompt-body textarea {\n  width: 100%;\n  resize: vertical;\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12.5px;\n  line-height: 1.6;\n}\n.prompt-body small {\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.prompt-preview {\n  margin-top: 12px;\n}\n.prompt-preview textarea {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.55;\n  min-height: 260px;\n}\n.legend {\n  font-size: 12.5px;\n  color: var(--muted);\n  margin-bottom: 10px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend ul {\n  margin: 8px 0 0;\n  padding-left: 18px;\n  line-height: 1.8;\n}\n.legend code {\n  color: var(--text);\n}\n\n/* ---------- Progress window above the orb ---------- */\n.hud {\n  position: fixed;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: rgba(22, 30, 26, 0.96);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow:\n    0 14px 40px rgba(0, 0, 0, 0.55),\n    inset 0 1px 0 rgba(220, 194, 124, 0.08);\n  backdrop-filter: blur(6px);\n  color: var(--text);\n  font-size: 13px;\n  overflow: hidden;\n}\n.hud[hidden] {\n  display: none;\n}\n.hud.enter {\n  animation: hud-in 0.18s ease-out;\n}\n@keyframes hud-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n}\n.hud[data-side='below'].enter {\n  animation-name: hud-in-below;\n}\n@keyframes hud-in-below {\n  from {\n    opacity: 0;\n    transform: translateY(-6px);\n  }\n}\n.hud-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 7px 8px 7px 12px;\n  cursor: grab;\n  user-select: none;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n}\n.hud-head:active {\n  cursor: grabbing;\n}\n.hud-head .status-dot {\n  margin-right: 2px;\n  flex: none;\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.hud-head strong {\n  font-family: var(--serif);\n  color: var(--gold);\n  letter-spacing: 0.06em;\n  flex: none;\n}\n.hud-count {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--muted);\n  font-size: 12px;\n}\n.hud-actions {\n  margin-left: auto;\n  display: flex;\n  gap: 4px;\n  flex: none;\n}\n.hud-actions button {\n  padding: 3px 8px;\n  font-size: 12px;\n}\n.hud-actions button.icon {\n  width: 26px;\n  height: 26px;\n  padding: 0;\n}\n.hud-actions button[hidden] {\n  display: none;\n}\n.hud-bar {\n  height: 3px;\n  background: rgba(220, 194, 124, 0.12);\n  position: relative;\n  overflow: hidden;\n  flex: none;\n}\n.hud-bar i {\n  position: absolute;\n  inset: 0 auto 0 0;\n  background: var(--gold);\n  transition: width 0.3s;\n}\n.hud-bar.indeterminate i {\n  width: 35% !important;\n  animation: hud-slide 1.3s ease-in-out infinite;\n}\n@keyframes hud-slide {\n  from {\n    left: -35%;\n  }\n  to {\n    left: 100%;\n  }\n}\n.hud-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 0;\n  overflow: auto;\n  min-height: 0;\n}\n.hud-list[hidden] {\n  display: none;\n}\n.hud-item {\n  display: grid;\n  grid-template-columns: 18px minmax(0, 1fr) auto auto;\n  gap: 8px;\n  align-items: center;\n  padding: 6px 8px 6px 12px;\n  animation: hud-in 0.18s ease-out;\n}\n.hud-item + .hud-item {\n  border-top: 1px solid rgba(217, 191, 120, 0.07);\n}\n.hud-item .spinner {\n  width: 13px;\n  height: 13px;\n}\n.hud-sym {\n  font-style: normal;\n  font-weight: 700;\n  text-align: center;\n  width: 16px;\n  height: 16px;\n  line-height: 16px;\n  border-radius: 50%;\n  font-size: 11px;\n}\n.hud-sym.ok {\n  color: #0f1512;\n  background: var(--green);\n}\n.hud-sym.bad {\n  color: #0f1512;\n  background: var(--red);\n}\n.hud-sym.wait,\n.hud-sym.off {\n  color: var(--muted);\n  border: 1px solid var(--line-strong);\n  line-height: 14px;\n}\n.hud-text {\n  min-width: 0;\n  display: grid;\n}\n.hud-text b {\n  font-weight: 600;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-text small {\n  color: var(--muted);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-item.failed .hud-text small {\n  color: #f0a898;\n  white-space: normal;\n  display: -webkit-box;\n  -webkit-line-clamp: 3;\n  -webkit-box-orient: vertical;\n}\n.hud-item.success .hud-text b {\n  color: var(--green);\n}\n.hud-item.cancelled,\n.hud-item.stale {\n  opacity: 0.7;\n}\n.hud-item time {\n  font-variant-numeric: tabular-nums;\n  color: var(--faint);\n  font-size: 11.5px;\n}\n.hud-item button.icon {\n  width: 22px;\n  height: 22px;\n  border-color: transparent;\n  background: transparent;\n  color: var(--faint);\n}\n.hud.collapsed .hud-head {\n  border-bottom: 0;\n}\n\n@media (max-width: 760px) {\n  .task-tabs {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n  .route-row {\n    grid-template-columns: 1fr 90px;\n  }\n  .route-row > button {\n    grid-column: 1/-1;\n  }\n  .route-row > .field:first-child:last-of-type {\n    grid-column: 1/-1;\n  }\n  .pchars,\n  .role-tag {\n    display: none;\n  }\n  .hud-actions button[data-hud='log'] {\n    display: none;\n  }\n}\n.task-block.prompts-block {\n  padding: 12px 14px 14px;\n}\n.prompt-toolbar h4 {\n  margin: 0;\n  color: var(--gold);\n  font-size: 14px;\n}\n.prompts-block > .muted {\n  font-size: 12.5px;\n  margin: 0 0 8px;\n}\n.task-editor input:not([type='checkbox']),\n.task-editor select,\n.preset-row input,\n.preset-row select,\n.preset-row button,\n.route-row button {\n  height: 38px;\n}\n.task-editor .prompt-body input {\n  height: 36px;\n}\n\n/* ---------- Country manager: delete tree ---------- */\n.country-row {\n  align-items: center;\n}\n.country-row .row-spacer {\n  flex: 1;\n}\n.remove-confirm {\n  flex-basis: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 12px;\n  border: 1px solid rgba(217, 112, 95, 0.45);\n  border-radius: 8px;\n  background: rgba(217, 112, 95, 0.08);\n}\n.remove-confirm small {\n  flex: 1 1 260px;\n  color: #f0c2b8;\n  line-height: 1.6;\n}\n\n/* ---------- Country manager: tree files ---------- */\n.tree-io h3 {\n  margin-bottom: 4px;\n}\n.tree-io > small {\n  display: block;\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n  margin-bottom: 10px;\n}\n.tree-io-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.tree-io .api-status {\n  margin: 8px 0 0;\n}\n.import-panel {\n  margin-top: 12px;\n  padding: 12px 14px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: var(--raised);\n  display: grid;\n  gap: 10px;\n}\n.import-panel h4 {\n  margin: 0;\n  color: var(--gold);\n}\n.import-panel ul {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.8;\n}\n.import-panel code {\n  font-size: 11.5px;\n  color: var(--muted);\n}\n.import-panel .warn {\n  color: var(--amber);\n}\n.tree-io {\n  margin-bottom: 18px;\n}\n\n/* ---------- News window (國際快訊) ---------- */\n.event-timeline {\n  margin: 6px 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.7;\n  color: var(--muted);\n}\n.event-timeline b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-current {\n  font-size: 13px;\n}\n.event-current b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-steps {\n  list-style: none;\n  margin: 6px 0;\n  padding: 0;\n  font-size: 13px;\n  line-height: 1.7;\n}\n.event-steps li::before {\n  display: inline-block;\n  width: 1.4em;\n  color: var(--muted);\n}\n.event-steps li.done {\n  color: var(--muted);\n  text-decoration: line-through;\n}\n.event-steps li.done::before {\n  content: '✓';\n}\n.event-steps li.active {\n  color: var(--gold);\n  font-weight: 700;\n}\n.event-steps li.active::before {\n  content: '▶';\n}\n.event-steps li.pending::before {\n  content: '○';\n}\n.event-steps li.planned {\n  font-style: italic;\n}\n.event-steps li.planned::before {\n  content: '◷';\n}\n.event-effects {\n  display: block;\n  color: var(--gold);\n}\n.node-pivot {\n  position: absolute;\n  top: 3px;\n  right: 22px;\n  font-size: 12px;\n  color: var(--gold);\n  text-shadow: 0 0 6px rgba(220, 194, 124, 0.6);\n}\n.pivotal-note {\n  border-left: 3px solid var(--gold);\n  padding-left: 10px;\n}\n.rel-core {\n  border: 1px solid var(--gold);\n  border-radius: 10px;\n  padding: 10px 14px;\n  margin: 10px 0 14px;\n  background: rgba(220, 194, 124, 0.08);\n}\n.rel-core h3,\n.rel-independent h3 {\n  margin: 0 0 6px;\n  font-size: 15px;\n}\n.rel-list {\n  list-style: none;\n  padding: 0;\n  margin: 0;\n  display: grid;\n  gap: 10px;\n}\n.rel-card {\n  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));\n  border-radius: 10px;\n  padding: 10px 12px;\n}\n.rel-card p {\n  margin: 6px 0;\n}\n.rel-pair {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-top: 6px;\n}\n.rel-branch {\n  color: var(--muted);\n}\n.rel-arrow {\n  color: var(--gold);\n}\n.rel-via {\n  margin: 4px 0 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: var(--muted);\n}\n.rel-independent {\n  margin-top: 14px;\n}\n.rel-independent dt {\n  font-weight: 600;\n}\n.rel-independent dd {\n  margin: 0 0 8px;\n  color: var(--muted);\n}\n\n.job-message {\n  white-space: pre-line;\n  overflow-wrap: anywhere;\n}\n\n/* v0.13.1 UI review */\n.status-jobs {\n  color: var(--muted);\n  display: inline-flex;\n  align-items: center;\n}\n.status-jobs.failed {\n  color: var(--red);\n}\n.status-jobs.busy {\n  color: var(--gold);\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.cmd-btn {\n  position: relative;\n}\n.alert-dot {\n  position: absolute;\n  top: 4px;\n  right: 4px;\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  background: var(--red);\n  box-shadow: 0 0 0 2px var(--bg);\n}\n.lock-confirm {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.lock-confirm p {\n  margin: 0 0 8px;\n  font-size: 13px;\n}\n.lock-confirm strong {\n  color: var(--amber);\n}\n.lock-confirm .row {\n  display: flex;\n  gap: 8px;\n}\n.job-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  padding-bottom: 12px;\n  margin-bottom: 8px;\n  border-bottom: 1px solid var(--line);\n}\n.job-buttons {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  justify-content: flex-end;\n}\n.job-detail summary {\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--muted);\n}\n.job-detail p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n.event-filters {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-bottom: 12px;\n}\n.event-filters select {\n  width: auto;\n  min-width: 140px;\n}\n.event-filters small {\n  margin-left: auto;\n  color: var(--muted);\n}\n.chip.active {\n  border-color: var(--gold);\n  color: var(--gold);\n  background: rgba(220, 194, 124, 0.1);\n}\n.country-row {\n  flex-wrap: wrap;\n  gap: 10px 14px;\n}\n.country-name {\n  min-width: 7em;\n}\n.switch-label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13px;\n}\n.tree-io > summary {\n  cursor: pointer;\n  color: var(--gold);\n  font-weight: 700;\n  margin-bottom: 8px;\n}\n.task-head {\n  flex-wrap: wrap;\n}\n.task-head .spacer {\n  flex: 1;\n}\n.last-run {\n  color: var(--muted);\n}\n.field .static {\n  margin: 6px 0 0;\n  font-size: 13px;\n  color: var(--muted);\n}\n.unsaved {\n  margin-right: auto;\n  color: var(--amber);\n  font-size: 13px;\n}\n.field[hidden] {\n  display: none;\n}\n.modal-jobs {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  margin: 0 12px 0 auto;\n  min-width: 0;\n  max-width: 55%;\n  font-size: 12px;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.modal-jobs[hidden] {\n  display: none;\n}\n.modal-jobs.failed {\n  color: var(--red);\n}\n.modal-jobs .spinner {\n  flex: none;\n  width: 12px;\n  height: 12px;\n}\n.modal-jobs .status-dot {\n  margin-right: 0;\n}\n.status-jobs {\n  max-width: 60vw;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;\n   the control select and 更新局勢 open from ⋯ (the top picker lists names only). */\n.nation-more-btn,\n.control-tag {\n  display: none;\n}\n@media (max-width: 760px) {\n  .nation-bar {\n    grid-template-columns: minmax(0, 1fr) auto auto;\n    padding: 6px 10px 8px;\n    gap: 6px 10px;\n  }\n  .nation-crest {\n    display: none;\n  }\n  .nation-copy h2 {\n    font-size: 16px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .control-tag {\n    display: block;\n    font-size: 11px;\n    color: var(--muted);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: auto;\n    min-width: 44px;\n  }\n  .gauge-head {\n    display: grid;\n    line-height: 1.1;\n  }\n  .gauge-head small {\n    font-size: 10px;\n  }\n  .gauge-head strong {\n    font-size: 16px;\n  }\n  .gauge-track {\n    height: 3px;\n    margin-top: 2px;\n  }\n  .nation-more-btn {\n    display: grid;\n    place-items: center;\n    width: 34px;\n    height: 34px;\n    padding: 0;\n    font-size: 18px;\n  }\n  .nation-more-btn[aria-expanded='true'] {\n    border-color: var(--gold);\n    color: var(--gold);\n  }\n  .agenda {\n    grid-column: 1/-1;\n    grid-template-columns: minmax(0, 1fr);\n    padding: 5px 10px;\n  }\n  .agenda-icon,\n  .agenda-copy small,\n  .agenda-meta > span + span {\n    display: none;\n  }\n  .agenda-copy {\n    grid-template-columns: minmax(0, auto) minmax(40px, 1fr) auto;\n    align-items: center;\n    column-gap: 8px;\n  }\n  .agenda-copy strong {\n    font-size: 14px;\n  }\n  .agenda-bar {\n    margin: 0;\n    height: 5px;\n  }\n  .empty-agenda .agenda-copy {\n    grid-template-columns: auto minmax(0, 1fr);\n  }\n  .empty-agenda .agenda-meta > span {\n    display: block;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .nation-actions {\n    display: none;\n  }\n  .nation-bar.more-open .nation-actions {\n    display: flex;\n  }\n}\n\n/* v0.13.3: settings and details additions */\n.notice {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 12px;\n  background: rgba(230, 169, 80, 0.08);\n  color: #f0c49a;\n  font-size: 13px;\n}\n.api-actions.confirm-row {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 10px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.block-note.model-hint {\n  color: #f0c49a;\n}\n.source-scope {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px 12px;\n  padding: 8px 12px;\n  margin: 4px 0 6px;\n  border: 1px solid var(--line-strong);\n  border-radius: 8px;\n  background: var(--raised);\n}\n.source-scope.custom {\n  border-color: var(--gold);\n}\n.source-scope b {\n  color: var(--gold);\n}\n.source-scope label {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\ndetails.fold > summary {\n  cursor: pointer;\n  color: var(--muted);\n  font-size: 12.5px;\n  list-style: none;\n}\ndetails.fold > summary::before {\n  content: '▸ ';\n}\ndetails.fold[open] > summary::before {\n  content: '▾ ';\n}\ndetails.detail-section.fold > summary h4 {\n  display: inline;\n  margin: 0;\n}\ndetails.detail-section.fold > summary::before {\n  color: var(--gold);\n}\n.source-modes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;\n  gap: 10px;\n  align-items: end;\n}\n@media (max-width: 760px) {\n  .source-modes {\n    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  }\n  .source-modes > button {\n    grid-column: 1/-1;\n  }\n}\n.api-actions.api-save {\n  align-items: center;\n  position: sticky;\n  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */\n  bottom: -18px;\n  margin-bottom: -18px;\n  padding-bottom: 18px !important;\n  z-index: 2;\n  padding: 10px 0;\n  background: var(--panel);\n  border-top: 1px solid var(--line);\n}\n.api-actions.api-save .api-status {\n  margin: 0;\n  flex: 1 1 200px;\n}\n@media (max-width: 760px) {\n  .api-actions.api-save {\n    bottom: -14px;\n    margin-bottom: -14px;\n    padding-bottom: 14px !important;\n  }\n}\n";
+  var style_default = "/* 國策檔案 v0.4 · 戰情檔案館介面\n * Tokens first; every colour below derives from them so states stay consistent. */\n:host {\n  all: initial;\n  --ink: #0d1310;\n  --bg: #131a16;\n  --panel: #19221d;\n  --raised: #212b25;\n  --raised-2: #29352e;\n  --line: rgba(217, 191, 120, 0.14);\n  --line-strong: rgba(217, 191, 120, 0.32);\n  --gold: #dcc27c;\n  --gold-deep: #a88d4c;\n  --text: #ece6d4;\n  --muted: #a8b0a1;\n  --faint: #7d867a;\n  --green: #72c492;\n  --amber: #e6a950;\n  --blue: #8fb0d6;\n  --red: #d9705f;\n  --cross: #7fa6cf;\n  --radius: 10px;\n  --drawer: 392px;\n  --serif: 'Noto Serif TC', 'Source Han Serif TC', 'PMingLiU', Georgia, serif;\n  font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;\n  color: var(--text);\n  font-size: 14px;\n  line-height: 1.6;\n  -webkit-font-smoothing: antialiased;\n}\n* {\n  box-sizing: border-box;\n}\nbutton,\ninput,\nselect,\ntextarea {\n  font: inherit;\n  color: inherit;\n}\nbutton {\n  cursor: pointer;\n  border: 1px solid var(--line-strong);\n  background: var(--raised);\n  padding: 7px 12px;\n  border-radius: 7px;\n  line-height: 1.3;\n  transition:\n    background 0.15s,\n    border-color 0.15s,\n    color 0.15s;\n}\nbutton:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: var(--raised-2);\n}\nbutton:disabled {\n  opacity: 0.4;\n  cursor: not-allowed;\n}\nbutton:focus-visible,\ninput:focus-visible,\nselect:focus-visible,\ntextarea:focus-visible,\nsummary:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: 2px;\n}\ninput,\nselect,\ntextarea {\n  color: var(--text);\n  background: var(--ink);\n  border: 1px solid rgba(217, 191, 120, 0.24);\n  border-radius: 7px;\n  padding: 8px 10px;\n  max-width: 100%;\n}\ninput::placeholder,\ntextarea::placeholder {\n  color: var(--faint);\n}\nselect option {\n  background: var(--panel);\n}\ninput[type='checkbox'] {\n  accent-color: var(--gold);\n  width: 16px;\n  height: 16px;\n}\nsvg {\n  width: 24px;\n  height: 24px;\n  flex-shrink: 0;\n}\na {\n  color: var(--gold);\n}\np {\n  margin: 0 0 12px;\n}\nh1,\nh2,\nh3,\nh4 {\n  font-family: var(--serif);\n  font-weight: 600;\n  margin: 0;\n}\nsmall {\n  color: var(--muted);\n}\ncode {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n}\n.muted {\n  color: var(--muted);\n}\n.gold {\n  color: var(--gold);\n}\n.row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n}\n.between {\n  justify-content: space-between;\n}\n.primary {\n  background: linear-gradient(180deg, #7a6a37, #5b4f28);\n  border-color: var(--gold);\n  color: #fff4d0;\n  font-weight: 600;\n}\n.primary:hover:not(:disabled) {\n  background: linear-gradient(180deg, #8d7b41, #6a5c2f);\n}\n.ghost {\n  background: transparent;\n  border-color: transparent;\n}\n.danger {\n  color: #f0a898;\n}\n.tag {\n  font-size: 11px;\n  letter-spacing: 0.18em;\n  color: var(--gold);\n}\n.pill {\n  display: inline-flex;\n  align-items: center;\n  border: 1px solid var(--line-strong);\n  padding: 2px 8px;\n  font-size: 12px;\n  border-radius: 99px;\n}\n.separator {\n  height: 1px;\n  background: var(--line);\n  margin: 16px 0;\n}\n.sr {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}\n.spinner {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border: 2px solid rgba(220, 194, 124, 0.3);\n  border-top-color: var(--gold);\n  border-radius: 50%;\n  animation: spin 0.9s linear infinite;\n  vertical-align: -2px;\n}\n@keyframes spin {\n  to {\n    transform: rotate(360deg);\n  }\n}\n\n/* ---------- Floating orb ---------- */\n.orb {\n  position: fixed;\n  right: 24px;\n  bottom: 24px;\n  width: 60px;\n  height: 60px;\n  padding: 12px;\n  border-radius: 50%;\n  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);\n  border: 2px solid var(--gold-deep);\n  box-shadow:\n    0 8px 28px rgba(0, 0, 0, 0.55),\n    inset 0 0 0 3px rgba(0, 0, 0, 0.35);\n  color: var(--gold);\n  z-index: 2147482999;\n}\n.orb:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);\n}\n.orb svg {\n  width: 100%;\n  height: 100%;\n}\n.orb .count {\n  position: absolute;\n  top: -3px;\n  right: -3px;\n  min-width: 20px;\n  height: 20px;\n  padding: 0 5px;\n  border-radius: 10px;\n  background: var(--gold);\n  color: #1a1d12;\n  font-size: 11px;\n  font-weight: 700;\n  line-height: 20px;\n}\n\n/* ---------- Shell ---------- */\n.shell {\n  position: fixed;\n  inset: 16px;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: var(--bg);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.shell[hidden],\n.modal-backdrop[hidden],\n.orb[hidden] {\n  display: none;\n}\n\n/* Command bar */\n.command {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-height: 58px;\n  padding: 8px 14px;\n  background: linear-gradient(180deg, #1c2620, #151d18);\n  border-bottom: 1px solid var(--line);\n}\n.brand-mark {\n  width: 38px;\n  height: 38px;\n  display: grid;\n  place-items: center;\n  color: var(--gold);\n  border: 1px solid var(--line-strong);\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.07);\n  flex-shrink: 0;\n}\n.brand-mark svg {\n  width: 26px;\n  height: 26px;\n}\n.brand {\n  display: grid;\n  line-height: 1.15;\n  flex-shrink: 0;\n}\n.brand h1 {\n  font-size: 17px;\n  letter-spacing: 0.12em;\n}\n.brand small {\n  font-size: 9.5px;\n  letter-spacing: 0.3em;\n  color: var(--gold-deep);\n}\n.nation-tabs {\n  display: flex;\n  gap: 6px;\n  overflow-x: auto;\n  scrollbar-width: none;\n  margin-left: 10px;\n  min-width: 0;\n}\n.nation-tabs::-webkit-scrollbar {\n  display: none;\n}\n.nation-tab {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 5px 12px 5px 6px;\n  border-radius: 9px;\n  border-color: transparent;\n  background: transparent;\n  white-space: nowrap;\n  flex-shrink: 0;\n}\n.nation-tab.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.tab-crest {\n  width: 30px;\n  height: 30px;\n  display: grid;\n  place-items: center;\n  border-radius: 7px;\n  background: rgba(255, 255, 255, 0.04);\n  color: var(--blue);\n}\n.nation-tab.player .tab-crest {\n  color: var(--gold);\n}\n.tab-crest svg {\n  width: 20px;\n  height: 20px;\n}\n.tab-copy {\n  display: grid;\n  text-align: left;\n  line-height: 1.2;\n}\n.tab-copy strong {\n  font-size: 13.5px;\n  font-weight: 600;\n}\n.tab-copy small {\n  font-size: 11px;\n}\n.nation-tab.add {\n  width: 38px;\n  justify-content: center;\n  padding: 6px;\n  border: 1px dashed var(--line-strong);\n  color: var(--gold);\n}\n.nation-picker {\n  display: none;\n  min-width: 0;\n  flex: 1;\n}\n.nation-picker select {\n  width: 100%;\n}\n.command-spacer {\n  flex: 1;\n}\n.test-label {\n  font-size: 11px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  padding: 3px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n}\n.date-chip {\n  display: grid;\n  line-height: 1.15;\n  text-align: right;\n  padding: 0 6px;\n}\n.date-chip small {\n  font-size: 10.5px;\n}\n.date-chip strong {\n  font-family: var(--serif);\n  font-size: 17px;\n  color: var(--gold);\n}\n.cmd-btn {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  height: 38px;\n  flex-shrink: 0;\n  white-space: nowrap;\n}\n.date-chip,\n.test-label,\n.nation-tab.add {\n  flex-shrink: 0;\n}\n.cmd-btn.busy {\n  border-color: var(--gold);\n}\n.cmd-btn.close {\n  width: 38px;\n  justify-content: center;\n  font-size: 20px;\n  padding: 0;\n}\n.error-banner {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  justify-content: space-between;\n  padding: 9px 16px;\n  background: rgba(217, 112, 95, 0.14);\n  border-bottom: 1px solid rgba(217, 112, 95, 0.4);\n  color: #f6c6ba;\n  font-size: 13px;\n}\n\n/* Nation bar */\n.nation-bar {\n  display: grid;\n  grid-template-columns: minmax(200px, 1.1fr) auto minmax(260px, 1.25fr) auto;\n  align-items: center;\n  gap: 20px;\n  padding: 12px 18px;\n  background: var(--panel);\n  border-bottom: 1px solid var(--line);\n}\n.nation-id {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-width: 0;\n}\n.nation-crest {\n  width: 48px;\n  height: 48px;\n  display: grid;\n  place-items: center;\n  border-radius: 12px;\n  border: 1px solid var(--line-strong);\n  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));\n  color: var(--gold);\n  flex-shrink: 0;\n}\n.nation-crest svg {\n  width: 32px;\n  height: 32px;\n}\n.nation-copy {\n  min-width: 0;\n}\n.nation-copy h2 {\n  font-size: 22px;\n  line-height: 1.25;\n  letter-spacing: 0.04em;\n}\n.nation-copy p {\n  margin: 2px 0 0;\n  color: var(--muted);\n  font-size: 12.5px;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.gauges {\n  display: flex;\n  gap: 16px;\n}\n.gauge {\n  width: 132px;\n}\n.gauge-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n}\n.gauge-head small {\n  font-size: 12px;\n}\n.gauge-head strong {\n  font-family: var(--serif);\n  font-size: 22px;\n  line-height: 1.1;\n}\n.gauge-track {\n  height: 6px;\n  border-radius: 3px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n  margin-top: 4px;\n}\n.gauge-track i {\n  display: block;\n  height: 100%;\n  border-radius: 3px;\n}\n.gauge.stability .gauge-track i {\n  background: linear-gradient(90deg, #5f9e75, var(--green));\n}\n.gauge.war .gauge-track i {\n  background: linear-gradient(90deg, #b75a49, var(--amber));\n}\n.agenda {\n  display: grid;\n  grid-template-columns: 46px 1fr;\n  gap: 12px;\n  align-items: center;\n  text-align: left;\n  padding: 9px 14px 9px 10px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line-strong);\n  min-width: 0;\n}\n.agenda.active {\n  border-color: rgba(114, 196, 146, 0.6);\n}\n.agenda.waiting {\n  border-color: rgba(230, 169, 80, 0.6);\n}\n.agenda.paused {\n  border-color: rgba(143, 176, 214, 0.6);\n}\n.agenda-icon {\n  width: 46px;\n  height: 46px;\n  display: grid;\n  place-items: center;\n  border-radius: 10px;\n  background: rgba(220, 194, 124, 0.1);\n  color: var(--gold);\n}\n.agenda.active .agenda-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n}\n.agenda.waiting .agenda-icon {\n  color: var(--amber);\n  background: rgba(230, 169, 80, 0.12);\n}\n.agenda-icon svg {\n  width: 28px;\n  height: 28px;\n}\n.agenda-copy {\n  display: grid;\n  gap: 2px;\n  min-width: 0;\n}\n.agenda-copy small {\n  font-size: 11.5px;\n  letter-spacing: 0.08em;\n}\n.agenda-copy strong {\n  font-family: var(--serif);\n  font-size: 16px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.agenda-bar {\n  height: 7px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n  margin-top: 3px;\n}\n.agenda-bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n  border-radius: 4px;\n}\n.agenda.waiting .agenda-bar i {\n  background: linear-gradient(90deg, #b67c2f, var(--amber));\n}\n.agenda.paused .agenda-bar i {\n  background: linear-gradient(90deg, #5c7ca3, var(--blue));\n}\n.agenda-meta {\n  display: flex;\n  justify-content: space-between;\n  gap: 10px;\n  font-size: 12px;\n  color: var(--muted);\n}\n.empty-agenda {\n  border-style: dashed;\n}\n.nation-actions {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.control-select select {\n  height: 36px;\n  padding: 0 8px;\n}\n.toggle {\n  height: 36px;\n  white-space: nowrap;\n}\n.toggle.on {\n  color: var(--gold);\n  border-color: var(--gold-deep);\n  background: rgba(220, 194, 124, 0.1);\n}\n.nation-actions .primary {\n  height: 36px;\n  white-space: nowrap;\n}\n\n/* ---------- Stage ---------- */\n.stage {\n  position: relative;\n  flex: 1;\n  min-height: 0;\n  overflow: hidden;\n  background:\n    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),\n    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    var(--ink);\n}\n.canvas {\n  position: absolute;\n  inset: 0;\n  overflow: hidden;\n  cursor: grab;\n  touch-action: none;\n  user-select: none;\n}\n.canvas:active {\n  cursor: grabbing;\n}\n.canvas:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: -4px;\n}\n.tree {\n  position: absolute;\n  left: 0;\n  top: 0;\n  transform-origin: 0 0;\n}\n.connectors {\n  position: absolute;\n  inset: 0;\n  width: auto;\n  height: auto;\n  overflow: visible;\n  pointer-events: none;\n}\n.connector {\n  fill: none;\n  stroke: rgba(220, 194, 124, 0.3);\n  stroke-width: 2.4;\n}\n.connector.done {\n  stroke: var(--gold);\n  stroke-width: 3;\n}\n.connector.alternative {\n  stroke-dasharray: 8 6;\n}\n.connector.cross-branch {\n  stroke: rgba(127, 166, 207, 0.55);\n}\n.connector.cross-branch.done {\n  stroke: var(--cross);\n}\n.connector.mutex {\n  stroke: var(--red);\n  stroke-width: 2;\n  stroke-dasharray: 2 6;\n  stroke-linecap: round;\n}\n.branch-banner {\n  position: absolute;\n  top: 16px;\n  height: 34px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  border-bottom: 1px solid var(--line-strong);\n  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));\n  pointer-events: none;\n}\n.branch-banner span {\n  font-family: var(--serif);\n  font-size: 15px;\n  letter-spacing: 0.3em;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  padding: 0 8px;\n}\n.branch-banner.active {\n  border-bottom-color: var(--gold);\n}\n.branch-summary {\n  position: absolute;\n  height: 66px;\n  display: grid;\n  align-content: center;\n  text-align: left;\n  border: 1px dashed var(--gold-deep);\n  background: rgba(220, 194, 124, 0.06);\n  border-radius: var(--radius);\n  padding: 8px 14px;\n}\n.branch-summary strong {\n  font-family: var(--serif);\n  color: var(--gold);\n}\n.branch-summary span {\n  font-size: 12px;\n  color: var(--muted);\n}\n\n/* Nodes */\n.node {\n  position: absolute;\n  display: grid;\n  grid-template-columns: 44px 1fr;\n  gap: 10px;\n  align-items: center;\n  padding: 8px 12px 8px 10px;\n  text-align: left;\n  border-radius: var(--radius);\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: linear-gradient(180deg, #25302a, #1b231f);\n  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);\n  transition:\n    transform 0.12s,\n    box-shadow 0.12s,\n    border-color 0.12s,\n    opacity 0.15s;\n}\n.node:hover:not(:disabled) {\n  transform: translateY(-2px);\n  border-color: var(--gold);\n  background: linear-gradient(180deg, #2c3830, #1e2722);\n}\n.node-icon {\n  width: 44px;\n  height: 44px;\n  display: grid;\n  place-items: center;\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid rgba(220, 194, 124, 0.2);\n  color: var(--gold);\n}\n.node-icon svg {\n  width: 26px;\n  height: 26px;\n}\n.node-text {\n  display: grid;\n  gap: 1px;\n  min-width: 0;\n}\n.node-name {\n  font-size: 14px;\n  font-weight: 600;\n  line-height: 1.3;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.node-meta {\n  font-size: 11.5px;\n  color: var(--muted);\n  white-space: nowrap;\n}\n.node-flag {\n  position: absolute;\n  top: 4px;\n  right: 7px;\n  font-size: 12px;\n  color: var(--red);\n}\n.node-progress {\n  position: absolute;\n  left: 10px;\n  right: 10px;\n  bottom: 5px;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.node-progress i {\n  display: block;\n  height: 100%;\n  background: var(--green);\n}\n.node.available .node-name {\n  color: #fffaf0;\n}\n.node.locked {\n  opacity: 0.58;\n  border-style: dashed;\n  border-color: rgba(236, 230, 212, 0.26);\n  box-shadow: none;\n}\n.node.locked .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.node.completed .node-icon {\n  background: rgba(255, 240, 200, 0.18);\n  border-color: rgba(255, 240, 200, 0.35);\n  color: #fff3c9;\n}\n.node.completed .node-name {\n  color: #fff7dc;\n}\n.node.completed .node-meta {\n  color: #f1dfa6;\n}\n.node.active {\n  border: 1.5px solid var(--green);\n  box-shadow:\n    0 0 0 3px rgba(114, 196, 146, 0.16),\n    0 0 26px rgba(114, 196, 146, 0.24);\n}\n.node.active .node-icon {\n  color: var(--green);\n  background: rgba(114, 196, 146, 0.12);\n  border-color: rgba(114, 196, 146, 0.35);\n}\n.node.active .node-meta {\n  color: #a7e3bd;\n}\n.node.waiting {\n  border: 1.5px solid var(--amber);\n  box-shadow:\n    0 0 0 3px rgba(230, 169, 80, 0.14),\n    0 0 22px rgba(230, 169, 80, 0.2);\n}\n.node.waiting .node-icon,\n.node.waiting .node-meta {\n  color: var(--amber);\n}\n.node.waiting .node-progress i {\n  background: var(--amber);\n}\n.node.paused {\n  border: 1.5px solid var(--blue);\n}\n.node.paused .node-icon,\n.node.paused .node-meta {\n  color: var(--blue);\n}\n.node.paused .node-progress i {\n  background: var(--blue);\n}\n.node.sealed,\n.node.terminated {\n  opacity: 0.7;\n  border-color: rgba(217, 112, 95, 0.6);\n  background:\n    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.1) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #2a2522, #1f1c1a);\n}\n.node.sealed .node-icon,\n.node.terminated .node-icon {\n  color: var(--red);\n  background: rgba(217, 112, 95, 0.08);\n  border-color: rgba(217, 112, 95, 0.25);\n}\n.node.sealed .node-meta,\n.node.terminated .node-meta {\n  color: #f0a898;\n}\n.node.unknown {\n  border-color: rgba(236, 230, 212, 0.18);\n  background:\n    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 6px, transparent 6px 12px),\n    linear-gradient(180deg, #202824, #181f1b);\n}\n.node.unknown .node-icon {\n  color: var(--faint);\n  background: rgba(255, 255, 255, 0.03);\n  border-color: rgba(255, 255, 255, 0.08);\n}\n.node.current {\n  animation: current-pulse 2.6s ease-in-out infinite;\n}\n@keyframes current-pulse {\n  50% {\n    box-shadow:\n      0 0 0 6px rgba(114, 196, 146, 0.1),\n      0 0 34px rgba(114, 196, 146, 0.32);\n  }\n}\n.node.selected {\n  outline: 2px solid var(--gold);\n  outline-offset: 4px;\n}\n.node.dim {\n  opacity: 0.16;\n}\n\n/* Overlays on the stage */\n.routes {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  bottom: 12px;\n  width: 268px;\n  display: none;\n  flex-direction: column;\n  background: rgba(19, 26, 22, 0.94);\n  backdrop-filter: blur(8px);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);\n  z-index: 3;\n  max-height: calc(100% - 24px);\n}\n.routes.open {\n  display: flex;\n}\n.routes-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 8px 6px 14px;\n}\n.routes-head strong {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n}\n.routes-head small {\n  flex: 1;\n  font-size: 12px;\n}\n.routes-head button {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  font-size: 18px;\n}\n.search-row {\n  display: flex;\n  gap: 6px;\n  padding: 4px 10px 8px;\n}\n.search-row label {\n  flex: 1;\n  min-width: 0;\n}\n.search-row input {\n  width: 100%;\n  height: 34px;\n}\n.search-row button {\n  height: 34px;\n  white-space: nowrap;\n  font-size: 12.5px;\n}\n.route-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 6px;\n  overflow: auto;\n  flex: 1;\n  border-top: 1px solid var(--line);\n  border-bottom: 1px solid var(--line);\n}\n.route-list li {\n  display: flex;\n  align-items: stretch;\n  gap: 4px;\n  margin: 2px 0;\n}\n.route-jump {\n  flex: 1;\n  display: grid;\n  grid-template-columns: 1fr auto;\n  gap: 2px 8px;\n  text-align: left;\n  padding: 7px 10px;\n  border-color: transparent;\n  background: transparent;\n  min-width: 0;\n}\n.route-list li.active .route-jump {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n}\n.route-list li.folded .route-name {\n  color: var(--faint);\n}\n.route-name {\n  font-size: 13.5px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\n.route-live {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  box-shadow: 0 0 8px var(--green);\n  flex-shrink: 0;\n}\n.route-count {\n  font-size: 12px;\n  color: var(--muted);\n  font-variant-numeric: tabular-nums;\n}\n.route-bar {\n  grid-column: 1/-1;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n}\n.route-bar i {\n  display: block;\n  height: 100%;\n  background: var(--gold);\n}\n.route-fold {\n  width: 30px;\n  padding: 0;\n  border-color: transparent;\n  background: transparent;\n  color: var(--muted);\n}\n.route-actions {\n  display: flex;\n  gap: 6px;\n  padding: 8px 10px 10px;\n}\n.route-actions button {\n  flex: 1;\n  font-size: 12.5px;\n}\n.routes-tab {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  z-index: 3;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);\n}\n.routes-tab small {\n  color: var(--gold);\n}\n.stage-hint {\n  position: absolute;\n  left: 50%;\n  bottom: 12px;\n  transform: translateX(-50%);\n  font-size: 12px;\n  color: var(--faint);\n  pointer-events: none;\n  white-space: nowrap;\n}\n.stage-tools {\n  position: absolute;\n  right: 12px;\n  bottom: 12px;\n  display: flex;\n  align-items: flex-end;\n  gap: 8px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage-tools > button,\n.zoom-controls,\n.legend-pop > summary {\n  height: 36px;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);\n}\n.zoom-controls {\n  display: flex;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n  overflow: hidden;\n}\n.zoom-controls button {\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  min-width: 36px;\n}\n.zoom-controls button + button {\n  border-left: 1px solid var(--line);\n}\n.zoom-value {\n  font-variant-numeric: tabular-nums;\n  font-size: 12.5px;\n}\n.legend-pop {\n  position: relative;\n}\n.legend-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  padding: 0 12px;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n}\n.legend-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.legend-list {\n  position: absolute;\n  right: 0;\n  bottom: 44px;\n  width: 210px;\n  margin: 0;\n  padding: 10px 14px;\n  list-style: none;\n  display: grid;\n  gap: 6px;\n  font-size: 12.5px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);\n}\n.legend-list li {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n}\n.sw {\n  width: 22px;\n  height: 14px;\n  border-radius: 4px;\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: #232d27;\n  flex-shrink: 0;\n}\n.sw.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.sw.active {\n  border: 2px solid var(--green);\n}\n.sw.waiting {\n  border: 2px solid var(--amber);\n}\n.sw.paused {\n  border: 2px solid var(--blue);\n}\n.sw.locked {\n  border-style: dashed;\n  opacity: 0.6;\n}\n.sw.terminated {\n  border-color: var(--red);\n  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);\n}\n.sw.unknown {\n  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);\n}\n.ln {\n  width: 22px;\n  height: 0;\n  border-top: 2.5px solid rgba(220, 194, 124, 0.6);\n  flex-shrink: 0;\n}\n.ln.dashed {\n  border-top-style: dashed;\n}\n.ln.cross {\n  border-top-color: var(--cross);\n}\n.ln.mutex {\n  border-top: 2.5px dotted var(--red);\n}\n.minimap {\n  position: absolute;\n  right: 12px;\n  bottom: 58px;\n  width: 190px;\n  height: 120px;\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  background: rgba(13, 19, 16, 0.92);\n  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\n  z-index: 2;\n  padding: 6px;\n  cursor: crosshair;\n  touch-action: none;\n  transition: right 0.22s ease;\n}\n.minimap-svg {\n  width: 100%;\n  height: 100%;\n}\n.mm {\n  fill: rgba(236, 230, 212, 0.28);\n}\n.mm.completed {\n  fill: var(--gold);\n}\n.mm.active,\n.mm.current {\n  fill: var(--green);\n}\n.mm.waiting {\n  fill: var(--amber);\n}\n.mm.paused {\n  fill: var(--blue);\n}\n.mm.locked,\n.mm.unknown {\n  fill: rgba(236, 230, 212, 0.12);\n}\n.mm.sealed,\n.mm.terminated {\n  fill: rgba(217, 112, 95, 0.55);\n}\n.mm.folded {\n  fill: rgba(220, 194, 124, 0.25);\n}\n.mm-view {\n  fill: rgba(220, 194, 124, 0.08);\n  stroke: var(--gold);\n  stroke-width: 1.5;\n  vector-effect: non-scaling-stroke;\n}\n.stage.with-drawer .stage-tools {\n  right: calc(var(--drawer) + 12px);\n}\n/* The drawer already covers part of the tree; the minimap would cover more. */\n.stage.with-drawer .minimap {\n  display: none;\n}\n.demo-pop {\n  position: absolute;\n  top: 12px;\n  right: 12px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage.with-drawer .demo-pop {\n  right: calc(var(--drawer) + 12px);\n}\n.demo-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  background: rgba(19, 26, 22, 0.94);\n  padding: 6px 10px;\n  border-radius: 7px;\n}\n.demo-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.demo-pop[open] {\n  display: grid;\n  gap: 6px;\n  width: 200px;\n  padding: 10px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n}\n.demo-pop[open] > summary {\n  border: 0;\n  padding: 0;\n  background: none;\n}\n\n/* Drawer */\n.drawer {\n  position: absolute;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  width: var(--drawer);\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border-left: 1px solid var(--line-strong);\n  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);\n  transform: translateX(100%);\n  transition: transform 0.22s ease;\n  z-index: 4;\n}\n.drawer.open {\n  transform: none;\n}\n.drawer-head {\n  position: relative;\n  display: grid;\n  grid-template-columns: 58px 1fr;\n  gap: 14px;\n  align-items: center;\n  padding: 18px 44px 16px 18px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n  box-shadow: inset 4px 0 0 var(--line-strong);\n}\n.drawer-head.completed {\n  box-shadow: inset 4px 0 0 var(--gold);\n}\n.drawer-head.active {\n  box-shadow: inset 4px 0 0 var(--green);\n}\n.drawer-head.waiting {\n  box-shadow: inset 4px 0 0 var(--amber);\n}\n.drawer-head.paused {\n  box-shadow: inset 4px 0 0 var(--blue);\n}\n.drawer-head.sealed,\n.drawer-head.terminated {\n  box-shadow: inset 4px 0 0 var(--red);\n}\n.drawer-close {\n  position: absolute;\n  top: 10px;\n  right: 10px;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n  font-size: 20px;\n}\n.drawer-emblem {\n  width: 58px;\n  height: 58px;\n  display: grid;\n  place-items: center;\n  border-radius: 13px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid var(--line-strong);\n  color: var(--gold);\n}\n.drawer-emblem svg {\n  width: 34px;\n  height: 34px;\n}\n.drawer-branch {\n  display: block;\n  font-size: 11.5px;\n  letter-spacing: 0.2em;\n  color: var(--gold);\n}\n.drawer-head h3 {\n  font-size: 20px;\n  line-height: 1.3;\n  margin: 2px 0 6px;\n}\n.state-pill,\n.days-pill {\n  display: inline-block;\n  font-size: 12px;\n  padding: 1px 9px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  margin-right: 6px;\n}\n.state-pill.completed {\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.22);\n  border-color: var(--gold);\n}\n.state-pill.active {\n  color: #a7e3bd;\n  border-color: var(--green);\n}\n.state-pill.waiting {\n  color: var(--amber);\n  border-color: var(--amber);\n}\n.state-pill.paused {\n  color: var(--blue);\n  border-color: var(--blue);\n}\n.state-pill.available {\n  color: #fffaf0;\n  border-color: rgba(236, 230, 212, 0.6);\n}\n.state-pill.locked,\n.state-pill.unknown {\n  color: var(--muted);\n}\n.state-pill.sealed,\n.state-pill.terminated {\n  color: #f0a898;\n  border-color: var(--red);\n}\n.days-pill {\n  color: var(--muted);\n}\n.drawer-body {\n  flex: 1;\n  overflow: auto;\n  padding: 16px 18px 24px;\n}\n.drawer-progress {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 14px;\n}\n.drawer-progress strong {\n  font-variant-numeric: tabular-nums;\n  color: var(--gold);\n}\n.bar {\n  height: 8px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n}\n.drawer-action {\n  display: grid;\n  gap: 8px;\n  padding: 12px;\n  margin-bottom: 16px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line);\n}\n.drawer-action .primary {\n  height: 40px;\n  font-size: 14.5px;\n}\n.blockers {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: #f0c49a;\n}\n.description {\n  font-size: 14px;\n  line-height: 1.8;\n}\n.detail-section {\n  padding: 14px 0;\n  border-top: 1px solid var(--line);\n}\n.detail-section h4 {\n  font-size: 13px;\n  letter-spacing: 0.12em;\n  color: var(--gold);\n  margin-bottom: 8px;\n}\n.detail-section ul {\n  margin: 0;\n  padding-left: 18px;\n  display: grid;\n  gap: 4px;\n  font-size: 13.5px;\n}\n.detail-section p {\n  font-size: 13.5px;\n}\n.reason {\n  color: var(--muted);\n  font-size: 13px;\n  margin: 8px 0 0;\n}\n.prereqs {\n  display: grid;\n  gap: 6px;\n}\n.prereq-group {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n}\n.chip {\n  font-size: 12.5px;\n  padding: 3px 10px;\n  border-radius: 99px;\n}\n.chip.done {\n  border-color: var(--gold);\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.15);\n}\n.or,\n.and {\n  font-size: 11.5px;\n  color: var(--faint);\n}\n.and {\n  display: block;\n  padding-left: 4px;\n}\n.conditions {\n  list-style: none;\n  padding: 0 !important;\n}\n.conditions li {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n}\n.cond-kind {\n  flex-shrink: 0;\n  font-size: 11px;\n  padding: 0 7px;\n  border-radius: 4px;\n  background: rgba(220, 194, 124, 0.12);\n  color: var(--gold);\n}\n.mutex-note {\n  border-left: 3px solid var(--red);\n  padding-left: 12px;\n}\n.route-facts {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  gap: 6px 12px;\n  margin: 8px 0 0;\n  font-size: 13px;\n}\n.route-facts dt {\n  color: var(--muted);\n}\n.route-facts dd {\n  margin: 0;\n}\n\n/* Status line and empty state */\n.statusline {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  min-height: 32px;\n  padding: 4px 16px;\n  border-top: 1px solid var(--line);\n  background: #111814;\n  font-size: 12px;\n  color: var(--muted);\n}\n.status-dot {\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  margin-right: 8px;\n  vertical-align: 1px;\n}\n.status-dot.busy {\n  background: var(--gold);\n  box-shadow: 0 0 8px var(--gold);\n}\n.linkish {\n  border: 0;\n  background: none;\n  padding: 2px 4px;\n  color: var(--gold);\n  font-size: 12px;\n}\n.empty {\n  flex: 1;\n  display: grid;\n  place-items: center;\n  padding: 24px;\n  background: var(--ink);\n}\n.empty-card {\n  max-width: 440px;\n  text-align: center;\n  display: grid;\n  justify-items: center;\n  gap: 12px;\n}\n.empty-card svg {\n  width: 72px;\n  height: 72px;\n  color: var(--gold);\n}\n.empty-card p {\n  color: var(--muted);\n}\n\n/* ---------- Modals and settings ---------- */\n.modal-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 2147483001;\n  background: rgba(5, 9, 7, 0.78);\n  backdrop-filter: blur(3px);\n  display: grid;\n  place-items: center;\n  padding: 24px;\n}\n.modal {\n  width: min(880px, 100%);\n  max-height: 90vh;\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.modal-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 16px 20px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);\n}\n.modal-header h2 {\n  font-size: 20px;\n  letter-spacing: 0.06em;\n}\n.modal-header button {\n  width: 34px;\n  height: 34px;\n  padding: 0;\n  font-size: 19px;\n}\n.modal-body {\n  padding: 18px 22px;\n  overflow: auto;\n}\n.modal-footer {\n  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n  padding: 12px 20px;\n  border-top: 1px solid var(--line);\n  background: #161e1a;\n}\n.modal-error {\n  color: #f6b3a4;\n  font-size: 13px;\n  white-space: pre-wrap;\n}\n.modal-body h3 {\n  font-size: 17px;\n  color: var(--gold);\n  margin-bottom: 6px;\n}\n.modal-body h4 {\n  font-size: 14px;\n  margin: 14px 0 6px;\n}\n.tabs {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-bottom: 18px;\n  padding-bottom: 10px;\n  border-bottom: 1px solid var(--line);\n}\n.tabs button {\n  border-color: transparent;\n  background: transparent;\n}\n.tabs button.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  color: var(--gold);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.settings-section[hidden] {\n  display: none;\n}\n.form-grid {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 14px 18px;\n}\n.form-grid > .wide {\n  grid-column: 1/-1;\n  min-width: 0;\n}\n.field {\n  display: grid;\n  gap: 6px;\n  font-size: 13px;\n  color: #d5d0bf;\n  min-width: 0;\n}\n.field.wide {\n  grid-column: 1/-1;\n}\n.field small {\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.field textarea {\n  min-height: 80px;\n  resize: vertical;\n}\n.check {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  color: #d5d0bf;\n}\n.check.wide,\n.check:has(> small) {\n  flex-wrap: wrap;\n}\n.check small {\n  flex-basis: 100%;\n  font-size: 11.5px;\n  line-height: 1.7;\n  padding-left: 24px;\n}\n.api-row,\n.job-card,\n.candidate,\n.event-card {\n  padding: 14px 16px;\n  border: 1px solid var(--line);\n  background: var(--raised);\n  border-radius: var(--radius);\n  margin-bottom: 12px;\n}\n.job-card .job-title {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n  margin-bottom: 12px;\n}\n.candidate {\n  display: flex;\n  gap: 12px;\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n.candidate strong {\n  display: block;\n  margin-bottom: 2px;\n}\n.candidate p {\n  font-size: 13px;\n  color: var(--muted);\n  margin: 0;\n}\n.event-card h3 {\n  margin: 6px 0;\n}\n.event-card p {\n  font-size: 13.5px;\n}\n.job-log {\n  display: grid;\n  grid-template-columns: 110px 1fr auto;\n  gap: 12px;\n  align-items: start;\n  border-bottom: 1px solid var(--line);\n  padding: 12px 0;\n  font-size: 13px;\n}\n.job-log > div:last-child {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n}\n.job-log .success {\n  color: var(--green);\n}\n.job-log .failed {\n  color: var(--red);\n}\n.job-log .running,\n.job-log .queued {\n  color: var(--gold);\n}\n.job-log .stale,\n.job-log .cancelled {\n  color: var(--muted);\n}\n.api-actions {\n  display: flex;\n  align-items: end;\n  flex-wrap: wrap;\n  gap: 10px;\n  margin: 12px 0;\n}\n.segment-max {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: end;\n  gap: 8px 12px;\n}\n.segment-max .field {\n  flex: 0 1 220px;\n}\n.segment-max-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  padding-bottom: 4px;\n}\n.segment-max small {\n  flex-basis: 100%;\n}\n.api-picker {\n  flex: 1;\n  min-width: 180px;\n}\n.api-editor {\n  margin-top: 16px;\n}\n.api-status {\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--gold);\n  font-size: 13px;\n}\n#source-panel fieldset {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  margin: 16px 0;\n  padding: 14px;\n  min-width: 0;\n}\n#source-panel legend {\n  color: var(--gold);\n  padding: 0 6px;\n  font-size: 13.5px;\n}\n#source-panel fieldset:disabled {\n  opacity: 0.55;\n}\n.source-list {\n  max-height: 300px;\n  overflow: auto;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 6px 12px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.source-group {\n  position: sticky;\n  top: -6px;\n  margin: 8px -12px 4px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--gold);\n  background: var(--ink);\n  border-bottom: 1px solid var(--line);\n}\n.source-entry {\n  display: flex;\n  align-items: start;\n  gap: 10px;\n  padding: 6px 0;\n  font-size: 13px;\n}\n.source-entry small {\n  display: block;\n  font-size: 11.5px;\n}\n.source-disabled span {\n  opacity: 0.65;\n}\n.source-book[hidden],\n.source-entry[hidden] {\n  display: none;\n}\n.source-rule {\n  display: grid;\n  grid-template-columns: 1fr 1fr auto;\n  gap: 8px;\n  margin: 8px 0;\n}\n.source-rule input {\n  min-width: 0;\n}\n.source-toggles {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px 18px;\n}\n.segment {\n  display: grid;\n  gap: 8px;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 10px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.segment-head {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.segment-head input[data-seg='name'] {\n  flex: 1;\n  min-width: 120px;\n}\n.segment textarea {\n  min-height: 70px;\n  resize: vertical;\n  width: 100%;\n}\n.legend {\n  margin-bottom: 14px;\n  font-size: 13px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend code {\n  color: var(--gold);\n}\n\n/* ---------- Responsive ---------- */\n@media (max-width: 1280px) {\n  .nation-bar {\n    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1.2fr);\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: flex-end;\n    margin-top: -4px;\n  }\n  .nation-copy p {\n    -webkit-line-clamp: 1;\n  }\n}\n@media (max-width: 1100px) {\n  .brand,\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n}\n@media (max-width: 1000px) {\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    gap: 12px 16px;\n  }\n  .agenda {\n    grid-column: 1/-1;\n    order: 3;\n  }\n  .nation-actions {\n    order: 4;\n  }\n  :host {\n    --drawer: 340px;\n  }\n}\n@media (max-width: 760px) {\n  .shell {\n    inset: 0;\n    border-radius: 0;\n    border: 0;\n  }\n  .command {\n    gap: 8px;\n    padding: 6px 8px;\n    min-height: 52px;\n  }\n  .brand-mark {\n    width: 34px;\n    height: 34px;\n  }\n  .nation-tabs,\n  .date-chip,\n  .test-label {\n    display: none;\n  }\n  .nation-picker {\n    display: block;\n  }\n  .command-spacer {\n    display: none;\n  }\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n  .cmd-btn.busy {\n    width: auto;\n    padding: 0 8px;\n  }\n  .cmd-btn.busy .cmd-text {\n    display: inline;\n  }\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    padding: 10px 12px;\n    gap: 10px;\n  }\n  .nation-crest {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-copy h2 {\n    font-size: 18px;\n  }\n  .nation-copy p {\n    display: none;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: 72px;\n  }\n  .gauge-head {\n    display: grid;\n  }\n  .gauge-head small {\n    font-size: 10.5px;\n    white-space: nowrap;\n  }\n  .gauge-head strong {\n    font-size: 18px;\n  }\n  .agenda {\n    padding: 7px 10px 7px 8px;\n    grid-template-columns: 38px 1fr;\n  }\n  .agenda-icon {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: stretch;\n    margin: 0;\n  }\n  .nation-actions > * {\n    flex: 1;\n  }\n  .control-select select {\n    width: 100%;\n  }\n  .routes {\n    top: 0;\n    left: 0;\n    bottom: 0;\n    width: min(320px, 86%);\n    max-height: none;\n    border-radius: 0 12px 12px 0;\n  }\n  .minimap,\n  .stage-hint {\n    display: none;\n  }\n  .stage.with-drawer .demo-pop {\n    right: 12px;\n  }\n  .drawer {\n    top: auto;\n    left: 0;\n    width: auto;\n    height: 72%;\n    border-left: 0;\n    border-top: 1px solid var(--line-strong);\n    border-radius: 16px 16px 0 0;\n    transform: translateY(100%);\n    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);\n  }\n  .drawer::before {\n    content: '';\n    display: block;\n    width: 44px;\n    height: 4px;\n    border-radius: 2px;\n    background: var(--line-strong);\n    margin: 8px auto 0;\n  }\n  .drawer.open {\n    transform: none;\n  }\n  .stage.with-drawer .stage-tools {\n    right: 12px;\n  }\n  .statusline .status-mid {\n    display: none;\n  }\n  .modal-backdrop {\n    padding: 0;\n    place-items: end stretch;\n  }\n  .modal {\n    max-height: 94dvh;\n    border-radius: 16px 16px 0 0;\n  }\n  .modal-body {\n    padding: 14px;\n  }\n  .form-grid,\n  .source-toggles {\n    grid-template-columns: 1fr;\n  }\n  .job-log {\n    grid-template-columns: 80px 1fr;\n  }\n  .job-log > div:last-child {\n    grid-column: 1/-1;\n    justify-content: flex-start;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  *,\n  *::before {\n    animation: none !important;\n    transition: none !important;\n  }\n}\n@media (max-width: 1200px) {\n  .stage.with-drawer .minimap {\n    display: none;\n  }\n}\n.demo-pop[open] button {\n  width: 100%;\n  text-align: left;\n}\n\n/* ---------- Tasks tab (任務) ---------- */\n.preset-bar {\n  padding: 14px 16px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));\n  margin-bottom: 14px;\n}\n.preset-title {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.preset-title h3 {\n  margin: 0;\n}\n.preset-title small {\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n}\n.preset-row {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.preset-row select {\n  flex: 1 1 200px;\n  min-width: 0;\n}\n.preset-row input[data-preset-name] {\n  flex: 1 1 160px;\n  min-width: 0;\n}\n.preset-bar .api-status:empty {\n  display: none;\n}\n.preset-bar .api-status {\n  margin: 8px 0 0;\n}\n.task-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 8px;\n  margin-bottom: 14px;\n}\n.task-tab {\n  display: grid;\n  gap: 3px;\n  text-align: left;\n  padding: 10px 12px;\n  background: var(--raised);\n  border-color: var(--line);\n  min-width: 0;\n}\n.task-tab strong {\n  font-family: var(--serif);\n  font-size: 14.5px;\n  font-weight: 600;\n}\n.task-tab small {\n  color: var(--faint);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.task-tab.active {\n  border-color: var(--gold);\n  background: var(--raised-2);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.task-tab.active strong {\n  color: var(--gold);\n}\n.task-editor[hidden] {\n  display: none;\n}\n.task-head {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.task-head h3 {\n  margin: 0;\n}\n.task-head small {\n  color: var(--muted);\n  font-size: 12.5px;\n}\n.task-block {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  background: var(--raised);\n  padding: 0 14px;\n  margin-bottom: 12px;\n}\n.task-block > summary {\n  cursor: pointer;\n  padding: 11px 0;\n  font-weight: 600;\n  color: var(--gold);\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.task-block > summary::-webkit-details-marker {\n  display: none;\n}\n.task-block > summary::before {\n  content: '▸';\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.task-block[open] > summary::before {\n  transform: rotate(90deg);\n}\n.task-block[open] {\n  padding-bottom: 14px;\n}\n.task-block .summary-note {\n  margin-left: auto;\n  font-weight: 400;\n  font-size: 12px;\n  color: var(--muted);\n}\n.block-note {\n  display: block;\n  margin-top: 8px;\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.route-row {\n  display: grid;\n  grid-template-columns: 1fr 120px auto;\n  gap: 10px;\n  align-items: end;\n  margin-bottom: 10px;\n}\n.route-row > .field:first-child:last-of-type {\n  grid-column: 1/3;\n}\n.route-row button {\n  height: 36px;\n}\n.prompt-toolbar {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n  margin-bottom: 10px;\n}\n.prompt-toolbar .spacer {\n  flex: 1;\n}\n.prompt-toolbar small {\n  color: var(--muted);\n  font-size: 12px;\n}\n.prompt-list {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 10px;\n}\n.prompt-card {\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  background: #1b2420;\n  transition:\n    border-color 0.15s,\n    opacity 0.15s;\n}\n.prompt-card.open {\n  border-color: var(--line-strong);\n}\n.prompt-card[data-kind='data'] {\n  border-left: 3px solid var(--blue);\n}\n.prompt-card[data-kind='guide'],\n.prompt-card[data-kind='task'] {\n  border-left: 3px solid var(--gold-deep);\n}\n.prompt-card[data-kind='custom'] {\n  border-left: 3px solid var(--green);\n}\n.prompt-card.off {\n  opacity: 0.55;\n}\n.prompt-card.off .pname {\n  text-decoration: line-through;\n  text-decoration-color: var(--faint);\n}\n.prompt-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 4px 6px 4px 4px;\n}\n.prompt-toggle {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 0;\n  background: transparent;\n  padding: 6px 8px;\n  text-align: left;\n}\n.prompt-toggle:hover:not(:disabled) {\n  background: rgba(255, 255, 255, 0.03);\n}\n.prompt-toggle .chev {\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.prompt-card.open .chev {\n  transform: rotate(90deg);\n}\n.pname {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-weight: 600;\n}\n.role-tag,\n.kind-tag {\n  flex: none;\n  font-size: 10.5px;\n  padding: 1px 7px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  color: var(--muted);\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n}\n.kind-tag {\n  font-family: inherit;\n}\n.kind-tag.data {\n  color: var(--blue);\n  border-color: rgba(143, 176, 214, 0.4);\n}\n.kind-tag.custom {\n  color: var(--green);\n  border-color: rgba(114, 196, 146, 0.4);\n}\n.kind-tag.modified {\n  color: var(--amber);\n  border-color: rgba(230, 169, 80, 0.45);\n}\n.pchars {\n  flex: none;\n  margin-left: auto;\n  font-size: 11px;\n  color: var(--faint);\n}\n.switch {\n  flex: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 12px;\n  color: var(--muted);\n  cursor: pointer;\n}\n.switch input {\n  appearance: none;\n  width: 30px;\n  height: 17px;\n  border-radius: 99px;\n  background: #0f1512;\n  border: 1px solid var(--line-strong);\n  position: relative;\n  margin: 0;\n  padding: 0;\n  cursor: pointer;\n  transition: background 0.15s;\n}\n.switch input::after {\n  content: '';\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 11px;\n  height: 11px;\n  border-radius: 50%;\n  background: var(--faint);\n  transition:\n    transform 0.15s,\n    background 0.15s;\n}\n.switch input:checked {\n  background: rgba(114, 196, 146, 0.25);\n  border-color: var(--green);\n}\n.switch input:checked::after {\n  transform: translateX(13px);\n  background: var(--green);\n}\n.switch input:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.switch span {\n  display: none;\n}\nbutton.icon {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  display: inline-grid;\n  place-items: center;\n  flex: none;\n}\n.prompt-body {\n  padding: 4px 12px 12px;\n  display: grid;\n  gap: 8px;\n}\n.prompt-body[hidden] {\n  display: none;\n}\n.prompt-fields {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n.prompt-fields input {\n  flex: 1 1 180px;\n  min-width: 0;\n}\n.prompt-fields select {\n  flex: 0 0 120px;\n}\n.prompt-body textarea {\n  width: 100%;\n  resize: vertical;\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12.5px;\n  line-height: 1.6;\n}\n.prompt-body small {\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.prompt-preview {\n  margin-top: 12px;\n}\n.prompt-preview textarea {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.55;\n  min-height: 260px;\n}\n.legend {\n  font-size: 12.5px;\n  color: var(--muted);\n  margin-bottom: 10px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend ul {\n  margin: 8px 0 0;\n  padding-left: 18px;\n  line-height: 1.8;\n}\n.legend code {\n  color: var(--text);\n}\n\n/* ---------- Progress window above the orb ---------- */\n.hud {\n  position: fixed;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: rgba(22, 30, 26, 0.96);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow:\n    0 14px 40px rgba(0, 0, 0, 0.55),\n    inset 0 1px 0 rgba(220, 194, 124, 0.08);\n  backdrop-filter: blur(6px);\n  color: var(--text);\n  font-size: 13px;\n  overflow: hidden;\n}\n.hud[hidden] {\n  display: none;\n}\n.hud.enter {\n  animation: hud-in 0.18s ease-out;\n}\n@keyframes hud-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n}\n.hud[data-side='below'].enter {\n  animation-name: hud-in-below;\n}\n@keyframes hud-in-below {\n  from {\n    opacity: 0;\n    transform: translateY(-6px);\n  }\n}\n.hud-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 7px 8px 7px 12px;\n  cursor: grab;\n  user-select: none;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n}\n.hud-head:active {\n  cursor: grabbing;\n}\n.hud-head .status-dot {\n  margin-right: 2px;\n  flex: none;\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.hud-head strong {\n  font-family: var(--serif);\n  color: var(--gold);\n  letter-spacing: 0.06em;\n  flex: none;\n}\n.hud-count {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--muted);\n  font-size: 12px;\n}\n.hud-actions {\n  margin-left: auto;\n  display: flex;\n  gap: 4px;\n  flex: none;\n}\n.hud-actions button {\n  padding: 3px 8px;\n  font-size: 12px;\n}\n.hud-actions button.icon {\n  width: 26px;\n  height: 26px;\n  padding: 0;\n}\n.hud-actions button[hidden] {\n  display: none;\n}\n.hud-bar {\n  height: 3px;\n  background: rgba(220, 194, 124, 0.12);\n  position: relative;\n  overflow: hidden;\n  flex: none;\n}\n.hud-bar i {\n  position: absolute;\n  inset: 0 auto 0 0;\n  background: var(--gold);\n  transition: width 0.3s;\n}\n.hud-bar.indeterminate i {\n  width: 35% !important;\n  animation: hud-slide 1.3s ease-in-out infinite;\n}\n@keyframes hud-slide {\n  from {\n    left: -35%;\n  }\n  to {\n    left: 100%;\n  }\n}\n.hud-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 0;\n  overflow: auto;\n  min-height: 0;\n}\n.hud-list[hidden] {\n  display: none;\n}\n.hud-item {\n  display: grid;\n  grid-template-columns: 18px minmax(0, 1fr) auto auto;\n  gap: 8px;\n  align-items: center;\n  padding: 6px 8px 6px 12px;\n  animation: hud-in 0.18s ease-out;\n}\n.hud-item + .hud-item {\n  border-top: 1px solid rgba(217, 191, 120, 0.07);\n}\n.hud-item .spinner {\n  width: 13px;\n  height: 13px;\n}\n.hud-sym {\n  font-style: normal;\n  font-weight: 700;\n  text-align: center;\n  width: 16px;\n  height: 16px;\n  line-height: 16px;\n  border-radius: 50%;\n  font-size: 11px;\n}\n.hud-sym.ok {\n  color: #0f1512;\n  background: var(--green);\n}\n.hud-sym.bad {\n  color: #0f1512;\n  background: var(--red);\n}\n.hud-sym.wait,\n.hud-sym.off {\n  color: var(--muted);\n  border: 1px solid var(--line-strong);\n  line-height: 14px;\n}\n.hud-text {\n  min-width: 0;\n  display: grid;\n}\n.hud-text b {\n  font-weight: 600;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-text small {\n  color: var(--muted);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-item.failed .hud-text small {\n  color: #f0a898;\n  white-space: normal;\n  display: -webkit-box;\n  -webkit-line-clamp: 3;\n  -webkit-box-orient: vertical;\n}\n.hud-item.success .hud-text b {\n  color: var(--green);\n}\n.hud-item.cancelled,\n.hud-item.stale {\n  opacity: 0.7;\n}\n.hud-item time {\n  font-variant-numeric: tabular-nums;\n  color: var(--faint);\n  font-size: 11.5px;\n}\n.hud-item button.icon {\n  width: 22px;\n  height: 22px;\n  border-color: transparent;\n  background: transparent;\n  color: var(--faint);\n}\n.hud.collapsed .hud-head {\n  border-bottom: 0;\n}\n\n@media (max-width: 760px) {\n  .task-tabs {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n  .route-row {\n    grid-template-columns: 1fr 90px;\n  }\n  .route-row > button {\n    grid-column: 1/-1;\n  }\n  .route-row > .field:first-child:last-of-type {\n    grid-column: 1/-1;\n  }\n  .pchars,\n  .role-tag {\n    display: none;\n  }\n  .hud-actions button[data-hud='log'] {\n    display: none;\n  }\n}\n.task-block.prompts-block {\n  padding: 12px 14px 14px;\n}\n.prompt-toolbar h4 {\n  margin: 0;\n  color: var(--gold);\n  font-size: 14px;\n}\n.prompts-block > .muted {\n  font-size: 12.5px;\n  margin: 0 0 8px;\n}\n.task-editor input:not([type='checkbox']),\n.task-editor select,\n.preset-row input,\n.preset-row select,\n.preset-row button,\n.route-row button {\n  height: 38px;\n}\n.task-editor .prompt-body input {\n  height: 36px;\n}\n\n/* ---------- Country manager: delete tree ---------- */\n.country-row {\n  align-items: center;\n}\n.country-row .row-spacer {\n  flex: 1;\n}\n.remove-confirm {\n  flex-basis: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 12px;\n  border: 1px solid rgba(217, 112, 95, 0.45);\n  border-radius: 8px;\n  background: rgba(217, 112, 95, 0.08);\n}\n.remove-confirm small {\n  flex: 1 1 260px;\n  color: #f0c2b8;\n  line-height: 1.6;\n}\n\n/* ---------- Country manager: tree files ---------- */\n.tree-io h3 {\n  margin-bottom: 4px;\n}\n.tree-io > small {\n  display: block;\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n  margin-bottom: 10px;\n}\n.tree-io-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.tree-io .api-status {\n  margin: 8px 0 0;\n}\n.import-panel {\n  margin-top: 12px;\n  padding: 12px 14px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: var(--raised);\n  display: grid;\n  gap: 10px;\n}\n.import-panel h4 {\n  margin: 0;\n  color: var(--gold);\n}\n.import-panel ul {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.8;\n}\n.import-panel code {\n  font-size: 11.5px;\n  color: var(--muted);\n}\n.import-panel .warn {\n  color: var(--amber);\n}\n.tree-io {\n  margin-bottom: 18px;\n}\n\n/* ---------- News window (國際快訊) ---------- */\n.event-timeline {\n  margin: 6px 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.7;\n  color: var(--muted);\n}\n.event-timeline b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-current {\n  font-size: 13px;\n}\n.event-current b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-steps {\n  list-style: none;\n  margin: 6px 0;\n  padding: 0;\n  font-size: 13px;\n  line-height: 1.7;\n}\n.event-steps li::before {\n  display: inline-block;\n  width: 1.4em;\n  color: var(--muted);\n}\n.event-steps li.done {\n  color: var(--muted);\n  text-decoration: line-through;\n}\n.event-steps li.done::before {\n  content: '✓';\n}\n.event-steps li.active {\n  color: var(--gold);\n  font-weight: 700;\n}\n.event-steps li.active::before {\n  content: '▶';\n}\n.event-steps li.pending::before {\n  content: '○';\n}\n.event-steps li.planned {\n  font-style: italic;\n}\n.event-steps li.planned::before {\n  content: '◷';\n}\n.event-effects {\n  display: block;\n  color: var(--gold);\n}\n.node-pivot {\n  position: absolute;\n  top: 3px;\n  right: 22px;\n  font-size: 12px;\n  color: var(--gold);\n  text-shadow: 0 0 6px rgba(220, 194, 124, 0.6);\n}\n.pivotal-note {\n  border-left: 3px solid var(--gold);\n  padding-left: 10px;\n}\n.rel-core {\n  border: 1px solid var(--gold);\n  border-radius: 10px;\n  padding: 10px 14px;\n  margin: 10px 0 14px;\n  background: rgba(220, 194, 124, 0.08);\n}\n.rel-core h3,\n.rel-independent h3 {\n  margin: 0 0 6px;\n  font-size: 15px;\n}\n.rel-list {\n  list-style: none;\n  padding: 0;\n  margin: 0;\n  display: grid;\n  gap: 10px;\n}\n.rel-card {\n  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));\n  border-radius: 10px;\n  padding: 10px 12px;\n}\n.rel-card p {\n  margin: 6px 0;\n}\n.rel-pair {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-top: 6px;\n}\n.rel-branch {\n  color: var(--muted);\n}\n.rel-arrow {\n  color: var(--gold);\n}\n.rel-via {\n  margin: 4px 0 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: var(--muted);\n}\n.rel-independent {\n  margin-top: 14px;\n}\n.rel-independent dt {\n  font-weight: 600;\n}\n.rel-independent dd {\n  margin: 0 0 8px;\n  color: var(--muted);\n}\n\n.job-message {\n  white-space: pre-line;\n  overflow-wrap: anywhere;\n}\n\n/* v0.13.1 UI review */\n.status-jobs {\n  color: var(--muted);\n  display: inline-flex;\n  align-items: center;\n}\n.status-jobs.failed {\n  color: var(--red);\n}\n.status-jobs.busy {\n  color: var(--gold);\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.cmd-btn {\n  position: relative;\n}\n.alert-dot {\n  position: absolute;\n  top: 4px;\n  right: 4px;\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  background: var(--red);\n  box-shadow: 0 0 0 2px var(--bg);\n}\n.lock-confirm {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.lock-confirm p {\n  margin: 0 0 8px;\n  font-size: 13px;\n}\n.lock-confirm strong {\n  color: var(--amber);\n}\n.lock-confirm .row {\n  display: flex;\n  gap: 8px;\n}\n.job-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  padding-bottom: 12px;\n  margin-bottom: 8px;\n  border-bottom: 1px solid var(--line);\n}\n.job-buttons {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  justify-content: flex-end;\n}\n.job-detail summary {\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--muted);\n}\n.job-detail p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n.event-filters {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-bottom: 12px;\n}\n.event-filters select {\n  width: auto;\n  min-width: 140px;\n}\n.event-filters small {\n  margin-left: auto;\n  color: var(--muted);\n}\n.chip.active {\n  border-color: var(--gold);\n  color: var(--gold);\n  background: rgba(220, 194, 124, 0.1);\n}\n.country-row {\n  flex-wrap: wrap;\n  gap: 10px 14px;\n}\n.country-name {\n  min-width: 7em;\n}\n.switch-label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13px;\n}\n.tree-io > summary {\n  cursor: pointer;\n  color: var(--gold);\n  font-weight: 700;\n  margin-bottom: 8px;\n}\n.task-head {\n  flex-wrap: wrap;\n}\n.task-head .spacer {\n  flex: 1;\n}\n.last-run {\n  color: var(--muted);\n}\n.field .static {\n  margin: 6px 0 0;\n  font-size: 13px;\n  color: var(--muted);\n}\n.unsaved {\n  margin-right: auto;\n  color: var(--amber);\n  font-size: 13px;\n}\n.field[hidden] {\n  display: none;\n}\n.modal-jobs {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  margin: 0 12px 0 auto;\n  min-width: 0;\n  max-width: 55%;\n  font-size: 12px;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.modal-jobs[hidden] {\n  display: none;\n}\n.modal-jobs.failed {\n  color: var(--red);\n}\n.modal-jobs .spinner {\n  flex: none;\n  width: 12px;\n  height: 12px;\n}\n.modal-jobs .status-dot {\n  margin-right: 0;\n}\n.status-jobs {\n  max-width: 60vw;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;\n   the control select and 更新局勢 open from ⋯ (the top picker lists names only). */\n.nation-more-btn,\n.control-tag {\n  display: none;\n}\n@media (max-width: 760px) {\n  .nation-bar {\n    grid-template-columns: minmax(0, 1fr) auto auto;\n    padding: 6px 10px 8px;\n    gap: 6px 10px;\n  }\n  .nation-crest {\n    display: none;\n  }\n  .nation-copy h2 {\n    font-size: 16px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .control-tag {\n    display: block;\n    font-size: 11px;\n    color: var(--muted);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: auto;\n    min-width: 44px;\n  }\n  .gauge-head {\n    display: grid;\n    line-height: 1.1;\n  }\n  .gauge-head small {\n    font-size: 10px;\n  }\n  .gauge-head strong {\n    font-size: 16px;\n  }\n  .gauge-track {\n    height: 3px;\n    margin-top: 2px;\n  }\n  .nation-more-btn {\n    display: grid;\n    place-items: center;\n    width: 34px;\n    height: 34px;\n    padding: 0;\n    font-size: 18px;\n  }\n  .nation-more-btn[aria-expanded='true'] {\n    border-color: var(--gold);\n    color: var(--gold);\n  }\n  .agenda {\n    grid-column: 1/-1;\n    grid-template-columns: minmax(0, 1fr);\n    padding: 5px 10px;\n  }\n  .agenda-icon,\n  .agenda-copy small,\n  .agenda-meta > span + span {\n    display: none;\n  }\n  .agenda-copy {\n    grid-template-columns: minmax(0, auto) minmax(40px, 1fr) auto;\n    align-items: center;\n    column-gap: 8px;\n  }\n  .agenda-copy strong {\n    font-size: 14px;\n  }\n  .agenda-bar {\n    margin: 0;\n    height: 5px;\n  }\n  .empty-agenda .agenda-copy {\n    grid-template-columns: auto minmax(0, 1fr);\n  }\n  .empty-agenda .agenda-meta > span {\n    display: block;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .nation-actions {\n    display: none;\n  }\n  .nation-bar.more-open .nation-actions {\n    display: flex;\n  }\n}\n\n/* v0.13.3: settings and details additions */\n.notice {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 12px;\n  background: rgba(230, 169, 80, 0.08);\n  color: #f0c49a;\n  font-size: 13px;\n}\n.api-actions.confirm-row {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 10px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.block-note.model-hint {\n  color: #f0c49a;\n}\n.source-scope {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px 12px;\n  padding: 8px 12px;\n  margin: 4px 0 6px;\n  border: 1px solid var(--line-strong);\n  border-radius: 8px;\n  background: var(--raised);\n}\n.source-scope.custom {\n  border-color: var(--gold);\n}\n.source-scope b {\n  color: var(--gold);\n}\n.source-scope label {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\ndetails.fold > summary {\n  cursor: pointer;\n  color: var(--muted);\n  font-size: 12.5px;\n  list-style: none;\n}\ndetails.fold > summary::before {\n  content: '▸ ';\n}\ndetails.fold[open] > summary::before {\n  content: '▾ ';\n}\ndetails.detail-section.fold > summary h4 {\n  display: inline;\n  margin: 0;\n}\ndetails.detail-section.fold > summary::before {\n  color: var(--gold);\n}\n.source-modes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;\n  gap: 10px;\n  align-items: end;\n}\n@media (max-width: 760px) {\n  .source-modes {\n    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  }\n  .source-modes > button {\n    grid-column: 1/-1;\n  }\n}\n.api-actions.api-save {\n  align-items: center;\n  position: sticky;\n  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */\n  bottom: -18px;\n  margin-bottom: -18px;\n  padding-bottom: 18px !important;\n  z-index: 2;\n  padding: 10px 0;\n  background: var(--panel);\n  border-top: 1px solid var(--line);\n}\n.api-actions.api-save .api-status {\n  margin: 0;\n  flex: 1 1 200px;\n}\n@media (max-width: 760px) {\n  .api-actions.api-save {\n    bottom: -14px;\n    margin-bottom: -14px;\n    padding-bottom: 14px !important;\n  }\n}\n\n/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */\n.period-strip {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  padding: 8px 18px;\n  border-bottom: 1px solid var(--line);\n  background: var(--panel);\n  flex-shrink: 0;\n}\n.period-copy {\n  flex: 1;\n  min-width: 0;\n}\n.period-copy strong {\n  display: block;\n  color: var(--gold);\n  font-size: 13px;\n}\n.period-copy small {\n  display: block;\n  color: var(--muted);\n  font-size: 11px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.period-toggle {\n  white-space: nowrap;\n  font-size: 12px;\n}\n.period-strip button {\n  font-size: 12px;\n  white-space: nowrap;\n}\n.period-anchor-note {\n  display: flex;\n  flex-direction: column;\n  gap: 5px;\n  margin-bottom: 14px;\n  border-left: 2px solid var(--blue);\n  padding: 10px 12px;\n  background: var(--raised);\n  font-size: 12px;\n}\n.period-anchor-note strong {\n  color: var(--blue);\n}\n.period-anchor-badge {\n  position: absolute;\n  top: -18px;\n  right: 0;\n  font-size: 10px;\n  line-height: 16px;\n  padding: 0 5px;\n  color: var(--blue);\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 3px;\n}\n.period-history {\n  margin: 14px 0;\n  border-left: 2px solid var(--gold-deep);\n  padding: 4px 16px;\n}\n.period-history time {\n  color: var(--gold);\n  font-size: 12px;\n}\n.period-history p {\n  line-height: 1.95;\n}\n@media (max-width: 760px) {\n  .period-strip {\n    gap: 8px;\n    padding: 8px 12px;\n    flex-wrap: wrap;\n  }\n  .period-copy {\n    flex-basis: 100%;\n  }\n  .period-copy small {\n    white-space: normal;\n  }\n  .period-strip button {\n    margin-left: auto;\n  }\n}\n";
 
   // src/api-panel.ts
-  var escape3 = (value) => String(value ?? "").replace(
+  var escape4 = (value) => String(value ?? "").replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
@@ -32522,8 +33602,8 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
       return location === "tavern" ? "API 金鑰另存於酒館擴充設定（隨帳號保存，並以 IndexedDB 備份），不會寫入樓層變量、劇情或匯出檔。" : location === "memory" ? "離線測試頁：保存只留在本頁記憶體，重新整理即清除。" : "找不到酒館擴充設定，金鑰暫存於此瀏覽器的 localStorage（未加密）；不寫入樓層變量或劇情。";
     }
     function render() {
-      const field = (key, label2, type = "text", extra = "") => `<label class="field">${label2}<input data-api-field="${key}" type="${type}" value="${escape3(draft[key])}" ${extra}></label>`;
-      const textarea = (key, label2, hint, placeholder) => `<label class="field wide">${label2}<small>${hint}</small><textarea data-api-field="${key}" rows="3" placeholder="${escape3(placeholder)}">${escape3(draft[key])}</textarea></label>`;
+      const field = (key, label2, type = "text", extra = "") => `<label class="field">${label2}<input data-api-field="${key}" type="${type}" value="${escape4(draft[key])}" ${extra}></label>`;
+      const textarea = (key, label2, hint, placeholder) => `<label class="field wide">${label2}<small>${hint}</small><textarea data-api-field="${key}" rows="3" placeholder="${escape4(placeholder)}">${escape4(draft[key])}</textarea></label>`;
       let deep = { strict: false, cot: false };
       try {
         deep = deepSeekOptions(draft);
@@ -32531,13 +33611,13 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
       }
       host.innerHTML = `<h3>API 預設</h3><p class="muted">切換目前聊天的預設；★ 為未指定聊天使用的全域預設。各項任務可另外指定主要與備援連線。修改內容按下方「保存預設」保存，不會關閉視窗；頁尾「儲存設定」也會一併保存。</p>
       ${legacyStrict.length ? `<p class="notice">舊版設定中「${legacyStrict.map((kind) => taskNames[kind]).join("」「")}」在任務設定開啟了嚴格 JSON。此選項已改到這裡：請在這些任務使用的 API 預設勾選「嚴格 JSON 回應」。儲存設定後不再提示。</p>` : ""}
-      <div class="api-actions"><label class="field api-picker">目前 API 預設<select data-api-select>${original === null ? '<option value="" selected>新增預設（尚未保存）</option>' : ""}${controller2.config.apis.map((api) => `<option value="${escape3(api.name)}" ${api.name === original ? "selected" : ""}>${api.name === controller2.config.defaultApi ? "★ " : ""}${escape3(api.name)}</option>`).join("")}</select></label><button data-api-action="default" ${original === null ? "disabled" : ""} title="設為全域預設">${original === controller2.config.defaultApi ? "★ 全域預設" : "☆ 設為全域預設"}</button><button data-api-action="new">＋ 新增</button><button data-api-action="delete" ${original === null || controller2.config.apis.length === 1 ? "disabled" : ""}>刪除</button></div>
-      ${pending ? `<div class="api-actions confirm-row"><span>「${escape3(savedDraft.name)}」有未儲存的修改。</span><button class="primary" data-api-action="switch-save">儲存後${pending.name === null ? "新增" : "切換"}</button><button class="danger" data-api-action="switch-discard">放棄修改</button><button data-api-action="switch-cancel">取消</button></div>` : ""}
+      <div class="api-actions"><label class="field api-picker">目前 API 預設<select data-api-select>${original === null ? '<option value="" selected>新增預設（尚未保存）</option>' : ""}${controller2.config.apis.map((api) => `<option value="${escape4(api.name)}" ${api.name === original ? "selected" : ""}>${api.name === controller2.config.defaultApi ? "★ " : ""}${escape4(api.name)}</option>`).join("")}</select></label><button data-api-action="default" ${original === null ? "disabled" : ""} title="設為全域預設">${original === controller2.config.defaultApi ? "★ 全域預設" : "☆ 設為全域預設"}</button><button data-api-action="new">＋ 新增</button><button data-api-action="delete" ${original === null || controller2.config.apis.length === 1 ? "disabled" : ""}>刪除</button></div>
+      ${pending ? `<div class="api-actions confirm-row"><span>「${escape4(savedDraft.name)}」有未儲存的修改。</span><button class="primary" data-api-action="switch-save">儲存後${pending.name === null ? "新增" : "切換"}</button><button class="danger" data-api-action="switch-discard">放棄修改</button><button data-api-action="switch-cancel">取消</button></div>` : ""}
       ${deletePending ? '<div class="api-actions"><span>刪除此預設？引用它的任務將改為跟隨目前預設。</span><button data-api-action="confirm-delete">確認刪除</button><button data-api-action="cancel-delete">取消</button></div>' : ""}
       <div class="form-grid api-editor">
       ${field("name", "預設名稱")}${field("url", "端點（基礎 URL）", "url", 'placeholder="https://example.com/v1"')}
       ${field("apiKey", "API 金鑰", "password", 'autocomplete="off"')}${field("proxy", "酒館代理預設名稱（選填）")}
-      ${field("model", "模型名稱（可手動輸入）")}<label class="field">模型列表<select data-api-model ${models.length ? "" : "disabled"}><option value="">${models.length ? "選擇模型，或保留手動名稱" : "請先載入模型"}</option>${models.map((name) => `<option value="${escape3(name)}" ${name === draft.model ? "selected" : ""}>${escape3(name)}</option>`).join("")}</select></label>
+      ${field("model", "模型名稱（可手動輸入）")}<label class="field">模型列表<select data-api-model ${models.length ? "" : "disabled"}><option value="">${models.length ? "選擇模型，或保留手動名稱" : "請先載入模型"}</option>${models.map((name) => `<option value="${escape4(name)}" ${name === draft.model ? "selected" : ""}>${escape4(name)}</option>`).join("")}</select></label>
       <div class="wide api-actions"><button data-api-action="models" ${busy ? "disabled" : ""}>${busy ? "載入中…" : "載入模型"}</button><small>使用上方 URL 與金鑰取得清單；未列出的模型可手動輸入。</small></div>
       ${field("maxTokens", "最大回覆長度（Token）", "number", 'min="1" step="1"')}${field("temperature", "Temperature", "number", 'min="0" max="2" step="0.05"')}
       <label class="check wide"><input type="checkbox" data-api-strict ${deep.strict ? "checked" : ""}>嚴格 JSON 回應<small>要求模型只回傳 JSON：加入 response_format: json_object、strict 後處理，並排除 top_p 與 reasoning_effort。關閉只移除 response_format。需指定 URL；供應商不支援時請關閉。所有使用此預設的任務都套用。</small></label>
@@ -32550,7 +33630,7 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
       ${textarea("excludeBodyParams", "排除主體參數", "逗號、換行或 YAML 列表，從請求體移除指定欄位。", "top_p, reasoning_effort")}
       ${textarea("requestHeaders", "附加請求標頭", "每行 Header: Value（YAML）；會加入自訂 API 請求。", "X-Custom-Header: value")}
       </div><p class="muted">URL、模型與代理皆空白時沿用酒館目前連線。進階參數需指定 URL 與模型。預設輸出 60,000 Token、Temperature 0.85。</p><p class="muted">${secretNotice()}</p>
-      <div class="api-actions api-save"><button data-api-action="discard">放棄修改</button><button class="primary" data-api-action="save">${original === null ? "保存並選用新預設" : "保存預設"}</button><p class="api-status" role="status">${escape3(status)}</p></div>`;
+      <div class="api-actions api-save"><button data-api-action="discard">放棄修改</button><button class="primary" data-api-action="save">${original === null ? "保存並選用新預設" : "保存預設"}</button><p class="api-status" role="status">${escape4(status)}</p></div>`;
     }
     const click = (event) => {
       const button = event.target.closest("[data-api-action]");
@@ -32732,7 +33812,7 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
   }
 
   // src/source-panel.ts
-  var escape4 = (value) => String(value ?? "").replace(
+  var escape5 = (value) => String(value ?? "").replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
@@ -32808,32 +33888,32 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
         const count = rows.filter(
           ({ entry }) => !entryExclusion(entry) && selectedEntry(entry, selected2)
         ).length;
-        return `<div class="source-group">${escape4(book)} · 已選 ${count}／${rows.length}</div>${rows.map(({ entry, index }) => {
+        return `<div class="source-group">${escape5(book)} · 已選 ${count}／${rows.length}</div>${rows.map(({ entry, index }) => {
           const excluded = entryExclusion(entry);
           const automatic = !excluded && settings.autoIncludeTables && tableEntry(entry);
           const text = `${entry.book} ${entry.name}`.toLowerCase();
-          return `<label class="source-entry ${entry.enabled ? "" : "source-disabled"}" data-filter-text="${escape4(text)}" ${text.includes(query) ? "" : "hidden"}><input type="checkbox" data-source-entry="${index}" ${automatic || !excluded && selectedEntry(entry, selected2) ? "checked" : ""} ${excluded || automatic ? "disabled" : ""}><span>${escape4(entry.name || `條目 ${entry.uid}`)}<small>${escape4(excluded || (automatic ? "資料庫表格 · 自動納入" : entry.strategy?.type === "constant" ? "常駐" : "關鍵字觸發"))} · ${entry.content.length.toLocaleString()} 字元${entry.enabled ? "" : " · 酒館停用"}</small></span></label>`;
+          return `<label class="source-entry ${entry.enabled ? "" : "source-disabled"}" data-filter-text="${escape5(text)}" ${text.includes(query) ? "" : "hidden"}><input type="checkbox" data-source-entry="${index}" ${automatic || !excluded && selectedEntry(entry, selected2) ? "checked" : ""} ${excluded || automatic ? "disabled" : ""}><span>${escape5(entry.name || `條目 ${entry.uid}`)}<small>${escape5(excluded || (automatic ? "資料庫表格 · 自動納入" : entry.strategy?.type === "constant" ? "常駐" : "關鍵字觸發"))} · ${entry.content.length.toLocaleString()} 字元${entry.enabled ? "" : " · 酒館停用"}</small></span></label>`;
         }).join("")}`;
       }).join("");
     }
     function render() {
       const context = contextConfig();
       const selection = bookConfig();
-      const ruleEditor = (key, name) => `<h4>${name}</h4><div data-rule-list="${key}">${context[key].map((rule, index) => `<div class="source-rule" data-rule-row="${index}"><input aria-label="開始詞" data-boundary="start" placeholder="開始詞，如 &lt;content" value="${escape4(rule.start)}"><input aria-label="結束詞" data-boundary="end" placeholder="結束詞，如 &lt;/content&gt;" value="${escape4(rule.end)}"><button data-source-action="delete-rule" data-rule-kind="${key}" data-rule-index="${index}">刪除</button></div>`).join("")}</div><button data-source-action="add-rule" data-rule-kind="${key}">＋ 新增${name}</button>`;
+      const ruleEditor = (key, name) => `<h4>${name}</h4><div data-rule-list="${key}">${context[key].map((rule, index) => `<div class="source-rule" data-rule-row="${index}"><input aria-label="開始詞" data-boundary="start" placeholder="開始詞，如 &lt;content" value="${escape5(rule.start)}"><input aria-label="結束詞" data-boundary="end" placeholder="結束詞，如 &lt;/content&gt;" value="${escape5(rule.end)}"><button data-source-action="delete-rule" data-rule-kind="${key}" data-rule-index="${index}">刪除</button></div>`).join("")}</div><button data-source-action="add-rule" data-rule-kind="${key}">＋ 新增${name}</button>`;
       const customized = jobKinds.filter((kind) => settings.overrides[kind]);
       const scope = target === "default" ? `<div class="source-scope"><span>正在編輯：<b>預設</b>（所有任務）</span>${customized.map((kind) => `<button data-source-action="target" data-target="${kind}">編輯「${labels[kind]}」專用</button>`).join("")}</div><small class="muted">要讓某項任務使用不同的世界書或上下文，到「任務」分頁把該任務的「世界書與上下文」改成「此任務自訂」。</small>` : `<div class="source-scope custom"><span>正在編輯：<b>${labels[target]}</b> 專用</span><label>世界書<select data-source-mode="worldbook"><option value="inherit">沿用預設</option><option value="custom" ${customBooks() ? "selected" : ""}>此任務自訂</option></select></label><label>上下文<select data-source-mode="context"><option value="inherit">沿用預設</option><option value="custom" ${customContext() ? "selected" : ""}>此任務自訂</option></select></label><button data-source-action="target" data-target="default">回到預設</button></div>`;
       host.innerHTML = `<h3>世界書與上下文</h3><p class="muted">只讀取所選來源。常駐條目直接納入；綠燈條目須命中整理後的上下文／補充提示詞，最多遞迴掃描 10 輪，不自動加入全域世界書。</p>
       ${scope}
-      <fieldset ${customBooks() ? "" : "disabled"}><legend>劇情世界書（對應 $1）</legend><label class="field">來源<select data-book-source><option value="character" ${selection.source === "character" ? "selected" : ""}>目前角色綁定</option><option value="manual" ${selection.source === "manual" ? "selected" : ""}>手動選擇世界書</option></select></label><small>目前角色綁定：${escape4(books.character.join("、") || "尚未載入／未綁定")}</small>
-      ${selection.source === "manual" ? `<label class="field">篩選世界書<input data-book-filter value="${escape4(bookFilter)}" placeholder="世界書名稱"></label><div class="source-list">${books.all.map((book) => `<label class="check source-book" ${book.toLowerCase().includes(bookFilter.toLowerCase()) ? "" : "hidden"} data-filter-text="${escape4(book.toLowerCase())}"><input type="checkbox" data-source-book="${escape4(book)}" ${selection.manualSelection.includes(book) ? "checked" : ""}>${escape4(book)}</label>`).join("")}</div><label class="field">手動選書（每行一項；空白就是不選書）<textarea data-manual-books>${escape4(selection.manualSelection.join("\n"))}</textarea></label>` : ""}
+      <fieldset ${customBooks() ? "" : "disabled"}><legend>劇情世界書（對應 $1）</legend><label class="field">來源<select data-book-source><option value="character" ${selection.source === "character" ? "selected" : ""}>目前角色綁定</option><option value="manual" ${selection.source === "manual" ? "selected" : ""}>手動選擇世界書</option></select></label><small>目前角色綁定：${escape5(books.character.join("、") || "尚未載入／未綁定")}</small>
+      ${selection.source === "manual" ? `<label class="field">篩選世界書<input data-book-filter value="${escape5(bookFilter)}" placeholder="世界書名稱"></label><div class="source-list">${books.all.map((book) => `<label class="check source-book" ${book.toLowerCase().includes(bookFilter.toLowerCase()) ? "" : "hidden"} data-filter-text="${escape5(book.toLowerCase())}"><input type="checkbox" data-source-book="${escape5(book)}" ${selection.manualSelection.includes(book) ? "checked" : ""}>${escape5(book)}</label>`).join("")}</div><label class="field">手動選書（每行一項；空白就是不選書）<textarea data-manual-books>${escape5(selection.manualSelection.join("\n"))}</textarea></label>` : ""}
       <div class="api-actions"><button data-source-action="load">載入／刷新世界書與條目</button><button data-source-action="all">全選啟用條目</button><button data-source-action="none">全不選</button></div><p class="muted">全不選會保存為空清單，不會回退成全選。酒館停用條目可以個別勾選，不改動酒館設定。規則／MVU／工作流托管與紀要專用條目不納入劇情掃描。</p>
       <label class="check"><input type="checkbox" data-source-global="autoIncludeTables" ${settings.autoIncludeTables ? "checked" : ""}>資料庫表格條目一律納入<small>開啟後 TavernDB-ACU 表格匯出（紀要、主角資訊、托管條目除外）不受勾選限制，也不看酒館啟用狀態；關閉時與一般條目相同，全不選即排除。</small></label>
-      <label class="field">篩選條目／世界書<input data-entry-filter value="${escape4(entryFilter)}"></label><div class="source-list" data-entry-list>${entryList(selection.enabledEntries) || `<p>${loading ? "讀取中…" : "尚未載入條目。"}</p>`}</div></fieldset>
+      <label class="field">篩選條目／世界書<input data-entry-filter value="${escape5(entryFilter)}"></label><div class="source-list" data-entry-list>${entryList(selection.enabledEntries) || `<p>${loading ? "讀取中…" : "尚未載入條目。"}</p>`}</div></fieldset>
       <fieldset ${customContext() ? "" : "disabled"}><legend>預設上下文（對應 $7）</legend><label class="field">最近 N 則 AI 回覆<input data-source-count type="number" min="0" max="100" value="${context.contextTurnCount}"><small>N 包含當前回覆；0 只保留當前樓。使用目前 Swipe，排除使用者與系統訊息。</small></label>
       <details><summary>提取與排除規則說明</summary><p>先提取，再排除。每條規則匹配最後一組完整邊界，不分大小寫；開始詞支援 &lt;tp、&lt;content 等未閉合開標籤前綴，保留邊界本身。多條提取結果依規則順序合併；全部未命中時沿用原文，預覽會標示。排除規則每條只移除最後一組，也套用於合併後的世界書內容。</p></details>${ruleEditor("contextExtractRules", "提取規則")}${ruleEditor("contextExcludeRules", "排除規則")}</fieldset>
       <fieldset><legend>其他來源（對應 $2／$5／$U／$C，預設關閉）</legend><div class="source-toggles"><label class="check"><input type="checkbox" data-source-global="managedEntries" ${settings.managedEntries ? "checked" : ""}>工作流托管條目（$2）<small>角色綁定世界書中的 WorkflowHelper-* 條目，只取酒館已啟用者，按相同掃描規則觸發。</small></label><label class="check"><input type="checkbox" data-source-global="summaryIndex" ${settings.summaryIndex ? "checked" : ""}>紀要索引（$5）<small>預設世界書的 TavernDB-ACU-CustomExport-纪要索引；沒有時改讀資料庫插件的紀要表或總體大綱。</small></label><label class="check"><input type="checkbox" data-source-global="persona" ${settings.persona ? "checked" : ""}>使用者設定與主角資料（$U）<small>酒館 persona 描述，加上角色世界書的「主角信息」匯出條目。</small></label><label class="check"><input type="checkbox" data-source-global="characterDescription" ${settings.characterDescription ? "checked" : ""}>角色描述（$C）<small>目前角色卡的 description，經巨集／EJS 處理。</small></label></div><p class="muted">在任務的提示詞段寫入這些佔位符時，即使此處未開啟也會讀取，並只在提示詞段送出。</p></fieldset>
-      <fieldset><legend>記憶回溯（對應 $6）與其他來源</legend><label class="field">最近 N 條 AM 紀要<input data-source-global="memoryRecallRecentCount" type="number" min="0" max="1000" value="${settings.memoryRecallRecentCount}"><small>從預設世界書讀取 CustomExport-纪要-N／舊總結條目，按 AM 編碼選取最近 N 條，附加包裹上下文；0 關閉。獨立於劇情條目勾選。</small></label><label class="check"><input data-source-global="includeLatestUser" type="checkbox" ${settings.includeLatestUser ? "checked" : ""}>加入最近使用者輸入（對應 $8，預設關閉）</label><div class="form-grid"><label class="field">故事時間路徑<input data-source-global="timePath" value="${escape4(settings.timePath)}"><small>相對 stat_data；支援復興紀元格式。</small></label><label class="field">玩家所在地路徑<input data-source-global="locationPath" value="${escape4(settings.locationPath)}"><small>相對 stat_data。快訊條依此判斷玩家身在哪一國，那一國未公開的消息會以內部密報顯示。</small></label><label class="field">角色卡新聞路徑<input data-source-global="newsPath" value="${escape4(settings.newsPath)}"><small>相對 stat_data。快訊條的「本報各版」讀取這裡，只讀不寫。</small></label><label class="field">完整請求字元上限<input data-source-global="maxInputCharacters" type="number" min="1000" max="2000000" value="${settings.maxInputCharacters}"><small>含系統提示、Schema、國策狀態及來源。超限停止，不截斷、不重試；字元不是 Token。</small></label><label class="field wide">額外 MVU 路徑（每行一項，預設不送）<textarea data-source-global="variables">${escape4(settings.variables.join("\n"))}</textarea><small>故事時間仍會在本機讀取，不需要把整個「世界」物件送給 API。</small></label><label class="field wide">補充來源需求<textarea data-source-global="extra">${escape4(settings.extra)}</textarea></label></div></fieldset>
-      <div class="api-actions"><label>預覽任務<select data-source-preview-job>${jobKinds.map((kind) => `<option value="${kind}" ${kind === previewJob ? "selected" : ""}>${labels[kind]}</option>`).join("")}</select></label><button data-source-action="preview">預覽將送出的來源（不呼叫 API）</button></div><p class="api-status" role="status">${escape4(status)}</p>${preview2 ? `<label class="field" data-source-preview>來源預覽<textarea readonly rows="15">${escape4(preview2)}</textarea></label>` : ""}`;
+      <fieldset><legend>記憶回溯（對應 $6）與其他來源</legend><label class="field">最近 N 條 AM 紀要<input data-source-global="memoryRecallRecentCount" type="number" min="0" max="1000" value="${settings.memoryRecallRecentCount}"><small>從預設世界書讀取 CustomExport-纪要-N／舊總結條目，按 AM 編碼選取最近 N 條，附加包裹上下文；0 關閉。獨立於劇情條目勾選。</small></label><label class="check"><input data-source-global="includeLatestUser" type="checkbox" ${settings.includeLatestUser ? "checked" : ""}>加入最近使用者輸入（對應 $8，預設關閉）</label><div class="form-grid"><label class="field">故事時間路徑<input data-source-global="timePath" value="${escape5(settings.timePath)}"><small>相對 stat_data；支援復興紀元格式。</small></label><label class="field">玩家所在地路徑<input data-source-global="locationPath" value="${escape5(settings.locationPath)}"><small>相對 stat_data。快訊條依此判斷玩家身在哪一國，那一國未公開的消息會以內部密報顯示。</small></label><label class="field">角色卡新聞路徑<input data-source-global="newsPath" value="${escape5(settings.newsPath)}"><small>相對 stat_data。快訊條的「本報各版」讀取這裡，只讀不寫。</small></label><label class="field">完整請求字元上限<input data-source-global="maxInputCharacters" type="number" min="1000" max="2000000" value="${settings.maxInputCharacters}"><small>含系統提示、Schema、國策狀態及來源。超限停止，不截斷、不重試；字元不是 Token。</small></label><label class="field wide">額外 MVU 路徑（每行一項，預設不送）<textarea data-source-global="variables">${escape5(settings.variables.join("\n"))}</textarea><small>故事時間仍會在本機讀取，不需要把整個「世界」物件送給 API。</small></label><label class="field wide">補充來源需求<textarea data-source-global="extra">${escape5(settings.extra)}</textarea></label></div></fieldset>
+      <div class="api-actions"><label>預覽任務<select data-source-preview-job>${jobKinds.map((kind) => `<option value="${kind}" ${kind === previewJob ? "selected" : ""}>${labels[kind]}</option>`).join("")}</select></label><button data-source-action="preview">預覽將送出的來源（不呼叫 API）</button></div><p class="api-status" role="status">${escape5(status)}</p>${preview2 ? `<label class="field" data-source-preview>來源預覽<textarea readonly rows="15">${escape5(preview2)}</textarea></label>` : ""}`;
     }
     async function loadEntries() {
       const version2 = ++revision;
@@ -33072,7 +34152,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
   }
 
   // src/ui.ts
-  var escape5 = (value) => String(value ?? "").replace(
+  var escape6 = (value) => String(value ?? "").replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
@@ -33123,7 +34203,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
     const shell = root.querySelector(".shell");
     const orb = root.querySelector(".orb");
     const backdrop = root.querySelector(".modal-backdrop");
-    let countryId = "";
+    let countryId2 = "";
     let nodeId = "";
     let query = "";
     let branch = "";
@@ -33264,10 +34344,10 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       if (!state) {
         return void 0;
       }
-      if (!state.countries[countryId]) {
-        countryId = Object.keys(state.countries)[0] ?? "";
+      if (!state.countries[countryId2]) {
+        countryId2 = Object.keys(state.countries)[0] ?? "";
       }
-      return state.countries[countryId];
+      return state.countries[countryId2];
     }
     async function action(operation) {
       try {
@@ -33309,44 +34389,55 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const country = currentCountry();
       const state = controller2.state;
       const countries = state ? Object.values(state.countries) : [];
+      if (country && centeredCountry && centeredCountry !== `${country.id}:${country.period.number}`) {
+        query = "";
+        branch = "";
+        collapsed.clear();
+      }
       if (country && !country.nodes[nodeId]) {
         nodeId = country.current || Object.keys(country.nodes)[0];
       }
       const controlLabel = (c) => !c.enabled ? "已停用" : c.calibration ? "待校準" : c.control === "player" ? "玩家選策" : "AI 演化";
       const tabs = countries.map(
-        (c) => `<button class="nation-tab ${c.id === countryId ? "active" : ""} ${c.control}" data-country="${escape5(c.id)}" title="${escape5(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === "player" ? "eagle" : "crown")}</span><span class="tab-copy"><strong>${escape5(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`
+        (c) => `<button class="nation-tab ${c.id === countryId2 ? "active" : ""} ${c.control}" data-country="${escape6(c.id)}" title="${escape6(c.name)}" aria-pressed="${c.id === countryId2}"><span class="tab-crest">${icon(c.control === "player" ? "eagle" : "crown")}</span><span class="tab-copy"><strong>${escape6(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`
       ).join("");
-      const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape5(c.id)}" ${selected(c.id === countryId)}>${escape5(c.name)}</option>`).join("")}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller2.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ""}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : "—"}</strong></div><button class="cmd-btn ${busy ? "busy" : ""}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ""}${unseenFailures().length ? `，${unseenFailures().length} 項失敗` : ""}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : "☰"}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ""}</span>${unseenFailures().length ? '<i class="alert-dot" aria-hidden="true"></i>' : ""}</button><button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
-      const error62 = controller2.error ? `<div class="error-banner" role="alert"><span>${escape5(controller2.error)}</span><button data-action="refresh">重新讀取</button></div>` : "";
+      const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape6(c.id)}" ${selected(c.id === countryId2)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller2.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ""}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : "—"}</strong></div><button class="cmd-btn ${busy ? "busy" : ""}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ""}${unseenFailures().length ? `，${unseenFailures().length} 項失敗` : ""}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : "☰"}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ""}</span>${unseenFailures().length ? '<i class="alert-dot" aria-hidden="true"></i>' : ""}</button><button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
+      const error62 = controller2.error ? `<div class="error-banner" role="alert"><span>${escape6(controller2.error)}</span><button data-action="refresh">重新讀取</button></div>` : "";
       let body;
       if (country && state) {
         const current = country.current ? country.nodes[country.current] : void 0;
         const currentProgress = current ? country.progress[current.id] : void 0;
         const percent = current && currentProgress ? Math.min(100, Math.round(currentProgress.days / current.days * 100)) : 0;
-        const agenda = current && currentProgress ? `<button class="agenda ${currentProgress.status}" data-action="open-current" title="查看主國策"><span class="agenda-icon">${icon(current.icon)}</span><span class="agenda-copy"><small>主國策 · ${statuses[currentProgress.status]}</small><strong>${escape5(current.name)}</strong><span class="agenda-bar"><i style="width:${percent}%"></i></span><span class="agenda-meta"><span>${currentProgress.days.toFixed(1)} / ${current.days} 日</span><span>${currentProgress.status === "waiting" ? "工期已滿 · 等待成果" : `尚餘 ${Math.max(0, current.days - currentProgress.days).toFixed(1)} 日`}</span></span></span></button>` : `<div class="agenda empty-agenda"><span class="agenda-icon">${icon("crown")}</span><span class="agenda-copy"><small>主國策</small><strong>${country.control === "player" ? "尚未選定" : "AI 評估中"}</strong><span class="agenda-meta"><span>${country.control === "player" ? "在樹上點選可開始的國策" : "下次局勢更新時依情勢選策"}</span></span></span></div>`;
+        const agenda = current && currentProgress ? `<button class="agenda ${currentProgress.status}" data-action="open-current" title="查看主國策"><span class="agenda-icon">${icon(current.icon)}</span><span class="agenda-copy"><small>主國策 · ${statuses[currentProgress.status]}</small><strong>${escape6(current.name)}</strong><span class="agenda-bar"><i style="width:${percent}%"></i></span><span class="agenda-meta"><span>${currentProgress.days.toFixed(1)} / ${current.days} 日</span><span>${currentProgress.status === "waiting" ? "工期已滿 · 等待成果" : `尚餘 ${Math.max(0, current.days - currentProgress.days).toFixed(1)} 日`}</span></span></span></button>` : `<div class="agenda empty-agenda"><span class="agenda-icon">${icon("crown")}</span><span class="agenda-copy"><small>主國策</small><strong>${country.control === "player" ? "尚未選定" : "AI 評估中"}</strong><span class="agenda-meta"><span>${country.control === "player" ? "在樹上點選可開始的國策" : "下次局勢更新時依情勢選策"}</span></span></span></div>`;
         const gauge = (label2, value, kind) => `<div class="gauge ${kind}" role="meter" aria-label="${label2}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><div class="gauge-head"><small>${label2}</small><strong>${value}</strong></div><div class="gauge-track"><i style="width:${value}%"></i></div></div>`;
         const stats = branchStats(country);
         const total = Object.keys(country.nodes).length;
         const doneAll = stats.reduce((sum, b) => sum + b.done, 0);
-        const routes = `<aside class="routes ${routesOpen ? "open" : ""}" aria-label="路線導覽"><div class="routes-head"><strong>路線</strong><small>${doneAll} / ${total} 完成</small><button class="ghost" data-action="routes" aria-label="收起路線面板">‹</button></div><div class="search-row"><label><span class="sr">搜尋國策</span><input id="focus-search" placeholder="搜尋國策名稱或內容" value="${escape5(query)}"></label><button data-action="search-next">下一項</button></div><ul class="route-list">${stats.map(
-          (b) => `<li class="${b.name === branch ? "active" : ""} ${collapsed.has(b.name) ? "folded" : ""}"><button class="route-jump" data-jump-branch="${escape5(b.name)}"><span class="route-name">${b.active ? '<i class="route-live" title="主國策所在路線"></i>' : ""}${escape5(b.name)}</span><span class="route-count">${b.done}/${b.total}</span><span class="route-bar"><i style="width:${Math.round(b.done / b.total * 100)}%"></i></span></button><button class="route-fold" data-fold-branch="${escape5(b.name)}" aria-label="${collapsed.has(b.name) ? "展開" : "收合"}${escape5(b.name)}" aria-expanded="${!collapsed.has(b.name)}" title="${collapsed.has(b.name) ? "展開路線" : "收合路線"}">${collapsed.has(b.name) ? "＋" : "−"}</button></li>`
+        const routes = `<aside class="routes ${routesOpen ? "open" : ""}" aria-label="路線導覽"><div class="routes-head"><strong>路線</strong><small>${doneAll} / ${total} 完成</small><button class="ghost" data-action="routes" aria-label="收起路線面板">‹</button></div><div class="search-row"><label><span class="sr">搜尋國策</span><input id="focus-search" placeholder="搜尋國策名稱或內容" value="${escape6(query)}"></label><button data-action="search-next">下一項</button></div><ul class="route-list">${stats.map(
+          (b) => `<li class="${b.name === branch ? "active" : ""} ${collapsed.has(b.name) ? "folded" : ""}"><button class="route-jump" data-jump-branch="${escape6(b.name)}"><span class="route-name">${b.active ? '<i class="route-live" title="主國策所在路線"></i>' : ""}${escape6(b.name)}</span><span class="route-count">${b.done}/${b.total}</span><span class="route-bar"><i style="width:${Math.round(b.done / b.total * 100)}%"></i></span></button><button class="route-fold" data-fold-branch="${escape6(b.name)}" aria-label="${collapsed.has(b.name) ? "展開" : "收合"}${escape6(b.name)}" aria-expanded="${!collapsed.has(b.name)}" title="${collapsed.has(b.name) ? "展開路線" : "收合路線"}">${collapsed.has(b.name) ? "＋" : "−"}</button></li>`
         ).join(
           ""
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路線</button><button data-action="expand-all">全部展開</button></div></aside>`;
-        body = `<section class="nation-bar ${nationMore ? "more-open" : ""}"><div class="nation-id"><span class="nation-crest">${icon(country.control === "player" ? "eagle" : "crown")}</span><div class="nation-copy"><h2>${escape5(country.name)}</h2><small class="control-tag">${controlLabel(country)} · 故事日 ${state.day.toFixed(1)}</small><p>${escape5(country.description)}</p></div></div><div class="gauges">${gauge("穩定度", country.stability, "stability")}${gauge("戰爭支持度", country.warSupport, "war")}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式與更新局勢" title="控制方式與更新局勢">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === "player")}>玩家選策</option><option value="ai" ${selected(country.control === "ai")}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文與 MVU 重新評估">更新局勢</button></div></section>
-      <section class="stage ${detailsOpen ? "with-drawer" : ""}"><div class="canvas" tabindex="0" aria-label="國策畫布，可拖曳平移，滾輪或雙指縮放"><div class="tree"></div></div>${routes}${routesOpen ? "" : `<button class="routes-tab" data-action="routes" aria-label="開啟路線面板">路線 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has("legend") ? "open" : ""}><summary>圖例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>進行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暫停</li><li><i class="sw available"></i>可開始</li><li><i class="sw locked"></i>條件未滿</li><li><i class="sw terminated"></i>已終止／路線鎖定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>擇一前置</li><li><i class="ln cross"></i>跨路線依賴</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? "" : "disabled"} title="定位主國策">◎ 主國策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支與國策之間的關係">⇄ 關係</button>' : ""}<div class="zoom-controls"><button data-action="zoom-out" aria-label="縮小">−</button><button data-action="fit" title="顯示整棵樹"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller2.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has("demo") ? "open" : ""}><summary>測試操作</summary><small>只改離線示範，不呼叫 API</small><button data-action="demo-days">故事時間 ＋7 日</button><button data-action="demo-outcome">完成聯運勘查</button><button data-action="demo-news">發布示範事件</button><button data-action="demo-reset">重設示範</button></details>` : ""}<aside class="drawer ${detailsOpen ? "open" : ""}" aria-label="國策詳情" ${detailsOpen ? "" : 'aria-hidden="true"'}>${detailsOpen ? renderDetails(country, country.nodes[nodeId]) : ""}</aside></section>`;
+        body = `<section class="nation-bar ${nationMore ? "more-open" : ""}"><div class="nation-id"><span class="nation-crest">${icon(country.control === "player" ? "eagle" : "crown")}</span><div class="nation-copy"><h2>${escape6(country.name)}</h2><small class="control-tag">${controlLabel(country)} · 故事日 ${state.day.toFixed(1)}</small><p>${escape6(country.description)}</p></div></div><div class="gauges">${gauge("穩定度", country.stability, "stability")}${gauge("戰爭支持度", country.warSupport, "war")}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式與更新局勢" title="控制方式與更新局勢">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === "player")}>玩家選策</option><option value="ai" ${selected(country.control === "ai")}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文與 MVU 重新評估">更新局勢</button></div></section>
+      ${periodBar(country, controller2.jobs)}<section class="stage ${detailsOpen ? "with-drawer" : ""}"><div class="canvas" tabindex="0" aria-label="國策畫布，可拖曳平移，滾輪或雙指縮放"><div class="tree"></div></div>${routes}${routesOpen ? "" : `<button class="routes-tab" data-action="routes" aria-label="開啟路線面板">路線 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has("legend") ? "open" : ""}><summary>圖例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>進行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暫停</li><li><i class="sw available"></i>可開始</li><li><i class="sw locked"></i>條件未滿</li><li><i class="sw terminated"></i>已終止／路線鎖定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>擇一前置</li><li><i class="ln cross"></i>跨路線依賴</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? "" : "disabled"} title="定位主國策">◎ 主國策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支與國策之間的關係">⇄ 關係</button>' : ""}<div class="zoom-controls"><button data-action="zoom-out" aria-label="縮小">−</button><button data-action="fit" title="顯示整棵樹"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller2.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has("demo") ? "open" : ""}><summary>測試操作</summary><small>只改離線示範，不呼叫 API</small><button data-action="demo-days">故事時間 ＋7 日</button><button data-action="demo-outcome">完成聯運勘查</button><button data-action="demo-news">發布示範事件</button>${preview2?.periodSample ? '<button data-action="demo-period-crisis">載入分期：局勢突變</button><button data-action="demo-period-complete">載入分期：議程完成</button><button data-action="demo-period-next">推進事件／演示換期</button>' : ""}<button data-action="demo-reset">重設示範</button></details>` : ""}<aside class="drawer ${detailsOpen ? "open" : ""}" aria-label="國策詳情" ${detailsOpen ? "" : 'aria-hidden="true"'}>${detailsOpen ? renderDetails(country, country.nodes[nodeId]) : ""}</aside></section>`;
       } else {
         body = `<section class="empty"><div class="empty-card">${icon("eagle")}<h2>${state ? "為這個世界選擇方向" : "連接你的故事"}</h2><p>${state ? "先辨識本局國家，再勾選要啟用的對象。國策內容會依你選擇的世界書與劇情生成。" : "國策樹需要一則已完成的正文，以及本樓可讀取的 MVU 變數。你仍可先設定 API 與來源。"}</p><div class="row"><button class="primary" data-action="countries">選擇啟用國家</button><button data-action="settings">設定來源與 API</button></div></div></section>`;
       }
       const summary = taskSummary();
-      shell.innerHTML = `${command}${error62}${body}<footer class="statusline"><button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape5(summary.text)}</button><span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ""}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
+      shell.innerHTML = `${command}${error62}${body}<footer class="statusline"><button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape6(summary.text)}</button><span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ""}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
       if (country) {
         drawTree(country);
         bindCanvas();
         bindMinimap();
-        if (centeredCountry !== country.id) {
-          centeredCountry = country.id;
+        if (centeredCountry !== `${country.id}:${country.period.number}`) {
+          centeredCountry = `${country.id}:${country.period.number}`;
           locateNode(nodeId);
+        }
+      }
+      if (modal === "period-history" && country) {
+        const body2 = backdrop.querySelector(".modal-body");
+        if (body2) {
+          body2.innerHTML = historyBody(country);
         }
       }
       if (modal === "jobs") {
@@ -33390,7 +34481,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const reasons = blockers(country, node2);
       const isCurrent = country.current === node2.id;
       const percent = Math.min(100, Math.round(progress.days / node2.days * 100));
-      const list = (items) => items.length ? `<ul>${items.map((item) => `<li>${escape5(item)}</li>`).join("")}</ul>` : '<p class="muted">無</p>';
+      const list = (items) => items.length ? `<ul>${items.map((item) => `<li>${escape6(item)}</li>`).join("")}</ul>` : '<p class="muted">無</p>';
       const route = country.branches.find((b) => b.name === node2.branch);
       const stateClass = progress.status === "idle" && reasons.length ? "locked" : progress.status === "idle" ? "available" : progress.status;
       const stateLabel = stateClass === "locked" ? "條件未滿" : stateClass === "available" ? "可開始" : statuses[progress.status];
@@ -33406,33 +34497,33 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const running = country.current ? country.nodes[country.current] : void 0;
       const verb = switchable ? "改選" : "開始";
       const act = switchable ? "switch" : "start";
-      const startButton = isCurrent ? '<button data-action="pause">暫停目前國策</button>' : locking && (startable || switchable) ? lockConfirm === node2.id ? `<div class="lock-confirm" role="alert"><p>${verb}後會立即鎖定路線，以下路線將無法再選：<strong>${rivals.map(escape5).join("、")}</strong></p><div class="row"><button class="primary" data-action="${act}">確認${verb}</button><button data-action="lock-cancel">取消</button></div></div>` : `<button class="primary" data-action="lock-ask">${verb}並鎖定路線</button>` : switchable ? '<button class="primary" data-action="switch">改選此國策</button>' : `<button class="primary" data-action="start" ${startable ? "" : "disabled"}>${progress.status === "paused" ? "恢復國策" : progress.status === "completed" ? "國策已完成" : "開始此國策"}</button>`;
-      const action2 = country.control === "player" ? `<div class="drawer-action">${startButton}${switchable && running ? `<small>會暫停「${escape5(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之後可恢復），${progress.status === "paused" ? "恢復" : "開始"}此國策。</small>` : ""}${reasons.length ? `<ul class="blockers">${reasons.map((r) => `<li>${escape5(r)}</li>`).join("")}</ul>` : ""}</div>` : `<div class="drawer-action"><small>AI 依情勢選擇後續國策；切換為「玩家選策」即可介入。</small></div>`;
-      return `<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="關閉詳情">×</button><span class="drawer-emblem">${icon(node2.icon)}</span><div><span class="drawer-branch">${escape5(node2.branch)}</span><h3>${escape5(node2.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node2.days} 日</span></div></header>
-      <div class="drawer-body">${progress.started !== null ? `<div class="drawer-progress"><div class="row between"><small>有效工期</small><strong>${progress.days.toFixed(1)} / ${node2.days} 日</strong></div><div class="bar"><i style="width:${percent}%"></i></div>${progress.evidence ? `<small>${escape5(progress.evidence)}</small>` : ""}</div>` : ""}
+      const startButton = isCurrent ? '<button data-action="pause">暫停目前國策</button>' : locking && (startable || switchable) ? lockConfirm === node2.id ? `<div class="lock-confirm" role="alert"><p>${verb}後會立即鎖定路線，以下路線將無法再選：<strong>${rivals.map(escape6).join("、")}</strong></p><div class="row"><button class="primary" data-action="${act}">確認${verb}</button><button data-action="lock-cancel">取消</button></div></div>` : `<button class="primary" data-action="lock-ask">${verb}並鎖定路線</button>` : switchable ? '<button class="primary" data-action="switch">改選此國策</button>' : `<button class="primary" data-action="start" ${startable ? "" : "disabled"}>${progress.status === "paused" ? "恢復國策" : progress.status === "completed" ? "國策已完成" : "開始此國策"}</button>`;
+      const action2 = country.control === "player" ? `<div class="drawer-action">${startButton}${switchable && running ? `<small>會暫停「${escape6(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之後可恢復），${progress.status === "paused" ? "恢復" : "開始"}此國策。</small>` : ""}${reasons.length ? `<ul class="blockers">${reasons.map((r) => `<li>${escape6(r)}</li>`).join("")}</ul>` : ""}</div>` : `<div class="drawer-action"><small>AI 依情勢選擇後續國策；切換為「玩家選策」即可介入。</small></div>`;
+      return `<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="關閉詳情">×</button><span class="drawer-emblem">${icon(node2.icon)}</span><div><span class="drawer-branch">${escape6(node2.branch)}</span><h3>${escape6(node2.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node2.days} 日</span></div></header>
+      <div class="drawer-body">${anchorNotice(country, node2)}${progress.started !== null ? `<div class="drawer-progress"><div class="row between"><small>有效工期</small><strong>${progress.days.toFixed(1)} / ${node2.days} 日</strong></div><div class="bar"><i style="width:${percent}%"></i></div>${progress.evidence ? `<small>${escape6(progress.evidence)}</small>` : ""}</div>` : ""}
       ${action2}
-      <p class="description">${escape5(node2.description)}</p>
-      <section class="detail-section"><h4>前置國策</h4>${node2.prerequisites.length ? `<div class="prereqs">${node2.prerequisites.map((group) => `<div class="prereq-group">${group.map((id, i) => `${i ? '<span class="or">或</span>' : ""}<button class="chip ${country.progress[id].status === "completed" ? "done" : ""}" data-goto="${escape5(id)}">${escape5(country.nodes[id].name)}</button>`).join("")}</div>`).join('<span class="and">且</span>')}</div>` : '<p class="muted">此路線的起點</p>'}</section>
+      <p class="description">${escape6(node2.description)}</p>
+      <section class="detail-section"><h4>前置國策</h4>${node2.prerequisites.length ? `<div class="prereqs">${node2.prerequisites.map((group) => `<div class="prereq-group">${group.map((id, i) => `${i ? '<span class="or">或</span>' : ""}<button class="chip ${country.progress[id].status === "completed" ? "done" : ""}" data-goto="${escape6(id)}">${escape6(country.nodes[id].name)}</button>`).join("")}</div>`).join('<span class="and">且</span>')}</div>` : '<p class="muted">此路線的起點</p>'}</section>
       <section class="detail-section"><h4>完成效果</h4>${list(
         node2.effects.map(
           (e) => effectText(e) + (e.when?.length && progress.status === "completed" ? progress.evidence.startsWith("歷史承接：") ? "（歷史承接，實際效果未記錄）" : progress.applied.includes(e.id) ? "（已生效）" : "（條件未成立，未生效）" : "")
         )
       )}</section>
-      ${conditions.length ? `<section class="detail-section"><h4>條件</h4><ul class="conditions">${conditions.map(([kind, label2]) => `<li><span class="cond-kind">${kind}</span>${escape5(label2)}</li>`).join("")}</ul></section>` : ""}
-      ${node2.impact === "pivotal" ? `<section class="detail-section pivotal-note"><h4>重要國策</h4><p>完成時發布新聞${node2.news ? `：「${escape5(node2.news.headline)}」` : ""}。</p></section>` : ""}
+      ${conditions.length ? `<section class="detail-section"><h4>條件</h4><ul class="conditions">${conditions.map(([kind, label2]) => `<li><span class="cond-kind">${kind}</span>${escape6(label2)}</li>`).join("")}</ul></section>` : ""}
+      ${node2.impact === "pivotal" ? `<section class="detail-section pivotal-note"><h4>重要國策</h4><p>完成時發布新聞${node2.news ? `：「${escape6(node2.news.headline)}」` : ""}。</p></section>` : ""}
       ${node2.mutex ? mutexNote(country, node2) : ""}
-      <section class="detail-section"><h4>投入與工期</h4>${list(node2.investments)}${node2.durationReason ? `<details class="fold"><summary>工期理由</summary><p class="reason">${escape5(node2.durationReason)}</p></details>` : ""}</section>
-      ${route ? `<section class="detail-section"><h4>路線抉擇 · ${escape5(route.name)}</h4><p>${escape5(route.purpose)}</p><dl class="route-facts"><dt>支持者</dt><dd>${escape5(route.supporters)}</dd><dt>阻力</dt><dd>${escape5(route.opposition)}</dd><dt>取捨</dt><dd>${escape5(route.tradeoff)}</dd><dt>終點</dt><dd>${escape5(route.destination)}</dd></dl></section>` : ""}
-      ${node2.reason ? `<details class="detail-section fold"><summary><h4>設計依據</h4></summary><p class="reason">${escape5(node2.reason)}</p></details>` : ""}</div>`;
+      <section class="detail-section"><h4>投入與工期</h4>${list(node2.investments)}${node2.durationReason ? `<details class="fold"><summary>工期理由</summary><p class="reason">${escape6(node2.durationReason)}</p></details>` : ""}</section>
+      ${route ? `<section class="detail-section"><h4>路線抉擇 · ${escape6(route.name)}</h4><p>${escape6(route.purpose)}</p><dl class="route-facts"><dt>支持者</dt><dd>${escape6(route.supporters)}</dd><dt>阻力</dt><dd>${escape6(route.opposition)}</dd><dt>取捨</dt><dd>${escape6(route.tradeoff)}</dd><dt>終點</dt><dd>${escape6(route.destination)}</dd></dl></section>` : ""}
+      ${node2.reason ? `<details class="detail-section fold"><summary><h4>設計依據</h4></summary><p class="reason">${escape6(node2.reason)}</p></details>` : ""}</div>`;
     }
     function mutexNote(country, node2) {
       const routes = mutexRoutes(Object.values(country.nodes)).get(node2.mutex.group);
       const own2 = routes.get(node2.mutex.route);
       const head = own2.heads.includes(node2);
       const others = [...routes].filter(([route]) => route !== node2.mutex.route);
-      const chips = (list) => list.map((n) => `<button class="chip" data-goto="${escape5(n.id)}">${escape5(n.name)}</button>`).join("");
+      const chips = (list) => list.map((n) => `<button class="chip" data-goto="${escape6(n.id)}">${escape6(n.name)}</button>`).join("");
       const lock = node2.mutex.lock === "start" ? "開始路線起點時即作出不可撤回的承諾" : "完成路線起點後鎖定其他路線";
-      return `<section class="detail-section mutex-note"><h4>互斥路線</h4><p>${escape5(node2.mutex.reason)}</p>${others.length ? `<p class="mutex-rivals"><small>${head ? "本國策是這條路線的起點，與以下路線互斥：" : `本國策屬於「${escape5(own2.heads.map((n) => n.name).join("／"))}」開啟的路線，與以下路線互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([, route]) => chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>` : "<small>這個互斥組沒有其他路線，實際上不會鎖定任何國策（舊版生成的資料）。</small>"}</section>`;
+      return `<section class="detail-section mutex-note"><h4>互斥路線</h4><p>${escape6(node2.mutex.reason)}</p>${others.length ? `<p class="mutex-rivals"><small>${head ? "本國策是這條路線的起點，與以下路線互斥：" : `本國策屬於「${escape6(own2.heads.map((n) => n.name).join("／"))}」開啟的路線，與以下路線互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([, route]) => chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>` : "<small>這個互斥組沒有其他路線，實際上不會鎖定任何國策（舊版生成的資料）。</small>"}</section>`;
     }
     function nodeState(country, node2) {
       const p = country.progress[node2.id];
@@ -33538,16 +34629,16 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       tree.innerHTML = `<svg class="connectors" width="${treeSize.width}" height="${treeSize.height}" aria-hidden="true">${lines.join("")}</svg>${[
         ...spans
       ].filter(([b]) => !collapsed.has(b)).map(
-        ([label2, span2]) => `<div class="branch-banner ${label2 === branch ? "active" : ""}" style="left:${span2.left}px;width:${span2.right - span2.left}px"><span>${escape5(label2)}</span></div>`
+        ([label2, span2]) => `<div class="branch-banner ${label2 === branch ? "active" : ""}" style="left:${span2.left}px;width:${span2.right - span2.left}px"><span>${escape6(label2)}</span></div>`
       ).join("")}${[...summaries].filter(([b]) => collapsed.has(b)).map(
-        ([b, p]) => `<button class="branch-summary" data-jump-branch="${escape5(b)}" style="left:${p.x}px;top:${p.y}px;width:${NODE_W}px"><strong>${escape5(b)}</strong><span>${nodes.filter((n) => n.branch === b).length} 項國策已收合 · 點選展開</span></button>`
+        ([b, p]) => `<button class="branch-summary" data-jump-branch="${escape6(b)}" style="left:${p.x}px;top:${p.y}px;width:${NODE_W}px"><strong>${escape6(b)}</strong><span>${nodes.filter((n) => n.branch === b).length} 項國策已收合 · 點選展開</span></button>`
       ).join("")}${drawn.map((node2) => {
         const p = country.progress[node2.id];
         const stateClass = states.get(node2.id);
         const position = pos(node2);
         const dim = query && !`${node2.name} ${node2.description}`.includes(query) || branch && node2.branch !== branch;
         const isCurrent = country.current === node2.id;
-        return `<button class="node ${stateClass} ${nodeId === node2.id && detailsOpen ? "selected" : ""} ${dim ? "dim" : ""} ${isCurrent ? "current" : ""}" data-node="${escape5(node2.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" aria-label="${escape5(node2.name)}，${escape5(meta3(node2, stateClass))}"><span class="node-icon">${icon(node2.icon)}</span><span class="node-text"><span class="node-name">${escape5(node2.name)}</span><span class="node-meta">${escape5(meta3(node2, stateClass))}</span></span>${heads.has(node2.id) ? '<span class="node-flag" title="互斥路線的分歧點">⇋</span>' : ""}${node2.impact === "pivotal" ? '<span class="node-pivot" title="重要國策：完成時發布新聞">✦</span>' : ""}${p.started !== null && stateClass !== "completed" ? `<span class="node-progress"><i style="width:${Math.min(100, p.days / node2.days * 100)}%"></i></span>` : ""}</button>`;
+        return `<button class="node ${stateClass} ${nodeId === node2.id && detailsOpen ? "selected" : ""} ${dim ? "dim" : ""} ${isCurrent ? "current" : ""}" data-node="${escape6(node2.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" aria-label="${escape6(node2.name)}，${escape6(meta3(node2, stateClass))}"><span class="node-icon">${icon(node2.icon)}</span><span class="node-text"><span class="node-name">${escape6(node2.name)}</span><span class="node-meta">${escape6(meta3(node2, stateClass))}</span></span>${anchorBadge(country, node2)}${heads.has(node2.id) ? '<span class="node-flag" title="互斥路線的分歧點">⇋</span>' : ""}${node2.impact === "pivotal" ? '<span class="node-pivot" title="重要國策：完成時發布新聞">✦</span>' : ""}${p.started !== null && stateClass !== "completed" ? `<span class="node-progress"><i style="width:${Math.min(100, p.days / node2.days * 100)}%"></i></span>` : ""}</button>`;
       }).join("")}`;
       const minimap = shell.querySelector(".minimap-svg");
       if (minimap) {
@@ -33792,7 +34883,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       taskPanel = void 0;
       modal = name;
       backdrop.hidden = false;
-      backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header class="modal-header"><h2 id="modal-title">${escape5(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="關閉對話框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ""}</section>`;
+      backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header class="modal-header"><h2 id="modal-title">${escape6(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="關閉對話框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ""}</section>`;
       backdrop.querySelector("button")?.focus();
       updateModalJobs();
     }
@@ -33804,7 +34895,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const summary = taskSummary();
       pill.hidden = !summary.state || modal === "jobs";
       pill.className = `modal-jobs ${summary.state}`;
-      pill.innerHTML = `${summary.state === "busy" ? '<i class="spinner"></i>' : '<i class="status-dot failed"></i>'}${escape5(summary.text.replace("，點此查看", ""))}`;
+      pill.innerHTML = `${summary.state === "busy" ? '<i class="spinner"></i>' : '<i class="status-dot failed"></i>'}${escape6(summary.text.replace("，點此查看", ""))}`;
     }
     function closeModal() {
       removing = "";
@@ -33827,11 +34918,11 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       }
       const existing = importing.entries.filter((entry) => controller2.state?.countries[entry.tree.id]);
       const withStatus = importing.entries.some((entry) => entry.status);
-      return `<div class="import-panel"><h4>準備匯入：${escape5(importing.file)}</h4><ul>${importing.entries.map(
-        (entry) => `<li><strong>${escape5(entry.tree.name)}</strong> <code>${escape5(entry.tree.id)}</code> · ${entry.tree.nodes.length} 項國策 · ${new Set(entry.tree.nodes.map((n) => n.branch)).size} 支分支${entry.status ? " · 含進度" : ""}${controller2.state?.countries[entry.tree.id] ? ' · <span class="warn">將取代現有國家</span>' : ""}</li>`
+      return `<div class="import-panel"><h4>準備匯入：${escape6(importing.file)}</h4><ul>${importing.entries.map(
+        (entry) => `<li><strong>${escape6(entry.tree.name)}</strong> <code>${escape6(entry.tree.id)}</code> · ${entry.tree.nodes.length} 項國策 · ${new Set(entry.tree.nodes.map((n) => n.branch)).size} 支分支${entry.status ? " · 含進度" : ""}${controller2.state?.countries[entry.tree.id] ? ' · <span class="warn">將取代現有國家</span>' : ""}</li>`
       ).join(
         ""
-      )}</ul><label class="check"><input type="checkbox" data-import-progress ${withStatus ? "" : "disabled"} ${checked(importing.withProgress && withStatus)}>連同進度<small>保留檔案中的進度、能力與鎖定；匯入後需執行「更新局勢」從目前故事日校準。事件不匯入。</small></label>${existing.length ? `<label class="check"><input type="checkbox" data-import-replace ${checked(importing.replace)}>取代同 id 的國家（${existing.map((e) => escape5(e.tree.name)).join("、")}）<small>原有的國策樹與進度會先刪除。</small></label>` : ""}<div class="tree-io-actions"><button class="primary" data-tree="import-confirm" ${existing.length && !importing.replace ? "disabled" : ""}>確認匯入</button><button data-tree="import-cancel">取消</button></div></div>`;
+      )}</ul><label class="check"><input type="checkbox" data-import-progress ${withStatus ? "" : "disabled"} ${checked(importing.withProgress && withStatus)}>連同進度<small>保留檔案中的進度、能力與鎖定；匯入後需執行「更新局勢」從目前故事日校準。事件不匯入。</small></label>${existing.length ? `<label class="check"><input type="checkbox" data-import-replace ${checked(importing.replace)}>取代同 id 的國家（${existing.map((e) => escape6(e.tree.name)).join("、")}）<small>原有的國策樹與進度會先刪除。</small></label>` : ""}<div class="tree-io-actions"><button class="primary" data-tree="import-confirm" ${existing.length && !importing.replace ? "disabled" : ""}>確認匯入</button><button data-tree="import-cancel">取消</button></div></div>`;
     }
     function download(name, text) {
       const link = doc.createElement("a");
@@ -33853,11 +34944,11 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
         ...backdrop.querySelectorAll("[data-candidate]:checked")
       ].map((e) => e.dataset.candidate);
       const created = countries.length ? `<h3>已建立的國家</h3>${countries.map(
-        (c) => `<div class="candidate country-row"><strong class="country-name">${escape5(c.name)}</strong><label class="switch-label"><input type="checkbox" data-enable="${escape5(c.id)}" ${checked(c.enabled)}>啟用</label>${c.control === "player" ? `<label class="switch-label" title="故事時間一次跳過很多天時，由 AI 替這個國家接著選下一項國策"><input type="checkbox" data-delegate="${escape5(c.id)}" ${checked(c.skipDelegate)}>時間跳躍時由 AI 代選</label>` : '<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${removing === c.id ? `<div class="remove-confirm" role="alert"><small>刪除「${escape5(c.name)}」的國策樹、進度與只涉及此國的事件？會寫入目前樓層；之後可從候選清單重新生成。</small><button class="danger" data-remove-confirm="${escape5(c.id)}">確認刪除</button><button data-remove-cancel>取消</button></div>` : `<button data-tree-export="${escape5(c.id)}">匯出</button><button class="danger" data-remove-country="${escape5(c.id)}" ${busyJobs ? 'disabled title="有任務進行中，請等任務結束後再刪除"' : ""}>刪除國策樹</button>`}</div>`
+        (c) => `<div class="candidate country-row"><strong class="country-name">${escape6(c.name)}</strong>${periodControl(c)}<label class="switch-label"><input type="checkbox" data-enable="${escape6(c.id)}" ${checked(c.enabled)}>啟用</label>${c.control === "player" ? `<label class="switch-label" title="故事時間一次跳過很多天時，由 AI 替這個國家接著選下一項國策"><input type="checkbox" data-delegate="${escape6(c.id)}" ${checked(c.skipDelegate)}>時間跳躍時由 AI 代選</label>` : '<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${removing === c.id ? `<div class="remove-confirm" role="alert"><small>刪除「${escape6(c.name)}」的國策樹、進度與只涉及此國的事件？會寫入目前樓層；之後可從候選清單重新生成。</small><button class="danger" data-remove-confirm="${escape6(c.id)}">確認刪除</button><button data-remove-cancel>取消</button></div>` : `<button data-tree-export="${escape6(c.id)}">匯出</button><button class="danger" data-remove-country="${escape6(c.id)}" ${busyJobs ? 'disabled title="有任務進行中，請等任務結束後再刪除"' : ""}>刪除國策樹</button>`}</div>`
       ).join(
         ""
       )}${countries.some((c) => !c.enabled) ? '<small class="muted">重新啟用後，下一次局勢更新會先校準現況；停用期間不累積工期。</small>' : ""}<div class="separator"></div>` : "";
-      const body = `${created}<h3>新增國家</h3><p class="muted">先從本局資料辨識國家，再勾選要生成國策樹的對象。</p><button data-modal="identify" ${identifying ? "disabled" : ""}>${identifying ? "正在辨識…" : "從目前資料辨識國家"}</button>${controller2.candidates.map((c) => `<label class="candidate"><input type="checkbox" data-candidate="${escape5(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape5(c.name)}</strong><p>${escape5(c.description)}</p><small>${escape5(c.evidence)}</small></span></label>`).join("")}${!controller2.candidates.length ? '<p class="muted">尚無待啟用的候選國家。</p>' : ""}<div class="separator"></div><details class="tree-io" ${importing || treeNotice ? "open" : ""}><summary>國策樹檔案：匯入與匯出</summary><div class="tree-io-actions"><button data-tree="import" title="載入手寫、submod 或其他聊天匯出的國策樹">匯入國策樹</button><button data-tree="export-all" ${countries.length ? "" : "disabled"} title="含完整進度，可用來備份或回報問題">匯出全部</button><button data-tree="copy-all" ${countries.length ? "" : "disabled"}>複製全部 JSON</button><button data-tree="template">下載範本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice ? `<p class="api-status">${escape5(treeNotice)}</p>` : ""}${importPanel()}</details>`;
+      const body = `${created}<h3>新增國家</h3><p class="muted">先從本局資料辨識國家，再勾選要生成國策樹的對象。</p><button data-modal="identify" ${identifying ? "disabled" : ""}>${identifying ? "正在辨識…" : "從目前資料辨識國家"}</button>${controller2.candidates.map((c) => `<label class="candidate"><input type="checkbox" data-candidate="${escape6(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape6(c.name)}</strong><p>${escape6(c.description)}</p><small>${escape6(c.evidence)}</small></span></label>`).join("")}${!controller2.candidates.length ? '<p class="muted">尚無待啟用的候選國家。</p>' : ""}<div class="separator"></div><details class="tree-io" ${importing || treeNotice ? "open" : ""}><summary>國策樹檔案：匯入與匯出</summary><div class="tree-io-actions"><button data-tree="import" title="載入手寫、submod 或其他聊天匯出的國策樹">匯入國策樹</button><button data-tree="export-all" ${countries.length ? "" : "disabled"} title="含完整進度，可用來備份或回報問題">匯出全部</button><button data-tree="copy-all" ${countries.length ? "" : "disabled"}>複製全部 JSON</button><button data-tree="template">下載範本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice ? `<p class="api-status">${escape6(treeNotice)}</p>` : ""}${importPanel()}</details>`;
       const footer = `<button data-modal="close">返回</button><button class="primary" data-modal="enable" ${selectedCandidates.length ? "" : "disabled"}>生成並啟用選取國家</button>`;
       if (!focus && modal === "countries") {
         const section = backdrop.querySelector(".modal-body");
@@ -33881,10 +34972,10 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const busy = controller2.jobs.some((j) => ["running", "queued"].includes(j.state));
       const message = (j) => {
         const text = jobMessage(j);
-        return text.length > 140 ? `<details class="job-detail"><summary>${escape5(text.slice(0, 120))}…</summary><p>${escape5(text)}</p></details>` : `<small class="job-message">${escape5(text)}</small>`;
+        return text.length > 140 ? `<details class="job-detail"><summary>${escape6(text.slice(0, 120))}…</summary><p>${escape6(text)}</p></details>` : `<small class="job-message">${escape6(text)}</small>`;
       };
       const rows = controller2.jobs.map(
-        (j) => `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape5(j.time)}</small>${j.inputCharacters !== void 0 ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ""}</div><div>${escape5(jobNames[j.kind] ?? j.kind)}${j.label ? ` · ${escape5(j.label)}` : ""}${j.route ? ` · ${escape5(j.route)}` : ""}<br>${message(j)}</div><div class="job-buttons">${["running", "queued"].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ""}${["failed", "stale"].includes(j.state) ? `<button data-retry="${j.id}">重試</button>` : ""}${controller2.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ""}</div></div>`
+        (j) => `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape6(j.time)}</small>${j.inputCharacters !== void 0 ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ""}</div><div>${escape6(jobNames[j.kind] ?? j.kind)}${j.label ? ` · ${escape6(j.label)}` : ""}${j.route ? ` · ${escape6(j.route)}` : ""}<br>${message(j)}</div><div class="job-buttons">${["running", "queued"].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ""}${["failed", "stale"].includes(j.state) ? `<button data-retry="${j.id}">重試</button>` : ""}${controller2.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ""}</div></div>`
       ).join("");
       const body = `<div class="job-actions"><button data-modal="run-reshape" title="劇情大幅改變時，修改尚未開始的國策">評估重大改樹</button><button class="danger" data-modal="cancel-all" ${busy ? "" : "disabled"}>取消全部任務</button></div>${rows || '<p class="muted">尚無任務紀錄。正文與一般變數更新完成後，國策任務會在背景執行，不會鎖住聊天；進度顯示在懸浮球上方。</p>'}${controller2.config.runLog ? '<p class="muted">執行紀錄已開啟：請求內容只保存在此頁記憶體，重新整理即清除。</p>' : ""}`;
       if (modal === "jobs") {
@@ -33895,12 +34986,12 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
     }
     function showLog(jobId) {
       const entries = controller2.logs.filter((log) => log.jobId === jobId).reverse();
-      const block = (label2, text, rows = 8) => text ? `<label class="field">${label2}<textarea readonly rows="${rows}">${escape5(text)}</textarea></label>` : "";
+      const block = (label2, text, rows = 8) => text ? `<label class="field">${label2}<textarea readonly rows="${rows}">${escape6(text)}</textarea></label>` : "";
       openModal(
         "log",
         "請求紀錄",
         `<p class="muted">只供除錯，不含 API 金鑰。</p>${entries.map(
-          (log) => `<article class="job-card"><div class="job-title">${escape5(jobNames[log.kind] ?? log.kind)}${log.stage ? ` · ${escape5(log.stage)}` : ""} · ${escape5(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1e3).toFixed(1)} 秒 · ${escape5(log.time)}</div>${log.error ? `<p class="modal-error">${escape5(log.error)}</p>` : '<p class="muted">✓ 格式通過</p>'}${log.messages.map(
+          (log) => `<article class="job-card"><div class="job-title">${escape6(jobNames[log.kind] ?? log.kind)}${log.stage ? ` · ${escape6(log.stage)}` : ""} · ${escape6(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1e3).toFixed(1)} 秒 · ${escape6(log.time)}</div>${log.error ? `<p class="modal-error">${escape6(log.error)}</p>` : '<p class="muted">✓ 格式通過</p>'}${log.messages.map(
             (message, index) => block(
               `#${index + 1} ${message.role} · ${message.content.length.toLocaleString()} 字元`,
               message.content,
@@ -33921,7 +35012,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       return parts.length ? parts.join("；") : "無直接影響";
     }
     function showRelations() {
-      const country = controller2.state?.countries[countryId];
+      const country = controller2.state?.countries[countryId2];
       if (!country) {
         return;
       }
@@ -33933,15 +35024,15 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
           relations.filter((r) => core && [branchOf(r.from), branchOf(r.to)].includes(core.name)).map((r) => branchOf(r.from) === core.name ? branchOf(r.to) : branchOf(r.from)).filter((name) => name !== core?.name)
         )
       ];
-      const focus = (id) => `<button class="chip" data-goto="${escape5(id)}">${escape5(country.nodes[id]?.name ?? id)}</button><small class="rel-branch">${escape5(branchOf(id))}</small>`;
+      const focus = (id) => `<button class="chip" data-goto="${escape6(id)}">${escape6(country.nodes[id]?.name ?? id)}</button><small class="rel-branch">${escape6(branchOf(id))}</small>`;
       const independent = country.branches.filter((b) => b.independent);
       openModal(
         "relations",
         `國策關係 · ${country.name}`,
         `<p class="muted">國策之間如何互相影響；每條關係下方列出實現它的規則。點國策名稱可在樹上定位。</p>
-      ${core ? `<section class="rel-core"><h3>核心分支：${escape5(core.name)}</h3>${core.coreReason ? `<p>${escape5(core.coreReason)}</p>` : ""}<small>影響的其他分支：${reached.length ? reached.map(escape5).join("、") : "無"}</small></section>` : ""}
-      ${relations.length ? `<ul class="rel-list">${relations.map((r) => `<li class="rel-card"><span class="tag">${escape5(relationKindNames[r.kind] ?? r.kind)}</span><div class="rel-pair">${focus(r.from)}<span class="rel-arrow" title="關聯；實際方向見下方規則">↔</span>${focus(r.to)}</div><p>${escape5(r.change)}</p>${r.via.length ? `<ul class="rel-via">${r.via.map((v) => `<li>${escape5(v)}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ul>` : "<p>這棵國策樹沒有記錄關係。較舊版本生成的樹、小型樹與匯入的樹可能沒有關係表。</p>"}
-      ${independent.length ? `<section class="rel-independent"><h3>獨立推進的分支</h3><dl>${independent.map((b) => `<dt>${escape5(b.name)}</dt><dd>${escape5(b.independent ?? "")}</dd>`).join("")}</dl></section>` : ""}`,
+      ${core ? `<section class="rel-core"><h3>核心分支：${escape6(core.name)}</h3>${core.coreReason ? `<p>${escape6(core.coreReason)}</p>` : ""}<small>影響的其他分支：${reached.length ? reached.map(escape6).join("、") : "無"}</small></section>` : ""}
+      ${relations.length ? `<ul class="rel-list">${relations.map((r) => `<li class="rel-card"><span class="tag">${escape6(relationKindNames[r.kind] ?? r.kind)}</span><div class="rel-pair">${focus(r.from)}<span class="rel-arrow" title="關聯；實際方向見下方規則">↔</span>${focus(r.to)}</div><p>${escape6(r.change)}</p>${r.via.length ? `<ul class="rel-via">${r.via.map((v) => `<li>${escape6(v)}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ul>` : "<p>這棵國策樹沒有記錄關係。較舊版本生成的樹、小型樹與匯入的樹可能沒有關係表。</p>"}
+      ${independent.length ? `<section class="rel-independent"><h3>獨立推進的分支</h3><dl>${independent.map((b) => `<dt>${escape6(b.name)}</dt><dd>${escape6(b.independent ?? "")}</dd>`).join("")}</dl></section>` : ""}`,
         '<button data-modal="close">返回</button>'
       );
     }
@@ -33961,10 +35052,10 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const toolbar = `<div class="event-filters">${filters.map(([id, label2]) => `<button class="chip ${eventFilter === id ? "active" : ""}" data-event-filter="${id}" aria-pressed="${eventFilter === id}">${label2}</button>`).join("")}<select data-event-country aria-label="依國家篩選"><option value="">所有國家</option>${Object.values(
         state?.countries ?? {}
       ).map(
-        (c) => `<option value="${escape5(c.id)}" ${selected(c.id === eventCountry)}>${escape5(c.name)}</option>`
+        (c) => `<option value="${escape6(c.id)}" ${selected(c.id === eventCountry)}>${escape6(c.name)}</option>`
       ).join("")}</select><small>${events.length} / ${all.length} 件</small></div>`;
       const cards = events.map(
-        (e) => `<article class="event-card"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape5(names(e))}${e.public ? "" : " · 未公開"}${e.status === "ongoing" ? " · 仍在發展" : e.result ? ` · ${resultNames[e.result]}` : ""}</span><h3>${escape5(e.headline || e.title)}</h3><p>${escape5(e.description)}</p>${e.current ? `<p class="event-current"><b>現況</b> ${escape5(e.current)}</p>` : ""}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape5(st.text)}${st.when ? ` <small>${escape5(st.when)}</small>` : ""}</li>`).join("")}</ul>` : ""}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape5(t.text)}</li>`).join("")}</ol>` : ""}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape5(newsEffects(state, e))}</small>` : ""}<small>${escape5(e.evidence)}</small></article>`
+        (e) => `<article class="event-card"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape6(names(e))}${e.public ? "" : " · 未公開"}${e.status === "ongoing" ? " · 仍在發展" : e.result ? ` · ${resultNames[e.result]}` : ""}</span><h3>${escape6(e.headline || e.title)}</h3><p>${escape6(e.description)}</p>${e.current ? `<p class="event-current"><b>現況</b> ${escape6(e.current)}</p>` : ""}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape6(st.text)}${st.when ? ` <small>${escape6(st.when)}</small>` : ""}</li>`).join("")}</ul>` : ""}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape6(t.text)}</li>`).join("")}</ol>` : ""}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape6(newsEffects(state, e))}</small>` : ""}<small>${escape6(e.evidence)}</small></article>`
       ).join("");
       const body = `${all.length ? toolbar : ""}${cards || `<p class="muted">${all.length ? "沒有符合篩選的事件。" : "目前沒有事件。局勢更新會記錄各國發生的事，包括未公開的。"}</p>`}`;
       if (modal === "events") {
@@ -33975,7 +35066,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
     }
     function optionList(values, value) {
       return values.map(
-        ([id, label2]) => `<option value="${escape5(id)}" ${selected(id === value)}>${escape5(label2)}</option>`
+        ([id, label2]) => `<option value="${escape6(id)}" ${selected(id === value)}>${escape6(label2)}</option>`
       ).join("");
     }
     const settingsFooter = '<button data-modal="close">取消</button><button class="primary" data-modal="save-settings">儲存設定</button>';
@@ -34019,22 +35110,20 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
         "settings",
         "國策設定",
         `<div class="tabs">${tabs.map(([id, name]) => `<button data-settings-tab="${id}" class="${settingsTab === id ? "active" : ""}">${name}</button>`).join("")}</div>
-      <div class="settings-section" ${settingsTab !== "general" ? "hidden" : ""}><div class="form-grid"><label class="field">國策樹規模<select data-setting="size">${optionList(
+      <div class="settings-section" ${settingsTab !== "general" ? "hidden" : ""}><div class="form-grid"><label class="field">每期規模<select data-setting="size">${optionList(
           [
-            ["small", "小型 · 15–25 節點"],
-            ["standard", "標準 · 40–60 節點"],
-            ["large", "大型 · 70–100 節點"],
-            ["epic", "超大型 · 110–150 節點"]
+            ["standard", "標準 · 每期 10–16 項"],
+            ["large", "大型 · 每期 16–24 項"]
           ],
           state?.settings.size ?? "standard"
-        )}</select><small>只影響之後新生成的樹。</small></label><label class="field">故事節奏<select data-setting="pace">${optionList(
+        )}</select><small>含前期承接節點，只影響新生成與下一期；數量是篇幅目標，不強制湊數。</small></label><label class="field">故事節奏<select data-setting="pace">${optionList(
           [
             ["fast", "快速"],
             ["standard", "標準"],
             ["long", "長期"]
           ],
           state?.settings.pace ?? "standard"
-        )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>在選定的既有世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未綁定世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">寫入世界書<input data-config="promptBookName" list="prompt-book-names" value="${escape5(draft.promptBookName)}" placeholder="留空：使用當前聊天綁定的世界書"><datalist id="prompt-book-names"></datalist><small>可選擇或輸入既有世界書名稱。留空時只使用聊天綁定，不會改用角色主世界書；切換目標會清理上一個寫入目標中的國策條目。此設定不改變聊天的世界書綁定。</small><small id="prompt-book-status"></small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
+        )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>在選定的既有世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未綁定世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">寫入世界書<input data-config="promptBookName" list="prompt-book-names" value="${escape6(draft.promptBookName)}" placeholder="留空：使用當前聊天綁定的世界書"><datalist id="prompt-book-names"></datalist><small>可選擇或輸入既有世界書名稱。留空時只使用聊天綁定，不會改用角色主世界書；切換目標會清理上一個寫入目標中的國策條目。此設定不改變聊天的世界書綁定。</small><small id="prompt-book-status"></small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
       <div class="settings-section" ${settingsTab !== "apis" ? "hidden" : ""}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "jobs" ? "hidden" : ""}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "sources" ? "hidden" : ""}><div id="source-panel"></div></div>`,
@@ -34044,7 +35133,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       const bookStatus = backdrop.querySelector("#prompt-book-status");
       void controller2.platform.worldbooks().then(({ all }) => {
         if (bookNames.isConnected) {
-          bookNames.innerHTML = [...new Set(all)].sort().map((name) => `<option value="${escape5(name)}"></option>`).join("");
+          bookNames.innerHTML = [...new Set(all)].sort().map((name) => `<option value="${escape6(name)}"></option>`).join("");
         }
       }).catch(() => {
         if (bookStatus.isConnected) {
@@ -34141,7 +35230,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
         return;
       }
       if (target.dataset.country) {
-        countryId = target.dataset.country;
+        countryId2 = target.dataset.country;
         detailsOpen = false;
         nodeId = "";
         query = "";
@@ -34180,6 +35269,18 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       if (name) {
         void action(async () => {
           switch (name) {
+            case "period-history": {
+              const country = currentCountry();
+              if (country) {
+                openModal(
+                  "period-history",
+                  "往期摘要",
+                  historyBody(country),
+                  '<button data-modal="close">返回</button>'
+                );
+              }
+              break;
+            }
             case "close":
               open2 = false;
               render();
@@ -34238,15 +35339,15 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
               break;
             case "start":
               lockConfirm = "";
-              await controller2.mutate((state) => startFocus(state, countryId, nodeId), true);
+              await controller2.mutate((state) => startFocus(state, countryId2, nodeId), true);
               break;
             case "pause":
-              await controller2.mutate((state) => pauseFocus(state, countryId), true);
+              await controller2.mutate((state) => pauseFocus(state, countryId2), true);
               break;
             case "switch":
               lockConfirm = "";
               await controller2.mutate(
-                (state) => startFocus(pauseFocus(state, countryId), countryId, nodeId),
+                (state) => startFocus(pauseFocus(state, countryId2), countryId2, nodeId),
                 true
               );
               break;
@@ -34307,6 +35408,15 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
             }
             case "demo-days":
               await preview2?.advance(7);
+              break;
+            case "demo-period-crisis":
+              await preview2?.periodSample?.(false);
+              break;
+            case "demo-period-complete":
+              await preview2?.periodSample?.(true);
+              break;
+            case "demo-period-next":
+              await preview2?.nextPeriod?.();
               break;
             case "demo-outcome":
               await preview2?.outcome();
@@ -34383,10 +35493,10 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       }
       if (input2.id === "country-picker") {
         if (input2.value === "__manage") {
-          input2.value = countryId;
+          input2.value = countryId2;
           showCountries();
         } else {
-          countryId = input2.value;
+          countryId2 = input2.value;
           nodeId = "";
           query = "";
           branch = "";
@@ -34411,10 +35521,18 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       if (input2.id === "country-control") {
         void action(
           () => controller2.mutate(
-            (state) => changeCountry(state, countryId, { control: input2.value }),
+            (state) => changeCountry(state, countryId2, { control: input2.value }),
             true
           )
         );
+      }
+      if (input2.dataset.periodAuto) {
+        void action(
+          () => controller2.mutate(
+            (state) => changeCountry(state, input2.dataset.periodAuto, { autoPeriod: input2.checked })
+          )
+        );
+        return;
       }
       for (const key of ["enable", "delegate"]) {
         const id = input2.dataset[key];
@@ -34479,7 +35597,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
               });
               importing = null;
               treeNotice = `已匯入 ${pending.entries.map((entry) => `「${entry.tree.name}」`).join("、")}。${pending.withProgress ? "請執行「更新局勢」校準進度。" : ""}`;
-              countryId = pending.entries[0].tree.id;
+              countryId2 = pending.entries[0].tree.id;
               nodeId = "";
               centeredCountry = "";
               showCountries(false);
@@ -34500,8 +35618,8 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
             const id = target.dataset.removeConfirm;
             removing = "";
             await controller2.removeCountry(id);
-            if (countryId === id) {
-              countryId = "";
+            if (countryId2 === id) {
+              countryId2 = "";
               nodeId = "";
               detailsOpen = false;
             }
@@ -34523,7 +35641,11 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
           if (target.dataset.retry) {
             const job = controller2.jobs.find((j) => j.id === target.dataset.retry);
             if (job) {
-              await controller2.run(job.kind, job.candidate);
+              if (job.periodWork && job.state === "stale") {
+                await controller2.run("update");
+              } else {
+                await controller2.run(job.kind, job.candidate, job.periodWork);
+              }
             }
             return;
           }

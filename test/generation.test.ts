@@ -117,22 +117,10 @@ test('骨架修正操作以 id 定位，壞操作略過並回報', async () => {
   assert.equal(root.nodes[0].impact, 'pivotal');
 });
 
-test('提示詞裡的骨架、修正與填寫範例都通過實際檢查（範例只差國策數）', async () => {
+test('生成指示使用分期與內容深度，不要求結構配額', async () => {
   const { DEFAULT_TASK } = await import('../src/prompts');
-  const { checkSkeleton, FillNodeSchema } = await import('../src/skeleton');
-  const { PatchReplySchema, applyPatch } = await import('../src/skeleton-patch');
-  const lines = DEFAULT_TASK.generate.split('\n');
-  const after = (label: string) => JSON.parse(lines[lines.findIndex((line) => line.startsWith(label)) + 1]);
-  const skeleton = after('骨架範例');
-  const snapshot = { state: { settings: { size: 'small', pace: 'normal' } }, context: {}, day: 0 };
-  const checked = checkSkeleton(
-    snapshot as never,
-    { id: 'ex_land', name: '範例王國', description: '', evidence: '' },
-    skeleton,
-  );
-  assert.equal(checked.problems.length, 1, checked.problems.join('\n'));
-  assert.match(checked.problems[0], /骨架須有 15–25 個國策，本次有 9 個/);
-  const patch = PatchReplySchema.parse(after('修正範例')).patch;
-  assert.equal(applyPatch(skeleton, patch).errors.length, 0);
-  for (const node of after('填寫範例').nodes) FillNodeSchema.parse(node);
+  assert.match(DEFAULT_TASK.generate, /10–16/);
+  assert.match(DEFAULT_TASK.generate, /沒有配額/);
+  assert.match(DEFAULT_TASK.generate, /stage=period/);
+  assert.match(DEFAULT_TASK.update, /transitions/);
 });

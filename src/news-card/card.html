@@ -1124,8 +1124,8 @@
       var linkedFocus = function (event) {
         var source = event.source || {};
         var country = countries[source.country];
-        return country && source.node && country.nodes[source.node]
-          ? { country: country, node: country.nodes[source.node] }
+        return country && source.node && (country.nodes[source.node] || source.name)
+          ? { country: country, node: country.nodes[source.node] || { id: source.node, name: source.name } }
           : null;
       };
       // Focuses that follow the one an event carries out and can still be taken.

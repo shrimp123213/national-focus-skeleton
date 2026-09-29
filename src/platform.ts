@@ -1,5 +1,15 @@
 import type { Config, JobKind, PromptItem, PromptRole, State, WorldbookSource } from './model';
 import type { SourceReport } from './sources';
+import type { Transition } from './periods';
+
+export type PeriodWork = {
+  transition: Transition;
+  identity: string;
+  historyHash?: string;
+  storyFingerprint?: string;
+  day: number;
+  basis: string;
+};
 
 /** `name` is only for display and logs; API requests send role and content only. */
 export type PromptMessage = { role: PromptRole; content: string; name?: string };
@@ -17,6 +27,7 @@ export type Snapshot = {
   identity: string;
   fingerprint: string;
   historyHash?: string;
+  storyFingerprint?: string;
   turn: number;
   day: number;
   state: State;
@@ -46,6 +57,7 @@ export type JobStatus = {
   label?: string;
   /** The candidate a generation job was for, so a failed job can be retried. */
   candidate?: { id: string; name: string; description: string; evidence: string };
+  periodWork?: PeriodWork;
   /** Epoch milliseconds when the job started running. */
   started?: number;
   /** Epoch milliseconds when the job finished. */

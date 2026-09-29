@@ -4,6 +4,7 @@ import { applyProposal, createState, installCountry, stampNews, startFocus } fro
 import { defaultConfig, type Config, type State, type JobKind } from './model';
 import { buildSourceContext } from './sources';
 import { stamp, type GenerateResult, type Platform, type Snapshot } from './platform';
+import { makeSampleState, advancePeriodSample, type Scenario } from './demo-period';
 
 export function demoState(): State {
   let state = installCountry(createState(100), demoTree(), 100);
@@ -27,6 +28,22 @@ export class DemoPlatform implements Platform {
   private revision = 0;
   private config = defaultConfig();
   private changes = new Set<() => void>();
+  private scenario: Scenario = 'crisis';
+  async periodSample(completed: boolean): Promise<void> {
+    this.scenario = completed ? 'complete' : 'crisis';
+    this.state = makeSampleState(this.scenario);
+    this.revision++;
+    for (const change of this.changes) {
+      change();
+    }
+  }
+  async nextPeriod(): Promise<void> {
+    this.state = advancePeriodSample(this.state, this.scenario);
+    this.revision++;
+    for (const change of this.changes) {
+      change();
+    }
+  }
   async read(config = this.config, job?: JobKind): Promise<Snapshot> {
     const sources = job
       ? await buildSourceContext({

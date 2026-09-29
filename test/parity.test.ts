@@ -559,7 +559,7 @@ test('任務請求依提示詞串排列訊息，資料段的 {{data}} 換成 JSO
   assert.equal(controller.config.jobs.identify.prompts.find((p) => p.kind === 'data')!.content, '');
   const generate = await controller.preview('generate');
   assert.match(generate.at(-1)!.content, /"limits":\{"min":/);
-  assert.match(generate.at(-1)!.content, /"stage":"skeleton"/);
+  assert.match(generate.at(-1)!.content, /"stage":"generate"/);
   controller.saveSettings({ ...controller.config, runLog: false });
   assert.deepEqual(controller.logs, []);
   controller.dispose();

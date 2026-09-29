@@ -1,7 +1,7 @@
 # Builds the 織界國策 task preset (national-focus-task-presets v1).
 import json, time
 
-PRESET_NAME = '織界國策 v3 骨架版（基調＋焦點風格包）'
+PRESET_NAME = '織界國策 v4 分期版（基調＋焦點風格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需嚴格讀取設定，辨識<故事信息>與<世界基本信息>中真實存在、能自主決定長期方向的國家與政權，呈現給 VOID',
@@ -269,53 +269,14 @@ Step 4：描述與依據
 - description 一兩句寫現狀與主要矛盾；evidence 引用設定或正文的依據
 </analysis_format>''',
     'generate': '''VOID: 織界者，以下是你的思維要求：
-
 <analysis_format>
-''' + THINK_WHERE.format(limit=1500) + '''
-
-先看任務資料的 stage：generate 是一次生成整棵樹；skeleton 只排整棵樹的骨架（結構、路線、能力與國策之間的關係），不寫內文；fill 只為 batch 中的國策撰寫內文；skeleton-fix 只用 patch 操作修正 skeleton 的 issues，Step 1–7 全部寫「略」。
-必須依下列步數推進，不得改變、增減或迴避步數（標明只適用某些 stage 的步驟，其他 stage 寫「略」）：
-Step 0：確認身份與限制
-- 一句話確認織界者身份與本次 stage；回顧<VOID_LAW>，啟動<因果權重自適應法則>與<事象剪定>
-- 若任務資料中的 correction 非空：逐條列出上次被退回的原因與這次的修正方法（最優先）
-- fill：若 batch 中有 previousError 不為 null 的項目，逐項列出原因與修正方法
-- skeleton-fix：逐條列出 issues，每條寫出要用的操作（insert／replace／remove）與路徑；國策數不足時，先逐支計數，決定補在哪幾支、各補幾項、接在哪個國策之後；skippedOperations 不為空時說明上次的操作為何無法套用
-- 若<VOID_INPUT>有內容：如何滿足？
-Step 1：力量錨定（generate／skeleton）
-- 本世界的力量體系是什麼？candidate 的統治者、守護者與戰略威懾位於哪個位格？
-- 主要鄰國與宿敵的威懾位格；R 值與本國存續的底線
-Step 2：國情分析（generate／skeleton，精簡後寫入 JSON 的 analysis）
-- 只列有設定依據的事實：疆域與地理、權力結構、利益群體、財政與資源依賴、外部威脅、信仰、既有工程
-- 區分「設定事實」與「推測」；本國的核心矛盾是什麼？
-Step 3：風格偏好
-- 如何融入<weaving_style>中的偏好？落到本國的哪些人、地、機構？
-Step 4：結構規劃（generate／skeleton）
-- 分支少而深，數量落在 limits.branches：一支國體或政治路線（內含 2–4 條互斥路線，是全樹的核心抉擇）、一至兩支對外、一至兩支內政，必要時一支專屬分支；逐支寫出名稱、目的、支持者、反對者、取捨與終點；每條互斥路線都有可信的支持者與不同的結局
-- 規劃分岔 ≥ limits.minimumForks、匯流 ≥ limits.minimumJoins、跨分支依賴 ≥ limits.minimumCrossBranchLinks，並寫出具體位置；每支（5 項以上）各有一處分岔與匯流
-- 互斥路線：哪些選擇在開始時就不可回頭（lock=start），哪些完成時才鎖定（lock=complete）？有沒有一個選擇應該牽動其他分支（跨分支互斥）？
-- 重要國策：每支 1–2 個影響重大、完成時值得公告的國策（宣戰或最後通牒、併吞或割讓、改制、結盟或廢約、重大法案施行、重大工程落成、長期研究成功、重大超凡力量的動用）。skeleton 寫 action；generate 寫 news：頭條像報紙標題，內文寫世界如何反應，選項按鈕像鋼4 的事件選項。是否形成局勢轉折由之後的發展決定
-- 執行方式：完成後仍需持續執行的工程或改革（分批清丈、長期工程）寫 execution=ongoing，系統會在完成時建立執行事件追蹤進度；一次完成的省略
-Step 5：國策之間的關係與能力流（generate／skeleton）
-- 本國最主要的戰略問題在哪一支？標 core=true 並寫 coreReason（不限政治，也可以是國防、重建或商業）
-- 核心分支透過哪些「會改變選擇」的規則影響至少 limits.coreMinimumBranches 支其他分支？逐條寫 from → to、關係類型（利益交換／政策配合／機會成本／情境差異／延後兌現／制度替代）、change（對方的選項、收益、代價或時機如何改變）與實現它的規則（能力條件、negate「必須沒有」、conditional 條件式成果、數值門檻、互斥）
-- 其他分支各參與哪條跨分支關係？確實獨立的分支，為什麼在本樹的時期與議題內可以獨立推進（寫 independent）？獨立分支和其他分支之間不能有能力或互斥的規則連結，跨分支前置只能是共同的起點國策（沒有前置的國策）；全國數值的一般影響不算，刻意設計的數值交換仍寫進 relations。檢查沒有為湊數編出牽強的關係
-- 承諾：有規則效力的承諾寫成能力；哪些國策以 negate 被它限制？毀約的國策以 revokes 撤銷並付 stats 代價
-- 共用建設：哪些國策以 conditional 依已取得的路線能力給不同成果？只由 conditional 提供的能力不能再當其他國策的條件
-- 每個撤銷：需要該能力的國策是否與撤銷者互斥、是撤銷者的必經前置，或有以撤銷者為必經前置的國策重新提供？有意關閉路線改用互斥
-- 逐一列出能力 key：由哪個國策產生、被哪些國策需要（requirements／sustain／outcomes 分清階段）；檢查沒有要求自身產出的條件、沒有循環、沒有只能在完成後才取得的能力；negate 條件不可在開始前就注定成立不了（要有能在它之前完成、且不鎖掉它路線的撤銷者）；同一國策不可同時要求有與沒有同一能力
-- 跨國策共用的劇情事實列在 facts；outcomes 只用於必須由劇情取得的外部成果（道路、他國同意、研究突破、登神），多數節點為空陣列
-Step 6：歷史承接（generate／skeleton）
-- 設定中明確已完成的國策才列入 historical，並附 evidence；歷史國策產出的能力與初始能力一致
-Step 7：內文（generate／fill）
-- fill：逐項讀 batch 的 gist、條件、provides、revokes、stats、conditional 與 relations；description 寫具體行動、利益衝突與代價，relations 寫出它如何改變另一方，conditional 寫出不同情況下的結果，revokes 與負面 stats 要寫出誰受損；有 mutex 寫 mutexReason；pivotal 的 news 頭條報導 action
-- 不改動結構：不輸出 prerequisites、mutex、條件或能力；batch 的每一項都輸出一筆，id 相同
-Step 8：數量清點與輸出前自檢
-- generate：逐支列出「分支名：項數」，合計必須落在 limits.min–limits.max
-- skeleton：逐支列出項數並加總，合計必須落在 limits.min–limits.max
-- fill：輸出筆數等於 batch 項數
-- skeleton：branch 逐字等於分支 name；條件只有 capability／fact／stability／warSupport 四種 kind，「必須沒有」用 negate:true；能力 key 都在 capabilityCatalog 或 capabilities；relations 的 from／to 是國策 id，kind 是六個英文 id 之一；每支 pivotal（重要國策）1–2 個
-- skeleton-fix：只輸出 {"patch":[…]}；每個 issue 都有對應的操作；新增國策的 id 不重複，前置指向已存在的國策，新能力也 insert 到 /capabilityCatalog/-
-- ID 唯一且以英文字母開頭；前置全部指向已存在的 ID；工期與理由符合 pace；文字長度不超過 limits.text；座標不輸出
+''' + THINK_WHERE.format(limit=1000) + '''
+1. 依 stage 和 schema 確認首次生成或 period 換期；讀 correction，修正實際錯誤。
+2. 確認國情、超凡力量、利益群體、當前局勢與本期主要目的；區分設定事實及新設計。
+3. 規劃本期議程及長期方向；標準 10–16、大型 16–24（含承接），是篇幅目標，禁止為湊數補國策。分岔、匯流、互斥、核心分支與重要國策沒有配額。
+4. period 時先確認 anchor、有效制度與事件，舊期只寫時間外的一段 summary；新節點使用 prefix，相關前置可連 anchor，不重造承接國策，不重發成果。保留有效長期方向，修訂或放棄要說明。
+5. 寫具體國家行動、利益及代價；持續執行交給事件。能力、事實、條件與產出分清，不要求自身成果，前置不循環，互斥路線相容。
+6. 檢查 ID、引用、工期、重要國策新聞與 JSON schema；首次生成輸出 tree 物件，period 輸出 summary 與 tree。
 </analysis_format>''',
     'update': '''VOID: 織界者，以下是你的思維要求：
 

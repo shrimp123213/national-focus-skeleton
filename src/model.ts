@@ -142,10 +142,10 @@ export const RelationSchema = z
 export type Relation = z.infer<typeof RelationSchema>;
 /** Whole-tree focus counts, alternative routes included (v0.10.0: fewer, deeper branches). */
 export const sizeLimits = {
-  small: [15, 25],
-  standard: [40, 60],
-  large: [70, 100],
-  epic: [110, 150],
+  small: [10, 16],
+  standard: [10, 16],
+  large: [16, 24],
+  epic: [16, 24],
 } as const;
 export const TreeSchema = z
   .object({
@@ -158,6 +158,13 @@ export const TreeSchema = z
     /** Skeleton edition: words the story uses for this country; they trigger its chat worldbook entry. */
     keywords: z.array(z.string().min(1).max(24)).max(8).optional(),
     analysis: z.string().default(''),
+    periodTitle: z.string().max(80).default('當前議程'),
+    agenda: z.string().max(800).default(''),
+    longTerm: z
+      .array(z.object({ id: Id, text: z.string().min(1).max(200) }).strict())
+      .max(4)
+      .default([]),
+    autoPeriod: z.boolean().optional(),
     branches: z.array(BranchSchema).default([]),
     /** Optional so trees without relations stay readable by v0.11.1. */
     relations: z.array(RelationSchema).optional(),
@@ -184,6 +191,17 @@ export const CountrySchema = TreeSchema.omit({ nodes: true, historical: true, ca
   treeRevision: z.number().int().nonnegative(),
   cursor: Day,
   current: z.string(),
+  autoPeriod: z.boolean().default(true),
+  period: z
+    .object({
+      number: z.number().int().positive().default(1),
+      started: Day.nullable().default(null),
+      anchor: z.string().default(''),
+      history: z
+        .array(z.object({ start: Day, end: Day, summary: z.string().min(1).max(1200) }).strict())
+        .default([]),
+    })
+    .default({ number: 1, started: null, anchor: '', history: [] }),
   nodes: z.record(Id, NodeSchema),
   progress: z.record(Id, ProgressSchema),
   locks: z.record(Id, z.object({ route: Id, reason: Text })),
@@ -246,7 +264,12 @@ export const EventSchema = z
      * it carries out (`country` and `node`).
      */
     source: z
-      .object({ kind: z.enum(['update', 'focus']), country: Id.optional(), node: Id.optional() })
+      .object({
+        kind: z.enum(['update', 'focus']),
+        country: Id.optional(),
+        node: Id.optional(),
+        name: z.string().optional(),
+      })
       .strict()
       .default({ kind: 'update' }),
     /** AI floor where this news was (last) published; set by the platform, never by the model. */
@@ -273,7 +296,9 @@ export const SettingsSchema = z.object({
   /** Unused since v0.12.7 (the fog was removed); kept so v0.11.1 can still read these saves. */
   fog: z.boolean(),
   observing: z.array(Id),
-  size: z.enum(['small', 'standard', 'large', 'epic']),
+  size: z
+    .enum(['small', 'standard', 'large', 'epic'])
+    .transform((size) => (size === 'small' ? 'standard' : size === 'epic' ? 'large' : size)),
   pace: z.enum(['fast', 'standard', 'long']),
 });
 export const StateSchema = z.object({
@@ -330,6 +355,19 @@ export const ProposalSchema = z
       )
       .default([]),
     calibrations: z.array(Id).default([]),
+    transitions: z
+      .array(
+        z
+          .object({
+            country: Id,
+            cause: z.enum(['completed', 'incompatible']),
+            reason: z.string().min(1).max(800),
+            invalidateActive: z.boolean().default(false),
+          })
+          .strict(),
+      )
+      .default([])
+      .describe('本期主要目的已完成或已不適配時直接換期；無需換期填空，禁止為關閉 autoPeriod 的國家換期'),
   })
   .strict();
 export const CandidatesSchema = z
