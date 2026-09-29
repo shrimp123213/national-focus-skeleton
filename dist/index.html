@@ -609,7 +609,7 @@
     };
   }
 
-  // node_modules/zod/v4/classic/external.js
+  // ../national-focus/node_modules/zod/v4/classic/external.js
   var external_exports = {};
   __export(external_exports, {
     $brand: () => $brand,
@@ -872,7 +872,7 @@
     xor: () => xor
   });
 
-  // node_modules/zod/v4/core/index.js
+  // ../national-focus/node_modules/zod/v4/core/index.js
   var core_exports2 = {};
   __export(core_exports2, {
     $ZodAny: () => $ZodAny,
@@ -1189,7 +1189,7 @@
     withParser: () => withParser
   });
 
-  // node_modules/zod/v4/core/util.js
+  // ../national-focus/node_modules/zod/v4/core/util.js
   var util_exports = {};
   __export(util_exports, {
     BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -2032,7 +2032,7 @@
     return fn;
   }
 
-  // node_modules/zod/v4/core/core.js
+  // ../national-focus/node_modules/zod/v4/core/core.js
   var _a;
   var NEVER = /* @__PURE__ */ Object.freeze({
     status: "aborted"
@@ -2154,7 +2154,7 @@
     return globalConfig;
   }
 
-  // node_modules/zod/v4/core/errors.js
+  // ../national-focus/node_modules/zod/v4/core/errors.js
   function _getMessage() {
     const internals = this._zod;
     internals.message ?? (internals.message = JSON.stringify(internals.def, jsonStringifyReplacer, 2));
@@ -2346,7 +2346,7 @@
     return lines.join("\n");
   }
 
-  // node_modules/zod/v4/core/parse.js
+  // ../national-focus/node_modules/zod/v4/core/parse.js
   function finalizeParams(callee, params) {
     return { callee: params?.callee ?? callee, Err: params?.Err };
   }
@@ -2506,7 +2506,7 @@
   };
   var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
-  // node_modules/zod/v4/core/regexes.js
+  // ../national-focus/node_modules/zod/v4/core/regexes.js
   var regexes_exports = {};
   __export(regexes_exports, {
     anyString: () => anyString,
@@ -2678,7 +2678,7 @@
   var sha512_base64 = /* @__PURE__ */ fixedBase64(86, "==");
   var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
-  // node_modules/zod/v4/core/checks.js
+  // ../national-focus/node_modules/zod/v4/core/checks.js
   var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
     var _a3;
     inst._zod ?? (inst._zod = {});
@@ -3154,7 +3154,7 @@
     };
   });
 
-  // node_modules/zod/v4/core/doc.js
+  // ../national-focus/node_modules/zod/v4/core/doc.js
   var Doc = class {
     constructor(args = [], closed = {}) {
       this.content = [];
@@ -3195,14 +3195,14 @@ ${content.join("\n")}
     }
   };
 
-  // node_modules/zod/v4/core/versions.js
+  // ../national-focus/node_modules/zod/v4/core/versions.js
   var version = {
     major: 4,
     minor: 6,
     patch: 5
   };
 
-  // node_modules/zod/v4/core/schemas.js
+  // ../national-focus/node_modules/zod/v4/core/schemas.js
   var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     var _a3;
     inst ?? (inst = {});
@@ -5616,7 +5616,7 @@ ${content.join("\n")}
     }
   }
 
-  // node_modules/zod/v4/core/memoizer.js
+  // ../national-focus/node_modules/zod/v4/core/memoizer.js
   var $ZodCyclicError = class extends Error {
     constructor() {
       super(`Cannot parse a reference cycle that closes through a transform`);
@@ -5893,7 +5893,7 @@ ${content.join("\n")}
     return backEdges !== void 0 && isRef(value) && backEdges.has(value);
   }
 
-  // node_modules/zod/v4/locales/index.js
+  // ../national-focus/node_modules/zod/v4/locales/index.js
   var locales_exports = {};
   __export(locales_exports, {
     ar: () => ar_default,
@@ -5961,7 +5961,7 @@ ${content.join("\n")}
     zhTW: () => zh_TW_default
   });
 
-  // node_modules/zod/v4/locales/ar.js
+  // ../national-focus/node_modules/zod/v4/locales/ar.js
   var error = () => {
     const Sizable = {
       string: { unit: "حرف", verb: "أن يحوي" },
@@ -6073,7 +6073,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/az.js
+  // ../national-focus/node_modules/zod/v4/locales/az.js
   var error2 = () => {
     const Sizable = {
       string: { unit: "simvol", verb: "olmalıdır" },
@@ -6184,7 +6184,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/be.js
+  // ../national-focus/node_modules/zod/v4/locales/be.js
   function getBelarusianPlural(count, one, few, many) {
     const absCount = Math.abs(count);
     const lastDigit = absCount % 10;
@@ -6353,7 +6353,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/bg.js
+  // ../national-focus/node_modules/zod/v4/locales/bg.js
   var error4 = () => {
     const Sizable = {
       string: { unit: "символа", verb: "да съдържа" },
@@ -6479,7 +6479,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/bn.js
+  // ../national-focus/node_modules/zod/v4/locales/bn.js
   var error5 = () => {
     const Sizable = {
       string: { unit: "অক্ষর", verb: "থাকতে হবে" },
@@ -6593,7 +6593,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ca.js
+  // ../national-focus/node_modules/zod/v4/locales/ca.js
   var error6 = () => {
     const Sizable = {
       string: { unit: "caràcters", verb: "contenir" },
@@ -6707,7 +6707,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ckb.js
+  // ../national-focus/node_modules/zod/v4/locales/ckb.js
   var error7 = () => {
     const Sizable = {
       string: { unit: "پیت", verb: "بێت" },
@@ -6840,7 +6840,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/cs.js
+  // ../national-focus/node_modules/zod/v4/locales/cs.js
   var error8 = () => {
     const Sizable = {
       string: { unit: "znaků", verb: "mít" },
@@ -6957,7 +6957,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/da.js
+  // ../national-focus/node_modules/zod/v4/locales/da.js
   var error9 = () => {
     const Sizable = {
       string: { unit: "tegn", verb: "havde" },
@@ -7078,7 +7078,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/de.js
+  // ../national-focus/node_modules/zod/v4/locales/de.js
   var error10 = () => {
     const Sizable = {
       string: { unit: "Zeichen", verb: "zu haben" },
@@ -7192,7 +7192,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/el.js
+  // ../national-focus/node_modules/zod/v4/locales/el.js
   var error11 = () => {
     const Sizable = {
       string: { unit: "χαρακτήρες", verb: "να έχει" },
@@ -7305,7 +7305,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/en.js
+  // ../national-focus/node_modules/zod/v4/locales/en.js
   var error12 = () => {
     const Sizable = {
       string: { unit: "characters", verb: "to have" },
@@ -7430,7 +7430,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/eo.js
+  // ../national-focus/node_modules/zod/v4/locales/eo.js
   var error13 = () => {
     const Sizable = {
       string: { unit: "karaktrojn", verb: "havi" },
@@ -7545,7 +7545,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/es.js
+  // ../national-focus/node_modules/zod/v4/locales/es.js
   var error14 = () => {
     const Sizable = {
       string: { unit: "caracteres", verb: "tener" },
@@ -7682,7 +7682,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/fa.js
+  // ../national-focus/node_modules/zod/v4/locales/fa.js
   var error15 = () => {
     const Sizable = {
       string: { unit: "کاراکتر", verb: "داشته باشد" },
@@ -7802,7 +7802,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/fi.js
+  // ../national-focus/node_modules/zod/v4/locales/fi.js
   var error16 = () => {
     const Sizable = {
       string: { unit: "merkkiä", subject: "merkkijonon" },
@@ -7920,7 +7920,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/fr.js
+  // ../national-focus/node_modules/zod/v4/locales/fr.js
   var error17 = () => {
     const Sizable = {
       string: { unit: "caractères", verb: "avoir" },
@@ -8050,7 +8050,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/fr-CA.js
+  // ../national-focus/node_modules/zod/v4/locales/fr-CA.js
   var error18 = () => {
     const Sizable = {
       string: { unit: "caractères", verb: "avoir" },
@@ -8163,7 +8163,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/gu.js
+  // ../national-focus/node_modules/zod/v4/locales/gu.js
   var error19 = () => {
     const Sizable = {
       string: { unit: "અક્ષર", verb: "હોવા જોઈએ" },
@@ -8277,7 +8277,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/he.js
+  // ../national-focus/node_modules/zod/v4/locales/he.js
   var error20 = () => {
     const TypeNames = {
       string: { label: "מחרוזת", gender: "f" },
@@ -8479,7 +8479,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/hi.js
+  // ../national-focus/node_modules/zod/v4/locales/hi.js
   var error21 = () => {
     const Sizable = {
       string: { unit: "अक्षर", verb: "रखने के लिए" },
@@ -8591,7 +8591,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/hr.js
+  // ../national-focus/node_modules/zod/v4/locales/hr.js
   var error22 = () => {
     const Sizable = {
       string: { unit: "znakova", verb: "imati" },
@@ -8718,7 +8718,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/hu.js
+  // ../national-focus/node_modules/zod/v4/locales/hu.js
   var error23 = () => {
     const Sizable = {
       string: { unit: "karakter", verb: "legyen" },
@@ -8832,7 +8832,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/hy.js
+  // ../national-focus/node_modules/zod/v4/locales/hy.js
   function getArmenianPlural(count, one, many) {
     return Math.abs(count) === 1 ? one : many;
   }
@@ -8991,7 +8991,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/id.js
+  // ../national-focus/node_modules/zod/v4/locales/id.js
   var error25 = () => {
     const Sizable = {
       string: { unit: "karakter", verb: "memiliki" },
@@ -9103,7 +9103,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/is.js
+  // ../national-focus/node_modules/zod/v4/locales/is.js
   var error26 = () => {
     const Sizable = {
       string: { unit: "stafi", verb: "að hafa" },
@@ -9218,7 +9218,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/it.js
+  // ../national-focus/node_modules/zod/v4/locales/it.js
   var error27 = () => {
     const Sizable = {
       string: { unit: "caratteri", verb: "avere" },
@@ -9332,7 +9332,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ja.js
+  // ../national-focus/node_modules/zod/v4/locales/ja.js
   var error28 = () => {
     const Sizable = {
       string: { unit: "文字", verb: "である" },
@@ -9445,7 +9445,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ka.js
+  // ../national-focus/node_modules/zod/v4/locales/ka.js
   var error29 = () => {
     const Sizable = {
       string: { unit: "სიმბოლო", verb: "უნდა შეიცავდეს" },
@@ -9563,7 +9563,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/km.js
+  // ../national-focus/node_modules/zod/v4/locales/km.js
   var error30 = () => {
     const Sizable = {
       string: { unit: "តួអក្សរ", verb: "គួរមាន" },
@@ -9679,12 +9679,12 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/kh.js
+  // ../national-focus/node_modules/zod/v4/locales/kh.js
   function kh_default() {
     return km_default();
   }
 
-  // node_modules/zod/v4/locales/kn.js
+  // ../national-focus/node_modules/zod/v4/locales/kn.js
   var error31 = () => {
     const Sizable = {
       string: { unit: "ಅಕ್ಷರಗಳು", verb: "ಹೊಂದಲು" },
@@ -9800,7 +9800,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ko.js
+  // ../national-focus/node_modules/zod/v4/locales/ko.js
   var error32 = () => {
     const Sizable = {
       string: { unit: "문자", verb: "to have" },
@@ -9917,7 +9917,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/lt.js
+  // ../national-focus/node_modules/zod/v4/locales/lt.js
   var capitalizeFirstCharacter = (text) => {
     return text.charAt(0).toUpperCase() + text.slice(1);
   };
@@ -10125,7 +10125,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/mk.js
+  // ../national-focus/node_modules/zod/v4/locales/mk.js
   var error34 = () => {
     const Sizable = {
       string: { unit: "знаци", verb: "да имаат" },
@@ -10240,7 +10240,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ms.js
+  // ../national-focus/node_modules/zod/v4/locales/ms.js
   var error35 = () => {
     const Sizable = {
       string: { unit: "aksara", verb: "mempunyai" },
@@ -10353,7 +10353,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ne.js
+  // ../national-focus/node_modules/zod/v4/locales/ne.js
   var error36 = () => {
     const Sizable = {
       string: { unit: "अक्षर", verb: "हुनुपर्छ" },
@@ -10465,7 +10465,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/nl.js
+  // ../national-focus/node_modules/zod/v4/locales/nl.js
   var error37 = () => {
     const Sizable = {
       string: { unit: "tekens", verb: "heeft" },
@@ -10581,7 +10581,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/nn.js
+  // ../national-focus/node_modules/zod/v4/locales/nn.js
   var error38 = () => {
     const Sizable = {
       string: { unit: "teikn", verb: "å ha" },
@@ -10695,7 +10695,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/no.js
+  // ../national-focus/node_modules/zod/v4/locales/no.js
   var error39 = () => {
     const Sizable = {
       string: { unit: "tegn", verb: "å ha" },
@@ -10809,7 +10809,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ota.js
+  // ../national-focus/node_modules/zod/v4/locales/ota.js
   var error40 = () => {
     const Sizable = {
       string: { unit: "harf", verb: "olmalıdır" },
@@ -10924,7 +10924,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ps.js
+  // ../national-focus/node_modules/zod/v4/locales/ps.js
   var error41 = () => {
     const Sizable = {
       string: { unit: "توکي", verb: "ولري" },
@@ -11044,7 +11044,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/pl.js
+  // ../national-focus/node_modules/zod/v4/locales/pl.js
   var error42 = () => {
     const Sizable = {
       string: { unit: "znaków", verb: "mieć" },
@@ -11159,7 +11159,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/pt.js
+  // ../national-focus/node_modules/zod/v4/locales/pt.js
   var error43 = () => {
     const Sizable = {
       string: { unit: "caracteres" },
@@ -11303,7 +11303,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/pt-BR.js
+  // ../national-focus/node_modules/zod/v4/locales/pt-BR.js
   var error44 = () => {
     const Sizable = {
       string: { unit: "caracteres" },
@@ -11448,7 +11448,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ro.js
+  // ../national-focus/node_modules/zod/v4/locales/ro.js
   var error45 = () => {
     const Sizable = {
       string: { unit: "caractere", verb: "să aibă" },
@@ -11571,7 +11571,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ru.js
+  // ../national-focus/node_modules/zod/v4/locales/ru.js
   function getRussianPlural(count, one, few, many) {
     const absCount = Math.abs(count);
     const lastDigit = absCount % 10;
@@ -11740,7 +11740,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/sk.js
+  // ../national-focus/node_modules/zod/v4/locales/sk.js
   var error47 = () => {
     const Sizable = {
       string: { unit: "znakov", verb: "mať" },
@@ -11857,7 +11857,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/sl.js
+  // ../national-focus/node_modules/zod/v4/locales/sl.js
   var error48 = () => {
     const Sizable = {
       string: { unit: "znakov", verb: "imeti" },
@@ -11972,7 +11972,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/sv.js
+  // ../national-focus/node_modules/zod/v4/locales/sv.js
   var error49 = () => {
     const Sizable = {
       string: { unit: "tecken", verb: "att ha" },
@@ -12088,7 +12088,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ta.js
+  // ../national-focus/node_modules/zod/v4/locales/ta.js
   var error50 = () => {
     const Sizable = {
       string: { unit: "எழுத்துக்கள்", verb: "கொண்டிருக்க வேண்டும்" },
@@ -12204,7 +12204,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/tg.js
+  // ../national-focus/node_modules/zod/v4/locales/tg.js
   var error51 = () => {
     const Sizable = {
       string: { unit: "аломат", verb: "дошта бошад" },
@@ -12321,7 +12321,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/th.js
+  // ../national-focus/node_modules/zod/v4/locales/th.js
   var error52 = () => {
     const Sizable = {
       string: { unit: "ตัวอักษร", verb: "ควรมี" },
@@ -12437,7 +12437,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/tk.js
+  // ../national-focus/node_modules/zod/v4/locales/tk.js
   var error53 = () => {
     const Sizable = {
       string: { unit: "simwol", verb: "bolmaly" },
@@ -12545,7 +12545,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/tr.js
+  // ../national-focus/node_modules/zod/v4/locales/tr.js
   var error54 = () => {
     const Sizable = {
       string: { unit: "karakter", verb: "olmalı" },
@@ -12656,7 +12656,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/uk.js
+  // ../national-focus/node_modules/zod/v4/locales/uk.js
   var error55 = () => {
     const Sizable = {
       string: { unit: "символів", verb: "матиме" },
@@ -12770,12 +12770,12 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/ua.js
+  // ../national-focus/node_modules/zod/v4/locales/ua.js
   function ua_default() {
     return uk_default();
   }
 
-  // node_modules/zod/v4/locales/ur.js
+  // ../national-focus/node_modules/zod/v4/locales/ur.js
   var error56 = () => {
     const Sizable = {
       string: { unit: "حروف", verb: "ہونا" },
@@ -12891,7 +12891,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/uz.js
+  // ../national-focus/node_modules/zod/v4/locales/uz.js
   var error57 = () => {
     const Sizable = {
       string: { unit: "belgi", verb: "bo‘lishi kerak" },
@@ -13005,7 +13005,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/vi.js
+  // ../national-focus/node_modules/zod/v4/locales/vi.js
   var error58 = () => {
     const Sizable = {
       string: { unit: "ký tự", verb: "có" },
@@ -13119,7 +13119,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/zh-CN.js
+  // ../national-focus/node_modules/zod/v4/locales/zh-CN.js
   var error59 = () => {
     const Sizable = {
       string: { unit: "字符", verb: "包含" },
@@ -13234,7 +13234,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/zh-TW.js
+  // ../national-focus/node_modules/zod/v4/locales/zh-TW.js
   var error60 = () => {
     const Sizable = {
       string: { unit: "字元", verb: "擁有" },
@@ -13347,7 +13347,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/locales/yo.js
+  // ../national-focus/node_modules/zod/v4/locales/yo.js
   var error61 = () => {
     const Sizable = {
       string: { unit: "àmi", verb: "ní" },
@@ -13460,7 +13460,7 @@ ${content.join("\n")}
     };
   }
 
-  // node_modules/zod/v4/core/registries.js
+  // ../national-focus/node_modules/zod/v4/core/registries.js
   var _a2;
   var $output = /* @__PURE__ */ Symbol("ZodOutput");
   var $input = /* @__PURE__ */ Symbol("ZodInput");
@@ -13510,9 +13510,9 @@ ${content.join("\n")}
   (_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
   var globalRegistry = globalThis.__zod_globalRegistry;
 
-  // node_modules/zod/v4/core/compile.js
-  var INVALID = /* @__PURE__ */ Symbol.for("zod.compile.invalid");
-  var FALLBACK_FLAG = /* @__PURE__ */ Symbol.for("zod.compile.fallback");
+  // ../national-focus/node_modules/zod/v4/core/compile.js
+  var INVALID = Symbol.for("zod.compile.invalid");
+  var FALLBACK_FLAG = Symbol.for("zod.compile.fallback");
   var ZodCompileAsyncError = class extends Error {
     constructor(message = "z.compile does not support async refinements, transforms, or checks") {
       super(message);
@@ -15112,7 +15112,7 @@ ${code}
     return accessor;
   }
 
-  // node_modules/zod/v4/core/api.js
+  // ../national-focus/node_modules/zod/v4/core/api.js
   function snapshotChecks(def) {
     if (def.checks)
       def.checks = [...def.checks];
@@ -16171,7 +16171,7 @@ ${code}
     return inst;
   }
 
-  // node_modules/zod/v4/core/to-json-schema.js
+  // ../national-focus/node_modules/zod/v4/core/to-json-schema.js
   function assignProps(target, ...sources) {
     for (const source of sources) {
       for (const key of Reflect.ownKeys(source)) {
@@ -16701,7 +16701,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return finalize(ctx, schema4);
   };
 
-  // node_modules/zod/v4/core/json-schema-processors.js
+  // ../national-focus/node_modules/zod/v4/core/json-schema-processors.js
   var narrowMin = (agg, key, value) => {
     if (agg[key] === void 0 || value > agg[key])
       agg[key] = value;
@@ -17292,7 +17292,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const seen = ctx.seen.get(schema4);
     seen.ref = def.innerType;
   };
-  var UNREPRESENTABLE_DEFAULT = /* @__PURE__ */ Symbol();
+  var UNREPRESENTABLE_DEFAULT = Symbol();
   function serializeDefaultValue(value, schema4, ctx, json2, params) {
     let unrepresentable = false;
     const serialized = JSON.stringify(value, (_, val) => {
@@ -17449,7 +17449,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return finalize(ctx, input2);
   }
 
-  // node_modules/zod/v4/core/json-schema-generator.js
+  // ../national-focus/node_modules/zod/v4/core/json-schema-generator.js
   var JSONSchemaGenerator = class {
     /** @deprecated Access via ctx instead */
     get metadataRegistry() {
@@ -17527,10 +17527,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
   };
 
-  // node_modules/zod/v4/core/json-schema.js
+  // ../national-focus/node_modules/zod/v4/core/json-schema.js
   var json_schema_exports = {};
 
-  // node_modules/zod/v4/classic/schemas.js
+  // ../national-focus/node_modules/zod/v4/classic/schemas.js
   var schemas_exports2 = {};
   __export(schemas_exports2, {
     ZodAny: () => ZodAny,
@@ -17711,7 +17711,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     xor: () => xor
   });
 
-  // node_modules/zod/v4/classic/checks.js
+  // ../national-focus/node_modules/zod/v4/classic/checks.js
   var checks_exports2 = {};
   __export(checks_exports2, {
     endsWith: () => _endsWith,
@@ -17746,7 +17746,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uppercase: () => _uppercase
   });
 
-  // node_modules/zod/v4/classic/errors.js
+  // ../national-focus/node_modules/zod/v4/classic/errors.js
   var _installedErrorProtos = /* @__PURE__ */ new WeakSet([Object.prototype, Error.prototype]);
   function _lazyMethod(proto, key, make) {
     Object.defineProperty(proto, key, {
@@ -17792,7 +17792,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     Parent: Error
   });
 
-  // node_modules/zod/v4/classic/parse.js
+  // ../national-focus/node_modules/zod/v4/classic/parse.js
   var parse2 = /* @__PURE__ */ _parse(ZodRealError);
   var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
   var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -17806,7 +17806,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
   var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-  // node_modules/zod/v4/classic/schemas.js
+  // ../national-focus/node_modules/zod/v4/classic/schemas.js
   function _ensureDefaultLocale() {
     if (!globalConfig.localeError)
       config(en_default());
@@ -19271,7 +19271,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     });
   }
 
-  // node_modules/zod/v4/classic/compat.js
+  // ../national-focus/node_modules/zod/v4/classic/compat.js
   var ZodIssueCode = {
     invalid_type: "invalid_type",
     too_big: "too_big",
@@ -19297,7 +19297,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   /* @__PURE__ */ (function(ZodFirstPartyTypeKind2) {
   })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-  // node_modules/zod/v4/classic/iso.js
+  // ../national-focus/node_modules/zod/v4/classic/iso.js
   var iso_exports = {};
   __export(iso_exports, {
     ZodISODate: () => ZodISODate,
@@ -19322,7 +19322,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return _isoDuration(ZodISODuration, params);
   }
 
-  // node_modules/zod/v4/classic/from-json-schema.js
+  // ../national-focus/node_modules/zod/v4/classic/from-json-schema.js
   var z = {
     ...schemas_exports2,
     ...checks_exports2,
@@ -20055,8 +20055,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return convertSchema(normalized, ctx);
   }
 
-  // node_modules/zod/v4/core/visit.js
-  var RESOLVING = /* @__PURE__ */ Symbol("z.visit/resolving");
+  // ../national-focus/node_modules/zod/v4/core/visit.js
+  var RESOLVING = Symbol("z.visit/resolving");
   function visit(schema4, fnOrHandlers) {
     const fn = typeof fnOrHandlers === "function" ? fnOrHandlers : (node2, rewritten) => {
       const h = fnOrHandlers[node2._zod.def.type];
@@ -20210,7 +20210,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return run(schema4);
   }
 
-  // node_modules/zod/v4/classic/deep-partial.js
+  // ../national-focus/node_modules/zod/v4/classic/deep-partial.js
   function deepPartial(schema4) {
     return visit(schema4, {
       object: (s) => s.partial(),
@@ -20222,7 +20222,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     });
   }
 
-  // node_modules/zod/v4/classic/in-out.js
+  // ../national-focus/node_modules/zod/v4/classic/in-out.js
   function withChecks(side, checks) {
     if (!checks?.length)
       return side;
@@ -20252,7 +20252,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     });
   }
 
-  // node_modules/zod/v4/classic/coerce.js
+  // ../national-focus/node_modules/zod/v4/classic/coerce.js
   var coerce_exports = {};
   __export(coerce_exports, {
     bigint: () => bigint3,
@@ -20881,6 +20881,8 @@ ${DATA_TOKEN}`;
      * message. Without ST-Prompt-Template the worldbook mode falls back to injection.
      */
     promptMode: external_exports.enum(["worldbook", "inject"]).default("worldbook"),
+    /** Empty uses the existing chat binding. A name selects an existing book, never creates one. */
+    promptBookName: external_exports.string().trim().default(""),
     /** Country detail entries: always sent (blue, like the Workflow Assistant world state) or on keywords (green). */
     countryEntries: external_exports.enum(["constant", "keyword"]).default("constant"),
     /** Workflow Assistant task presets: task settings and sources, without API routes. */
@@ -24447,14 +24449,14 @@ ${formatIssues(checked2.problems)}`
     };
   }
 
-  // node_modules/yaml/browser/dist/nodes/identity.js
-  var ALIAS = /* @__PURE__ */ Symbol.for("yaml.alias");
-  var DOC = /* @__PURE__ */ Symbol.for("yaml.document");
-  var MAP = /* @__PURE__ */ Symbol.for("yaml.map");
-  var PAIR = /* @__PURE__ */ Symbol.for("yaml.pair");
-  var SCALAR = /* @__PURE__ */ Symbol.for("yaml.scalar");
-  var SEQ = /* @__PURE__ */ Symbol.for("yaml.seq");
-  var NODE_TYPE = /* @__PURE__ */ Symbol.for("yaml.node.type");
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/identity.js
+  var ALIAS = Symbol.for("yaml.alias");
+  var DOC = Symbol.for("yaml.document");
+  var MAP = Symbol.for("yaml.map");
+  var PAIR = Symbol.for("yaml.pair");
+  var SCALAR = Symbol.for("yaml.scalar");
+  var SEQ = Symbol.for("yaml.seq");
+  var NODE_TYPE = Symbol.for("yaml.node.type");
   var isAlias = (node2) => !!node2 && typeof node2 === "object" && node2[NODE_TYPE] === ALIAS;
   var isDocument = (node2) => !!node2 && typeof node2 === "object" && node2[NODE_TYPE] === DOC;
   var isMap = (node2) => !!node2 && typeof node2 === "object" && node2[NODE_TYPE] === MAP;
@@ -24483,10 +24485,10 @@ ${formatIssues(checked2.problems)}`
   }
   var hasAnchor = (node2) => (isScalar(node2) || isCollection(node2)) && !!node2.anchor;
 
-  // node_modules/yaml/browser/dist/visit.js
-  var BREAK = /* @__PURE__ */ Symbol("break visit");
-  var SKIP = /* @__PURE__ */ Symbol("skip children");
-  var REMOVE = /* @__PURE__ */ Symbol("remove node");
+  // ../national-focus/node_modules/yaml/browser/dist/visit.js
+  var BREAK = Symbol("break visit");
+  var SKIP = Symbol("skip children");
+  var REMOVE = Symbol("remove node");
   function visit2(node2, visitor) {
     const visitor_ = initVisitor(visitor);
     if (isDocument(node2)) {
@@ -24633,7 +24635,7 @@ ${formatIssues(checked2.problems)}`
     }
   }
 
-  // node_modules/yaml/browser/dist/doc/directives.js
+  // ../national-focus/node_modules/yaml/browser/dist/doc/directives.js
   var escapeChars = {
     "!": "%21",
     ",": "%2C",
@@ -24796,7 +24798,7 @@ ${formatIssues(checked2.problems)}`
   Directives.defaultYaml = { explicit: false, version: "1.2" };
   Directives.defaultTags = { "!!": "tag:yaml.org,2002:" };
 
-  // node_modules/yaml/browser/dist/doc/anchors.js
+  // ../national-focus/node_modules/yaml/browser/dist/doc/anchors.js
   function anchorIsValid(anchor2) {
     if (/[\x00-\x19\s,[\]{}]/.test(anchor2)) {
       const sa = JSON.stringify(anchor2);
@@ -24855,7 +24857,7 @@ ${formatIssues(checked2.problems)}`
     };
   }
 
-  // node_modules/yaml/browser/dist/doc/applyReviver.js
+  // ../national-focus/node_modules/yaml/browser/dist/doc/applyReviver.js
   function applyReviver(reviver, obj, key, val) {
     if (val && typeof val === "object") {
       if (Array.isArray(val)) {
@@ -24899,7 +24901,7 @@ ${formatIssues(checked2.problems)}`
     return reviver.call(obj, key, val);
   }
 
-  // node_modules/yaml/browser/dist/nodes/toJS.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/toJS.js
   function toJS(value, arg, ctx) {
     if (Array.isArray(value))
       return value.map((v, i) => toJS(v, String(i), ctx));
@@ -24922,7 +24924,7 @@ ${formatIssues(checked2.problems)}`
     return value;
   }
 
-  // node_modules/yaml/browser/dist/nodes/Node.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/Node.js
   var NodeBase = class {
     constructor(type) {
       Object.defineProperty(this, NODE_TYPE, { value: type });
@@ -24954,7 +24956,7 @@ ${formatIssues(checked2.problems)}`
     }
   };
 
-  // node_modules/yaml/browser/dist/nodes/Alias.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/Alias.js
   var Alias = class extends NodeBase {
     constructor(source) {
       super(ALIAS);
@@ -25061,7 +25063,7 @@ ${formatIssues(checked2.problems)}`
     return 1;
   }
 
-  // node_modules/yaml/browser/dist/nodes/Scalar.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/Scalar.js
   var isScalarValue = (value) => !value || typeof value !== "function" && typeof value !== "object";
   var Scalar = class extends NodeBase {
     constructor(value) {
@@ -25081,7 +25083,7 @@ ${formatIssues(checked2.problems)}`
   Scalar.QUOTE_DOUBLE = "QUOTE_DOUBLE";
   Scalar.QUOTE_SINGLE = "QUOTE_SINGLE";
 
-  // node_modules/yaml/browser/dist/doc/createNode.js
+  // ../national-focus/node_modules/yaml/browser/dist/doc/createNode.js
   var defaultTagPrefix = "tag:yaml.org,2002:";
   function findTagObject(value, tagName, tags) {
     if (tagName) {
@@ -25147,7 +25149,7 @@ ${formatIssues(checked2.problems)}`
     return node2;
   }
 
-  // node_modules/yaml/browser/dist/nodes/Collection.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/Collection.js
   function collectionFromPath(schema4, path, value) {
     let v = value;
     for (let i = path.length - 1; i >= 0; --i) {
@@ -25279,7 +25281,7 @@ ${formatIssues(checked2.problems)}`
     }
   };
 
-  // node_modules/yaml/browser/dist/stringify/stringifyComment.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyComment.js
   var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
   function indentComment(comment, indent) {
     if (/^\n+$/.test(comment))
@@ -25288,7 +25290,7 @@ ${formatIssues(checked2.problems)}`
   }
   var lineComment = (str, indent, comment) => str.endsWith("\n") ? indentComment(comment, indent) : comment.includes("\n") ? "\n" + indentComment(comment, indent) : (str.endsWith(" ") ? "" : " ") + comment;
 
-  // node_modules/yaml/browser/dist/stringify/foldFlowLines.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/foldFlowLines.js
   var FOLD_FLOW = "flow";
   var FOLD_BLOCK = "block";
   var FOLD_QUOTED = "quoted";
@@ -25415,7 +25417,7 @@ ${indent}${text.slice(fold + 1, end2)}`;
     return end;
   }
 
-  // node_modules/yaml/browser/dist/stringify/stringifyString.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyString.js
   var getFoldOptions = (ctx, isBlock2) => ({
     indentAtStart: isBlock2 ? ctx.indent.length : ctx.indentAtStart,
     lineWidth: ctx.options.lineWidth,
@@ -25690,7 +25692,7 @@ ${indent}`);
     return res;
   }
 
-  // node_modules/yaml/browser/dist/stringify/stringify.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringify.js
   function createStringifyContext(doc, options) {
     const opt = Object.assign({
       blockQuote: true,
@@ -25803,7 +25805,7 @@ ${indent}`);
 ${ctx.indent}${str}`;
   }
 
-  // node_modules/yaml/browser/dist/stringify/stringifyPair.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyPair.js
   function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
     let keyComment = isNode(key) && key.comment || null;
@@ -25926,14 +25928,14 @@ ${ctx.indent}`;
     return str;
   }
 
-  // node_modules/yaml/browser/dist/log.js
+  // ../national-focus/node_modules/yaml/browser/dist/log.js
   function warn(logLevel, warning) {
     if (logLevel === "debug" || logLevel === "warn") {
       console.warn(warning);
     }
   }
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/merge.js
   var MERGE_KEY = "<<";
   var merge2 = {
     identify: (value) => value === MERGE_KEY || typeof value === "symbol" && value.description === MERGE_KEY,
@@ -25983,7 +25985,7 @@ ${ctx.indent}`;
     return ctx && isAlias(value) ? value.resolve(ctx.doc, ctx) : value;
   }
 
-  // node_modules/yaml/browser/dist/nodes/addPairToJSMap.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/addPairToJSMap.js
   function addPairToJSMap(ctx, map3, { key, value }) {
     if (isNode(key) && key.addToJSMap)
       key.addToJSMap(ctx, map3, value);
@@ -26036,7 +26038,7 @@ ${ctx.indent}`;
     return JSON.stringify(jsKey);
   }
 
-  // node_modules/yaml/browser/dist/nodes/Pair.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/Pair.js
   function createPair(key, value, ctx) {
     const k = createNode(key, void 0, ctx);
     const v = createNode(value, void 0, ctx);
@@ -26065,7 +26067,7 @@ ${ctx.indent}`;
     }
   };
 
-  // node_modules/yaml/browser/dist/stringify/stringifyCollection.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyCollection.js
   function stringifyCollection(collection, ctx, options) {
     const flow = ctx.inFlow ?? collection.flow;
     const stringify4 = flow ? stringifyFlowCollection : stringifyBlockCollection;
@@ -26207,7 +26209,7 @@ ${indent}${end}`;
     }
   }
 
-  // node_modules/yaml/browser/dist/nodes/YAMLMap.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/YAMLMap.js
   function findPair(items, key) {
     const k = isScalar(key) ? key.value : key;
     for (const it of items) {
@@ -26338,7 +26340,7 @@ ${indent}${end}`;
     }
   };
 
-  // node_modules/yaml/browser/dist/schema/common/map.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/common/map.js
   var map2 = {
     collection: "map",
     default: true,
@@ -26352,7 +26354,7 @@ ${indent}${end}`;
     createNode: (schema4, obj, ctx) => YAMLMap.from(schema4, obj, ctx)
   };
 
-  // node_modules/yaml/browser/dist/nodes/YAMLSeq.js
+  // ../national-focus/node_modules/yaml/browser/dist/nodes/YAMLSeq.js
   var YAMLSeq = class extends Collection {
     static get tagName() {
       return "tag:yaml.org,2002:seq";
@@ -26456,7 +26458,7 @@ ${indent}${end}`;
     return typeof idx === "number" && Number.isInteger(idx) && idx >= 0 ? idx : null;
   }
 
-  // node_modules/yaml/browser/dist/schema/common/seq.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/common/seq.js
   var seq = {
     collection: "seq",
     default: true,
@@ -26470,7 +26472,7 @@ ${indent}${end}`;
     createNode: (schema4, obj, ctx) => YAMLSeq.from(schema4, obj, ctx)
   };
 
-  // node_modules/yaml/browser/dist/schema/common/string.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/common/string.js
   var string4 = {
     identify: (value) => typeof value === "string",
     default: true,
@@ -26482,7 +26484,7 @@ ${indent}${end}`;
     }
   };
 
-  // node_modules/yaml/browser/dist/schema/common/null.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/common/null.js
   var nullTag = {
     identify: (value) => value == null,
     createNode: () => new Scalar(null),
@@ -26493,7 +26495,7 @@ ${indent}${end}`;
     stringify: ({ source }, ctx) => typeof source === "string" && nullTag.test.test(source) ? source : ctx.options.nullStr
   };
 
-  // node_modules/yaml/browser/dist/schema/core/bool.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/core/bool.js
   var boolTag = {
     identify: (value) => typeof value === "boolean",
     default: true,
@@ -26510,7 +26512,7 @@ ${indent}${end}`;
     }
   };
 
-  // node_modules/yaml/browser/dist/stringify/stringifyNumber.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyNumber.js
   function stringifyNumber({ format, minFractionDigits, tag, value }) {
     if (typeof value === "bigint")
       return String(value);
@@ -26531,7 +26533,7 @@ ${indent}${end}`;
     return n;
   }
 
-  // node_modules/yaml/browser/dist/schema/core/float.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/core/float.js
   var floatNaN = {
     identify: (value) => typeof value === "number",
     default: true,
@@ -26567,7 +26569,7 @@ ${indent}${end}`;
     stringify: stringifyNumber
   };
 
-  // node_modules/yaml/browser/dist/schema/core/int.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/core/int.js
   var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
   var intResolve = (str, offset, radix, { intAsBigInt }) => intAsBigInt ? BigInt(str) : parseInt(str.substring(offset), radix);
   function intStringify(node2, radix, prefix) {
@@ -26603,7 +26605,7 @@ ${indent}${end}`;
     stringify: (node2) => intStringify(node2, 16, "0x")
   };
 
-  // node_modules/yaml/browser/dist/schema/core/schema.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/core/schema.js
   var schema = [
     map2,
     seq,
@@ -26618,7 +26620,7 @@ ${indent}${end}`;
     float
   ];
 
-  // node_modules/yaml/browser/dist/schema/json/schema.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/json/schema.js
   function intIdentify2(value) {
     return typeof value === "bigint" || Number.isInteger(value);
   }
@@ -26676,7 +26678,7 @@ ${indent}${end}`;
   };
   var schema2 = [map2, seq].concat(jsonScalars, jsonError);
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js
   var binary = {
     identify: (value) => value instanceof Uint8Array,
     // Buffer inherits from Uint8Array
@@ -26729,7 +26731,7 @@ ${indent}${end}`;
     }
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/pairs.js
   function resolvePairs(seq2, onError) {
     if (isSeq(seq2)) {
       for (let i = 0; i < seq2.items.length; ++i) {
@@ -26795,7 +26797,7 @@ ${cn.comment}` : item.comment;
     createNode: createPairs
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js
   var YAMLOMap = class _YAMLOMap extends YAMLSeq {
     constructor() {
       super();
@@ -26861,7 +26863,7 @@ ${cn.comment}` : item.comment;
     createNode: (schema4, iterable, ctx) => YAMLOMap.from(schema4, iterable, ctx)
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/bool.js
   function boolStringify({ value, source }, ctx) {
     const boolObj = value ? trueTag : falseTag;
     if (source && boolObj.test.test(source))
@@ -26885,7 +26887,7 @@ ${cn.comment}` : item.comment;
     stringify: boolStringify
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/float.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/float.js
   var floatNaN2 = {
     identify: (value) => typeof value === "number",
     default: true,
@@ -26924,7 +26926,7 @@ ${cn.comment}` : item.comment;
     stringify: stringifyNumber
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/int.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/int.js
   var intIdentify3 = (value) => typeof value === "bigint" || Number.isInteger(value);
   function intResolve2(str, offset, radix, { intAsBigInt }) {
     const sign = str[0];
@@ -26993,7 +26995,7 @@ ${cn.comment}` : item.comment;
     stringify: (node2) => intStringify2(node2, 16, "0x")
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/set.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/set.js
   var YAMLSet = class _YAMLSet extends YAMLMap {
     constructor(schema4) {
       super(schema4);
@@ -27072,7 +27074,7 @@ ${cn.comment}` : item.comment;
     }
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/timestamp.js
   function parseSexagesimal(str, asBigInt) {
     const sign = str[0];
     const parts = sign === "-" || sign === "+" ? str.substring(1) : str;
@@ -27151,7 +27153,7 @@ ${cn.comment}` : item.comment;
     stringify: ({ value }) => value?.toISOString().replace(/(T00:00:00)?\.000Z$/, "") ?? ""
   };
 
-  // node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/yaml-1.1/schema.js
   var schema3 = [
     map2,
     seq,
@@ -27176,7 +27178,7 @@ ${cn.comment}` : item.comment;
     timestamp
   ];
 
-  // node_modules/yaml/browser/dist/schema/tags.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/tags.js
   var schemas = /* @__PURE__ */ new Map([
     ["core", schema],
     ["failsafe", [map2, seq, string4]],
@@ -27247,7 +27249,7 @@ ${cn.comment}` : item.comment;
     }, []);
   }
 
-  // node_modules/yaml/browser/dist/schema/Schema.js
+  // ../national-focus/node_modules/yaml/browser/dist/schema/Schema.js
   var sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
   var Schema = class _Schema {
     constructor({ compat, customTags, merge: merge3, resolveKnownTags, schema: schema4, sortMapEntries, toStringDefaults }) {
@@ -27268,7 +27270,7 @@ ${cn.comment}` : item.comment;
     }
   };
 
-  // node_modules/yaml/browser/dist/stringify/stringifyDocument.js
+  // ../national-focus/node_modules/yaml/browser/dist/stringify/stringifyDocument.js
   function stringifyDocument(doc, options) {
     const lines = [];
     let hasDirectives = options.directives === true;
@@ -27339,7 +27341,7 @@ ${cn.comment}` : item.comment;
     return lines.join("\n") + "\n";
   }
 
-  // node_modules/yaml/browser/dist/doc/Document.js
+  // ../national-focus/node_modules/yaml/browser/dist/doc/Document.js
   var Document = class _Document {
     constructor(value, replacer, options) {
       this.commentBefore = null;
@@ -27631,7 +27633,7 @@ ${cn.comment}` : item.comment;
     throw new Error("Expected a YAML collection as document contents");
   }
 
-  // node_modules/yaml/browser/dist/errors.js
+  // ../national-focus/node_modules/yaml/browser/dist/errors.js
   var YAMLError = class extends Error {
     constructor(name, pos, code, message) {
       super();
@@ -27687,7 +27689,7 @@ ${pointer}
     }
   };
 
-  // node_modules/yaml/browser/dist/compose/resolve-props.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-props.js
   function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
     let spaceBefore = false;
     let atNewline = startOnNewline;
@@ -27815,7 +27817,7 @@ ${pointer}
     };
   }
 
-  // node_modules/yaml/browser/dist/compose/util-contains-newline.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/util-contains-newline.js
   function containsNewline(key) {
     if (!key)
       return null;
@@ -27851,7 +27853,7 @@ ${pointer}
     }
   }
 
-  // node_modules/yaml/browser/dist/compose/util-flow-indent-check.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/util-flow-indent-check.js
   function flowIndentCheck(indent, fc, onError) {
     if (fc?.type === "flow-collection") {
       const end = fc.end[0];
@@ -27862,7 +27864,7 @@ ${pointer}
     }
   }
 
-  // node_modules/yaml/browser/dist/compose/util-map-includes.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/util-map-includes.js
   function mapIncludes(ctx, items, search) {
     const { uniqueKeys } = ctx.options;
     if (uniqueKeys === false)
@@ -27871,7 +27873,7 @@ ${pointer}
     return items.some((pair) => isEqual(pair.key, search));
   }
 
-  // node_modules/yaml/browser/dist/compose/resolve-block-map.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-block-map.js
   var startColMsg = "All mapping items must start at the same column";
   function resolveBlockMap({ composeNode: composeNode2, composeEmptyNode: composeEmptyNode2 }, ctx, bm, onError, tag) {
     const NodeClass = tag?.nodeClass ?? YAMLMap;
@@ -27967,7 +27969,7 @@ ${pointer}
     return map3;
   }
 
-  // node_modules/yaml/browser/dist/compose/resolve-block-seq.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-block-seq.js
   function resolveBlockSeq({ composeNode: composeNode2, composeEmptyNode: composeEmptyNode2 }, ctx, bs, onError, tag) {
     const NodeClass = tag?.nodeClass ?? YAMLSeq;
     const seq2 = new NodeClass(ctx.schema);
@@ -28009,7 +28011,7 @@ ${pointer}
     return seq2;
   }
 
-  // node_modules/yaml/browser/dist/compose/resolve-end.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-end.js
   function resolveEnd(end, offset, reqSpace, onError) {
     let comment = "";
     if (end) {
@@ -28046,7 +28048,7 @@ ${pointer}
     return { comment, offset };
   }
 
-  // node_modules/yaml/browser/dist/compose/resolve-flow-collection.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-flow-collection.js
   var blockMsg = "Block collections are not allowed within flow collections";
   var isBlock = (token) => token && (token.type === "block-map" || token.type === "block-seq");
   function resolveFlowCollection({ composeNode: composeNode2, composeEmptyNode: composeEmptyNode2 }, ctx, fc, onError, tag) {
@@ -28226,7 +28228,7 @@ ${pointer}
     return coll;
   }
 
-  // node_modules/yaml/browser/dist/compose/compose-collection.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-collection.js
   function resolveCollection(CN2, ctx, token, onError, tagName, tag) {
     const coll = token.type === "block-map" ? resolveBlockMap(CN2, ctx, token, onError, tag) : token.type === "block-seq" ? resolveBlockSeq(CN2, ctx, token, onError, tag) : resolveFlowCollection(CN2, ctx, token, onError, tag);
     const Coll = coll.constructor;
@@ -28278,7 +28280,7 @@ ${pointer}
     return node2;
   }
 
-  // node_modules/yaml/browser/dist/compose/resolve-block-scalar.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-block-scalar.js
   function resolveBlockScalar(ctx, scalar, onError) {
     const start = scalar.offset;
     const header = parseBlockScalarHeader(scalar, ctx.options.strict, onError);
@@ -28454,7 +28456,7 @@ ${pointer}
     return lines;
   }
 
-  // node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/resolve-flow-scalar.js
   function resolveFlowScalar(scalar, strict, onError) {
     const { offset, type, source, end } = scalar;
     let _type;
@@ -28667,7 +28669,7 @@ ${pointer}
     }
   }
 
-  // node_modules/yaml/browser/dist/compose/compose-scalar.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-scalar.js
   function composeScalar(ctx, token, tagToken, onError) {
     const { value, type, comment, range } = token.type === "block-scalar" ? resolveBlockScalar(ctx, token, onError) : resolveFlowScalar(token, ctx.options.strict, onError);
     const tagName = tagToken ? ctx.directives.tagName(tagToken.source, (msg) => onError(tagToken, "TAG_RESOLVE_FAILED", msg)) : null;
@@ -28738,7 +28740,7 @@ ${pointer}
     return tag;
   }
 
-  // node_modules/yaml/browser/dist/compose/util-empty-scalar-position.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/util-empty-scalar-position.js
   function emptyScalarPosition(offset, before, pos) {
     if (before) {
       pos ?? (pos = before.length);
@@ -28762,7 +28764,7 @@ ${pointer}
     return offset;
   }
 
-  // node_modules/yaml/browser/dist/compose/compose-node.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-node.js
   var CN = { composeNode, composeEmptyNode };
   function composeNode(ctx, token, props, onError) {
     const atKey = ctx.atKey;
@@ -28855,7 +28857,7 @@ ${pointer}
     return alias;
   }
 
-  // node_modules/yaml/browser/dist/compose/compose-doc.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/compose-doc.js
   function composeDoc(options, directives, { offset, start, value, end }, onError) {
     const opts = Object.assign({ _directives: directives }, options);
     const doc = new Document(void 0, opts);
@@ -28888,7 +28890,7 @@ ${pointer}
     return doc;
   }
 
-  // node_modules/yaml/browser/dist/compose/composer.js
+  // ../national-focus/node_modules/yaml/browser/dist/compose/composer.js
   function getErrorPos(src) {
     if (typeof src === "number")
       return [src, src + 1];
@@ -29081,10 +29083,10 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // node_modules/yaml/browser/dist/parse/cst-visit.js
-  var BREAK2 = /* @__PURE__ */ Symbol("break visit");
-  var SKIP2 = /* @__PURE__ */ Symbol("skip children");
-  var REMOVE2 = /* @__PURE__ */ Symbol("remove item");
+  // ../national-focus/node_modules/yaml/browser/dist/parse/cst-visit.js
+  var BREAK2 = Symbol("break visit");
+  var SKIP2 = Symbol("skip children");
+  var REMOVE2 = Symbol("remove item");
   function visit3(cst, visitor) {
     if ("type" in cst && cst.type === "document")
       cst = { start: cst.start, value: cst.value };
@@ -29137,7 +29139,7 @@ ${end.comment}` : end.comment;
     return typeof ctrl === "function" ? ctrl(item, path) : ctrl;
   }
 
-  // node_modules/yaml/browser/dist/parse/cst.js
+  // ../national-focus/node_modules/yaml/browser/dist/parse/cst.js
   var BOM = "\uFEFF";
   var DOCUMENT = "";
   var FLOW_END = "";
@@ -29202,7 +29204,7 @@ ${end.comment}` : end.comment;
     return null;
   }
 
-  // node_modules/yaml/browser/dist/parse/lexer.js
+  // ../national-focus/node_modules/yaml/browser/dist/parse/lexer.js
   function isEmpty(ch) {
     switch (ch) {
       case void 0:
@@ -29784,7 +29786,7 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // node_modules/yaml/browser/dist/parse/line-counter.js
+  // ../national-focus/node_modules/yaml/browser/dist/parse/line-counter.js
   var LineCounter = class {
     constructor() {
       this.lineStarts = [];
@@ -29809,7 +29811,7 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // node_modules/yaml/browser/dist/parse/parser.js
+  // ../national-focus/node_modules/yaml/browser/dist/parse/parser.js
   function includesToken(list, type) {
     for (let i = 0; i < list.length; ++i)
       if (list[i].type === type)
@@ -30672,7 +30674,7 @@ ${end.comment}` : end.comment;
     }
   };
 
-  // node_modules/yaml/browser/dist/public-api.js
+  // ../national-focus/node_modules/yaml/browser/dist/public-api.js
   function parseOptions(options) {
     const prettyErrors = options.prettyErrors !== false;
     const lineCounter = options.lineCounter || prettyErrors && new LineCounter() || null;
@@ -30968,7 +30970,6 @@ ${end.comment}` : end.comment;
     constructor(limits) {
       this.limits = limits;
     }
-    limits;
     active = /* @__PURE__ */ new Map();
     waiters = [];
     free(route) {
@@ -31035,7 +31036,6 @@ ${end.comment}` : end.comment;
       this.platform = platform;
       this.config = ConfigSchema.parse(platform.loadConfig());
     }
-    platform;
     config;
     state = null;
     candidates = [];
@@ -34034,12 +34034,23 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
             ["long", "長期"]
           ],
           state?.settings.pace ?? "standard"
-        )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>聊天世界書（預設）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>聊天世界書：在本聊天的世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層的國策資料，切換 Swipe 會自動對應。需要提示詞模板擴展，沒有時自動改用直接注入。條目的位置與順序可在酒館中調整。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
+        )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>在選定的既有世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未綁定世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">寫入世界書<input data-config="promptBookName" list="prompt-book-names" value="${escape5(draft.promptBookName)}" placeholder="留空：使用當前聊天綁定的世界書"><datalist id="prompt-book-names"></datalist><small>可選擇或輸入既有世界書名稱。留空時只使用聊天綁定，不會改用角色主世界書；切換目標會清理上一個寫入目標中的國策條目。此設定不改變聊天的世界書綁定。</small><small id="prompt-book-status"></small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
       <div class="settings-section" ${settingsTab !== "apis" ? "hidden" : ""}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "jobs" ? "hidden" : ""}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "sources" ? "hidden" : ""}><div id="source-panel"></div></div>`,
         settingsFooter
       );
+      const bookNames = backdrop.querySelector("#prompt-book-names");
+      const bookStatus = backdrop.querySelector("#prompt-book-status");
+      void controller2.platform.worldbooks().then(({ all }) => {
+        if (bookNames.isConnected) {
+          bookNames.innerHTML = [...new Set(all)].sort().map((name) => `<option value="${escape5(name)}"></option>`).join("");
+        }
+      }).catch(() => {
+        if (bookStatus.isConnected) {
+          bookStatus.textContent = "無法載入世界書清單，可手動輸入既有名稱。";
+        }
+      });
       apiPanel = mountApiPanel(controller2, backdrop.querySelector("#api-panel"), (update) => {
         readSettingsDraft();
         draft = update(draft);
@@ -34101,6 +34112,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
       if (countryEntries === "constant" || countryEntries === "keyword") {
         draft.countryEntries = countryEntries;
       }
+      draft.promptBookName = backdrop.querySelector('[data-config="promptBookName"]')?.value.trim() ?? draft.promptBookName;
       const promptMode = backdrop.querySelector('[data-config="promptMode"]')?.value;
       if (promptMode === "worldbook" || promptMode === "inject") {
         draft.promptMode = promptMode;

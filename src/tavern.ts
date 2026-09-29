@@ -103,7 +103,6 @@ export type TavernApi = {
   injectPrompts(prompts: Record<string, unknown>[]): { uninject(): void };
   getChatWorldbookName?(chat: 'current'): string | null;
   toastr?: { warning(message: string, title?: string): void };
-  getOrCreateChatWorldbook?(chat: 'current'): Promise<string>;
   updateWorldbookWith?(
     name: string,
     updater: (entries: WorldbookEntryLike[]) => WorldbookEntryLike[],
@@ -173,6 +172,7 @@ export class TavernPlatform implements Platform {
   private bookEpoch = 0;
   /** One warning per failure streak; a later success resets it. */
   private bookWarned = false;
+  private writtenBook: { chat: string; name: string } | null = null;
   private disposed = false;
   private annotating: Promise<void> | null = null;
   private generating = false;
@@ -862,7 +862,7 @@ export class TavernPlatform implements Platform {
     return (
       this.config?.promptMode !== 'inject' &&
       Boolean(this.api.EjsTemplate) &&
-      Boolean(this.api.getOrCreateChatWorldbook && this.api.updateWorldbookWith)
+      Boolean(this.api.updateWorldbookWith)
     );
   }
   inject(state: State, news = true): void {
@@ -914,9 +914,26 @@ export class TavernPlatform implements Platform {
           return;
         }
         const wanted = view ? bookEntries(view, this.config?.countryEntries !== 'keyword') : [];
-        const name = wanted.length
-          ? await api.getOrCreateChatWorldbook!('current')
-          : (api.getChatWorldbookName?.('current') ?? null);
+        const name = this.config?.promptBookName || api.getChatWorldbookName?.('current') || null;
+        if (!name && wanted.length) {
+          throw new Error(
+            '尚未綁定聊天世界書。請先綁定，或到「設定 › 一般 › 寫入世界書」選擇既有世界書；不會自動建立新書。',
+          );
+        }
+        const previous = this.writtenBook?.chat === source.chat ? this.writtenBook.name : null;
+        if (previous && previous !== name) {
+          const entries = (await api.getWorldbook(previous)) as unknown as WorldbookEntryLike[];
+          if (!this.bookCurrent(source)) {
+            return;
+          }
+          if (reconcileBook(entries, []) !== null) {
+            await api.updateWorldbookWith(previous, (entries) => reconcileBook(entries, []) ?? entries);
+          }
+          if (!this.bookCurrent(source)) {
+            return;
+          }
+          this.writtenBook = null;
+        }
         if (!name || !this.bookCurrent(source)) {
           return;
         }
@@ -932,8 +949,26 @@ export class TavernPlatform implements Platform {
             return;
           }
         }
-        if (source.handOff) {
+        const character = api.getCharWorldbookNames('current');
+        const activeBooks = [
+          api.getChatWorldbookName?.('current'),
+          character.primary,
+          ...character.additional,
+          ...api.getGlobalWorldbookNames(),
+        ];
+        if (source.handOff && activeBooks.includes(name)) {
           api.uninjectPrompts([injectionId]);
+        }
+        this.writtenBook = wanted.length ? { chat: source.chat, name } : null;
+        if (wanted.length && !activeBooks.includes(name)) {
+          if (!this.bookWarned) {
+            api.toastr?.warning(
+              `條目已寫入「${name}」，但此書未在本聊天啟用。國策資料暫用直接注入；請在酒館中綁定或啟用該書。`,
+              '國策檔案',
+            );
+          }
+          this.bookWarned = true;
+          return;
         }
         this.bookWarned = false;
       })
@@ -942,7 +977,7 @@ export class TavernPlatform implements Platform {
         if (this.bookCurrent(source) && !this.bookWarned) {
           this.bookWarned = true;
           api.toastr?.warning(
-            '聊天世界書條目更新失敗，國策資料改用直接注入。詳情見瀏覽器主控台。',
+            `世界書條目更新失敗，國策資料暫用直接注入。${error instanceof Error ? error.message : '詳情見瀏覽器主控台。'}`,
             '國策檔案',
           );
         }

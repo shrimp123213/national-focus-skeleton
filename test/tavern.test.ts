@@ -580,7 +580,7 @@ test('有提示詞模板擴展時，國策以聊天世界書條目讀取樓層�
   let injected = '';
   Object.assign(env.api, {
     EjsTemplate: {},
-    getChatWorldbookName: () => (created ? 'chat-book' : null),
+    getChatWorldbookName: () => 'chat-book',
     getOrCreateChatWorldbook: async () => {
       created++;
       return 'chat-book';
@@ -637,7 +637,10 @@ test('有提示詞模板擴展時，國策以聊天世界書條目讀取樓層�
 
 function bookEnvironment() {
   const env = environment();
-  const books = new Map<string, any[]>();
+  const books = new Map<string, any[]>([
+    ['book-chat-a', []],
+    ['book-chat-b', []],
+  ]);
   const state = { failNext: 0, warnings: [] as string[], injected: '', gate: null as Promise<void> | null };
   let chat = () => env.api.SillyTavern.getCurrentChatId();
   Object.assign(env.api, {
@@ -676,6 +679,64 @@ function bookEnvironment() {
   return { env, books, state, settle, countries };
 }
 
+test('沒有聊天世界書時不建立新書，保留注入並提示選擇；可手動選既有書並清理前一目標', async () => {
+  const { env, books, state, settle } = bookEnvironment();
+  let creations = 0;
+  Object.assign(env.api, {
+    getChatWorldbookName: () => null,
+    getGlobalWorldbookNames: () => ['manual-a', 'manual-b'],
+    getOrCreateChatWorldbook: async () => {
+      creations++;
+      return 'unexpected';
+    },
+  });
+  try {
+    const empty = await env.platform.read(defaultConfig());
+    env.getData().国策 = { ...demoState(), day: empty.day };
+    const initial = await env.platform.read(defaultConfig());
+    await env.platform.commit(initial, initial.state);
+    env.platform.inject((await env.platform.read(defaultConfig())).state);
+    await settle();
+    assert.equal(creations, 0);
+    assert.match(state.injected, /各國動向/);
+    assert.match(state.warnings[0], /尚未綁定聊天世界書/);
+    const unrelated = { name: '原有設定', content: '保留', strategy: { type: 'constant', keys: [] } };
+    books.set('manual-a', [unrelated]);
+    books.set('manual-b', []);
+    const selected = { ...defaultConfig(), promptBookName: 'manual-a' };
+    env.platform.inject((await env.platform.read(selected)).state);
+    await settle();
+    assert.equal(state.injected, '');
+    assert.ok(books.get('manual-a')!.some((e) => e.name === '國策檔案-世界概況'));
+    env.platform.inject((await env.platform.read({ ...selected, promptBookName: 'manual-b' })).state);
+    await settle();
+    assert.deepEqual(books.get('manual-a'), [unrelated]);
+    assert.ok(books.get('manual-b')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.equal(creations, 0);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
+test('手動目標尚未啟用時可寫入條目，但保留直接注入以免正文缺少國策資料', async () => {
+  const { env, books, state, settle } = bookEnvironment();
+  try {
+    books.set('unbound', []);
+    const config = { ...defaultConfig(), promptBookName: 'unbound' };
+    const empty = await env.platform.read(config);
+    env.getData().国策 = { ...demoState(), day: empty.day };
+    const initial = await env.platform.read(config);
+    await env.platform.commit(initial, initial.state);
+    env.platform.inject((await env.platform.read(config)).state);
+    await settle();
+    assert.ok(books.get('unbound')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.match(state.injected, /各國動向/);
+    assert.match(state.warnings[0], /未在本聊天啟用/);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
 test('聊天世界書同步失敗時保留直接注入並提示一次；之後成功才交給條目，不重複送出', async () => {
   const { env, books, state, settle } = bookEnvironment();
   try {
@@ -684,7 +745,7 @@ test('聊天世界書同步失敗時保留直接注入並提示一次；之後�
     const old = await env.platform.read(defaultConfig());
     await env.platform.commit(old, old.state);
     const saved = await env.platform.read(defaultConfig());
-    books.clear();
+    books.set('book-chat-a', []);
     state.failNext = 2;
     env.platform.inject(saved.state);
     await settle();
@@ -714,9 +775,10 @@ test('世界書工作綁定來源聊天與樓層：切換聊天或排入較新�
     env.chat();
     env.emit('chat');
     await settle();
-    assert.equal(books.get('book-chat-b'), undefined);
+    assert.deepEqual(books.get('book-chat-b'), []);
     // Switch while the job waits on the worldbook read: nothing is written to either chat.
-    books.clear();
+    books.set('book-chat-a', []);
+    books.set('book-chat-b', []);
     let open!: () => void;
     state.gate = new Promise((resolve) => (open = resolve));
     env.platform.inject(a.state);

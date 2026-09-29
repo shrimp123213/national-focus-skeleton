@@ -566,6 +566,8 @@ export const ConfigSchema = z.object({
    * message. Without ST-Prompt-Template the worldbook mode falls back to injection.
    */
   promptMode: z.enum(['worldbook', 'inject']).default('worldbook'),
+  /** Empty uses the existing chat binding. A name selects an existing book, never creates one. */
+  promptBookName: z.string().trim().default(''),
   /** Country detail entries: always sent (blue, like the Workflow Assistant world state) or on keywords (green). */
   countryEntries: z.enum(['constant', 'keyword']).default('constant'),
   /** Workflow Assistant task presets: task settings and sources, without API routes. */
