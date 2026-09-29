@@ -1,0 +1,1846 @@
+import { blockers, changeCountry, pauseFocus, resultNames, startFocus } from './engine';
+import { icon } from './icons';
+import { layoutTree } from './layout';
+import { mutexRoutes } from './reachability';
+import {
+  ConfigSchema,
+  jobKinds,
+  relationKindNames,
+  type Config,
+  type Country,
+  type FocusNode,
+  type JobKind,
+} from './model';
+import { mountTaskPanel, taskNames } from './task-panel';
+import { mountHud } from './hud';
+import type { State } from './model';
+import { exportTrees, parseTreeFile, treeTemplate, type TreeImport } from './tree-io';
+import type { FocusController } from './workflow';
+import css from './style.css';
+import { mountApiPanel } from './api-panel';
+import { mountSourcePanel } from './source-panel';
+
+const escape = (value: unknown): string =>
+  String(value ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+  );
+const statuses: Record<string, string> = {
+  idle: '尚未開始',
+  active: '進行中',
+  paused: '已暫停',
+  waiting: '等待條件',
+  completed: '已完成',
+  terminated: '已終止',
+};
+const jobNames = taskNames;
+const jobStates: Record<string, string> = {
+  queued: '排隊中',
+  running: '執行中',
+  success: '完成',
+  failed: '失敗',
+  cancelled: '已取消',
+  stale: '已過期',
+};
+const checked = (value: boolean) => (value ? 'checked' : '');
+/** Node card geometry on the tree canvas (grid units come from layoutTree). */
+const NODE_W = 188;
+const NODE_H = 66;
+const GRID_X = 228;
+const GRID_Y = 122;
+const ORIGIN_X = 28;
+const ORIGIN_Y = 70;
+const selected = (value: boolean) => (value ? 'selected' : '');
+/** Mutex link between two cards that never runs through a card in the same column. */
+function mutexPath(a: { x: number; y: number }, b: { x: number; y: number }): string {
+  const midA = a.y + NODE_H / 2;
+  const midB = b.y + NODE_H / 2;
+  if (b.x >= a.x + NODE_W) {
+    if (a.y === b.y) {
+      return `M${a.x + NODE_W} ${midA}H${b.x}`;
+    }
+    const bend = Math.max(24, (b.x - a.x - NODE_W) / 2);
+    return `M${a.x + NODE_W} ${midA}C${a.x + NODE_W + bend} ${midA} ${b.x - bend} ${midB} ${b.x} ${midB}`;
+  }
+  // Same column: bracket along the right edge.
+  const side = Math.max(a.x, b.x) + NODE_W + 22;
+  return `M${a.x + NODE_W} ${midA}H${side}V${midB}H${b.x + NODE_W}`;
+}
+
+export function mountUI(
+  controller: FocusController,
+  doc: Document,
+  preview?: {
+    advance(days: number): Promise<void>;
+    outcome(): Promise<void>;
+    news(): Promise<void>;
+    reset(): void;
+  },
+): () => void {
+  const host = doc.createElement('div');
+  host.id = 'national-focus-root';
+  doc.body.append(host);
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = `<style>${css}</style><button class="orb" title="開啟國策樹" aria-label="開啟國策樹">${icon('eagle')}<span class="count" hidden></span></button><section class="shell" aria-label="國策樹面板" hidden></section><div class="modal-backdrop" hidden></div>`;
+  const shell = root.querySelector<HTMLElement>('.shell')!;
+  const orb = root.querySelector<HTMLButtonElement>('.orb')!;
+  const backdrop = root.querySelector<HTMLElement>('.modal-backdrop')!;
+  let countryId = '';
+  let nodeId = '';
+  let query = '';
+  let branch = '';
+  const collapsed = new Set<string>();
+  let positions = new Map<string, { x: number; y: number }>();
+  let centeredCountry = '';
+  let zoom = 0.85;
+  let pan = { x: 45, y: 45 };
+  let detailsOpen = false;
+  let routesOpen = (doc.defaultView?.innerWidth ?? 1200) > 760;
+  /** Phone layout: the control select and 更新局勢 sit behind the nation bar's ⋯ button. */
+  let nationMore = false;
+  const openPops = new Set<string>();
+  let open = controller.platform.demo;
+  let modal = '';
+  let previousFocus: HTMLElement | null = null;
+  let draft = structuredClone(controller.config);
+  let settingsTab = 'general';
+  /** Country whose tree deletion awaits confirmation in the country manager. */
+  let removing = '';
+  /** Parsed tree file waiting for confirmation in the country manager. */
+  let importing: { file: string; entries: TreeImport[]; withProgress: boolean; replace: boolean } | null =
+    null;
+  let treeNotice = '';
+  /** Failed jobs the player has already seen in the task window. */
+  const failuresSeen = new Set<string>();
+  /** Focus whose route-locking start awaits confirmation in the drawer. */
+  let lockConfirm = '';
+  /** Event log filters. */
+  let eventFilter: 'all' | 'ongoing' | 'resolved' | 'secret' = 'all';
+  let eventCountry = '';
+  let unsub = () => {};
+  let treeSize = { width: 1600, height: 1000 };
+  let orbDragged = false;
+  let apiPanel: ReturnType<typeof mountApiPanel> | undefined;
+  let sourcePanel: ReturnType<typeof mountSourcePanel> | undefined;
+  let taskPanel: ReturnType<typeof mountTaskPanel> | undefined;
+  let orbPointer: { x: number; y: number; left: number; top: number } | null = null;
+  const view = doc.defaultView!;
+  const ORB_KEY = 'national-focus.orb.v1';
+  /** Stored orb position and window state; browser storage may be missing or blocked. */
+  function loadOrb(): { left?: number; top?: number; collapsed?: boolean } {
+    try {
+      const raw = JSON.parse(view.localStorage.getItem(ORB_KEY) ?? '{}');
+      return raw && typeof raw === 'object' ? raw : {};
+    } catch {
+      return {};
+    }
+  }
+  function saveOrb(): void {
+    try {
+      view.localStorage.setItem(ORB_KEY, JSON.stringify({ ...orbAt, collapsed: hudCollapsed }));
+    } catch {
+      // Keep the position for this page only.
+    }
+  }
+  const stored = loadOrb();
+  let orbAt: { left: number; top: number } | null =
+    Number.isFinite(stored.left) && Number.isFinite(stored.top)
+      ? { left: stored.left!, top: stored.top! }
+      : null;
+  let hudCollapsed = stored.collapsed === true;
+  const orbSize = () => orb.offsetWidth || 60;
+  /** Orb box in viewport coordinates, also while the orb is hidden behind the open panel. */
+  function orbBox(): { left: number; top: number; size: number } {
+    const size = orbSize();
+    const width = doc.documentElement.clientWidth;
+    const height = doc.documentElement.clientHeight;
+    const at = orbAt ?? { left: width - 24 - size, top: height - 24 - size };
+    return {
+      left: Math.max(0, Math.min(width - size, at.left)),
+      top: Math.max(0, Math.min(height - size, at.top)),
+      size,
+    };
+  }
+  function applyOrb(): void {
+    if (!orbAt) {
+      return;
+    }
+    const box = orbBox();
+    Object.assign(orb.style, { right: 'auto', bottom: 'auto', left: `${box.left}px`, top: `${box.top}px` });
+  }
+  applyOrb();
+  let dragHandle: HTMLElement | null = null;
+  function beginDrag(event: PointerEvent, handle: HTMLElement): void {
+    const box = orbBox();
+    dragHandle = handle;
+    orbPointer = { x: event.clientX, y: event.clientY, left: box.left, top: box.top };
+    orbDragged = false;
+    handle.setPointerCapture(event.pointerId);
+  }
+  function dragMove(event: PointerEvent): void {
+    if (!orbPointer) {
+      return;
+    }
+    const dx = event.clientX - orbPointer.x;
+    const dy = event.clientY - orbPointer.y;
+    if (Math.hypot(dx, dy) > 6) {
+      orbDragged = true;
+    }
+    if (orbDragged) {
+      orbAt = { left: orbPointer.left + dx, top: orbPointer.top + dy };
+      orbAt = { left: orbBox().left, top: orbBox().top };
+      applyOrb();
+      hud.place();
+    }
+  }
+  function dragEnd(cancelled: boolean): void {
+    if (orbPointer && orbDragged) {
+      saveOrb();
+    }
+    orbPointer = null;
+    if (dragHandle !== orb) {
+      // Only a drag that started on the orb must swallow the following click.
+      orbDragged = false;
+    } else if (cancelled) {
+      orbDragged = true;
+    }
+    dragHandle = null;
+  }
+  orb.style.touchAction = 'none';
+  orb.addEventListener('pointerdown', (event) => beginDrag(event, orb));
+  const hud = mountHud({
+    root,
+    doc,
+    controller,
+    names: taskNames,
+    message: (job) => jobMessage(job),
+    anchor: orbBox,
+    drag: beginDrag,
+    openLog: () => showJobs(),
+    collapsed: hudCollapsed,
+    onCollapse: (value) => {
+      hudCollapsed = value;
+      saveOrb();
+    },
+  });
+  for (const handle of [orb, hud.element.querySelector<HTMLElement>('.hud-head')!]) {
+    handle.style.touchAction = 'none';
+    handle.addEventListener('pointermove', dragMove);
+    handle.addEventListener('pointerup', () => dragEnd(false));
+    handle.addEventListener('pointercancel', () => dragEnd(true));
+  }
+  const onResize = () => applyOrb();
+  view.addEventListener('resize', onResize);
+  function jobMessage(job: { message: string }): string {
+    return job.message;
+  }
+
+  function currentCountry(): Country | undefined {
+    const state = controller.state;
+    if (!state) {
+      return undefined;
+    }
+    if (!state.countries[countryId]) {
+      countryId = Object.keys(state.countries)[0] ?? '';
+    }
+    return state.countries[countryId];
+  }
+  async function action(operation: () => Promise<void>): Promise<void> {
+    try {
+      await operation();
+    } catch (error) {
+      controller.report(error);
+    }
+  }
+  /** Open the drawer; on narrow screens the routes panel yields its space to the tree. */
+  function openDetails(): void {
+    detailsOpen = true;
+    if ((shell.querySelector<HTMLElement>('.stage')?.clientWidth ?? 0) < 1200) {
+      routesOpen = false;
+    }
+  }
+  function branchStats(country: Country) {
+    const names = [...new Set(Object.values(country.nodes).map((n) => n.branch))];
+    return names.map((name) => {
+      const members = Object.values(country.nodes).filter((n) => n.branch === name);
+      return {
+        name,
+        total: members.length,
+        done: members.filter((n) => country.progress[n.id].status === 'completed').length,
+        active: members.some((n) => n.id === country.current),
+      };
+    });
+  }
+  function render(): void {
+    shell.hidden = !open;
+    orb.hidden = open;
+    const busy = controller.jobs.filter((j) => ['running', 'queued'].includes(j.state)).length;
+    const badge = root.querySelector<HTMLElement>('.count')!;
+    badge.hidden = busy === 0;
+    badge.textContent = String(busy);
+    hud.suppress(open);
+    hud.update();
+    if (!open) {
+      return;
+    }
+    const country = currentCountry();
+    const state = controller.state;
+    const countries = state ? Object.values(state.countries) : [];
+    if (country && !country.nodes[nodeId]) {
+      nodeId = country.current || Object.keys(country.nodes)[0];
+    }
+    const controlLabel = (c: Country) =>
+      !c.enabled ? '已停用' : c.calibration ? '待校準' : c.control === 'player' ? '玩家選策' : 'AI 演化';
+    const tabs = countries
+      .map(
+        (c) =>
+          `<button class="nation-tab ${c.id === countryId ? 'active' : ''} ${c.control}" data-country="${escape(c.id)}" title="${escape(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === 'player' ? 'eagle' : 'crown')}</span><span class="tab-copy"><strong>${escape(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`,
+      )
+      .join('');
+    const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ''}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : '—'}</strong></div><button class="cmd-btn ${busy ? 'busy' : ''}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ''}${unseenFailures().length ? `，${unseenFailures().length} 項失敗` : ''}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : '☰'}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ''}</span>${unseenFailures().length ? '<i class="alert-dot" aria-hidden="true"></i>' : ''}</button><button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
+    const error = controller.error
+      ? `<div class="error-banner" role="alert"><span>${escape(controller.error)}</span><button data-action="refresh">重新讀取</button></div>`
+      : '';
+    let body: string;
+    if (country && state) {
+      const current = country.current ? country.nodes[country.current] : undefined;
+      const currentProgress = current ? country.progress[current.id] : undefined;
+      const percent =
+        current && currentProgress
+          ? Math.min(100, Math.round((currentProgress.days / current.days) * 100))
+          : 0;
+      const agenda =
+        current && currentProgress
+          ? `<button class="agenda ${currentProgress.status}" data-action="open-current" title="查看主國策"><span class="agenda-icon">${icon(current.icon)}</span><span class="agenda-copy"><small>主國策 · ${statuses[currentProgress.status]}</small><strong>${escape(current.name)}</strong><span class="agenda-bar"><i style="width:${percent}%"></i></span><span class="agenda-meta"><span>${currentProgress.days.toFixed(1)} / ${current.days} 日</span><span>${currentProgress.status === 'waiting' ? '工期已滿 · 等待成果' : `尚餘 ${Math.max(0, current.days - currentProgress.days).toFixed(1)} 日`}</span></span></span></button>`
+          : `<div class="agenda empty-agenda"><span class="agenda-icon">${icon('crown')}</span><span class="agenda-copy"><small>主國策</small><strong>${country.control === 'player' ? '尚未選定' : 'AI 評估中'}</strong><span class="agenda-meta"><span>${country.control === 'player' ? '在樹上點選可開始的國策' : '下次局勢更新時依情勢選策'}</span></span></span></div>`;
+      const gauge = (label: string, value: number, kind: string) =>
+        `<div class="gauge ${kind}" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><div class="gauge-head"><small>${label}</small><strong>${value}</strong></div><div class="gauge-track"><i style="width:${value}%"></i></div></div>`;
+      const stats = branchStats(country);
+      const total = Object.keys(country.nodes).length;
+      const doneAll = stats.reduce((sum, b) => sum + b.done, 0);
+      const routes = `<aside class="routes ${routesOpen ? 'open' : ''}" aria-label="路線導覽"><div class="routes-head"><strong>路線</strong><small>${doneAll} / ${total} 完成</small><button class="ghost" data-action="routes" aria-label="收起路線面板">‹</button></div><div class="search-row"><label><span class="sr">搜尋國策</span><input id="focus-search" placeholder="搜尋國策名稱或內容" value="${escape(query)}"></label><button data-action="search-next">下一項</button></div><ul class="route-list">${stats
+        .map(
+          (b) =>
+            `<li class="${b.name === branch ? 'active' : ''} ${collapsed.has(b.name) ? 'folded' : ''}"><button class="route-jump" data-jump-branch="${escape(b.name)}"><span class="route-name">${b.active ? '<i class="route-live" title="主國策所在路線"></i>' : ''}${escape(b.name)}</span><span class="route-count">${b.done}/${b.total}</span><span class="route-bar"><i style="width:${Math.round((b.done / b.total) * 100)}%"></i></span></button><button class="route-fold" data-fold-branch="${escape(b.name)}" aria-label="${collapsed.has(b.name) ? '展開' : '收合'}${escape(b.name)}" aria-expanded="${!collapsed.has(b.name)}" title="${collapsed.has(b.name) ? '展開路線' : '收合路線'}">${collapsed.has(b.name) ? '＋' : '−'}</button></li>`,
+        )
+        .join(
+          '',
+        )}</ul><div class="route-actions"><button data-action="isolate">只看此路線</button><button data-action="expand-all">全部展開</button></div></aside>`;
+      body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2>${escape(country.name)}</h2><small class="control-tag">${controlLabel(country)} · 故事日 ${state.day.toFixed(1)}</small><p>${escape(country.description)}</p></div></div><div class="gauges">${gauge('穩定度', country.stability, 'stability')}${gauge('戰爭支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式與更新局勢" title="控制方式與更新局勢">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家選策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文與 MVU 重新評估">更新局勢</button></div></section>
+      <section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="國策畫布，可拖曳平移，滾輪或雙指縮放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="開啟路線面板">路線 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>圖例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>進行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暫停</li><li><i class="sw available"></i>可開始</li><li><i class="sw locked"></i>條件未滿</li><li><i class="sw terminated"></i>已終止／路線鎖定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>擇一前置</li><li><i class="ln cross"></i>跨路線依賴</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主國策">◎ 主國策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支與國策之間的關係">⇄ 關係</button>' : ''}<div class="zoom-controls"><button data-action="zoom-out" aria-label="縮小">−</button><button data-action="fit" title="顯示整棵樹"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>測試操作</summary><small>只改離線示範，不呼叫 API</small><button data-action="demo-days">故事時間 ＋7 日</button><button data-action="demo-outcome">完成聯運勘查</button><button data-action="demo-news">發布示範事件</button><button data-action="demo-reset">重設示範</button></details>` : ''}<aside class="drawer ${detailsOpen ? 'open' : ''}" aria-label="國策詳情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
+    } else {
+      body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '為這個世界選擇方向' : '連接你的故事'}</h2><p>${state ? '先辨識本局國家，再勾選要啟用的對象。國策內容會依你選擇的世界書與劇情生成。' : '國策樹需要一則已完成的正文，以及本樓可讀取的 MVU 變數。你仍可先設定 API 與來源。'}</p><div class="row"><button class="primary" data-action="countries">選擇啟用國家</button><button data-action="settings">設定來源與 API</button></div></div></section>`;
+    }
+    const summary = taskSummary();
+    shell.innerHTML = `${command}${error}${body}<footer class="statusline"><button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape(summary.text)}</button><span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ''}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
+    if (country) {
+      drawTree(country);
+      bindCanvas();
+      bindMinimap();
+      if (centeredCountry !== country.id) {
+        centeredCountry = country.id;
+        locateNode(nodeId);
+      }
+    }
+    if (modal === 'jobs') {
+      showJobs();
+    }
+    if (modal === 'countries') {
+      showCountries(false);
+    }
+    updateModalJobs();
+  }
+  /** Failed jobs not yet seen in the task window. */
+  function unseenFailures() {
+    return controller.jobs.filter((job) => job.state === 'failed' && !failuresSeen.has(job.id));
+  }
+  /** The status line: what the background tasks are doing, or how the last one ended. */
+  function taskSummary(): { text: string; state: string } {
+    const active = controller.jobs.filter((job) => ['running', 'queued'].includes(job.state));
+    if (active.length) {
+      const job = active.find((item) => item.state === 'running') ?? active[0];
+      const name = `${jobNames[job.kind as JobKind] ?? job.kind}${job.label ? `（${job.label}）` : ''}`;
+      const more = active.length > 1 ? `，另有 ${active.length - 1} 項` : '';
+      return { text: `${name}：${jobMessage(job)}${more}`, state: 'busy' };
+    }
+    const failed = unseenFailures().length;
+    if (failed) {
+      return { text: `${failed} 項任務失敗，點此查看`, state: 'failed' };
+    }
+    const last = controller.jobs.find((job) => job.state === 'success');
+    return last
+      ? { text: `上次完成：${jobNames[last.kind as JobKind] ?? last.kind} · ${last.time}`, state: '' }
+      : { text: '任務待命', state: '' };
+  }
+  function effectText(e: FocusNode['effects'][number]): string {
+    const when = e.when?.length ? `若${e.when.map((r) => r.label).join('且')}：` : '';
+    return when + effectBody(e);
+  }
+  function effectBody(e: FocusNode['effects'][number]): string {
+    return e.kind === 'capability'
+      ? `${e.active ? '建立／恢復' : '失效'}：${e.name}`
+      : e.kind === 'commitment'
+        ? `承諾：${e.name}`
+        : `${e.kind === 'stability' ? '穩定度' : '戰爭支持度'} ${e.value >= 0 ? '+' : ''}${e.value}`;
+  }
+  function renderDetails(country: Country, node: FocusNode | undefined): string {
+    if (!node) {
+      return '<p class="muted">點選國策查看詳情。</p>';
+    }
+    const progress = country.progress[node.id];
+    const reasons = blockers(country, node);
+    const isCurrent = country.current === node.id;
+    const percent = Math.min(100, Math.round((progress.days / node.days) * 100));
+    const list = (items: string[]) =>
+      items.length
+        ? `<ul>${items.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>`
+        : '<p class="muted">無</p>';
+    const route = country.branches.find((b) => b.name === node.branch);
+    const stateClass =
+      progress.status === 'idle' && reasons.length
+        ? 'locked'
+        : progress.status === 'idle'
+          ? 'available'
+          : progress.status;
+    const stateLabel =
+      stateClass === 'locked'
+        ? '條件未滿'
+        : stateClass === 'available'
+          ? '可開始'
+          : statuses[progress.status];
+    const conditions = [
+      ...node.requirements.map((r) => ['啟動', r.label]),
+      ...node.sustain.map((r) => ['持續', r.label]),
+      ...node.outcomes.map((r) => ['成果', r.label]),
+    ];
+    // Starting a route that locks on start closes the other routes for good: say so and confirm.
+    const locking =
+      !isCurrent &&
+      node.mutex?.lock === 'start' &&
+      !country.locks[node.mutex.group] &&
+      progress.status === 'idle';
+    const rivals = locking
+      ? [...(mutexRoutes(Object.values(country.nodes)).get(node.mutex!.group) ?? [])]
+          .filter(([route]) => route !== node.mutex!.route)
+          .flatMap(([, route]) => route.heads.map((head) => head.name))
+      : [];
+    const startable = !(reasons.length || country.current || progress.status === 'completed');
+    // 改選: pause the current focus and start this one in one step (it keeps its invested days).
+    const switchable =
+      !isCurrent && Boolean(country.current) && !reasons.length && progress.status !== 'completed';
+    const running = country.current ? country.nodes[country.current] : undefined;
+    const verb = switchable ? '改選' : '開始';
+    const act = switchable ? 'switch' : 'start';
+    const startButton = isCurrent
+      ? '<button data-action="pause">暫停目前國策</button>'
+      : locking && (startable || switchable)
+        ? lockConfirm === node.id
+          ? `<div class="lock-confirm" role="alert"><p>${verb}後會立即鎖定路線，以下路線將無法再選：<strong>${rivals.map(escape).join('、')}</strong></p><div class="row"><button class="primary" data-action="${act}">確認${verb}</button><button data-action="lock-cancel">取消</button></div></div>`
+          : `<button class="primary" data-action="lock-ask">${verb}並鎖定路線</button>`
+        : switchable
+          ? '<button class="primary" data-action="switch">改選此國策</button>'
+          : `<button class="primary" data-action="start" ${startable ? '' : 'disabled'}>${progress.status === 'paused' ? '恢復國策' : progress.status === 'completed' ? '國策已完成' : '開始此國策'}</button>`;
+    const action =
+      country.control === 'player'
+        ? `<div class="drawer-action">${startButton}${switchable && running ? `<small>會暫停「${escape(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之後可恢復），${progress.status === 'paused' ? '恢復' : '開始'}此國策。</small>` : ''}${reasons.length ? `<ul class="blockers">${reasons.map((r) => `<li>${escape(r)}</li>`).join('')}</ul>` : ''}</div>`
+        : `<div class="drawer-action"><small>AI 依情勢選擇後續國策；切換為「玩家選策」即可介入。</small></div>`;
+    return `<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="關閉詳情">×</button><span class="drawer-emblem">${icon(node.icon)}</span><div><span class="drawer-branch">${escape(node.branch)}</span><h3>${escape(node.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node.days} 日</span></div></header>
+      <div class="drawer-body">${progress.started !== null ? `<div class="drawer-progress"><div class="row between"><small>有效工期</small><strong>${progress.days.toFixed(1)} / ${node.days} 日</strong></div><div class="bar"><i style="width:${percent}%"></i></div>${progress.evidence ? `<small>${escape(progress.evidence)}</small>` : ''}</div>` : ''}
+      ${action}
+      <p class="description">${escape(node.description)}</p>
+      <section class="detail-section"><h4>前置國策</h4>${node.prerequisites.length ? `<div class="prereqs">${node.prerequisites.map((group) => `<div class="prereq-group">${group.map((id, i) => `${i ? '<span class="or">或</span>' : ''}<button class="chip ${country.progress[id].status === 'completed' ? 'done' : ''}" data-goto="${escape(id)}">${escape(country.nodes[id].name)}</button>`).join('')}</div>`).join('<span class="and">且</span>')}</div>` : '<p class="muted">此路線的起點</p>'}</section>
+      <section class="detail-section"><h4>完成效果</h4>${list(
+        node.effects.map(
+          (e) =>
+            effectText(e) +
+            (e.when?.length && progress.status === 'completed'
+              ? progress.evidence.startsWith('歷史承接：')
+                ? '（歷史承接，實際效果未記錄）'
+                : progress.applied.includes(e.id)
+                  ? '（已生效）'
+                  : '（條件未成立，未生效）'
+              : ''),
+        ),
+      )}</section>
+      ${conditions.length ? `<section class="detail-section"><h4>條件</h4><ul class="conditions">${conditions.map(([kind, label]) => `<li><span class="cond-kind">${kind}</span>${escape(label)}</li>`).join('')}</ul></section>` : ''}
+      ${node.impact === 'pivotal' ? `<section class="detail-section pivotal-note"><h4>重要國策</h4><p>完成時發布新聞${node.news ? `：「${escape(node.news.headline)}」` : ''}。</p></section>` : ''}
+      ${node.mutex ? mutexNote(country, node) : ''}
+      <section class="detail-section"><h4>投入與工期</h4>${list(node.investments)}${node.durationReason ? `<details class="fold"><summary>工期理由</summary><p class="reason">${escape(node.durationReason)}</p></details>` : ''}</section>
+      ${route ? `<section class="detail-section"><h4>路線抉擇 · ${escape(route.name)}</h4><p>${escape(route.purpose)}</p><dl class="route-facts"><dt>支持者</dt><dd>${escape(route.supporters)}</dd><dt>阻力</dt><dd>${escape(route.opposition)}</dd><dt>取捨</dt><dd>${escape(route.tradeoff)}</dd><dt>終點</dt><dd>${escape(route.destination)}</dd></dl></section>` : ''}
+      ${node.reason ? `<details class="detail-section fold"><summary><h4>設計依據</h4></summary><p class="reason">${escape(node.reason)}</p></details>` : ''}</div>`;
+  }
+  /** Name the competing routes, so a mutex never looks like it has no counterpart. */
+  function mutexNote(country: Country, node: FocusNode): string {
+    const routes = mutexRoutes(Object.values(country.nodes)).get(node.mutex!.group)!;
+    const own = routes.get(node.mutex!.route)!;
+    const head = own.heads.includes(node);
+    const others = [...routes].filter(([route]) => route !== node.mutex!.route);
+    const chips = (list: FocusNode[]) =>
+      list.map((n) => `<button class="chip" data-goto="${escape(n.id)}">${escape(n.name)}</button>`).join('');
+    const lock =
+      node.mutex!.lock === 'start' ? '開始路線起點時即作出不可撤回的承諾' : '完成路線起點後鎖定其他路線';
+    return `<section class="detail-section mutex-note"><h4>互斥路線</h4><p>${escape(node.mutex!.reason)}</p>${
+      others.length
+        ? `<p class="mutex-rivals"><small>${head ? '本國策是這條路線的起點，與以下路線互斥：' : `本國策屬於「${escape(own.heads.map((n) => n.name).join('／'))}」開啟的路線，與以下路線互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([, route]) => chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>`
+        : '<small>這個互斥組沒有其他路線，實際上不會鎖定任何國策（舊版生成的資料）。</small>'
+    }</section>`;
+  }
+  function nodeState(country: Country, node: FocusNode): string {
+    const p = country.progress[node.id];
+    if (p.status !== 'idle') {
+      return p.status;
+    }
+    const lock = node.mutex ? country.locks[node.mutex.group] : undefined;
+    if (lock && lock.route !== node.mutex!.route) {
+      return 'sealed';
+    }
+    return blockers(country, node).length ? 'locked' : 'available';
+  }
+  function drawTree(country: Country): void {
+    const tree = shell.querySelector<HTMLElement>('.tree')!;
+    const nodes = Object.values(country.nodes);
+    positions = new Map(
+      layoutTree(nodes).map((n) => [n.id, { x: n.x * GRID_X + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y }]),
+    );
+    const pos = (node: FocusNode) => positions.get(node.id)!;
+    const summaries = new Map<string, { x: number; y: number }>();
+    const spans = new Map<string, { left: number; right: number }>();
+    for (const b of new Set(nodes.map((n) => n.branch))) {
+      const members = nodes.filter((n) => n.branch === b);
+      summaries.set(b, {
+        x: Math.min(...members.map((n) => pos(n).x)),
+        y: Math.min(...members.map((n) => pos(n).y)),
+      });
+      spans.set(b, {
+        left: Math.min(...members.map((n) => pos(n).x)),
+        right: Math.max(...members.map((n) => pos(n).x)) + NODE_W,
+      });
+    }
+    const endpoint = (node: FocusNode) =>
+      collapsed.has(node.branch) ? summaries.get(node.branch)! : pos(node);
+    const drawn = nodes.filter((n) => !collapsed.has(n.branch));
+    const points = [...drawn.map(pos), ...[...summaries].filter(([b]) => collapsed.has(b)).map(([, p]) => p)];
+    treeSize = {
+      width: Math.max(...points.map((p) => p.x)) + NODE_W + ORIGIN_X,
+      height: Math.max(...points.map((p) => p.y)) + NODE_H + 48,
+    };
+    tree.style.width = `${treeSize.width}px`;
+    tree.style.height = `${treeSize.height}px`;
+    const states = new Map(nodes.map((n) => [n.id, nodeState(country, n)]));
+    const lines: string[] = [];
+    const edgeKeys = new Set<string>();
+    // One marker per route: its topmost head, i.e. where the player commits to that route.
+    const groups = mutexRoutes(nodes);
+    const heads = new Set<string>();
+    const mutexLines: string[] = [];
+    for (const routes of groups.values()) {
+      if (routes.size < 2) {
+        continue;
+      }
+      const leaders: FocusNode[] = [];
+      for (const route of routes.values()) {
+        route.heads.forEach((head) => heads.add(head.id));
+        const shown = route.heads.filter((head) => !collapsed.has(head.branch));
+        if (shown.length) {
+          leaders.push(
+            shown.reduce((a, b) =>
+              pos(a).y < pos(b).y || (pos(a).y === pos(b).y && pos(a).x < pos(b).x) ? a : b,
+            ),
+          );
+        }
+      }
+      leaders.sort((a, b) => pos(a).x - pos(b).x || pos(a).y - pos(b).y);
+      for (let i = 1; i < leaders.length; i++) {
+        mutexLines.push(
+          `<path class="connector mutex" d="${mutexPath(pos(leaders[i - 1]), pos(leaders[i]))}"/>`,
+        );
+      }
+    }
+    for (const node of nodes) {
+      const target = endpoint(node);
+      for (const parent of node.prerequisites.flat()) {
+        const parentNode = country.nodes[parent];
+        if (node.branch === parentNode.branch && collapsed.has(node.branch)) {
+          continue;
+        }
+        const from = endpoint(parentNode);
+        const edgeKey = `${from.x},${from.y}:${target.x},${target.y}`;
+        if (edgeKeys.has(edgeKey)) {
+          continue;
+        }
+        edgeKeys.add(edgeKey);
+        const completed =
+          !collapsed.has(node.branch) &&
+          !collapsed.has(parentNode.branch) &&
+          states.get(parent) === 'completed';
+        const x1 = from.x + NODE_W / 2;
+        const y1 = from.y + NODE_H;
+        const x2 = target.x + NODE_W / 2;
+        const y2 = target.y;
+        const middle = y1 + Math.max(14, (y2 - y1) / 2);
+        const radius = Math.min(10, Math.abs(x2 - x1) / 2, Math.abs(y2 - middle));
+        const direction = x2 > x1 ? 1 : -1;
+        const d =
+          x1 === x2
+            ? `M${x1} ${y1}V${y2}`
+            : `M${x1} ${y1}V${middle - radius}Q${x1} ${middle} ${x1 + direction * radius} ${middle}H${x2 - direction * radius}Q${x2} ${middle} ${x2} ${middle + radius}V${y2}`;
+        lines.push(
+          `<path class="connector ${completed ? 'done' : ''} ${node.prerequisites.some((g) => g.length > 1 && g.includes(parent)) ? 'alternative' : ''} ${node.branch !== parentNode.branch ? 'cross-branch' : ''}" d="${d}"/>`,
+        );
+      }
+    }
+    lines.push(...mutexLines);
+    const meta = (node: FocusNode, stateClass: string) => {
+      const p = country.progress[node.id];
+      return stateClass === 'completed'
+        ? '✓ 已完成'
+        : stateClass === 'active'
+          ? `${p.days.toFixed(0)} / ${node.days} 日`
+          : stateClass === 'waiting'
+            ? '等待成果'
+            : stateClass === 'paused'
+              ? `Ⅱ ${p.days.toFixed(0)} / ${node.days} 日`
+              : stateClass === 'sealed'
+                ? '路線已鎖定'
+                : stateClass === 'terminated'
+                  ? '已終止'
+                  : `${node.days} 日`;
+    };
+    tree.innerHTML = `<svg class="connectors" width="${treeSize.width}" height="${treeSize.height}" aria-hidden="true">${lines.join('')}</svg>${[
+      ...spans,
+    ]
+      .filter(([b]) => !collapsed.has(b))
+      .map(
+        ([label, span]) =>
+          `<div class="branch-banner ${label === branch ? 'active' : ''}" style="left:${span.left}px;width:${span.right - span.left}px"><span>${escape(label)}</span></div>`,
+      )
+      .join('')}${[...summaries]
+      .filter(([b]) => collapsed.has(b))
+      .map(
+        ([b, p]) =>
+          `<button class="branch-summary" data-jump-branch="${escape(b)}" style="left:${p.x}px;top:${p.y}px;width:${NODE_W}px"><strong>${escape(b)}</strong><span>${nodes.filter((n) => n.branch === b).length} 項國策已收合 · 點選展開</span></button>`,
+      )
+      .join('')}${drawn
+      .map((node) => {
+        const p = country.progress[node.id];
+        const stateClass = states.get(node.id)!;
+        const position = pos(node);
+        const dim =
+          (query && !`${node.name} ${node.description}`.includes(query)) ||
+          (branch && node.branch !== branch);
+        const isCurrent = country.current === node.id;
+        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-icon">${icon(node.icon)}</span><span class="node-text"><span class="node-name">${escape(node.name)}</span><span class="node-meta">${escape(meta(node, stateClass))}</span></span>${heads.has(node.id) ? '<span class="node-flag" title="互斥路線的分歧點">⇋</span>' : ''}${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要國策：完成時發布新聞">✦</span>' : ''}${p.started !== null && stateClass !== 'completed' ? `<span class="node-progress"><i style="width:${Math.min(100, (p.days / node.days) * 100)}%"></i></span>` : ''}</button>`;
+      })
+      .join('')}`;
+    const minimap = shell.querySelector<SVGSVGElement>('.minimap-svg');
+    if (minimap) {
+      minimap.setAttribute('viewBox', `0 0 ${treeSize.width} ${treeSize.height}`);
+      minimap.innerHTML = `${drawn
+        .map((node) => {
+          const p = pos(node);
+          return `<rect class="mm ${states.get(node.id)} ${country.current === node.id ? 'current' : ''}" x="${p.x}" y="${p.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/>`;
+        })
+        .join('')}${[...summaries]
+        .filter(([b]) => collapsed.has(b))
+        .map(
+          ([, p]) =>
+            `<rect class="mm folded" x="${p.x}" y="${p.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/>`,
+        )
+        .join('')}<rect class="mm-view" x="0" y="0" width="0" height="0"/>`;
+    }
+    const searchButton = shell.querySelector<HTMLButtonElement>('[data-action="search-next"]');
+    if (searchButton) {
+      const count = query ? nodes.filter((n) => `${n.name} ${n.description}`.includes(query)).length : 0;
+      searchButton.textContent = query ? `下一項 (${count})` : '下一項';
+      searchButton.disabled = count === 0;
+    }
+    transform();
+  }
+  function locateNode(id: string): void {
+    const country = currentCountry();
+    let canvas = shell.querySelector<HTMLElement>('.canvas');
+    const node = country?.nodes[id];
+    if (!canvas || !node) {
+      return;
+    }
+    if (collapsed.delete(node.branch)) {
+      render();
+      canvas = shell.querySelector<HTMLElement>('.canvas')!;
+    }
+    const p = positions.get(id)!;
+    zoom = Math.max(zoom, 0.8);
+    pan = {
+      x: viewCenterX(canvas) - (p.x + NODE_W / 2) * zoom,
+      y: canvas.clientHeight / 2 - (p.y + NODE_H / 2) * zoom,
+    };
+    transform();
+  }
+  /** Horizontal centre of the canvas area not covered by the routes panel or the drawer. */
+  function viewCenterX(canvas: HTMLElement): number {
+    const rect = canvas.getBoundingClientRect();
+    const routes = shell.querySelector<HTMLElement>('.routes.open');
+    const drawer = shell.querySelector<HTMLElement>('.drawer.open');
+    const wide = rect.width > 760;
+    const left = wide && routes ? routes.getBoundingClientRect().right - rect.left : 0;
+    const right = wide && drawer ? rect.right - drawer.getBoundingClientRect().left : 0;
+    return left + (rect.width - left - right) / 2;
+  }
+  function jumpBranch(value: string): void {
+    branch = value;
+    collapsed.delete(value);
+    render();
+    if (!value) {
+      fit();
+      return;
+    }
+    const country = currentCountry();
+    const canvas = shell.querySelector<HTMLElement>('.canvas');
+    if (!country || !canvas) {
+      return;
+    }
+    const points = Object.values(country.nodes)
+      .filter((n) => n.branch === value)
+      .map((n) => positions.get(n.id)!);
+    if (!points.length) {
+      return;
+    }
+    const left = Math.min(...points.map((p) => p.x));
+    const top = Math.min(...points.map((p) => p.y)) - 50;
+    const width = Math.max(...points.map((p) => p.x)) - left + NODE_W;
+    const height = Math.max(...points.map((p) => p.y)) - top + NODE_H;
+    zoom = Math.max(
+      0.05,
+      Math.min(1, (canvas.clientWidth - 80) / width, (canvas.clientHeight - 60) / height),
+    );
+    pan = { x: viewCenterX(canvas) - (left + width / 2) * zoom, y: 30 - top * zoom };
+    transform();
+  }
+  function transform(): void {
+    const tree = shell.querySelector<HTMLElement>('.tree');
+    if (tree) {
+      tree.style.transform = `translate(${pan.x}px,${pan.y}px) scale(${zoom})`;
+    }
+    const label = shell.querySelector('.zoom-value');
+    if (label) {
+      label.textContent = `${zoom < 0.1 ? (zoom * 100).toFixed(1) : Math.round(zoom * 100)}%`;
+    }
+    const canvas = shell.querySelector<HTMLElement>('.canvas');
+    const view = shell.querySelector<SVGRectElement>('.mm-view');
+    if (canvas && view) {
+      view.setAttribute('x', String(-pan.x / zoom));
+      view.setAttribute('y', String(-pan.y / zoom));
+      view.setAttribute('width', String(canvas.clientWidth / zoom));
+      view.setAttribute('height', String(canvas.clientHeight / zoom));
+    }
+  }
+  function zoomAt(next: number, x: number, y: number): void {
+    const clamped = Math.max(0.02, Math.min(2, next));
+    pan = { x: x - ((x - pan.x) * clamped) / zoom, y: y - ((y - pan.y) * clamped) / zoom };
+    zoom = clamped;
+    transform();
+  }
+  function fit(): void {
+    const canvas = shell.querySelector<HTMLElement>('.canvas');
+    if (canvas) {
+      zoom = Math.max(
+        0.02,
+        Math.min(1, (canvas.clientWidth - 60) / treeSize.width, (canvas.clientHeight - 40) / treeSize.height),
+      );
+      pan = { x: viewCenterX(canvas) - (treeSize.width * zoom) / 2, y: 20 };
+      transform();
+    }
+  }
+  function bindMinimap(): void {
+    const map = shell.querySelector<HTMLElement>('.minimap');
+    const canvas = shell.querySelector<HTMLElement>('.canvas');
+    if (!map || !canvas) {
+      return;
+    }
+    let dragging = false;
+    const move = (event: PointerEvent) => {
+      const rect = map.getBoundingClientRect();
+      const scale = Math.max(treeSize.width / rect.width, treeSize.height / rect.height);
+      // SVG uses preserveAspectRatio xMidYMid meet: account for the letterbox offset.
+      const offsetX = (rect.width - treeSize.width / scale) / 2;
+      const offsetY = (rect.height - treeSize.height / scale) / 2;
+      const x = (event.clientX - rect.left - offsetX) * scale;
+      const y = (event.clientY - rect.top - offsetY) * scale;
+      pan = { x: canvas.clientWidth / 2 - x * zoom, y: canvas.clientHeight / 2 - y * zoom };
+      transform();
+    };
+    map.addEventListener('pointerdown', (event) => {
+      dragging = true;
+      map.setPointerCapture(event.pointerId);
+      move(event);
+    });
+    map.addEventListener('pointermove', (event) => dragging && move(event));
+    map.addEventListener('pointerup', () => {
+      dragging = false;
+    });
+    map.addEventListener('pointercancel', () => {
+      dragging = false;
+    });
+  }
+  function bindCanvas(): void {
+    const canvas = shell.querySelector<HTMLElement>('.canvas')!;
+    // Focus or scrollIntoView can scroll overflow:hidden layers; the view is driven by pan/zoom only.
+    for (const layer of [canvas, shell.querySelector<HTMLElement>('.stage')]) {
+      layer?.addEventListener('scroll', () => {
+        layer.scrollLeft = 0;
+        layer.scrollTop = 0;
+      });
+    }
+    const pointers = new Map<number, { x: number; y: number }>();
+    let moved = false;
+    let startNode = '';
+    canvas.addEventListener(
+      'wheel',
+      (event) => {
+        event.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        zoomAt(zoom * Math.exp(-event.deltaY * 0.0015), event.clientX - rect.left, event.clientY - rect.top);
+      },
+      { passive: false },
+    );
+    canvas.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || (event.target as Element).closest('.branch-summary')) {
+        return;
+      }
+      moved = pointers.size > 0;
+      startNode = (event.target as Element).closest<HTMLElement>('[data-node]')?.dataset.node ?? '';
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      canvas.setPointerCapture(event.pointerId);
+    });
+    canvas.addEventListener('pointermove', (event) => {
+      const old = pointers.get(event.pointerId);
+      if (!old) {
+        return;
+      }
+      const next = { x: event.clientX, y: event.clientY };
+      if (Math.hypot(next.x - old.x, next.y - old.y) > 2) {
+        moved = true;
+      }
+      if (pointers.size === 1) {
+        pan.x += next.x - old.x;
+        pan.y += next.y - old.y;
+      } else {
+        const other = [...pointers.entries()].find(([id]) => id !== event.pointerId)![1];
+        const beforeDistance = Math.hypot(old.x - other.x, old.y - other.y);
+        const afterDistance = Math.hypot(next.x - other.x, next.y - other.y);
+        const rect = canvas.getBoundingClientRect();
+        if (beforeDistance > 1) {
+          zoomAt(
+            (zoom * afterDistance) / beforeDistance,
+            (other.x + old.x) / 2 - rect.left,
+            (other.y + old.y) / 2 - rect.top,
+          );
+          pan.x += (next.x - old.x) / 2;
+          pan.y += (next.y - old.y) / 2;
+        }
+      }
+      pointers.set(event.pointerId, next);
+      transform();
+    });
+    canvas.addEventListener('pointerup', (event) => {
+      if (!pointers.has(event.pointerId)) {
+        return;
+      }
+      pointers.delete(event.pointerId);
+      canvas.releasePointerCapture(event.pointerId);
+      if (!moved && startNode) {
+        nodeId = startNode;
+        openDetails();
+        render();
+      }
+    });
+    canvas.addEventListener('pointercancel', (event) => {
+      pointers.delete(event.pointerId);
+    });
+    canvas.addEventListener('keydown', (event) => {
+      if ((event.target as Element).closest('[data-node]')) {
+        return;
+      }
+      const delta: Record<string, [number, number]> = {
+        ArrowLeft: [40, 0],
+        ArrowRight: [-40, 0],
+        ArrowUp: [0, 40],
+        ArrowDown: [0, -40],
+      };
+      if (delta[event.key]) {
+        event.preventDefault();
+        pan.x += delta[event.key][0];
+        pan.y += delta[event.key][1];
+        transform();
+      }
+    });
+  }
+  function openModal(name: string, title: string, body: string, footer = ''): void {
+    if (!modal) {
+      previousFocus = root.activeElement as HTMLElement;
+    }
+    apiPanel?.dispose();
+    apiPanel = undefined;
+    sourcePanel?.dispose();
+    sourcePanel = undefined;
+    taskPanel?.dispose();
+    taskPanel = undefined;
+    modal = name;
+    backdrop.hidden = false;
+    backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="關閉對話框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
+    backdrop.querySelector<HTMLButtonElement>('button')?.focus();
+    updateModalJobs();
+  }
+  /** Windows cover the status line, so they show running tasks in their own header. */
+  function updateModalJobs(): void {
+    const pill = backdrop.querySelector<HTMLElement>('.modal-jobs');
+    if (!pill) {
+      return;
+    }
+    const summary = taskSummary();
+    pill.hidden = !summary.state || modal === 'jobs';
+    pill.className = `modal-jobs ${summary.state}`;
+    pill.innerHTML = `${summary.state === 'busy' ? '<i class="spinner"></i>' : '<i class="status-dot failed"></i>'}${escape(summary.text.replace('，點此查看', ''))}`;
+  }
+  function closeModal(): void {
+    removing = '';
+    importing = null;
+    treeNotice = '';
+    apiPanel?.dispose();
+    apiPanel = undefined;
+    sourcePanel?.dispose();
+    sourcePanel = undefined;
+    taskPanel?.dispose();
+    taskPanel = undefined;
+    backdrop.hidden = true;
+    backdrop.innerHTML = '';
+    modal = '';
+    previousFocus?.focus();
+  }
+  function importPanel(): string {
+    if (!importing) {
+      return '';
+    }
+    const existing = importing.entries.filter((entry) => controller.state?.countries[entry.tree.id]);
+    const withStatus = importing.entries.some((entry) => entry.status);
+    return `<div class="import-panel"><h4>準備匯入：${escape(importing.file)}</h4><ul>${importing.entries
+      .map(
+        (entry) =>
+          `<li><strong>${escape(entry.tree.name)}</strong> <code>${escape(entry.tree.id)}</code> · ${entry.tree.nodes.length} 項國策 · ${new Set(entry.tree.nodes.map((n) => n.branch)).size} 支分支${entry.status ? ' · 含進度' : ''}${controller.state?.countries[entry.tree.id] ? ' · <span class="warn">將取代現有國家</span>' : ''}</li>`,
+      )
+      .join(
+        '',
+      )}</ul><label class="check"><input type="checkbox" data-import-progress ${withStatus ? '' : 'disabled'} ${checked(importing.withProgress && withStatus)}>連同進度<small>保留檔案中的進度、能力與鎖定；匯入後需執行「更新局勢」從目前故事日校準。事件不匯入。</small></label>${existing.length ? `<label class="check"><input type="checkbox" data-import-replace ${checked(importing.replace)}>取代同 id 的國家（${existing.map((e) => escape(e.tree.name)).join('、')}）<small>原有的國策樹與進度會先刪除。</small></label>` : ''}<div class="tree-io-actions"><button class="primary" data-tree="import-confirm" ${existing.length && !importing.replace ? 'disabled' : ''}>確認匯入</button><button data-tree="import-cancel">取消</button></div></div>`;
+  }
+  function download(name: string, text: string): void {
+    const link = doc.createElement('a');
+    link.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    link.download = name;
+    doc.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+  const stamp = () => new Date().toISOString().slice(0, 10);
+  function showCountries(focus = true): void {
+    const countries = controller.state ? Object.values(controller.state.countries) : [];
+    const busyJobs = controller.jobs.some((j) => ['running', 'queued'].includes(j.state));
+    const identifying = controller.jobs.some(
+      (j) => j.kind === 'identify' && ['running', 'queued'].includes(j.state),
+    );
+    const selectedCandidates = [
+      ...backdrop.querySelectorAll<HTMLInputElement>('[data-candidate]:checked'),
+    ].map((e) => e.dataset.candidate);
+    const created = countries.length
+      ? `<h3>已建立的國家</h3>${countries
+          .map(
+            (c) =>
+              `<div class="candidate country-row"><strong class="country-name">${escape(c.name)}</strong><label class="switch-label"><input type="checkbox" data-enable="${escape(c.id)}" ${checked(c.enabled)}>啟用</label>${c.control === 'player' ? `<label class="switch-label" title="故事時間一次跳過很多天時，由 AI 替這個國家接著選下一項國策"><input type="checkbox" data-delegate="${escape(c.id)}" ${checked(c.skipDelegate)}>時間跳躍時由 AI 代選</label>` : '<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${
+                removing === c.id
+                  ? `<div class="remove-confirm" role="alert"><small>刪除「${escape(c.name)}」的國策樹、進度與只涉及此國的事件？會寫入目前樓層；之後可從候選清單重新生成。</small><button class="danger" data-remove-confirm="${escape(c.id)}">確認刪除</button><button data-remove-cancel>取消</button></div>`
+                  : `<button data-tree-export="${escape(c.id)}">匯出</button><button class="danger" data-remove-country="${escape(c.id)}" ${busyJobs ? 'disabled title="有任務進行中，請等任務結束後再刪除"' : ''}>刪除國策樹</button>`
+              }</div>`,
+          )
+          .join(
+            '',
+          )}${countries.some((c) => !c.enabled) ? '<small class="muted">重新啟用後，下一次局勢更新會先校準現況；停用期間不累積工期。</small>' : ''}<div class="separator"></div>`
+      : '';
+    const body = `${created}<h3>新增國家</h3><p class="muted">先從本局資料辨識國家，再勾選要生成國策樹的對象。</p><button data-modal="identify" ${identifying ? 'disabled' : ''}>${identifying ? '正在辨識…' : '從目前資料辨識國家'}</button>${controller.candidates.map((c) => `<label class="candidate"><input type="checkbox" data-candidate="${escape(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape(c.name)}</strong><p>${escape(c.description)}</p><small>${escape(c.evidence)}</small></span></label>`).join('')}${!controller.candidates.length ? '<p class="muted">尚無待啟用的候選國家。</p>' : ''}<div class="separator"></div><details class="tree-io" ${importing || treeNotice ? 'open' : ''}><summary>國策樹檔案：匯入與匯出</summary><div class="tree-io-actions"><button data-tree="import" title="載入手寫、submod 或其他聊天匯出的國策樹">匯入國策樹</button><button data-tree="export-all" ${countries.length ? '' : 'disabled'} title="含完整進度，可用來備份或回報問題">匯出全部</button><button data-tree="copy-all" ${countries.length ? '' : 'disabled'}>複製全部 JSON</button><button data-tree="template">下載範本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice ? `<p class="api-status">${escape(treeNotice)}</p>` : ''}${importPanel()}</details>`;
+    const footer = `<button data-modal="close">返回</button><button class="primary" data-modal="enable" ${selectedCandidates.length ? '' : 'disabled'}>生成並啟用選取國家</button>`;
+    if (!focus && modal === 'countries') {
+      const section = backdrop.querySelector('.modal-body');
+      if (section) {
+        section.innerHTML = `${body}<div class="modal-error" role="alert"></div>`;
+      }
+      const foot = backdrop.querySelector('.modal-footer');
+      if (foot) {
+        foot.innerHTML = footer;
+      }
+    } else {
+      openModal('countries', '管理國家', body, footer);
+    }
+  }
+  function showJobs(): void {
+    for (const job of controller.jobs) {
+      if (job.state === 'failed') {
+        failuresSeen.add(job.id);
+      }
+    }
+    const busy = controller.jobs.some((j) => ['running', 'queued'].includes(j.state));
+    const message = (j: (typeof controller.jobs)[number]) => {
+      const text = jobMessage(j);
+      return text.length > 140
+        ? `<details class="job-detail"><summary>${escape(text.slice(0, 120))}…</summary><p>${escape(text)}</p></details>`
+        : `<small class="job-message">${escape(text)}</small>`;
+    };
+    const rows = controller.jobs
+      .map(
+        (j) =>
+          `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape(j.time)}</small>${j.inputCharacters !== undefined ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ''}</div><div>${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${j.route ? ` · ${escape(j.route)}` : ''}<br>${message(j)}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${['failed', 'stale'].includes(j.state) ? `<button data-retry="${j.id}">重試</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ''}</div></div>`,
+      )
+      .join('');
+    const body = `<div class="job-actions"><button data-modal="run-reshape" title="劇情大幅改變時，修改尚未開始的國策">評估重大改樹</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任務</button></div>${rows || '<p class="muted">尚無任務紀錄。正文與一般變數更新完成後，國策任務會在背景執行，不會鎖住聊天；進度顯示在懸浮球上方。</p>'}${controller.config.runLog ? '<p class="muted">執行紀錄已開啟：請求內容只保存在此頁記憶體，重新整理即清除。</p>' : ''}`;
+    if (modal === 'jobs') {
+      backdrop.querySelector('.modal-body')!.innerHTML = body;
+    } else {
+      openModal('jobs', '任務', body, '<button data-modal="close">返回</button>');
+    }
+  }
+  function showLog(jobId: string): void {
+    const entries = controller.logs.filter((log) => log.jobId === jobId).reverse();
+    const block = (label: string, text: string, rows = 8) =>
+      text
+        ? `<label class="field">${label}<textarea readonly rows="${rows}">${escape(text)}</textarea></label>`
+        : '';
+    openModal(
+      'log',
+      '請求紀錄',
+      `<p class="muted">只供除錯，不含 API 金鑰。</p>${entries
+        .map(
+          (log) =>
+            `<article class="job-card"><div class="job-title">${escape(jobNames[log.kind as keyof typeof jobNames] ?? log.kind)}${log.stage ? ` · ${escape(log.stage)}` : ''} · ${escape(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1000).toFixed(1)} 秒 · ${escape(log.time)}</div>${log.error ? `<p class="modal-error">${escape(log.error)}</p>` : '<p class="muted">✓ 格式通過</p>'}${log.messages
+              .map((message, index) =>
+                block(
+                  `#${index + 1} ${message.role} · ${message.content.length.toLocaleString()} 字元`,
+                  message.content,
+                  6,
+                ),
+              )
+              .join(
+                '',
+              )}${block('推理內容', log.reasoning, 6)}${block(`模型回應 · ${log.output.length.toLocaleString()} 字元`, log.output)}</article>`,
+        )
+        .join('')}`,
+      '<button data-modal="jobs">返回任務</button>',
+    );
+  }
+  type NewsEvent = State['events'][string];
+  const newsKicker = (event: NewsEvent) =>
+    event.source.kind === 'focus'
+      ? '國策事件'
+      : event.importance === 'world'
+        ? '世界新聞'
+        : event.scope === 'front'
+          ? '身邊的消息'
+          : '各國動態';
+  function newsEffects(state: State, event: NewsEvent): string {
+    const parts = event.changes
+      .filter((change) => change.effects.length)
+      .map(
+        (change) =>
+          `${state.countries[change.country]?.name ?? change.country}：${change.effects.map(effectText).join('、')}`,
+      );
+    return parts.length ? parts.join('；') : '無直接影響';
+  }
+  /** Skeleton edition: the core branch, the relations between focuses and independent branches. */
+  function showRelations(): void {
+    const country = controller.state?.countries[countryId];
+    if (!country) {
+      return;
+    }
+    const core = country.branches.find((b) => b.core);
+    const relations = country.relations ?? [];
+    const branchOf = (id: string) => country.nodes[id]?.branch ?? '';
+    const reached = [
+      ...new Set(
+        relations
+          .filter((r) => core && [branchOf(r.from), branchOf(r.to)].includes(core.name))
+          .map((r) => (branchOf(r.from) === core!.name ? branchOf(r.to) : branchOf(r.from)))
+          .filter((name) => name !== core?.name),
+      ),
+    ];
+    const focus = (id: string) =>
+      `<button class="chip" data-goto="${escape(id)}">${escape(country.nodes[id]?.name ?? id)}</button><small class="rel-branch">${escape(branchOf(id))}</small>`;
+    const independent = country.branches.filter((b) => b.independent);
+    openModal(
+      'relations',
+      `國策關係 · ${country.name}`,
+      `<p class="muted">國策之間如何互相影響；每條關係下方列出實現它的規則。點國策名稱可在樹上定位。</p>
+      ${core ? `<section class="rel-core"><h3>核心分支：${escape(core.name)}</h3>${core.coreReason ? `<p>${escape(core.coreReason)}</p>` : ''}<small>影響的其他分支：${reached.length ? reached.map(escape).join('、') : '無'}</small></section>` : ''}
+      ${relations.length ? `<ul class="rel-list">${relations.map((r) => `<li class="rel-card"><span class="tag">${escape(relationKindNames[r.kind] ?? r.kind)}</span><div class="rel-pair">${focus(r.from)}<span class="rel-arrow" title="關聯；實際方向見下方規則">↔</span>${focus(r.to)}</div><p>${escape(r.change)}</p>${r.via.length ? `<ul class="rel-via">${r.via.map((v) => `<li>${escape(v)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>` : '<p>這棵國策樹沒有記錄關係。較舊版本生成的樹、小型樹與匯入的樹可能沒有關係表。</p>'}
+      ${independent.length ? `<section class="rel-independent"><h3>獨立推進的分支</h3><dl>${independent.map((b) => `<dt>${escape(b.name)}</dt><dd>${escape(b.independent ?? '')}</dd>`).join('')}</dl></section>` : ''}`,
+      '<button data-modal="close">返回</button>',
+    );
+  }
+  function showEvents(): void {
+    const state = controller.state;
+    const all = state ? Object.values(state.events).sort((a, b) => b.at - a.at) : [];
+    const events = all.filter(
+      (e) =>
+        (!eventCountry || e.countries.includes(eventCountry)) &&
+        (eventFilter === 'all' ||
+          (eventFilter === 'ongoing' && e.status === 'ongoing') ||
+          (eventFilter === 'resolved' && e.status === 'resolved') ||
+          (eventFilter === 'secret' && !e.public)),
+    );
+    const filters: [typeof eventFilter, string][] = [
+      ['all', '全部'],
+      ['ongoing', '進行中'],
+      ['resolved', '已結束'],
+      ['secret', '未公開'],
+    ];
+    const names = (e: (typeof all)[number]) =>
+      e.countries.map((id) => state?.countries[id]?.name ?? id).join('、');
+    const toolbar = `<div class="event-filters">${filters.map(([id, label]) => `<button class="chip ${eventFilter === id ? 'active' : ''}" data-event-filter="${id}" aria-pressed="${eventFilter === id}">${label}</button>`).join('')}<select data-event-country aria-label="依國家篩選"><option value="">所有國家</option>${Object.values(
+      state?.countries ?? {},
+    )
+      .map(
+        (c) =>
+          `<option value="${escape(c.id)}" ${selected(c.id === eventCountry)}>${escape(c.name)}</option>`,
+      )
+      .join('')}</select><small>${events.length} / ${all.length} 件</small></div>`;
+    const cards = events
+      .map(
+        (e) =>
+          `<article class="event-card"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape(names(e))}${e.public ? '' : ' · 未公開'}${e.status === 'ongoing' ? ' · 仍在發展' : e.result ? ` · ${resultNames[e.result]}` : ''}</span><h3>${escape(e.headline || e.title)}</h3><p>${escape(e.description)}</p>${e.current ? `<p class="event-current"><b>現況</b> ${escape(e.current)}</p>` : ''}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape(st.text)}${st.when ? ` <small>${escape(st.when)}</small>` : ''}</li>`).join('')}</ul>` : ''}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape(t.text)}</li>`).join('')}</ol>` : ''}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape(newsEffects(state, e))}</small>` : ''}<small>${escape(e.evidence)}</small></article>`,
+      )
+      .join('');
+    const body = `${all.length ? toolbar : ''}${cards || `<p class="muted">${all.length ? '沒有符合篩選的事件。' : '目前沒有事件。局勢更新會記錄各國發生的事，包括未公開的。'}</p>`}`;
+    if (modal === 'events') {
+      backdrop.querySelector('.modal-body')!.innerHTML =
+        `${body}<div class="modal-error" role="alert"></div>`;
+    } else {
+      openModal('events', '國家事件紀錄', body, '<button data-modal="close">返回</button>');
+    }
+  }
+  function optionList(values: [string, string][], value: string): string {
+    return values
+      .map(
+        ([id, label]) => `<option value="${escape(id)}" ${selected(id === value)}>${escape(label)}</option>`,
+      )
+      .join('');
+  }
+  const settingsFooter =
+    '<button data-modal="close">取消</button><button class="primary" data-modal="save-settings">儲存設定</button>';
+  /** Unsaved changes in the settings window (general, task and source forms; size and pace). */
+  function settingsDirty(): boolean {
+    if (modal !== 'settings') {
+      return false;
+    }
+    readSettingsDraft();
+    const size = backdrop.querySelector<HTMLSelectElement>('[data-setting="size"]')?.value;
+    const pace = backdrop.querySelector<HTMLSelectElement>('[data-setting="pace"]')?.value;
+    const state = controller.state;
+    const same = (a: unknown, b: unknown) => {
+      try {
+        return (
+          JSON.stringify(ConfigSchema.parse(structuredClone(a))) ===
+          JSON.stringify(ConfigSchema.parse(structuredClone(b)))
+        );
+      } catch {
+        return false;
+      }
+    };
+    return (
+      Boolean(apiPanel?.dirty()) ||
+      !same(draft, controller.config) ||
+      Boolean(state && ((size && size !== state.settings.size) || (pace && pace !== state.settings.pace)))
+    );
+  }
+  /** Close a window; the settings window asks first when it has unsaved changes. */
+  function requestClose(): void {
+    if (settingsDirty()) {
+      const footer = backdrop.querySelector('.modal-footer');
+      if (footer) {
+        footer.innerHTML =
+          '<span class="unsaved">有未儲存的修改</span><button data-modal="keep-editing">繼續編輯</button><button class="danger" data-modal="discard">放棄修改</button><button class="primary" data-modal="save-settings">儲存並關閉</button>';
+        footer.querySelector<HTMLButtonElement>('[data-modal="keep-editing"]')?.focus();
+      }
+      return;
+    }
+    closeModal();
+  }
+  function renderSettings(taskState?: { selected?: JobKind; status?: string }): void {
+    const state = controller.state;
+    const tabs = [
+      ['general', '一般'],
+      ['apis', 'API 連線'],
+      ['jobs', '任務'],
+      ['sources', '世界書與上下文'],
+    ];
+    openModal(
+      'settings',
+      '國策設定',
+      `<div class="tabs">${tabs.map(([id, name]) => `<button data-settings-tab="${id}" class="${settingsTab === id ? 'active' : ''}">${name}</button>`).join('')}</div>
+      <div class="settings-section" ${settingsTab !== 'general' ? 'hidden' : ''}><div class="form-grid"><label class="field">國策樹規模<select data-setting="size">${optionList(
+        [
+          ['small', '小型 · 15–25 節點'],
+          ['standard', '標準 · 40–60 節點'],
+          ['large', '大型 · 70–100 節點'],
+          ['epic', '超大型 · 110–150 節點'],
+        ],
+        state?.settings.size ?? 'standard',
+      )}</select><small>只影響之後新生成的樹。</small></label><label class="field">故事節奏<select data-setting="pace">${optionList(
+        [
+          ['fast', '快速'],
+          ['standard', '標準'],
+          ['long', '長期'],
+        ],
+        state?.settings.pace ?? 'standard',
+      )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>聊天世界書（預設）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>聊天世界書：在本聊天的世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層的國策資料，切換 Swipe 會自動對應。需要提示詞模板擴展，沒有時自動改用直接注入。條目的位置與順序可在酒館中調整。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
+      <div class="settings-section" ${settingsTab !== 'apis' ? 'hidden' : ''}><div id="api-panel"></div></div>
+      <div class="settings-section" ${settingsTab !== 'jobs' ? 'hidden' : ''}><div id="task-panel"></div></div>
+      <div class="settings-section" ${settingsTab !== 'sources' ? 'hidden' : ''}><div id="source-panel"></div></div>`,
+      settingsFooter,
+    );
+    apiPanel = mountApiPanel(controller, backdrop.querySelector<HTMLElement>('#api-panel')!, (update) => {
+      readSettingsDraft();
+      draft = update(draft);
+      // Connection names may have changed: redraw the task routing selects from the draft.
+      taskPanel?.refresh();
+    });
+    taskPanel = mountTaskPanel(
+      controller,
+      backdrop.querySelector<HTMLElement>('#task-panel')!,
+      () => draft,
+      (next, remount) => {
+        draft = next;
+        controller.saveSettings(draft);
+        if (remount) {
+          // A preset can replace worldbook/context settings too: rebuild every tab from the saved config.
+          const kept = taskPanel?.state();
+          draft = structuredClone(controller.config);
+          renderSettings(kept);
+        }
+      },
+      taskState,
+      {
+        setMode(kind, key, custom) {
+          sourcePanel?.setMode(kind, key, custom);
+        },
+        edit(kind) {
+          sourcePanel?.focus(kind);
+          switchSettingsTab('sources');
+        },
+      },
+    );
+    sourcePanel = mountSourcePanel(
+      controller,
+      backdrop.querySelector<HTMLElement>('#source-panel')!,
+      () => draft,
+      (sources) => {
+        draft.sources = sources;
+      },
+    );
+  }
+  function switchSettingsTab(id: string): void {
+    readSettingsDraft();
+    settingsTab = id;
+    // Keep the form mounted so unsaved general settings survive tab switches.
+    for (const section of backdrop.querySelectorAll<HTMLElement>('.settings-section')) {
+      section.hidden =
+        [...backdrop.querySelectorAll('.settings-section')].indexOf(section) !==
+        ['general', 'apis', 'jobs', 'sources'].indexOf(settingsTab);
+    }
+    for (const tab of backdrop.querySelectorAll('[data-settings-tab]')) {
+      tab.classList.toggle('active', (tab as HTMLElement).dataset.settingsTab === settingsTab);
+    }
+    backdrop.querySelector('.modal-body')?.scrollTo(0, 0);
+  }
+  function readSettingsDraft(): void {
+    const configInput = backdrop.querySelector<HTMLInputElement>('[data-config="concurrency"]');
+    if (!configInput) {
+      return;
+    }
+    draft.concurrency = Number(configInput.value);
+    draft.runLog =
+      backdrop.querySelector<HTMLInputElement>('[data-config="runLog"]')?.checked ?? draft.runLog;
+    draft.newsPrompt =
+      backdrop.querySelector<HTMLInputElement>('[data-config="newsPrompt"]')?.checked ?? draft.newsPrompt;
+    const countryEntries = backdrop.querySelector<HTMLSelectElement>('[data-config="countryEntries"]')?.value;
+    if (countryEntries === 'constant' || countryEntries === 'keyword') {
+      draft.countryEntries = countryEntries;
+    }
+    const promptMode = backdrop.querySelector<HTMLSelectElement>('[data-config="promptMode"]')?.value;
+    if (promptMode === 'worldbook' || promptMode === 'inject') {
+      draft.promptMode = promptMode;
+    }
+    taskPanel?.read();
+    sourcePanel?.read();
+  }
+  const clickHandler = (event: Event) => {
+    const target = (event.target as Element).closest<HTMLElement>('button');
+    if (!target) {
+      return;
+    }
+    if (target === orb) {
+      if (orbDragged && (event as MouseEvent).detail !== 0) {
+        orbDragged = false;
+        return;
+      }
+      open = true;
+      render();
+      return;
+    }
+    if (target.dataset.node && (event as MouseEvent).detail === 0) {
+      nodeId = target.dataset.node;
+      openDetails();
+      render();
+      return;
+    }
+    if (target.dataset.country) {
+      countryId = target.dataset.country;
+      detailsOpen = false;
+      nodeId = '';
+      query = '';
+      branch = '';
+      collapsed.clear();
+      centeredCountry = '';
+      pan = { x: 30, y: 35 };
+      render();
+      return;
+    }
+    if (target.dataset.goto) {
+      if (modal === 'relations') {
+        closeModal();
+      }
+      nodeId = target.dataset.goto;
+      openDetails();
+      render();
+      locateNode(nodeId);
+      return;
+    }
+    if (target.dataset.jumpBranch) {
+      jumpBranch(target.dataset.jumpBranch);
+      return;
+    }
+    if (target.dataset.foldBranch) {
+      const value = target.dataset.foldBranch;
+      if (collapsed.has(value)) {
+        collapsed.delete(value);
+      } else {
+        collapsed.add(value);
+      }
+      render();
+      return;
+    }
+    const name = target.dataset.action;
+    if (name) {
+      void action(async () => {
+        switch (name) {
+          case 'close':
+            open = false;
+            render();
+            break;
+          case 'detail-close':
+            detailsOpen = false;
+            render();
+            break;
+          case 'routes':
+            routesOpen = !routesOpen;
+            render();
+            break;
+          case 'nation-more':
+            nationMore = !nationMore;
+            render();
+            break;
+          case 'open-current': {
+            const country = currentCountry();
+            if (country?.current) {
+              nodeId = country.current;
+              openDetails();
+              render();
+              locateNode(nodeId);
+            }
+            break;
+          }
+          case 'settings':
+            draft = structuredClone(controller.config);
+            renderSettings();
+            break;
+          case 'countries':
+            showCountries();
+            break;
+          case 'jobs':
+            showJobs();
+            break;
+          case 'events':
+            showEvents();
+            break;
+          case 'relations':
+            showRelations();
+            break;
+          case 'refresh':
+            await controller.refresh();
+            break;
+          case 'update':
+            await controller.run('update');
+            break;
+          case 'lock-ask':
+            lockConfirm = nodeId;
+            render();
+            break;
+          case 'lock-cancel':
+            lockConfirm = '';
+            render();
+            break;
+          case 'start':
+            lockConfirm = '';
+            await controller.mutate((state) => startFocus(state, countryId, nodeId), true);
+            break;
+          case 'pause':
+            await controller.mutate((state) => pauseFocus(state, countryId), true);
+            break;
+          case 'switch':
+            lockConfirm = '';
+            await controller.mutate(
+              (state) => startFocus(pauseFocus(state, countryId), countryId, nodeId),
+              true,
+            );
+            break;
+          case 'fit':
+            fit();
+            break;
+          case 'locate-current': {
+            const country = currentCountry();
+            if (country?.current) {
+              nodeId = country.current;
+              render();
+              locateNode(nodeId);
+            }
+            break;
+          }
+          case 'search-next': {
+            const country = currentCountry();
+            const matches = Object.values(country?.nodes ?? {}).filter((n) =>
+              `${n.name} ${n.description}`.includes(query),
+            );
+            if (matches.length) {
+              nodeId = matches[(matches.findIndex((n) => n.id === nodeId) + 1) % matches.length].id;
+              branch = '';
+              openDetails();
+              render();
+              locateNode(nodeId);
+            }
+            break;
+          }
+          case 'isolate': {
+            const country = currentCountry();
+            if (country) {
+              const chosen = branch || country.nodes[nodeId]?.branch;
+              for (const b of new Set(Object.values(country.nodes).map((n) => n.branch))) {
+                if (b !== chosen) {
+                  collapsed.add(b);
+                }
+              }
+              jumpBranch(chosen);
+            }
+            break;
+          }
+          case 'expand-all':
+            collapsed.clear();
+            branch = '';
+            render();
+            fit();
+            break;
+          case 'zoom-in':
+          case 'zoom-out': {
+            const canvas = shell.querySelector<HTMLElement>('.canvas')!;
+            zoomAt(
+              zoom * (name === 'zoom-in' ? 1.2 : 1 / 1.2),
+              canvas.clientWidth / 2,
+              canvas.clientHeight / 2,
+            );
+            break;
+          }
+          case 'demo-days':
+            await preview?.advance(7);
+            break;
+          case 'demo-outcome':
+            await preview?.outcome();
+            break;
+          case 'demo-news':
+            await preview?.news();
+            showEvents();
+            break;
+          case 'demo-reset':
+            preview?.reset();
+            break;
+        }
+      });
+    }
+  };
+  root.addEventListener('click', clickHandler);
+  // <details> toggles do not bubble; keep popovers open across re-renders.
+  root.addEventListener(
+    'toggle',
+    (event) => {
+      const pop = (event.target as HTMLElement).dataset?.pop;
+      if (pop) {
+        if ((event.target as HTMLDetailsElement).open) {
+          openPops.add(pop);
+        } else {
+          openPops.delete(pop);
+        }
+      }
+    },
+    true,
+  );
+  root.addEventListener('input', (event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.id === 'focus-search') {
+      query = target.value;
+      const country = currentCountry();
+      if (country && controller.state) {
+        drawTree(country);
+      }
+    }
+  });
+  root.addEventListener('change', (event) => {
+    const input = event.target as HTMLInputElement;
+    if (input.dataset.treeFile !== undefined) {
+      const file = input.files?.[0];
+      input.value = '';
+      if (file) {
+        void file
+          .text()
+          .then((text) => {
+            let raw: unknown;
+            try {
+              raw = JSON.parse(text);
+            } catch {
+              throw new Error('檔案不是有效的 JSON');
+            }
+            importing = { file: file.name, entries: parseTreeFile(raw), withProgress: false, replace: false };
+            treeNotice = '';
+            showCountries(false);
+          })
+          .catch((error) => {
+            const element = backdrop.querySelector('.modal-error');
+            if (element) {
+              element.textContent = `匯入失敗：${error instanceof Error ? error.message : String(error)}`;
+            }
+          });
+      }
+      return;
+    }
+    if (input.dataset.importProgress !== undefined && importing) {
+      importing.withProgress = input.checked;
+      return;
+    }
+    if (input.dataset.importReplace !== undefined && importing) {
+      importing.replace = input.checked;
+      showCountries(false);
+      return;
+    }
+    if (input.id === 'country-picker') {
+      if (input.value === '__manage') {
+        input.value = countryId;
+        showCountries();
+      } else {
+        countryId = input.value;
+        nodeId = '';
+        query = '';
+        branch = '';
+        collapsed.clear();
+        centeredCountry = '';
+        detailsOpen = false;
+        render();
+      }
+    }
+    if (input.dataset.eventCountry !== undefined) {
+      eventCountry = input.value;
+      showEvents();
+      return;
+    }
+    if (input.dataset.candidate !== undefined) {
+      const enable = backdrop.querySelector<HTMLButtonElement>('[data-modal="enable"]');
+      if (enable) {
+        enable.disabled = !backdrop.querySelector('[data-candidate]:checked');
+      }
+      return;
+    }
+    if (input.id === 'country-control') {
+      void action(() =>
+        controller.mutate(
+          (state) => changeCountry(state, countryId, { control: input.value as 'ai' | 'player' }),
+          true,
+        ),
+      );
+    }
+    for (const key of ['enable', 'delegate'] as const) {
+      const id = input.dataset[key];
+      if (id) {
+        void action(() =>
+          controller.mutate((state) => {
+            return changeCountry(
+              state,
+              id,
+              key === 'enable' ? { enabled: input.checked } : { skipDelegate: input.checked },
+            );
+          }, true),
+        );
+      }
+    }
+  });
+  backdrop.addEventListener('click', (event) => {
+    const target = (event.target as Element).closest<HTMLElement>('button');
+    if (!target) {
+      return;
+    }
+    void (async () => {
+      try {
+        if (target.dataset.treeExport) {
+          const id = target.dataset.treeExport;
+          download(
+            `國策樹-${controller.state!.countries[id].name}-${stamp()}.json`,
+            exportTrees(controller.state!, [id]),
+          );
+          return;
+        }
+        switch (target.dataset.tree) {
+          case 'import':
+            backdrop.querySelector<HTMLInputElement>('[data-tree-file]')?.click();
+            return;
+          case 'export-all':
+            download(`國策樹-全部-${stamp()}.json`, exportTrees(controller.state!));
+            return;
+          case 'copy-all': {
+            const text = exportTrees(controller.state!);
+            try {
+              await navigator.clipboard.writeText(text);
+              treeNotice = `已複製 ${text.length.toLocaleString()} 字元的 JSON。`;
+            } catch {
+              throw new Error('瀏覽器不允許複製到剪貼簿，請改用「匯出全部」下載檔案。');
+            }
+            showCountries(false);
+            return;
+          }
+          case 'template':
+            download('國策樹範本.json', treeTemplate());
+            return;
+          case 'import-cancel':
+            importing = null;
+            showCountries(false);
+            return;
+          case 'import-confirm': {
+            const pending = importing!;
+            await controller.importTrees(pending.entries, {
+              withProgress: pending.withProgress && pending.entries.some((entry) => entry.status),
+              replace: pending.replace,
+            });
+            importing = null;
+            treeNotice = `已匯入 ${pending.entries.map((entry) => `「${entry.tree.name}」`).join('、')}。${pending.withProgress ? '請執行「更新局勢」校準進度。' : ''}`;
+            countryId = pending.entries[0].tree.id;
+            nodeId = '';
+            centeredCountry = '';
+            showCountries(false);
+            return;
+          }
+        }
+        if (target.dataset.removeCountry !== undefined) {
+          removing = target.dataset.removeCountry;
+          showCountries(false);
+          return;
+        }
+        if (target.dataset.removeCancel !== undefined) {
+          removing = '';
+          showCountries(false);
+          return;
+        }
+        if (target.dataset.removeConfirm) {
+          const id = target.dataset.removeConfirm;
+          removing = '';
+          await controller.removeCountry(id);
+          if (countryId === id) {
+            countryId = '';
+            nodeId = '';
+            detailsOpen = false;
+          }
+          showCountries(false);
+          return;
+        }
+        if (target.dataset.cancel) {
+          controller.cancel(target.dataset.cancel);
+          return;
+        }
+        if (target.dataset.log) {
+          showLog(target.dataset.log);
+          return;
+        }
+        if (target.dataset.settingsTab) {
+          switchSettingsTab(target.dataset.settingsTab);
+          return;
+        }
+        if (target.dataset.retry) {
+          const job = controller.jobs.find((j) => j.id === target.dataset.retry);
+          if (job) {
+            await controller.run(job.kind as JobKind, job.candidate);
+          }
+          return;
+        }
+        if (target.dataset.eventFilter) {
+          eventFilter = target.dataset.eventFilter as typeof eventFilter;
+          showEvents();
+          return;
+        }
+        switch (target.dataset.modal) {
+          case 'close':
+            requestClose();
+            break;
+          case 'keep-editing': {
+            const footer = backdrop.querySelector('.modal-footer');
+            if (footer) {
+              footer.innerHTML = settingsFooter;
+            }
+            break;
+          }
+          case 'discard':
+            closeModal();
+            break;
+          case 'jobs':
+            showJobs();
+            break;
+          case 'identify':
+            await controller.run('identify');
+            break;
+          case 'enable': {
+            const ids = [...backdrop.querySelectorAll<HTMLInputElement>('[data-candidate]:checked')].map(
+              (e) => e.dataset.candidate,
+            );
+            const candidates = controller.candidates.filter((c) => ids.includes(c.id));
+            if (!candidates.length) {
+              throw new Error('請先勾選候選國家');
+            }
+            closeModal();
+            await controller.enable(candidates);
+            break;
+          }
+          case 'run-update':
+            await controller.run('update');
+            break;
+          case 'run-reshape':
+            await controller.run('reshape');
+            break;
+          case 'cancel-all':
+            controller.cancelAll();
+            break;
+          case 'save-settings': {
+            readSettingsDraft();
+            const size = backdrop.querySelector<HTMLSelectElement>('[data-setting="size"]')!.value as
+              | 'small'
+              | 'standard'
+              | 'large'
+              | 'epic';
+            const pace = backdrop.querySelector<HTMLSelectElement>('[data-setting="pace"]')!.value as
+              | 'fast'
+              | 'standard'
+              | 'long';
+            try {
+              // The API tab's preset edits first: they rename presets the task routes may use.
+              apiPanel?.commit();
+            } catch (error) {
+              switchSettingsTab('apis');
+              throw error;
+            }
+            // The retired task-level strict JSON switch: the API tab named it once; now clear it.
+            for (const kind of jobKinds) {
+              draft.jobs[kind].strictJson = false;
+            }
+            controller.saveSettings(draft);
+            await controller.refresh();
+            if (
+              controller.state &&
+              (controller.state.settings.size !== size || controller.state.settings.pace !== pace)
+            ) {
+              await controller.mutate((state) => {
+                Object.assign(state.settings, { size, pace });
+                state.revision++;
+                return state;
+              });
+            }
+            closeModal();
+            break;
+          }
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const element = backdrop.querySelector('.modal-error');
+        if (element) {
+          element.textContent = message;
+        } else {
+          controller.report(error);
+        }
+      }
+    })();
+  });
+  root.addEventListener('keydown', (event) => {
+    const key = event as KeyboardEvent;
+    if (key.key === 'Escape') {
+      if (modal) {
+        requestClose();
+      } else if (detailsOpen) {
+        detailsOpen = false;
+        render();
+      } else {
+        open = false;
+        render();
+      }
+    }
+    if (key.key === 'Tab' && modal) {
+      const focusable = [
+        ...backdrop.querySelectorAll<HTMLElement>(
+          'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled)',
+        ),
+      ].filter((e) => !e.closest('[hidden]'));
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (key.shiftKey && root.activeElement === first) {
+        key.preventDefault();
+        last?.focus();
+      }
+      if (!key.shiftKey && root.activeElement === last) {
+        key.preventDefault();
+        first?.focus();
+      }
+    }
+  });
+  unsub = controller.subscribe(() => {
+    render();
+  });
+  // The newspaper bar in the chat opens the panel or its event log.
+  const stopNews =
+    controller.platform.onNewsRequest?.((_messageId, action) => {
+      if (modal) {
+        closeModal();
+      }
+      open = true;
+      render();
+      if (action === 'events') {
+        showEvents();
+      }
+    }) ?? (() => {});
+  render();
+  return () => {
+    unsub();
+    apiPanel?.dispose();
+    apiPanel = undefined;
+    sourcePanel?.dispose();
+    sourcePanel = undefined;
+    taskPanel?.dispose();
+    taskPanel = undefined;
+    hud.dispose();
+    stopNews();
+    view.removeEventListener('resize', onResize);
+    host.remove();
+  };
+}

@@ -1,0 +1,1640 @@
+<body>
+  <style>
+    :root {
+      --paper: #f1e8d2;
+      --paper2: #e9dec3;
+      --ink: #221c14;
+      --ink2: #4a4034;
+      --ink3: #7a6d5b;
+      --rule: #2a2219;
+      --line: #b9a984;
+      --meter: #d6c7a2;
+      --slip: #f7f1e1;
+      --red: #9e2b20;
+      --gold: #b8913f;
+      --desk: #1b1814;
+      --desk2: #25211b;
+      --deskline: #3a332a;
+      --desktx: #e6dcc6;
+      --desktx2: #a3977f;
+      --sheen:
+        radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.35), transparent 60%),
+        radial-gradient(ellipse at 100% 100%, rgba(120, 90, 40, 0.12), transparent 55%);
+      --serif:
+        'Noto Serif TC', 'Noto Serif SC', 'Source Han Serif TC', 'Source Han Serif SC', 'PMingLiU', 'MingLiU',
+        'SimSun', serif;
+      --sans: 'Noto Sans TC', 'Noto Sans SC', 'Microsoft JhengHei', 'Microsoft YaHei', sans-serif;
+      --fz: 1;
+      --maxh: 720px;
+    }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    .nb {
+      margin: 12px 0 4px;
+      font-family: var(--sans);
+      color: var(--ink);
+    }
+    .nb.dark {
+      --paper: #1f1c17;
+      --paper2: #2a261f;
+      --ink: #e9e0cc;
+      --ink2: #c4b89e;
+      --ink3: #8e836e;
+      --rule: #bfb08f;
+      --line: #51493c;
+      --meter: #3a342b;
+      --slip: #29251e;
+      --red: #d46a55;
+      --sheen: none;
+    }
+    /* ---------- the strip: a folded newspaper, also the header when open ---------- */
+    .strip {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0 10px;
+      padding: 10px 14px 11px;
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      box-shadow:
+        0 2px 0 var(--paper2),
+        0 4px 0 var(--line),
+        0 6px 14px rgba(0, 0, 0, 0.45);
+    }
+    .nb.open .strip {
+      border-radius: 4px 4px 0 0;
+      box-shadow: none;
+      border-bottom: 1px solid var(--rule);
+    }
+    .strip .mast {
+      font-family: var(--serif);
+      font-weight: 900;
+      font-size: calc(17px * var(--fz));
+      letter-spacing: 0.12em;
+      white-space: nowrap;
+    }
+    .strip .date,
+    .strip .cnt {
+      font-size: calc(11.5px * var(--fz));
+      color: var(--ink3);
+      white-space: nowrap;
+    }
+    .strip .cnt {
+      color: var(--ink2);
+    }
+    .strip .hl {
+      order: 5;
+      flex-basis: 100%;
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid var(--line);
+      font-family: var(--serif);
+      font-weight: 700;
+      font-size: calc(15px * var(--fz));
+      line-height: 1.5;
+    }
+    .extra {
+      position: absolute;
+      top: -9px;
+      left: -7px;
+      background: var(--red);
+      color: #fff4e0;
+      font-family: var(--serif);
+      font-weight: 900;
+      font-size: 12px;
+      padding: 1px 7px;
+      transform: rotate(-8deg);
+      letter-spacing: 0.2em;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    .nb.dark .extra {
+      color: #1f1c17;
+    }
+    .ctl {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      font-size: calc(12px * var(--fz));
+      white-space: nowrap;
+    }
+    .ctl .b,
+    .toggle {
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 1px 7px;
+      cursor: pointer;
+      color: var(--ink2);
+      line-height: 1.5;
+      background: transparent;
+      font: inherit;
+    }
+    .toggle {
+      border-color: var(--ink2);
+      font-size: calc(12px * var(--fz));
+      white-space: nowrap;
+    }
+    .ctl .v {
+      min-width: 38px;
+      text-align: center;
+      color: var(--ink3);
+      font-size: calc(11px * var(--fz));
+    }
+    .ctl .sep {
+      width: 1px;
+      height: 16px;
+      background: var(--line);
+      margin: 0 4px;
+    }
+    .nb.quiet:not(.open) .strip {
+      background: #2a2621;
+      color: #8d8472;
+      box-shadow: none;
+      border: 1px solid #3a342c;
+    }
+    .nb.quiet:not(.open) .strip .mast {
+      font-size: calc(14px * var(--fz));
+      color: #a39883;
+    }
+    .nb.quiet .strip .hl {
+      order: 0;
+      flex: 1;
+      flex-basis: auto;
+      margin: 0;
+      padding: 0 0 0 12px;
+      border-top: 0;
+      border-left: 1px solid var(--line);
+      font-weight: 400;
+      font-family: var(--sans);
+      font-size: calc(13px * var(--fz));
+    }
+    .nb.quiet:not(.open) .strip .hl {
+      color: #8d8472;
+      border-color: #3a342c;
+    }
+    .nb.quiet:not(.open) .ctl .b,
+    .nb.quiet:not(.open) .toggle {
+      border-color: #5a5246;
+      color: #8d8472;
+    }
+    /* ---------- open: index on the left, the paper on the right ---------- */
+    .board {
+      display: none;
+      max-height: var(--maxh);
+      border-radius: 0 0 4px 4px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    }
+    .nb.open .board {
+      display: flex;
+    }
+    .index,
+    .paper {
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+    .index {
+      width: 26%;
+      min-width: 150px;
+      background: var(--desk);
+      color: var(--desktx);
+      border-right: 1px solid #000;
+      display: flex;
+      flex-direction: column;
+      scrollbar-color: #4a4236 transparent;
+    }
+    .index .ih {
+      padding: 12px 12px 8px;
+      border-bottom: 1px solid var(--deskline);
+    }
+    .index .ih b {
+      font-family: var(--serif);
+      font-size: calc(15px * var(--fz));
+      letter-spacing: 0.2em;
+    }
+    .index .ih div {
+      font-size: calc(11px * var(--fz));
+      color: var(--desktx2);
+      margin-top: 3px;
+    }
+    .grp {
+      padding: 8px 0 2px;
+    }
+    .grp h6 {
+      margin: 0 12px 4px;
+      font-size: calc(10.5px * var(--fz));
+      letter-spacing: 0.18em;
+      color: var(--desktx2);
+      font-weight: 400;
+    }
+    .it {
+      display: block;
+      padding: 6px 12px 6px 14px;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      font-size: calc(12.5px * var(--fz));
+      line-height: 1.45;
+      color: var(--desktx);
+    }
+    .it:hover,
+    .it.on {
+      background: var(--desk2);
+    }
+    .it.on {
+      border-left-color: var(--gold);
+    }
+    .it small {
+      display: block;
+      font-size: calc(10.5px * var(--fz));
+      color: var(--desktx2);
+      margin-top: 1px;
+    }
+    .it .new {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      margin-right: 5px;
+      vertical-align: 2px;
+    }
+    .it.secret {
+      color: #e9b3a9;
+    }
+    .index .foot {
+      margin-top: auto;
+      padding: 10px 12px;
+      border-top: 1px solid var(--deskline);
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      text-align: center;
+      font: inherit;
+      font-size: calc(12px * var(--fz));
+      color: var(--desktx);
+      background: transparent;
+      border: 1px solid #5a5246;
+      border-radius: 3px;
+      padding: 5px 0;
+      cursor: pointer;
+    }
+    .btn + .btn {
+      margin-top: 6px;
+    }
+    .paper {
+      flex: 1;
+      min-width: 0;
+      background: var(--paper);
+      background-image: var(--sheen);
+      color: var(--ink);
+      padding: 14px 18px 16px;
+      font-family: var(--serif);
+      scrollbar-color: var(--line) transparent;
+    }
+    .top,
+    .sub,
+    .colophon {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      color: var(--ink3);
+    }
+    .top {
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 3px;
+    }
+    .masthead {
+      text-align: center;
+      font-weight: 900;
+      font-size: calc(34px * var(--fz));
+      letter-spacing: 0.3em;
+      text-indent: 0.3em;
+      line-height: 1.15;
+      padding: 6px 0 2px;
+    }
+    .sub {
+      color: var(--ink2);
+      border-top: 3px double var(--rule);
+      border-bottom: 1px solid var(--rule);
+      padding: 3px 0;
+      margin-bottom: 10px;
+    }
+    .kicker {
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      letter-spacing: 0.14em;
+      color: var(--red);
+      font-weight: 700;
+    }
+    .kicker.plain {
+      color: var(--ink3);
+    }
+    .front {
+      display: grid;
+      grid-template-columns: 1fr 34%;
+      gap: 14px;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 12px;
+    }
+    .front.solo {
+      grid-template-columns: 1fr;
+    }
+    .lead h1 {
+      font-size: calc(23px * var(--fz));
+      line-height: 1.28;
+      margin: 3px 0 5px;
+      font-weight: 900;
+    }
+    .deck {
+      font-size: calc(13px * var(--fz));
+      color: var(--ink2);
+      line-height: 1.55;
+      margin: 0 0 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid var(--line);
+    }
+    .cols {
+      column-count: 2;
+      column-gap: 14px;
+      column-rule: 1px solid var(--line);
+      font-size: calc(12.5px * var(--fz));
+      line-height: 1.75;
+      text-align: justify;
+    }
+    .cols p {
+      margin: 0 0 6px;
+      text-indent: 2em;
+    }
+    .cols p.dc {
+      text-indent: 0;
+    }
+    .cols p.dc::first-letter {
+      float: left;
+      font-size: calc(34px * var(--fz));
+      line-height: 1;
+      font-weight: 900;
+      margin: 3px 5px 0 0;
+    }
+    .by {
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      color: var(--ink3);
+      margin-top: 4px;
+    }
+    .more-news {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+    .more-news article + article {
+      margin-top: 8px;
+    }
+    .more-news h3 {
+      font-size: calc(15px * var(--fz));
+      margin: 2px 0 3px;
+    }
+    .more-news p {
+      margin: 0;
+      font-size: calc(12.5px * var(--fz));
+      line-height: 1.7;
+    }
+    .slips {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+    .slip {
+      background: var(--slip);
+      border: 1px solid var(--line);
+      padding: 10px 11px 30px;
+      position: relative;
+      transform: rotate(1.2deg);
+      box-shadow: 2px 3px 0 rgba(60, 40, 10, 0.15);
+      margin-top: 4px;
+    }
+    .slip:nth-child(even) {
+      transform: rotate(-1deg);
+    }
+    .slip::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 16px;
+      width: 14px;
+      height: 26px;
+      border: 2px solid #8b8f96;
+      border-radius: 8px;
+      border-bottom-color: transparent;
+    }
+    .stamp {
+      position: absolute;
+      bottom: 9px;
+      right: 10px;
+      border: 2px solid var(--red);
+      color: var(--red);
+      font-family: var(--sans);
+      font-weight: 900;
+      font-size: 11px;
+      padding: 1px 5px;
+      transform: rotate(-12deg);
+      letter-spacing: 0.1em;
+    }
+    .slip h3 {
+      font-size: calc(15px * var(--fz));
+      margin: 4px 0 6px;
+      line-height: 1.35;
+    }
+    .slip p {
+      font-size: calc(12px * var(--fz));
+      line-height: 1.7;
+      margin: 0 0 6px;
+      color: var(--ink2);
+    }
+    details.fold {
+      margin-top: 10px;
+    }
+    details.fold > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 8px;
+      user-select: none;
+    }
+    details.fold > summary::-webkit-details-marker {
+      display: none;
+    }
+    details.fold > summary::before,
+    details.fold > summary::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid var(--rule);
+    }
+    details.fold:not([open]) > summary {
+      margin-bottom: 0;
+    }
+    summary .t {
+      font-family: var(--sans);
+      font-weight: 900;
+      font-size: calc(12px * var(--fz));
+      letter-spacing: 0.3em;
+      white-space: nowrap;
+    }
+    summary .n {
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      color: var(--ink3);
+      white-space: nowrap;
+    }
+    summary .n b {
+      color: var(--red);
+    }
+    summary .car {
+      font-family: var(--sans);
+      font-size: calc(11px * var(--fz));
+      color: var(--ink2);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 0 6px;
+      white-space: nowrap;
+    }
+    details.fold:not([open]) > summary .car::after {
+      content: '展開 ▾';
+    }
+    details.fold[open] > summary .car::after {
+      content: '收起 ▴';
+    }
+    .serials {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 14px;
+    }
+    .serial {
+      border-top: 2px solid var(--rule);
+      padding-top: 6px;
+    }
+    .serial.inside {
+      border-top-color: var(--red);
+    }
+    .serial h2 {
+      font-size: calc(16px * var(--fz));
+      margin: 2px 0 4px;
+      font-weight: 900;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .serial h2 em {
+      font-style: normal;
+      font-family: var(--sans);
+      font-size: calc(11px * var(--fz));
+      color: var(--ink2);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .meter {
+      display: flex;
+      gap: 3px;
+      margin: 2px 0 6px;
+    }
+    .meter i {
+      flex: 1;
+      height: 6px;
+      background: var(--meter);
+      border: 1px solid var(--line);
+    }
+    .meter i.f {
+      background: var(--ink);
+    }
+    .meter i.a {
+      background: repeating-linear-gradient(45deg, var(--ink) 0 2px, var(--meter) 2px 4px);
+    }
+    .sum {
+      font-size: calc(12px * var(--fz));
+      line-height: 1.65;
+      color: var(--ink2);
+      margin: 0 0 5px;
+    }
+    .sum b {
+      color: var(--ink);
+      margin-right: 6px;
+    }
+    .steps {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: calc(12px * var(--fz));
+      line-height: 1.55;
+    }
+    .steps li {
+      display: flex;
+      gap: 6px;
+      padding: 2px 0;
+      border-bottom: 1px dotted var(--line);
+    }
+    .steps li:last-child {
+      border-bottom: 0;
+    }
+    .steps .g {
+      width: 14px;
+      text-align: center;
+      font-family: var(--sans);
+      flex: none;
+    }
+    .steps .done {
+      color: var(--ink3);
+    }
+    .steps .done .t {
+      text-decoration: line-through;
+    }
+    .steps .active {
+      font-weight: 700;
+    }
+    .steps .active .g,
+    .steps .active .w {
+      color: var(--red);
+    }
+    .steps .pending {
+      color: var(--ink2);
+    }
+    .steps .planned {
+      color: var(--ink3);
+      font-style: italic;
+    }
+    .steps .w {
+      margin-left: auto;
+      font-family: var(--sans);
+      font-size: calc(10px * var(--fz));
+      color: var(--ink3);
+      white-space: nowrap;
+      font-style: normal;
+    }
+    .ways {
+      margin-top: 6px;
+      background: var(--paper2);
+      padding: 6px 8px;
+      font-size: calc(11.5px * var(--fz));
+      line-height: 1.6;
+    }
+    .ways b {
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      letter-spacing: 0.12em;
+      color: var(--ink2);
+      display: block;
+      margin-bottom: 2px;
+    }
+    .ways div::before {
+      content: '◇ ';
+      color: var(--ink3);
+    }
+    .bd {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 10px 0 6px;
+      border-bottom: 2px solid var(--rule);
+      padding-bottom: 2px;
+    }
+    .bd.fresh-head {
+      border-bottom-color: var(--red);
+    }
+    .bd b {
+      font-size: calc(15px * var(--fz));
+      font-weight: 900;
+      letter-spacing: 0.12em;
+    }
+    .bd i {
+      font-style: normal;
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      color: var(--ink3);
+    }
+    .fresh {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 14px 18px;
+      margin-bottom: 6px;
+    }
+    .news {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px 14px;
+    }
+    .nw {
+      font-size: calc(12px * var(--fz));
+      line-height: 1.72;
+      text-align: justify;
+    }
+    .fresh .nw {
+      font-size: calc(13.5px * var(--fz));
+      line-height: 1.8;
+    }
+    .nw h4 {
+      margin: 0 0 2px;
+      font-size: calc(13.5px * var(--fz));
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .fresh .nw h4 {
+      font-size: calc(18px * var(--fz));
+    }
+    .nw p {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+    .nw time {
+      display: block;
+      font-family: var(--sans);
+      font-size: calc(10px * var(--fz));
+      color: var(--ink3);
+      margin: -1px 0 3px;
+      font-style: normal;
+    }
+    .nw.upd time,
+    .src {
+      color: var(--red);
+    }
+    .src {
+      display: block;
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      font-style: normal;
+    }
+    .tag {
+      font-family: var(--sans);
+      font-size: calc(10px * var(--fz));
+      font-weight: 700;
+      padding: 0 5px;
+      border-radius: 2px;
+      white-space: nowrap;
+      letter-spacing: 0;
+      font-style: normal;
+    }
+    .nw.upd .tag {
+      background: var(--red);
+      color: #fff4e0;
+    }
+    .nb.dark .nw.upd .tag {
+      color: #1f1c17;
+    }
+    .nw.old {
+      color: var(--ink3);
+    }
+    .nw.old h4 {
+      color: var(--ink2);
+      font-weight: 700;
+    }
+    .nw.old .tag {
+      border: 1px solid var(--line);
+      color: var(--ink3);
+      font-weight: 400;
+    }
+    .nw.old p {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .nw.old.full p {
+      display: block;
+    }
+    .nw .more {
+      font-family: var(--sans);
+      font-size: calc(10.5px * var(--fz));
+      color: var(--ink3);
+      cursor: pointer;
+    }
+    .nw.k {
+      border-top: 1px solid var(--line);
+      padding-top: 5px;
+    }
+    .nw.k.upd {
+      border-top: 3px solid var(--red);
+    }
+    .nw.ads {
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .nw.ads.old {
+      border-style: dashed;
+    }
+    .nw.ads.upd {
+      border: 2px solid var(--ink);
+      outline: 1px solid var(--ink);
+      outline-offset: 2px;
+      margin: 3px;
+      color: var(--ink);
+    }
+    .news .nw.ads h4 {
+      justify-content: center;
+      letter-spacing: 0.2em;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+    .nw.tea {
+      padding: 4px 0 4px 10px;
+      border-left: 1px dotted var(--line);
+      font-style: italic;
+    }
+    .nw.tea h4 {
+      font-style: normal;
+    }
+    .nw.tea.upd {
+      border-left: 3px solid var(--red);
+    }
+    .oldhead {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 4px;
+      font-family: var(--sans);
+      font-size: calc(11.5px * var(--fz));
+      color: var(--ink2);
+    }
+    .oldhead::after {
+      content: '';
+      flex: 1;
+      border-top: 1px dashed var(--line);
+    }
+    .oldhead .t {
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      color: var(--ink);
+    }
+    .sw {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      order: 2;
+    }
+    .sw i {
+      width: 28px;
+      height: 15px;
+      border-radius: 8px;
+      background: var(--line);
+      position: relative;
+    }
+    .sw i::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--paper);
+    }
+    .sw.on i {
+      background: var(--ink);
+    }
+    .sw.on i::after {
+      left: 15px;
+    }
+    .oldbody.off {
+      display: none;
+    }
+    .none {
+      font-size: calc(12px * var(--fz));
+      color: var(--ink3);
+      padding: 4px 0 8px;
+    }
+    .colophon {
+      margin-top: 12px;
+      border-top: 3px double var(--rule);
+      padding-top: 4px;
+    }
+    .flash {
+      animation: fl 1.2s ease;
+    }
+    @keyframes fl {
+      0% {
+        background: rgba(184, 145, 63, 0.45);
+      }
+      100% {
+        background: transparent;
+      }
+    }
+    @media (max-width: 620px) {
+      .strip .ctl {
+        order: 4;
+        margin: 8px 0 0;
+      }
+      .strip .toggle {
+        order: 4;
+        margin: 8px 0 0 auto;
+      }
+      .nb.quiet .strip .mast {
+        flex-basis: 100%;
+      }
+      .nb.quiet .strip .hl {
+        order: 5;
+        flex-basis: 100%;
+        border-left: 0;
+        padding: 6px 0 0;
+      }
+      .board {
+        flex-direction: column;
+      }
+      .paper {
+        min-height: 0;
+      }
+      .index {
+        width: auto;
+        border-right: 0;
+        border-bottom: 1px solid #000;
+        overflow: visible;
+      }
+      .index .groups {
+        display: flex;
+        overflow-x: auto;
+      }
+      .grp {
+        display: flex;
+        padding: 6px 0;
+      }
+      .grp h6,
+      .it small,
+      .index .foot {
+        display: none;
+      }
+      .it {
+        white-space: nowrap;
+        border-left: 0;
+        border-bottom: 2px solid transparent;
+      }
+      .it.on {
+        border-bottom-color: var(--gold);
+      }
+      .front,
+      .fresh {
+        grid-template-columns: 1fr;
+      }
+      .cols {
+        column-count: 1;
+      }
+      .masthead {
+        font-size: calc(26px * var(--fz));
+      }
+    }
+  </style>
+  <div class="nb" id="nb" hidden></div>
+  <script>
+    (function () {
+      var root = document.getElementById('nb');
+      var esc = function (value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      };
+      var floor = getCurrentMessageId();
+      var vars = getVariables({ type: 'message', message_id: floor }) || {};
+      var state = vars['国策'];
+      if (!state || !state.countries || !state.events) {
+        return;
+      }
+      var stat = vars.stat_data || {};
+      var bar = state['快讯'] || {};
+      var countries = state.countries;
+      var insiders =
+        bar.insiders ||
+        Object.keys(countries).filter(function (id) {
+          return countries[id].enabled && countries[id].control === 'player';
+        });
+      var nameOf = function (id) {
+        return (countries[id] && countries[id].name) || id;
+      };
+      var inside = function (event) {
+        return (event.countries || []).filter(function (id) {
+          return insiders.indexOf(id) >= 0;
+        });
+      };
+      var visible = function (event) {
+        return event.public || inside(event).length > 0;
+      };
+      var rank = { world: 3, major: 2, minor: 1 };
+      var weight = function (event) {
+        var focus = event.source && event.source.kind === 'focus' && event.importance !== 'minor';
+        return (focus ? 10 : 0) + (rank[event.importance] || 1) + (event.scope === 'front' ? 0.5 : 0);
+      };
+      var all = Object.keys(state.events).map(function (id) {
+        return state.events[id];
+      });
+      var fresh = all
+        .filter(function (event) {
+          return event.shownAt === floor && visible(event);
+        })
+        .sort(function (a, b) {
+          return weight(b) - weight(a) || a.at - b.at;
+        });
+      var headlines = fresh.filter(function (event) {
+        return event.public;
+      });
+      var secrets = fresh.filter(function (event) {
+        return !event.public;
+      });
+      var serials = all
+        .filter(function (event) {
+          // Running stories, and ones that ended on this floor after running for a while.
+          return (
+            visible(event) &&
+            (event.status === 'ongoing' ||
+              (event.touchedAt === floor &&
+                ((event.steps || []).length > 0 || (event.timeline || []).length > 1)))
+          );
+        })
+        .sort(function (a, b) {
+          var touched = Number(b.touchedAt === floor) - Number(a.touchedAt === floor);
+          var last = function (event) {
+            return Math.max.apply(
+              null,
+              [event.at].concat(
+                (event.timeline || []).map(function (t) {
+                  return t.at;
+                }),
+              ),
+            );
+          };
+          return touched || last(b) - last(a);
+        });
+      var progressed = serials.filter(function (event) {
+        return event.touchedAt === floor;
+      });
+      // The card's own news: every field, the ones changed on this floor first and larger.
+      var path = String(bar.newsPath || '新闻').split('.');
+      var source = path.reduce(function (value, key) {
+        return value && typeof value === 'object' ? value[key] : undefined;
+      }, stat);
+      var text = function (item) {
+        if (Array.isArray(item) && item.length && typeof item[0] !== 'object') return String(item[0]);
+        return typeof item === 'string' ? item : item == null ? '' : JSON.stringify(item);
+      };
+      var boards = [];
+      if (source && typeof source === 'object') {
+        Object.keys(source).forEach(function (board, index) {
+          var content = source[board];
+          var fields = [];
+          if (content && typeof content === 'object' && !Array.isArray(content)) {
+            Object.keys(content).forEach(function (field) {
+              fields.push({ key: board + '/' + field, name: field, text: text(content[field]) });
+            });
+          } else {
+            fields.push({ key: board, name: board, text: text(content) });
+          }
+          var style = /留言|悬赏|懸賞/.test(board) ? 'ads' : /茶|社交|逸闻|逸聞/.test(board) ? 'tea' : 'k';
+          boards.push({ name: board, style: index === 0 ? 'k' : style, fields: fields });
+        });
+      }
+      var changed = bar.changed || [];
+      var updated = bar.updated || {};
+      var freshNews = [];
+      var oldCount = 0;
+      boards.forEach(function (board) {
+        board.fields.forEach(function (field) {
+          field.board = board;
+          field.fresh = changed.indexOf(field.key) >= 0;
+          if (field.fresh) freshNews.push(field);
+          else oldCount++;
+        });
+      });
+      var total = fresh.length + freshNews.length;
+      var quiet = total === 0 && progressed.length === 0;
+
+      // Display settings follow the player across chats (Tavern Helper global variables).
+      var settingsKey = 'national_focus_newspaper';
+      var settings = { dark: false, fz: 1, serials: true, pages: true, old: true };
+      try {
+        var saved =
+          (typeof getVariables === 'function' && (getVariables({ type: 'global' }) || {})[settingsKey]) ||
+          JSON.parse(localStorage.getItem(settingsKey) || 'null');
+        if (saved && typeof saved === 'object') {
+          Object.keys(settings).forEach(function (key) {
+            if (typeof saved[key] === typeof settings[key]) settings[key] = saved[key];
+          });
+        }
+      } catch (error) {}
+      var save = function () {
+        try {
+          if (typeof insertOrAssignVariables === 'function') {
+            var patch = {};
+            patch[settingsKey] = settings;
+            insertOrAssignVariables(patch, { type: 'global' });
+          } else {
+            localStorage.setItem(settingsKey, JSON.stringify(settings));
+          }
+        } catch (error) {}
+      };
+      var sizes = [0.9, 1, 1.15, 1.3, 1.5];
+
+      var first = function (value) {
+        return String(value || '').split(/(?<=[。！？])/)[0];
+      };
+      var headlineOf = function (event) {
+        return event.headline || event.title;
+      };
+      var lead = headlines[0];
+      var stripHeadline = lead
+        ? headlineOf(lead)
+        : secrets[0]
+          ? headlineOf(secrets[0]) + '（內部密報）'
+          : freshNews[0]
+            ? freshNews[0].board.name + '・' + freshNews[0].name + '：' + first(freshNews[0].text)
+            : progressed[0]
+              ? headlineOf(progressed[0]) + '：' + (progressed[0].current || '有新進展')
+              : '本樓沒有新消息・進行中事件 ' + serials.length + ' 件';
+      // An extra edition for public news of an important focus or of world importance.
+      var extra = headlines.some(function (event) {
+        return (
+          (event.source && event.source.kind === 'focus' && event.importance !== 'minor') ||
+          event.importance === 'world'
+        );
+      });
+      var flags = function (event) {
+        return (event.countries || []).map(nameOf).join('、');
+      };
+      var paragraphs = function (value) {
+        return String(value || '')
+          .split(/\n+/)
+          .filter(Boolean);
+      };
+      var linkedFocus = function (event) {
+        var source = event.source || {};
+        var country = countries[source.country];
+        return country && source.node && country.nodes[source.node]
+          ? { country: country, node: country.nodes[source.node] }
+          : null;
+      };
+      // Focuses that follow the one an event carries out and can still be taken.
+      var ways = function (event) {
+        var link = linkedFocus(event);
+        if (!link) return [];
+        var country = link.country;
+        return Object.keys(country.nodes)
+          .map(function (id) {
+            return country.nodes[id];
+          })
+          .filter(function (node) {
+            var progress = country.progress[node.id] || {};
+            var lock = node.mutex && country.locks[node.mutex.group];
+            return (
+              (progress.status === 'idle' || !progress.status) &&
+              !(lock && lock.route !== node.mutex.route) &&
+              (node.prerequisites || []).some(function (group) {
+                return group.indexOf(link.node.id) >= 0;
+              })
+            );
+          })
+          .slice(0, 3);
+      };
+      var steps = function (event) {
+        var list = event.steps || [];
+        if (!list.length) {
+          return (event.timeline || []).slice(-3).map(function (entry, index, items) {
+            return {
+              text: entry.text,
+              state: index === items.length - 1 && event.status === 'ongoing' ? 'active' : 'done',
+            };
+          });
+        }
+        return list;
+      };
+      var glyph = { done: '✓', active: '▶', pending: '○', planned: '◷' };
+      var resultName = { achieved: '已達成', abandoned: '已終止', failed: '已失敗' };
+
+      var html = [];
+      html.push(
+        '<div class="strip" id="strip">' +
+          (extra ? '<span class="extra">號外</span>' : '') +
+          '<span class="mast">阿斯塔利亞快訊</span>' +
+          (bar.time ? '<span class="date">' + esc(bar.time) + '</span>' : '') +
+          (total ? '<span class="cnt">本期 ' + total + ' 則</span>' : '') +
+          '<span class="hl">' +
+          esc(stripHeadline) +
+          '</span>' +
+          '<span class="ctl"><button class="b" data-fz="-">A−</button><span class="v" id="fzv"></span><button class="b" data-fz="+">A+</button><span class="sep"></span><button class="b" id="mode"></button></span>' +
+          '<button class="toggle" id="toggle"></button></div>',
+      );
+      // Index.
+      var index = [];
+      var item = function (target, title, small, extraClass, isNew) {
+        return (
+          '<a class="it ' +
+          (extraClass || '') +
+          '" data-go="' +
+          target +
+          '">' +
+          (isNew ? '<span class="new"></span>' : '') +
+          esc(title) +
+          '<small>' +
+          esc(small) +
+          '</small></a>'
+        );
+      };
+      if (headlines.length) {
+        index.push(
+          '<div class="grp"><h6>頭版</h6>' +
+            headlines
+              .map(function (event, i) {
+                return item('h' + i, headlineOf(event), flags(event), '', true);
+              })
+              .join('') +
+            '</div>',
+        );
+      }
+      if (secrets.length) {
+        index.push(
+          '<div class="grp"><h6>內部密報</h6>' +
+            secrets
+              .map(function (event, i) {
+                return item(
+                  's' + i,
+                  event.title,
+                  '未公開・' + inside(event).map(nameOf).join('、'),
+                  'secret',
+                  true,
+                );
+              })
+              .join('') +
+            '</div>',
+        );
+      }
+      if (serials.length) {
+        index.push(
+          '<div class="grp"><h6>連載追蹤</h6>' +
+            serials
+              .map(function (event, i) {
+                var list = event.steps || [];
+                var done = list.filter(function (step) {
+                  return step.state === 'done';
+                }).length;
+                return item(
+                  'e' + i,
+                  event.title + (list.length ? ' ' + done + '/' + list.length : ''),
+                  event.touchedAt === floor
+                    ? '本樓有進展'
+                    : event.status === 'ongoing'
+                      ? '進行中'
+                      : '本樓結束',
+                  '',
+                  event.touchedAt === floor,
+                );
+              })
+              .join('') +
+            '</div>',
+        );
+      }
+      if (boards.length) {
+        index.push(
+          '<div class="grp"><h6>本報各版・本樓更新</h6>' +
+            freshNews
+              .map(function (field) {
+                return item('n-' + field.key, field.name, field.board.name, '', true);
+              })
+              .join('') +
+            item('oldhead', '舊聞 ' + oldCount + ' 欄', '全部版面', '', false) +
+            '</div>',
+        );
+      }
+      html.push(
+        '<div class="board"><nav class="index"><div class="ih"><b>本期要目</b><div>' +
+          esc(bar.time || '') +
+          '</div></div><div class="groups">' +
+          index.join('') +
+          '</div><div class="foot"><button class="btn" data-emit="events">事件紀錄</button><button class="btn" data-emit="panel">開啟國策面板</button></div></nav><main class="paper" id="paper">',
+      );
+      html.push(
+        '<div class="top"><span>' +
+          (total ? '本期 ' + total + ' 則' : '本期無新消息') +
+          (secrets.length ? '・內部密報 ' + secrets.length + ' 則' : '') +
+          '</span><span>國策與世界</span></div><div class="masthead">阿斯塔利亞快訊</div><div class="sub"><span>' +
+          esc(bar.time || '') +
+          '</span><span>' +
+          esc(
+            String(bar.location || '')
+              .split('-')
+              .filter(Boolean)
+              .slice(-2)
+              .join('・') || '',
+          ) +
+          '</span></div>',
+      );
+      // Front page.
+      if (headlines.length || secrets.length) {
+        var front = '<section class="front' + (secrets.length && headlines.length ? '' : ' solo') + '">';
+        if (headlines.length) {
+          var body = paragraphs(lead.description);
+          var focus = linkedFocus(lead);
+          front +=
+            '<article class="lead" id="h0"><div class="kicker">' +
+            esc(
+              (lead.importance === 'world' ? '世界新聞' : '各國新聞') +
+                (lead.source && lead.source.kind === 'focus' && lead.importance !== 'minor'
+                  ? '・重要國策'
+                  : '') +
+                '・' +
+                flags(lead),
+            ) +
+            '</div><h1>' +
+            esc(headlineOf(lead)) +
+            '</h1>' +
+            (lead.headline && lead.headline !== lead.title
+              ? '<p class="deck">' + esc(lead.title) + '</p>'
+              : '') +
+            '<div class="cols">' +
+            body
+              .map(function (line, i) {
+                return '<p' + (i === 0 ? ' class="dc"' : '') + '>' + esc(line) + '</p>';
+              })
+              .join('') +
+            (lead.current ? '<p>' + esc(lead.current) + '</p>' : '') +
+            '</div>' +
+            (focus
+              ? '<div class="by">國策：' + esc(focus.country.name) + '「' + esc(focus.node.name) + '」</div>'
+              : '') +
+            headlines
+              .slice(1)
+              .map(function (event, i) {
+                return (
+                  '<div class="more-news"><article id="h' +
+                  (i + 1) +
+                  '"><div class="kicker plain">' +
+                  esc(flags(event)) +
+                  '</div><h3>' +
+                  esc(headlineOf(event)) +
+                  '</h3><p>' +
+                  esc(event.description) +
+                  '</p></article></div>'
+                );
+              })
+              .join('') +
+            '</article>';
+        }
+        if (secrets.length) {
+          front +=
+            '<aside class="slips">' +
+            secrets
+              .map(function (event, i) {
+                return (
+                  '<div class="slip" id="s' +
+                  i +
+                  '"><div class="kicker">內部密報・' +
+                  esc(inside(event).map(nameOf).join('、')) +
+                  '</div><h3>' +
+                  esc(headlineOf(event)) +
+                  '</h3>' +
+                  paragraphs(event.description)
+                    .map(function (line) {
+                      return '<p>' + esc(line) + '</p>';
+                    })
+                    .join('') +
+                  (event.current ? '<p>' + esc(event.current) + '</p>' : '') +
+                  '<span class="stamp">未公開</span></div>'
+                );
+              })
+              .join('') +
+            '</aside>';
+        }
+        html.push(front + '</section>');
+      }
+      // Serials: running stories and their progress.
+      if (serials.length) {
+        html.push(
+          '<details class="fold" id="f-serials"' +
+            (settings.serials ? ' open' : '') +
+            '><summary><span class="t">連載追蹤</span><span class="n">進行中 ' +
+            serials.filter(function (event) {
+              return event.status === 'ongoing';
+            }).length +
+            ' 件・本樓進展 <b>' +
+            progressed.length +
+            '</b></span><span class="car"></span></summary><section class="serials">' +
+            serials
+              .map(function (event, i) {
+                var list = steps(event);
+                var planned = event.steps || [];
+                var done = planned.filter(function (step) {
+                  return step.state === 'done';
+                }).length;
+                var meter = planned.length
+                  ? '<div class="meter">' +
+                    planned
+                      .map(function (step) {
+                        return (
+                          '<i class="' +
+                          (step.state === 'done' ? 'f' : step.state === 'active' ? 'a' : '') +
+                          '"></i>'
+                        );
+                      })
+                      .join('') +
+                    '</div>'
+                  : '';
+                var link = linkedFocus(event);
+                var next = ways(event);
+                var latest = (event.timeline || []).slice(-1)[0];
+                return (
+                  '<article class="serial' +
+                  (event.public ? '' : ' inside') +
+                  '" id="e' +
+                  i +
+                  '"><div class="kicker' +
+                  (event.public ? ' plain' : '') +
+                  '">' +
+                  esc(
+                    (link ? '國策執行' : '事件') +
+                      '・' +
+                      (event.public ? '公開' : '未公開') +
+                      '・' +
+                      flags(event),
+                  ) +
+                  '</div><h2>' +
+                  esc(event.title) +
+                  '<em>' +
+                  (planned.length
+                    ? '第 ' + done + '／' + planned.length + ' 步'
+                    : event.status === 'ongoing'
+                      ? '進行中'
+                      : esc(resultName[event.result] || '已結束')) +
+                  '</em></h2>' +
+                  meter +
+                  '<p class="sum"><b>起因</b>' +
+                  esc(first(event.description)) +
+                  '<br><b>現況</b>' +
+                  esc(event.current || (latest ? latest.text : '')) +
+                  '</p><ul class="steps">' +
+                  list
+                    .map(function (step, index) {
+                      var isNew = event.touchedAt === floor && step.state === 'active';
+                      return (
+                        '<li class="' +
+                        esc(step.state) +
+                        '"><span class="g">' +
+                        (glyph[step.state] || '·') +
+                        '</span><span class="t">' +
+                        esc(step.text) +
+                        '</span>' +
+                        (step.when || isNew
+                          ? '<span class="w">' + esc(step.when || '本樓') + '</span>'
+                          : '') +
+                        '</li>'
+                      );
+                    })
+                    .join('') +
+                  '</ul>' +
+                  (next.length
+                    ? '<div class="ways"><b>可能走向（後續國策）</b>' +
+                      next
+                        .map(function (node) {
+                          return (
+                            '<div>' +
+                            esc(node.name) +
+                            '：' +
+                            esc(first(node.description).slice(0, 40)) +
+                            '</div>'
+                          );
+                        })
+                        .join('') +
+                      '</div>'
+                    : '') +
+                  '</article>'
+                );
+              })
+              .join('') +
+            '</section></details>',
+        );
+      }
+      // The card's own news pages.
+      if (boards.length) {
+        var field = function (item, isFresh) {
+          var time = updated[item.key];
+          return (
+            '<article class="nw ' +
+            item.board.style +
+            (isFresh ? ' upd' : ' old') +
+            '" id="n-' +
+            esc(item.key) +
+            '">' +
+            (isFresh ? '<span class="src">' + esc(item.board.name) + '</span>' : '') +
+            '<h4>' +
+            esc(item.name) +
+            '<span class="tag">' +
+            (isFresh ? '本樓更新' : '舊聞') +
+            '</span></h4>' +
+            (time ? '<time>更新於 ' + esc(time) + '</time>' : '') +
+            '<p>' +
+            esc(item.text) +
+            '</p>' +
+            (isFresh ? '' : '<span class="more">全文 ▾</span>') +
+            '</article>'
+          );
+        };
+        html.push(
+          '<details class="fold" id="f-pages"' +
+            (settings.pages ? ' open' : '') +
+            '><summary><span class="t">本報各版</span><span class="n">本樓更新 <b>' +
+            freshNews.length +
+            '</b>・舊聞 ' +
+            oldCount +
+            '</span><span class="car"></span></summary><div class="bd fresh-head"><b>本期更新</b><i>與上一個 AI 樓層不同的欄位</i></div>' +
+            (freshNews.length
+              ? '<div class="fresh">' +
+                freshNews
+                  .map(function (item) {
+                    return field(item, true);
+                  })
+                  .join('') +
+                '</div>'
+              : '<p class="none">本樓沒有更新的新聞。</p>') +
+            '<div class="oldhead" id="oldhead"><span class="t">舊聞</span><span>' +
+            oldCount +
+            ' 欄，依角色卡原本的順序</span><span class="sw' +
+            (settings.old ? ' on' : '') +
+            '" id="oldsw"><i></i>顯示舊聞</span></div><div class="oldbody' +
+            (settings.old ? '' : ' off') +
+            '" id="oldbody">' +
+            boards
+              .map(function (board) {
+                var old = board.fields.filter(function (item) {
+                  return !item.fresh;
+                });
+                return old.length
+                  ? '<div class="bd"><b>' +
+                      esc(board.name) +
+                      '</b><i>舊聞 ' +
+                      old.length +
+                      ' 欄</i></div><div class="news">' +
+                      old
+                        .map(function (item) {
+                          return field(item, false);
+                        })
+                        .join('') +
+                      '</div>'
+                  : '';
+              })
+              .join('') +
+            '</div></details>',
+        );
+      }
+      html.push(
+        '<div class="colophon"><span>本報各版取自角色卡的新聞變量，只讀不改；時間為最後更新的故事時間</span></div></main></div>',
+      );
+      root.innerHTML = html.join('');
+      root.hidden = false;
+      if (quiet) root.classList.add('quiet');
+
+      var paper = document.getElementById('paper');
+      try {
+        var height = window.top && window.top.innerHeight;
+        if (height)
+          root.style.setProperty('--maxh', Math.max(360, Math.min(760, Math.round(height * 0.75))) + 'px');
+      } catch (error) {}
+      var apply = function () {
+        root.classList.toggle('dark', settings.dark);
+        root.style.setProperty('--fz', String(settings.fz));
+        document.getElementById('fzv').textContent = Math.round(settings.fz * 100) + '%';
+        document.getElementById('mode').textContent = settings.dark ? '☀ 淺色' : '☾ 深色';
+        document.getElementById('toggle').textContent = root.classList.contains('open')
+          ? '收起 ▴'
+          : quiet
+            ? '翻閱 ▾'
+            : '展開 ▾';
+      };
+      apply();
+      document.getElementById('strip').addEventListener('click', function (event) {
+        var button = event.target.closest ? event.target.closest('button') : null;
+        if (button && button.dataset.fz) {
+          var at = sizes.indexOf(settings.fz);
+          at = Math.max(
+            0,
+            Math.min(sizes.length - 1, (at < 0 ? 1 : at) + (button.dataset.fz === '+' ? 1 : -1)),
+          );
+          settings.fz = sizes[at];
+          save();
+        } else if (button && button.id === 'mode') {
+          settings.dark = !settings.dark;
+          save();
+        } else {
+          root.classList.toggle('open');
+        }
+        apply();
+      });
+      root.addEventListener('click', function (event) {
+        var target = event.target;
+        var go = target.closest ? target.closest('[data-go]') : null;
+        if (go) {
+          root.querySelectorAll('.it').forEach(function (it) {
+            it.classList.remove('on');
+          });
+          go.classList.add('on');
+          var node = document.getElementById(go.dataset.go);
+          if (!node) return;
+          var fold = node.closest('details');
+          if (fold) fold.open = true;
+          if (node.classList.contains('old')) {
+            if (!settings.old) document.getElementById('oldsw').click();
+            node.classList.add('full');
+          }
+          paper.scrollTo({ top: node.offsetTop - paper.offsetTop - 10, behavior: 'smooth' });
+          node.classList.remove('flash');
+          void node.offsetWidth;
+          node.classList.add('flash');
+          return;
+        }
+        var more = target.closest ? target.closest('.more') : null;
+        if (more) {
+          var article = more.parentNode;
+          article.classList.toggle('full');
+          more.textContent = article.classList.contains('full') ? '收起 ▴' : '全文 ▾';
+          return;
+        }
+        var sw = target.closest ? target.closest('#oldsw') : null;
+        if (sw) {
+          settings.old = !settings.old;
+          sw.classList.toggle('on', settings.old);
+          document.getElementById('oldbody').classList.toggle('off', !settings.old);
+          save();
+          return;
+        }
+        var emit = target.closest ? target.closest('[data-emit]') : null;
+        if (emit) {
+          // The national focus script listens and opens its panel or event log.
+          eventEmit('national-focus:open-news', floor, emit.dataset.emit);
+        }
+      });
+      ['serials', 'pages'].forEach(function (key) {
+        var fold = document.getElementById('f-' + key);
+        if (fold) {
+          fold.addEventListener('toggle', function () {
+            if (settings[key] !== fold.open) {
+              settings[key] = fold.open;
+              save();
+            }
+          });
+        }
+      });
+    })();
+  </script>
+</body>

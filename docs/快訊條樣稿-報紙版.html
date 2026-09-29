@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>快訊條報紙樣稿</title>
+<style>
+:root{
+  --paper:#f1e8d2; --paper2:#e9dec3; --ink:#221c14; --ink2:#4a4034; --ink3:#7a6d5b;
+  --rule:#2a2219; --line:#b9a984; --meter:#d6c7a2; --slip:#f7f1e1;
+  --sheen:radial-gradient(ellipse at 20% 0%,rgba(255,255,255,.35),transparent 60%),radial-gradient(ellipse at 100% 100%,rgba(120,90,40,.12),transparent 55%); --red:#9e2b20; --gold:#b8913f;
+  --desk:#1b1814; --desk2:#25211b; --deskline:#3a332a; --desktx:#e6dcc6; --desktx2:#a3977f;
+  --serif:'Noto Serif TC','Noto Serif CJK TC','Source Han Serif TC','PMingLiU','MingLiU',serif;
+  --sans:'Noto Sans TC','Noto Sans CJK TC','Microsoft JhengHei',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#2b2b2b;color:#ddd;font-family:var(--sans)}
+.wrap{max-width:820px;margin:0 auto}
+.msg{color:#cfc8b8;font-size:calc(14px*var(--fz,1));line-height:1.8;padding:4px 2px 10px;border-bottom:1px dashed #444}
+.cap{color:#8f98a8;font-size:calc(12px*var(--fz,1));margin:14px 0 6px}
+.cap+.strip{margin-top:14px}
+
+/* ---------- collapsed strip: a folded newspaper ---------- */
+.strip{display:flex;align-items:center;gap:12px;background:var(--paper);color:var(--ink);
+  border-radius:4px;padding:8px 12px;cursor:pointer;position:relative;
+  box-shadow:0 2px 0 var(--paper2),0 4px 0 var(--line),0 6px 14px rgba(0,0,0,.45)}
+.strip .mast{font-family:var(--serif);font-weight:900;font-size:calc(17px*var(--fz,1));letter-spacing:.12em;white-space:nowrap}
+.strip .date{font-size:calc(11.5px*var(--fz,1));color:var(--ink3);white-space:nowrap}
+.strip .hl{font-family:var(--serif);font-weight:700;font-size:calc(13.5px*var(--fz,1));flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:1px solid var(--line);padding-left:12px}
+.strip .cnt{font-size:calc(11.5px*var(--fz,1));color:var(--ink2);white-space:nowrap}
+.strip .open{font-size:calc(12px*var(--fz,1));border:1px solid var(--ink2);padding:1px 9px;border-radius:3px;white-space:nowrap}
+.extra{position:absolute;top:-9px;left:-7px;background:var(--red);color:#fff4e0;font-family:var(--serif);font-weight:900;
+  font-size:calc(12px*var(--fz,1));padding:1px 7px;transform:rotate(-8deg);letter-spacing:.2em;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.strip.quiet{background:#2a2621;color:#8d8472;box-shadow:none;border:1px solid #3a342c}
+.strip.quiet .mast{font-size:calc(14px*var(--fz,1));color:#a39883}.strip.quiet .hl{border-color:#3a342c;font-weight:400;color:#8d8472}
+.strip.quiet .open{border-color:#5a5246}
+
+/* ---------- expanded ---------- */
+.board{display:flex;margin-top:0;border-radius:4px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.index{width:26%;min-width:168px;background:var(--desk);color:var(--desktx);border-right:1px solid #000;display:flex;flex-direction:column}
+.index .ih{padding:12px 12px 8px;border-bottom:1px solid var(--deskline)}
+.index .ih b{font-family:var(--serif);font-size:calc(15px*var(--fz,1));letter-spacing:.2em}
+.index .ih div{font-size:calc(11px*var(--fz,1));color:var(--desktx2);margin-top:3px}
+.grp{padding:8px 0 2px}
+.grp h6{margin:0 12px 4px;font-size:calc(10.5px*var(--fz,1));letter-spacing:.18em;color:var(--desktx2);font-weight:400}
+.it{display:block;padding:6px 12px 6px 14px;border-left:3px solid transparent;cursor:pointer;font-size:calc(12.5px*var(--fz,1));line-height:1.45;color:var(--desktx)}
+.it:hover{background:var(--desk2)}
+.it.on{background:var(--desk2);border-left-color:var(--gold)}
+.it small{display:block;font-size:calc(10.5px*var(--fz,1));color:var(--desktx2);margin-top:1px}
+.it .new{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:5px;vertical-align:2px}
+.it.secret{color:#e9b3a9}
+.index .foot{margin-top:auto;padding:10px 12px;border-top:1px solid var(--deskline)}
+.btn{display:block;text-align:center;font-size:calc(12px*var(--fz,1));color:var(--desktx);border:1px solid #5a5246;border-radius:3px;padding:5px 0;cursor:pointer}
+.btn+.btn{margin-top:6px}
+
+.paper{flex:1;min-width:0;background:var(--paper);color:var(--ink);padding:14px 18px 16px;font-family:var(--serif);
+  background-image:var(--sheen)}
+.top{display:flex;justify-content:space-between;font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));color:var(--ink3);border-bottom:1px solid var(--rule);padding-bottom:3px}
+.masthead{text-align:center;font-weight:900;font-size:calc(36px*var(--fz,1));letter-spacing:.32em;line-height:1.15;padding:6px 0 2px;text-indent:.32em}
+.sub{display:flex;justify-content:space-between;font-family:var(--sans);font-size:calc(11px*var(--fz,1));color:var(--ink2);border-top:3px double var(--rule);border-bottom:1px solid var(--rule);padding:3px 0;margin-bottom:10px}
+.kicker{font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));letter-spacing:.14em;color:var(--red);font-weight:700}
+.kicker.plain{color:var(--ink3)}
+
+.front{display:grid;grid-template-columns:1fr 34%;gap:14px;border-bottom:1px solid var(--rule);padding-bottom:12px}
+.lead h1{font-size:calc(23px*var(--fz,1));text-wrap:balance;line-height:1.28;margin:3px 0 5px;font-weight:900}
+.lead .deck{font-size:calc(13px*var(--fz,1));color:var(--ink2);line-height:1.55;margin:0 0 8px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.cols{column-count:2;column-gap:14px;column-rule:1px solid var(--line);font-size:calc(12.5px*var(--fz,1));line-height:1.75;text-align:justify}
+.cols p{margin:0 0 6px;text-indent:2em}
+.cols p.dc{text-indent:0}
+.cols p.dc::first-letter{float:left;font-size:calc(34px*var(--fz,1));line-height:1;font-weight:900;margin:3px 5px 0 0}
+.by{font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));color:var(--ink3);margin-top:4px}
+
+/* internal dispatch slip */
+.slip{background:var(--slip);border:1px solid var(--line);padding:10px 11px 11px;position:relative;transform:rotate(1.2deg);
+  box-shadow:2px 3px 0 rgba(60,40,10,.15);align-self:start;margin-top:4px}
+.slip::before{content:'';position:absolute;top:-10px;left:16px;width:14px;height:26px;border:2px solid #8b8f96;border-radius:8px;border-bottom-color:transparent}
+.stamp{position:absolute;top:8px;right:8px;border:2px solid var(--red);color:var(--red);font-family:var(--sans);font-weight:900;
+  font-size:calc(11px*var(--fz,1));padding:1px 5px;transform:rotate(-12deg);letter-spacing:.1em;opacity:.85}
+.slip h3{font-size:calc(15px*var(--fz,1));margin:4px 0 6px;line-height:1.35;padding-right:40px}
+.slip p{font-size:calc(12px*var(--fz,1));line-height:1.7;margin:0 0 6px;color:var(--ink2)}
+.slip .why{font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));color:var(--red);border-top:1px dashed var(--line);padding-top:5px}
+
+/* serial tracker */
+.sect{display:flex;align-items:center;gap:10px;margin:10px 0 8px}
+.sect span{font-family:var(--sans);font-weight:900;font-size:calc(12px*var(--fz,1));letter-spacing:.3em;white-space:nowrap}
+.sect::before,.sect::after{content:'';flex:1;border-top:1px solid var(--rule)}
+.serials{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.serial{border-top:2px solid var(--rule);padding-top:6px}
+.serial.focus{border-top-color:var(--red)}
+.serial h2{font-size:calc(16px*var(--fz,1));margin:2px 0 4px;font-weight:900;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.serial h2 em{font-style:normal;font-family:var(--sans);font-size:calc(11px*var(--fz,1));color:var(--ink2);font-weight:700;white-space:nowrap}
+.meter{display:flex;gap:3px;margin:2px 0 6px}
+.meter i{flex:1;height:6px;background:var(--meter);border:1px solid var(--line)}
+.meter i.f{background:var(--ink)}
+.meter i.a{background:repeating-linear-gradient(45deg,var(--ink) 0 2px,var(--meter) 2px 4px)}
+.serial .sum{font-size:calc(12px*var(--fz,1));line-height:1.65;color:var(--ink2);margin:0 0 5px}
+.serial .sum b{color:var(--ink)}
+.steps{list-style:none;margin:0;padding:0;font-size:calc(12px*var(--fz,1));line-height:1.55}
+.steps li{display:flex;gap:6px;padding:2px 0;border-bottom:1px dotted var(--line)}
+.steps li:last-child{border-bottom:0}
+.steps .g{width:14px;text-align:center;font-family:var(--sans);flex:none}
+.steps .d{color:var(--ink3)} .steps .d .t{text-decoration:line-through;text-decoration-color:var(--line)}
+.steps .a{font-weight:700}.steps .a .g{color:var(--red)}
+.steps .p{color:var(--ink2)}
+.steps .pl{color:var(--ink3);font-style:italic}
+.steps .w{margin-left:auto;font-family:var(--sans);font-size:calc(10px*var(--fz,1));color:var(--ink3);white-space:nowrap;font-style:normal}
+.steps .a .w{color:var(--red)}
+.ways{margin-top:6px;background:var(--paper2);padding:6px 8px;font-size:calc(11.5px*var(--fz,1));line-height:1.6}
+.ways b{font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));letter-spacing:.12em;color:var(--ink2);display:block;margin-bottom:2px}
+.ways div{display:flex;gap:6px}.ways div::before{content:'◇';color:var(--ink3)}
+
+/* original news pages */
+.pages{display:grid;grid-template-columns:1fr 1fr 34%;gap:12px}
+.pg{font-size:calc(12px*var(--fz,1));line-height:1.7;text-align:justify}
+.pg h4{font-size:calc(13.5px*var(--fz,1));margin:2px 0 3px;line-height:1.4}
+.pg p{margin:0}
+.pg .more{font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));color:var(--ink3)}
+.ad{border:2px solid var(--ink);padding:6px 8px;text-align:center;font-size:calc(12px*var(--fz,1));line-height:1.6;outline:1px solid var(--ink);outline-offset:2px}
+.ad .h{font-weight:900;font-size:calc(17px*var(--fz,1));letter-spacing:.4em;text-indent:.4em;border-bottom:1px solid var(--ink);margin-bottom:4px}
+.ad .amt{font-weight:900;font-size:calc(15px*var(--fz,1));margin-top:3px}
+.colophon{margin-top:12px;border-top:3px double var(--rule);padding-top:4px;display:flex;justify-content:space-between;font-family:var(--sans);font-size:calc(10px*var(--fz,1));color:var(--ink3)}
+.flash{animation:fl 1.2s ease}
+@keyframes fl{0%{background:rgba(184,145,63,.45)}100%{background:transparent}}
+
+
+/* ---------- v2: bounded height, folds, full news ---------- */
+.board{max-height:760px}
+.index,.paper{overflow-y:auto;scrollbar-width:thin}
+.paper{scrollbar-color:var(--line) transparent}.index{scrollbar-color:#4a4236 transparent}
+body.full .board{max-height:none}
+details.fold{margin-top:10px}
+details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;margin:0 0 8px;user-select:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before,details.fold>summary::after{content:'';flex:1;border-top:1px solid var(--rule)}
+details.fold>summary .t{font-family:var(--sans);font-weight:900;font-size:calc(12px*var(--fz,1));letter-spacing:.3em;white-space:nowrap}
+details.fold>summary .n{font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));color:var(--ink3);white-space:nowrap}
+details.fold>summary .n b{color:var(--red)}
+details.fold>summary .car{font-family:var(--sans);font-size:calc(11px*var(--fz,1));color:var(--ink2);border:1px solid var(--line);border-radius:3px;padding:0 6px;white-space:nowrap}
+details.fold:not([open])>summary .car::after{content:'展開 ▾'}
+details.fold[open]>summary .car::after{content:'收起 ▴'}
+details.fold:not([open])>summary{margin-bottom:0}
+.tools{display:flex;justify-content:flex-end;gap:0;margin:-2px 0 8px;font-family:var(--sans);font-size:calc(11px*var(--fz,1))}
+.tools span{border:1px solid var(--line);padding:1px 9px;cursor:pointer;color:var(--ink2)}
+.tools span+span{border-left:0}
+.tools span.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.bd{display:flex;align-items:baseline;gap:8px;margin:10px 0 6px;border-bottom:2px solid var(--rule);padding-bottom:2px}
+.bd b{font-size:calc(15px*var(--fz,1));font-weight:900;letter-spacing:.12em}
+.bd i{font-style:normal;font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));color:var(--ink3)}
+.bd i em{font-style:normal;color:var(--red);font-weight:700}
+.news{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px 14px}
+.nw{font-size:calc(12px*var(--fz,1));line-height:1.72;text-align:justify;position:relative}
+.nw h4{margin:0 0 2px;font-size:calc(13.5px*var(--fz,1));font-weight:900;display:flex;align-items:center;gap:6px}
+.nw p{margin:0}
+.tag{font-family:var(--sans);font-size:calc(10px*var(--fz,1));font-weight:700;padding:0 5px;border-radius:2px;white-space:nowrap}
+.nw.upd .tag{background:var(--red);color:#fff4e0}
+.nw.old .tag{border:1px solid var(--line);color:var(--ink3);font-weight:400}
+.nw.old{color:var(--ink3)}
+.nw.old h4{color:var(--ink2);font-weight:700}
+.nw.old p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.nw.old.openfull p{display:block}
+.nw .more{font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));color:var(--ink3);cursor:pointer}
+.nw.upd .more{display:none}
+/* 阿斯塔利亞快訊: news columns */
+.nw.k{border-top:1px solid var(--line);padding-top:5px}
+.nw.k.upd{border-top:3px solid var(--red)}
+/* 酒館留言板: classified ads */
+.nw.ads{border:1px solid var(--line);padding:6px 8px;text-align:left}
+.nw.ads h4{justify-content:center;letter-spacing:.2em;border-bottom:1px solid var(--line);padding-bottom:2px;margin-bottom:4px}
+.nw.ads.upd{border:2px solid var(--ink);outline:1px solid var(--ink);outline-offset:2px;margin:3px;color:var(--ink)}
+.nw.ads.upd h4{border-bottom-color:var(--ink)}
+.nw.ads.old{border-style:dashed}
+.nw.ads h4 .tag{letter-spacing:0}
+/* 午後茶會: gossip column */
+.nw.tea{padding:4px 0 4px 10px;border-left:1px dotted var(--line);font-style:italic}
+.nw.tea h4{font-style:normal}
+.nw.tea.upd{border-left:3px solid var(--red)}
+
+/* narrow screens: index becomes a strip above the paper */
+@media (max-width:620px){
+  .strip .ctl{order:4;margin-left:0;margin-top:6px}
+  .strip .open{order:4;margin-left:auto;margin-top:6px}
+  .fresh{grid-template-columns:1fr}
+  body{padding:10px}
+  .board{flex-direction:column}
+  .index{width:auto;border-right:0;border-bottom:1px solid #000}
+  .index .groups{display:flex;overflow-x:auto}
+  .grp{display:flex;padding:6px 0}.grp h6{display:none}
+  .it{white-space:nowrap;border-left:0;border-bottom:2px solid transparent}.it.on{border-bottom-color:var(--gold)}
+  .it small{display:none}
+  .index .foot{display:none}
+  .front,.serials,.pages{grid-template-columns:1fr}
+  .cols{column-count:1}
+  .masthead{font-size:calc(26px*var(--fz,1))}
+}
+
+/* ---------- v3: strip stays as header, dark mode, update time ---------- */
+.nb{margin-top:14px}
+.nb .strip{border-radius:4px}
+.nb.open .strip{border-radius:4px 4px 0 0;box-shadow:none;border-bottom:1px solid var(--rule)}
+.nb .board{display:none;border-radius:0 0 4px 4px}
+.nb.open .board{display:flex}
+.nb.open .strip .open::after{content:'收起 ▴'}
+.nb:not(.open) .strip .open::after{content:'展開 ▾'}
+.nb.dark{--paper:#1f1c17;--paper2:#2a261f;--ink:#e9e0cc;--ink2:#c4b89e;--ink3:#8e836e;--rule:#bfb08f;
+  --red:#d46a55;--line:#51493c;--meter:#3a342b;--slip:#29251e;--sheen:none}
+.nb.dark .strip{box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.nb.dark .nw.upd .tag,.nb.dark .extra{color:#1f1c17}
+.nb.dark .stamp{opacity:1}
+.mode{cursor:pointer;border:1px solid var(--line);border-radius:3px;padding:0 7px;color:var(--ink2)}
+.mode:hover{border-color:var(--ink2)}
+.nw time{display:block;font-family:var(--sans);font-size:calc(10px*var(--fz,1));color:var(--ink3);margin:-1px 0 3px;font-style:normal;letter-spacing:0}
+.nw.upd time{color:var(--red)}
+
+/* ---------- v4: controls in strip, font size, fresh news first ---------- */
+.nb .strip{padding:11px 12px;gap:10px}
+.ctl{display:flex;align-items:center;gap:4px;font-family:var(--sans);font-size:12px;white-space:nowrap}
+.ctl .b{border:1px solid var(--line);border-radius:3px;padding:1px 7px;cursor:pointer;color:var(--ink2);line-height:1.5}
+.ctl .b:hover{border-color:var(--ink2);color:var(--ink)}
+.ctl .v{min-width:38px;text-align:center;color:var(--ink3);font-size:11px}
+.ctl .sep{width:1px;height:16px;background:var(--line);margin:0 4px}
+.nb .strip .open{border-color:var(--ink2)}
+.fresh{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px 18px;margin-bottom:6px}
+.fresh .nw{font-size:calc(13.5px*var(--fz,1));line-height:1.8}
+.fresh .nw h4{font-size:calc(18px*var(--fz,1))}
+.fresh .nw .src{display:block;font-family:var(--sans);font-size:calc(10.5px*var(--fz,1));letter-spacing:.12em;color:var(--red);font-weight:700;margin-bottom:1px;font-style:normal}
+.fresh .nw.ads h4{justify-content:flex-start}
+.none{font-size:calc(12px*var(--fz,1));color:var(--ink3);padding:4px 0 8px}
+.oldhead{display:flex;align-items:center;gap:10px;margin:14px 0 4px;font-family:var(--sans);font-size:calc(11.5px*var(--fz,1));color:var(--ink2)}
+.oldhead::after{content:'';flex:1;border-top:1px dashed var(--line)}
+.oldhead .t{font-weight:900;letter-spacing:.2em;color:var(--ink)}
+.sw{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;order:2}
+.sw i{width:28px;height:15px;border-radius:8px;background:var(--line);position:relative;transition:.15s}
+.sw i::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--paper);transition:.15s}
+.sw.on i{background:var(--ink)}.sw.on i::after{left:15px}
+#oldbody.off{display:none}
+.oldbody .news{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+
+/* ---------- v5: two-row strip, headline in full ---------- */
+.strip{flex-wrap:wrap;row-gap:0;padding:10px 14px 11px}
+.strip .ctl{margin-left:auto}
+.strip:not(.quiet) .hl{order:5;flex-basis:100%;white-space:normal;overflow:visible;border-left:0;padding:7px 0 0;margin-top:7px;
+  border-top:1px solid var(--line);font-size:calc(15px*var(--fz,1));line-height:1.5}
+.strip.quiet .hl{flex:1}
+.strip .cnt{margin-left:4px}
+.nb.open .strip{padding-bottom:11px}
+.nb .strip{row-gap:0}
+@media (max-width:620px){
+  .strip .ctl,.strip .ctl[style]{order:4;margin-left:0!important;margin-top:8px}
+  .strip .open{order:4;margin-left:auto;margin-top:8px}
+  .strip.quiet .mast{flex-basis:100%}
+  .strip.quiet .hl{order:5;flex-basis:100%;border-left:0;padding:6px 0 0;white-space:normal}
+}
+.slip{padding-bottom:30px}.slip .stamp{top:auto;bottom:9px;right:10px}.slip h3{padding-right:0}
+</style></head><body><div class="wrap">
+
+<div class="msg">……（正文）女皇的通牒在傍晚傳到鐵爐堡，城門口的徵兵告示又多貼了一層。</div>
+
+<div class="cap">① 收納：兩行。上行是報頭、時間、則數與功能鍵；下行完整顯示頭條。有重要國策時蓋「號外」章</div>
+<div class="strip"><span class="extra">號外</span><span class="mast">阿斯塔利亞快訊</span><span class="date">491年6月20日 10:12</span>
+<span class="hl">帝國向卡拉什利亞斯發出最後通牒　女皇動員鐵爐堡全部常備軍團</span><span class="cnt">本期 7 則</span><span class="ctl"><span class="b">A−</span><span class="v">100%</span><span class="b">A+</span><span class="sep"></span><span class="b">☾ 深色</span></span><span class="open">展開 ▾</span></div>
+
+<div class="cap">② 收納：本樓沒有新消息</div>
+<div class="strip quiet"><span class="mast">阿斯塔利亞快訊</span><span class="hl">本樓沒有新消息・進行中事件 2 件</span><span class="ctl" style="margin-left:0"><span class="b">A−</span><span class="v">100%</span><span class="b">A+</span><span class="sep"></span><span class="b">☾ 深色</span></span><span class="open">翻閱 ▾</span></div>
+
+<div class="cap" id="cap3">③ 展開：收納條常駐在上方，點功能鍵以外的位置收起或展開</div>
+<div class="nb open" id="nb">
+<div class="strip" id="nbstrip"><span class="extra">號外</span><span class="mast">阿斯塔利亞快訊</span><span class="date">491年6月20日 10:12</span>
+<span class="hl">帝國向卡拉什利亞斯發出最後通牒　女皇動員鐵爐堡全部常備軍團</span><span class="cnt">本期 7 則</span><span class="ctl" id="ctl"><span class="b" data-fz="-">A−</span><span class="v" id="fzv">100%</span><span class="b" data-fz="+">A+</span><span class="sep"></span><span class="b" id="mode">☾ 深色</span></span><span class="open"></span></div>
+<div class="board">
+  <nav class="index">
+    <div class="ih"><b>本期要目</b><div>491年6月20日 10:12</div></div>
+    <div class="groups">
+    <div class="grp"><h6>頭版</h6>
+      <a class="it on" data-go="a-lead"><span class="new"></span>帝國發出最後通牒<small>世界新聞・重要國策</small></a>
+    </div>
+    <div class="grp"><h6>內部密報</h6>
+      <a class="it secret" data-go="a-slip"><span class="new"></span>戈登家族阻擋測量隊<small>未公開・奧古斯提姆帝國</small></a>
+    </div>
+    <div class="grp"><h6>連載追蹤</h6>
+      <a class="it" data-go="a-s1"><span class="new"></span>七省清丈進程 4/7<small>本樓有進展</small></a>
+      <a class="it" data-go="a-s2"><span class="new"></span>馳原大攻勢 2/4<small>本樓有進展</small></a>
+    </div>
+    <div class="grp"><h6>本報各版・本樓更新</h6>
+      <a class="it" data-go="n2"><span class="new"></span>军事行动<small>阿斯塔利亞快訊</small></a>
+      <a class="it" data-go="n3"><span class="new"></span>经济动脉<small>阿斯塔利亞快訊</small></a>
+      <a class="it" data-go="n5"><span class="new"></span>高额悬赏<small>酒館留言板</small></a>
+      <a class="it" data-go="oldhead">舊聞 11 欄<small>全部版面</small></a>
+    </div>
+    </div>
+    <div class="foot"><span class="btn">翻閱往期</span><span class="btn">開啟國策面板</span></div>
+  </nav>
+
+  <main class="paper">
+    <div class="top"><span>本期 7 則・內部密報 1 則</span><span>國策與世界</span></div>
+    <div class="masthead">阿斯塔利亞快訊</div>
+    <div class="sub"><span>復興紀元 491 年 6 月 20 日 10:12</span><span>艾瑟嘉德發行</span></div>
+
+    <section class="front">
+      <article class="lead" id="a-lead">
+        <div class="kicker">世界新聞・重要國策完成</div>
+        <h1>帝國向卡拉什利亞斯發出最後通牒</h1>
+        <p class="deck">女皇動員鐵爐堡全部常備軍團，限獸族聯盟三十日內撤出恒風草原前哨；各國使節連夜離開艾瑟嘉德。</p>
+        <div class="cols">
+          <p class="dc">昨日傍晚，王宮發布敕令，宣布對卡拉什利亞斯獸族聯盟提出最後通牒。敕令要求聯盟在三十日內撤出恒風草原沿線的全部前哨，並交還去年冬季奪走的兩座驛站。</p>
+          <p>鐵爐堡的常備軍團已經開始集結，城外的補給棧道日夜有馬車往來。內閣宣稱，這是「七省新秩序」確立後，帝國第一次以全國兵力回應邊境威脅。</p>
+          <p>索倫蒂斯與蒼海同盟的使節已於當夜啟程回國，兩國都尚未發表正式聲明。</p>
+        </div>
+        <div class="by">國策：奧古斯提姆帝國「對獸族發出最後通牒」完成</div>
+      </article>
+
+      <aside class="slip" id="a-slip">
+        <span class="stamp">未公開</span>
+        <div class="kicker">內部密報・奧古斯提姆帝國</div>
+        <h3>戈登家族以私兵阻擋清丈測量隊</h3>
+        <p>四省清冊已入庫；金谷城周邊封地與霜臨城拒絕丈量，測量隊在封地邊界被私兵攔下。</p>
+        <p>內閣尚未決定是否動用禁衛軍。</p>
+      </aside>
+    </section>
+
+    <details class="fold" open id="f-serial"><summary><span class="t">連載追蹤</span><span class="n">進行中 2 件・本樓進展 <b>2</b></span><span class="car"></span></summary>
+    <section class="serials">
+      <article class="serial focus" id="a-s1">
+        <div class="kicker">國策執行・內部</div>
+        <h2>七省清丈進程<em>第 4／7 步</em></h2>
+        <div class="meter"><i class="f"></i><i class="f"></i><i class="f"></i><i class="a"></i><i></i><i></i><i></i></div>
+        <p class="sum"><b>起因</b>　強制清丈令（2 月）<br><b>現況</b>　四省清冊入庫；兩地以私兵阻擋。</p>
+        <ul class="steps">
+          <li class="d"><span class="g">✓</span><span class="t">測量隊進駐七省</span><span class="w">2 月</span></li>
+          <li class="d"><span class="g">✓</span><span class="t">辰鐘、索萊爾清冊入庫</span><span class="w">4 月</span></li>
+          <li class="d"><span class="g">✓</span><span class="t">馳原、中部清冊入庫</span><span class="w">6 月初</span></li>
+          <li class="a"><span class="g">▶</span><span>金谷城：私兵阻擋測量隊</span><span class="w">本樓</span></li>
+          <li class="p"><span class="g">○</span><span>霜臨城交出莊園冊籍</span></li>
+          <li class="p"><span class="g">○</span><span>第七省清丈</span></li>
+          <li class="pl"><span class="g">◷</span><span>秋季內閣議定是否動兵</span><span class="w">9 月前</span></li>
+        </ul>
+        <div class="ways"><b>可能走向（後續國策）</b>
+          <div>查抄戈登家族糧倉：強行解除阻力</div>
+          <div>金谷糧價協約：讓步換交糧，清丈延後</div>
+        </div>
+      </article>
+      <article class="serial" id="a-s2">
+        <div class="kicker plain">國際事件・公開</div>
+        <h2>馳原大攻勢<em>第 2／4 步</em></h2>
+        <div class="meter"><i class="f"></i><i class="f"></i><i class="a"></i><i></i></div>
+        <p class="sum"><b>起因</b>　最後通牒（5 月）<br><b>現況</b>　前鋒越過恒風草原前哨線，補給棧道延伸中。</p>
+        <ul class="steps">
+          <li class="d"><span class="g">✓</span><span class="t">鐵爐堡集結常備軍團</span><span class="w">5 月</span></li>
+          <li class="d"><span class="g">✓</span><span class="t">前鋒拔除三座獸族前哨</span><span class="w">6 月初</span></li>
+          <li class="a"><span class="g">▶</span><span>向月隱盆地外緣推進</span><span class="w">本樓</span></li>
+          <li class="p"><span class="g">○</span><span>迫使卡拉什利亞斯議和或決戰</span></li>
+        </ul>
+      </article>
+    </section>
+    </details>
+
+    <details class="fold" open id="f-pages"><summary><span class="t">本報各版</span><span class="n">本樓更新 <b>3</b>・舊聞 11</span><span class="car"></span></summary>
+      <div class="bd" style="border-bottom-color:var(--red)"><b>本期更新</b><i>與上一個 AI 樓層不同的欄位</i></div>
+      <div class="fresh">
+        <article class="nw k upd" id="n2"><span class="src">阿斯塔利亞快訊</span><h4>军事行动<span class="tag">本樓更新</span></h4><time>更新於 491年6月20日 10:12</time><p>通往铁炉堡的官道上挤满运送辎重的马车，驿站马匹一律征用。女皇的最后通牒送达后，常备军团已在城外列阵，传闻帝国将在三十日期满当天越过恒风草原前哨线，边境商队纷纷折返。</p></article>
+        <article class="nw k upd" id="n3"><span class="src">阿斯塔利亞快訊</span><h4>经济动脉<span class="tag">本樓更新</span></h4><time>更新於 491年6月20日 10:12</time><p>戈登家族停止平价交粮的消息虽未证实，金谷城的粮商已先行囤货，城南市集的面包价格一周上涨三成。帝国财政院发布公告，承诺秋收前开放王室粮仓平抑粮价，但市面仍半信半疑。</p></article>
+        <article class="nw ads upd" id="n5"><span class="src">酒館留言板</span><h4>高额悬赏<span class="tag">本樓更新</span></h4><time>更新於 491年6月20日 10:12</time><p>霜临城领主府悬赏五百金币，征求护送清丈测量队的冒险者前往城郊庄园。须持有冒险者公会银级以上证书，报酬按日结算，另有伤亡抚恤。</p></article>
+      </div>
+      <div class="oldhead" id="oldhead"><span class="t">舊聞</span><span>11 欄，依角色卡原本的順序</span><span class="sw on" id="oldsw"><i></i>顯示舊聞</span></div>
+      <div class="oldbody" id="oldbody">
+        <div class="bd"><b>阿斯塔利亞快訊</b><i>舊聞 3 欄</i></div>
+        <div class="news">
+          <article class="nw k old" id="n0"><h4>势力要闻<span class="tag">舊聞</span></h4><time>更新於 491年6月14日 09:40</time><p>奥古斯提姆帝国枢密院今晨正式向日冕法理特区递交了第三轮跨境资产清算清单，勒令北境在立冬日前结清所有滞纳税款。与此同时，日冕院首席执政官罗瑟·赫利俄斯公开宣称特区的独立清算系统运转完备，全面驳回了帝国的行政指令。</p><span class="more">全文 ▾</span></article>
+          <article class="nw k old" id="n1"><h4>尊位行迹<span class="tag">舊聞</span></h4><time>更新於 491年6月18日 16:05</time><p>据传常年隐居于无尽树海深处的‘渊脉龙嫲’近期被目击于暗河源流现身，其巨大的龙影引发了长达数日的魔力暴潮，导致瓦伦蒂亚公国外围的水系流量骤增三成，多处沿河防御据点被迫临时后撤。</p><span class="more">全文 ▾</span></article>
+          <article class="nw k old" id="n4"><h4>灾害预警<span class="tag">舊聞</span></h4><time>更新於 491年6月9日 07:30</time><p>永冻冰原深处由于极寒魔力异动引发了连锁雪崩，大量低阶冰霜魔物向下涌入辞冕冰脊外沿，诺斯加德联盟已向沿途各领地发布了三级寒潮戒备令，提醒往来商队警惕暴风雪与魔兽伏击。</p><span class="more">全文 ▾</span></article>
+        </div>
+        <div class="bd"><b>酒館留言板</b><i>舊聞 4 欄</i></div>
+        <div class="news">
+          <article class="nw ads old" id="n6"><h4>冒险发现<span class="tag">舊聞</span></h4><time>更新於 491年6月17日 20:15</time><p>有两支黑市淘金小队在悲鸣沼泽边缘的枯骨林地中，发现了一处被古代魔法阵掩盖的废弃排水泵房，传闻深处藏有第二次位面交汇时期遗留的高纯度魔导机油。</p><span class="more">全文 ▾</span></article>
+          <article class="nw ads old" id="n7"><h4>怪物异动<span class="tag">舊聞</span></h4><time>更新於 491年6月16日 11:00</time><p>艾瑟嘉德城外皇家狩猎围场深处的松针古林中，疑似有一头第五层级的变异影刃霜狼潜伏，围场巡逻队已在后山拉起黄色警戒线，禁止低阶冒险者私自涉足。</p><span class="more">全文 ▾</span></article>
+          <article class="nw ads old" id="n8"><h4>通缉要犯<span class="tag">舊聞</span></h4><time>更新於 491年6月16日 11:00</time><p>帝国治安总署发布红色通缉令，悬赏两万帝冕币缉捕自称‘灰鸦’的流窜符文盗贼。该犯涉嫌多次在学者区别墅外围偷窥拓印贵族防卫结界，具有极高的潜行与脱逃技巧。</p><span class="more">全文 ▾</span></article>
+          <article class="nw ads old" id="n9"><h4>宝物传闻<span class="tag">舊聞</span></h4><time>更新於 491年6月12日 08:20</time><p>帝都工务署今晨发布嘉奖通告，称赞神谕大道地下主干管网在极短时间内消除了微小应力死角，确保了大典巡礼花车群的绝对平稳通过；坊间盛传有旁晶港的高阶奇械神匠秘密协助了此次维保。</p><span class="more">全文 ▾</span></article>
+        </div>
+        <div class="bd"><b>午後茶會</b><i>舊聞 4 欄</i></div>
+        <div class="news">
+          <article class="nw tea old" id="n10"><h4>社交逸闻<span class="tag">舊聞</span></h4><time>更新於 491年6月18日 16:05</time><p>艾瑟嘉德学者区的古籍商人圈内盛传，近期有多位神秘买家在暗中搜罗一切带有东方古陆图腾的羊皮残卷，导致市面上相关拓本的价格水涨船高。</p><span class="more">全文 ▾</span></article>
+          <article class="nw tea old" id="n11"><h4>千里远望<span class="tag">舊聞</span></h4><time>更新於 491年6月17日 20:15</time><p>在索伦蒂斯银帆城的海景庄园内，工匠杜林·深熔正对着一堆刚运抵的极北冷雾泰丝破口大骂，抱怨原料含水率过高影响了主礼服暗纹的编织进度。</p><span class="more">全文 ▾</span></article>
+          <article class="nw tea old" id="n12"><h4>命运涟漪<span class="tag">舊聞</span></h4><time>更新於 491年6月14日 09:40</time><p>一位身披灰布斗篷、面容苍白且带着盲眼绷带的年轻占星女学者，刚刚在艾瑟嘉德南门税关完成了登记，她怀里紧紧抱着一本没有封皮的残破星盘，步履蹒跚地走向学者区。</p><span class="more">全文 ▾</span></article>
+          <article class="nw tea old" id="n13"><h4>邂逅预兆<span class="tag">舊聞</span></h4><time>更新於 491年6月12日 08:20</time><p>在艾瑟嘉德金谷大道尽头的‘皇家烘焙坊’，一位身穿白色厨师服的年轻手艺人学徒‘皮平·甜面包’，正满头大汗地将一盘刚出炉的、淋满了特制蜂蜜糖浆的榛果派端上餐盘。他似乎预感到了将有极为尊贵的客人光临。</p><span class="more">全文 ▾</span></article>
+        </div>
+      </div>
+    </details>
+
+    <div class="colophon"><span>本報各版：變量「新闻」全部欄位・與上一個 AI 樓層不同者為本樓更新・時間為最後更新的故事時間</span></div>
+  </main>
+</div>
+</div>
+</div>
+<script>
+document.querySelectorAll('.it').forEach(function(a){a.addEventListener('click',function(){
+  document.querySelectorAll('.it').forEach(function(b){b.classList.remove('on')});a.classList.add('on');
+  var t=document.getElementById(a.dataset.go);if(!t)return;
+  var d=t.closest('details');if(d)d.open=true;
+  if(t.classList.contains('old'))t.classList.add('openfull');
+  var p=document.querySelector('.paper');p.scrollTo({top:t.offsetTop-p.offsetTop-10,behavior:'smooth'});
+  t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');});});
+document.querySelectorAll('.nw.old .more').forEach(function(m){m.addEventListener('click',function(){
+  var n=m.parentNode;n.classList.toggle('openfull');m.textContent=n.classList.contains('openfull')?'收起 ▴':'全文 ▾';});});
+if(location.search.indexOf('full')>=0)document.body.classList.add('full');
+if(location.search.indexOf('fold')>=0)document.getElementById('f-serial').open=false;
+
+var nb=document.getElementById('nb');
+document.getElementById('nbstrip').addEventListener('click',function(e){if(e.target.closest('.ctl'))return;nb.classList.toggle('open')});
+var fz=[0.9,1,1.15,1.3,1.5],fi=1;
+document.querySelectorAll('[data-fz]').forEach(function(b){b.addEventListener('click',function(){
+  fi=Math.max(0,Math.min(fz.length-1,fi+(b.dataset.fz==='+'?1:-1)));nb.style.setProperty('--fz',fz[fi]);
+  document.getElementById('fzv').textContent=Math.round(fz[fi]*100)+'%';});});
+var sw=document.getElementById('oldsw');sw.addEventListener('click',function(){sw.classList.toggle('on');
+  document.getElementById('oldbody').classList.toggle('off',!sw.classList.contains('on'));});
+var m=location.search.match(/fz=([\d.]+)/);if(m){fi=fz.indexOf(+m[1]);nb.style.setProperty('--fz',m[1]);document.getElementById('fzv').textContent=Math.round(m[1]*100)+'%';}
+if(location.search.indexOf('noold')>=0){sw.classList.remove('on');document.getElementById('oldbody').classList.add('off');}
+var md=document.getElementById('mode');
+md.addEventListener('click',function(){nb.classList.toggle('dark');md.textContent=nb.classList.contains('dark')?'☀ 淺色':'☾ 深色'});
+if(location.search.indexOf('dark')>=0){nb.classList.add('dark');md.textContent='☀ 淺色';}
+if(location.search.indexOf('only')>=0){document.querySelectorAll('body>.wrap>.msg,body>.wrap>.cap,body>.wrap>.strip').forEach(function(e){e.style.display='none'});nb.style.marginTop='10px';}
+</script>
+</body></html>

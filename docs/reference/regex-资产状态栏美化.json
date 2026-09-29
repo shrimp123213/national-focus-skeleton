@@ -1,0 +1,17 @@
+{
+    "disabled": false,
+    "findRegex": "<资产账本\\s*\\/>",
+    "id": "d7b8d4c3-b2bd-49f1-a27d-a48dc093df28",
+    "markdownOnly": true,
+    "maxDepth": 2,
+    "minDepth": null,
+    "placement": [
+        2
+    ],
+    "promptOnly": false,
+    "replaceString": "```\n<body>\n<script>\n$('body').load('https://testingcf.jsdelivr.net/gh/d1040426514-crypto/tavern_helper_template-main@v0.0.32/dist/资产账本/index.html')\n</script>\n</body>\n```",
+    "runOnEdit": true,
+    "scriptName": "资产状态栏美化",
+    "substituteRegex": 0,
+    "trimStrings": []
+}

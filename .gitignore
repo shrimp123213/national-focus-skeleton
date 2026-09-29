@@ -1,0 +1,25 @@
+node_modules/
+.npm-cache/
+*.log
+
+# Local archives; Git records new version history.
+/backup/
+/backups/
+
+# Local credentials and machine-specific settings.
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+
+# Temporary files and test output.
+/coverage/
+/test-results/
+/playwright-report/
+*.tsbuildinfo
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
