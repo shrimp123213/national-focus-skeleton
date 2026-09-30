@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>國策檔案 · 介面打磨樣品</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #0c1210;
+        color: #ede6d4;
+        font:
+          14px 'Microsoft JhengHei',
+          system-ui,
+          sans-serif;
+      }
+      .preview-bar {
+        position: fixed;
+        inset: 0 0 auto;
+        height: 54px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 24px;
+        z-index: 2147483600;
+        background: #0c1210;
+        border-bottom: 1px solid #e3c88a22;
+      }
+      .label {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        margin-right: auto;
+      }
+      .label strong {
+        letter-spacing: 0.14em;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .label span {
+        color: #9ba698;
+        font-size: 12px;
+      }
+      .switch {
+        display: flex;
+        gap: 2px;
+        padding: 3px;
+        border: 1px solid #e3c88a22;
+        border-radius: 6px;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+      }
+      .preview-bar button {
+        color: #acb5a8;
+        background: transparent;
+        border: 0;
+        border-radius: 3px;
+        padding: 6px 12px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .preview-bar button[aria-pressed='true'] {
+        color: #eee7d6;
+        background: #344038;
+      }
+      .preview-bar button:focus-visible {
+        outline: 2px solid #deca96;
+        outline-offset: 2px;
+      }
+      main.intro {
+        padding: 20vh 10vw;
+        max-width: 850px;
+      }
+      .intro h1 {
+        font:
+          42px Georgia,
+          'PMingLiU',
+          serif;
+      }
+      .intro p {
+        color: #aab3a5;
+        line-height: 2;
+      }
+      #paper-screen {
+        position: fixed;
+        inset: 64px 18px 18px;
+        background: #19221d;
+        border: 1px solid #d8c69b40;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      #paper-screen[hidden] {
+        display: none;
+      }
+      .paper-note {
+        margin: 0;
+        padding: 10px 20px;
+        font-size: 12px;
+        color: #bbc2b6;
+        background: #141e18;
+      }
+      #newspaper {
+        width: 100%;
+        height: calc(100% - 40px);
+        border: 0;
+        background: #171d18;
+      }
+      #failure {
+        position: fixed;
+        bottom: 12px;
+        left: 20px;
+        color: #f2b29e;
+        z-index: 2147483640;
+      }
+      @media (max-width: 760px) {
+        .preview-bar {
+          height: 94px;
+          flex-wrap: wrap;
+          padding: 8px 12px;
+          gap: 7px 12px;
+          justify-content: space-between;
+        }
+        .label {
+          width: 100%;
+        }
+        .label span {
+          margin-left: auto;
+        }
+        .preview-bar button {
+          padding: 6px 13px;
+        }
+        #paper-screen {
+          inset: 104px 6px 6px;
+        }
+        .paper-note {
+          padding: 8px 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="preview-bar" aria-label="樣品比較工具">
+      <div class="label"><strong>國策檔案 · 設計樣品</strong><span>離線示範 / 不連接 API</span></div>
+      <div class="switch" role="group" aria-label="選擇畫面">
+        <button data-view="focus" aria-pressed="true">國策樹</button>
+        <button data-view="paper" aria-pressed="false">報紙</button>
+      </div>
+      <div class="switch" role="group" aria-label="比較設計">
+        <button data-style="original" aria-pressed="false">現行版</button>
+        <button data-style="refined" aria-pressed="true">打磨版</button>
+      </div>
+    </header>
+    <main class="intro">
+      <small>NATIONAL FOCUS ARCHIVE</small>
+      <h1>讓世界的下一步，更清楚。</h1>
+      <p>
+        沿用 v0.14.4
+        的國策介面與操作。從右下角懸浮球重新開啟面板，或切換到報紙閱讀樣品。國名與內容為展示資料。
+      </p>
+      <p>可拖曳、縮放、選擇節點與切換國家。「測試操作」可推進事件與演示換期。重新整理會恢復初始狀態。</p>
+    </main>
+    <section id="paper-screen" aria-label="報紙閱讀樣品" hidden>
+      <p class="paper-note">閱讀樣品 · 本頁第一次開啟時的示範資料，可比較排版、切換深淺色與調整字級。</p>
+      <iframe id="newspaper" title="國策報紙閱讀樣品"></iframe>
+    </section>
+    <p id="failure" role="alert"></p>
+    <!-- BUNDLE -->
+  </body>
+</html>
