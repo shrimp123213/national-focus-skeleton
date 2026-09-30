@@ -5,7 +5,7 @@
       --paper2: #e9dec3;
       --ink: #221c14;
       --ink2: #4a4034;
-      --ink3: #7a6d5b;
+      --ink3: #625747;
       --rule: #2a2219;
       --line: #b9a984;
       --meter: #d6c7a2;
@@ -16,14 +16,15 @@
       --desk2: #25211b;
       --deskline: #3a332a;
       --desktx: #e6dcc6;
-      --desktx2: #a3977f;
+      --desktx2: #bfb39b;
       --sheen:
         radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.35), transparent 60%),
         radial-gradient(ellipse at 100% 100%, rgba(120, 90, 40, 0.12), transparent 55%);
-      --serif:
-        'Noto Serif TC', 'Noto Serif SC', 'Source Han Serif TC', 'Source Han Serif SC', 'PMingLiU', 'MingLiU',
-        'SimSun', serif;
-      --sans: 'Noto Sans TC', 'Noto Sans SC', 'Microsoft JhengHei', 'Microsoft YaHei', sans-serif;
+      /* Prefer CJK sans faces for mixed simplified/traditional text. Keep serif for the masthead. */
+      --sans:
+        'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans TC',
+        'Microsoft JhengHei', 'PingFang TC', sans-serif;
+      --serif: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif TC', 'Source Han Serif TC', var(--sans);
       --fz: 1;
       --maxh: 720px;
     }
@@ -46,7 +47,7 @@
       --paper2: #2a261f;
       --ink: #e9e0cc;
       --ink2: #c4b89e;
-      --ink3: #8e836e;
+      --ink3: #b4a68b;
       --rule: #bfb08f;
       --line: #51493c;
       --meter: #3a342b;
@@ -79,14 +80,14 @@
     }
     .strip .mast {
       font-family: var(--serif);
-      font-weight: 900;
+      font-weight: 700;
       font-size: calc(17px * var(--fz));
       letter-spacing: 0.12em;
       white-space: nowrap;
     }
     .strip .date,
     .strip .cnt {
-      font-size: calc(11.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
       white-space: nowrap;
     }
@@ -99,7 +100,7 @@
       margin-top: 7px;
       padding-top: 7px;
       border-top: 1px solid var(--line);
-      font-family: var(--serif);
+      font-family: var(--sans);
       font-weight: 700;
       font-size: calc(15px * var(--fz));
       line-height: 1.5;
@@ -110,12 +111,12 @@
       left: -7px;
       background: var(--red);
       color: #fff4e0;
-      font-family: var(--serif);
-      font-weight: 900;
+      font-family: var(--sans);
+      font-weight: 700;
       font-size: 12px;
       padding: 1px 7px;
       transform: rotate(-8deg);
-      letter-spacing: 0.2em;
+      letter-spacing: 0.08em;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
     .nb.dark .extra {
@@ -149,7 +150,7 @@
       min-width: 38px;
       text-align: center;
       color: var(--ink3);
-      font-size: calc(11px * var(--fz));
+      font-size: calc(12px * var(--fz));
     }
     .ctl .sep {
       width: 1px;
@@ -159,13 +160,18 @@
     }
     .nb.quiet:not(.open) .strip {
       background: #2a2621;
-      color: #8d8472;
+      color: #c8bca5;
       box-shadow: none;
       border: 1px solid #3a342c;
     }
+    .nb.quiet:not(.open) .strip .date,
+    .nb.quiet:not(.open) .strip .cnt,
+    .nb.quiet:not(.open) .ctl .v {
+      color: #c8bca5;
+    }
     .nb.quiet:not(.open) .strip .mast {
       font-size: calc(14px * var(--fz));
-      color: #a39883;
+      color: #e6dcc6;
     }
     .nb.quiet .strip .hl {
       order: 0;
@@ -180,13 +186,13 @@
       font-size: calc(13px * var(--fz));
     }
     .nb.quiet:not(.open) .strip .hl {
-      color: #8d8472;
+      color: #c8bca5;
       border-color: #3a342c;
     }
     .nb.quiet:not(.open) .ctl .b,
     .nb.quiet:not(.open) .toggle {
       border-color: #5a5246;
-      color: #8d8472;
+      color: #c8bca5;
     }
     /* ---------- open: index on the left, the paper on the right ---------- */
     .board {
@@ -219,12 +225,12 @@
       border-bottom: 1px solid var(--deskline);
     }
     .index .ih b {
-      font-family: var(--serif);
+      font-family: var(--sans);
       font-size: calc(15px * var(--fz));
-      letter-spacing: 0.2em;
+      letter-spacing: 0.08em;
     }
     .index .ih div {
-      font-size: calc(11px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--desktx2);
       margin-top: 3px;
     }
@@ -233,8 +239,8 @@
     }
     .grp h6 {
       margin: 0 12px 4px;
-      font-size: calc(10.5px * var(--fz));
-      letter-spacing: 0.18em;
+      font-size: calc(12px * var(--fz));
+      letter-spacing: 0.08em;
       color: var(--desktx2);
       font-weight: 400;
     }
@@ -256,7 +262,7 @@
     }
     .it small {
       display: block;
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--desktx2);
       margin-top: 1px;
     }
@@ -300,7 +306,7 @@
       background-image: var(--sheen);
       color: var(--ink);
       padding: 14px 18px 16px;
-      font-family: var(--serif);
+      font-family: var(--sans);
       scrollbar-color: var(--line) transparent;
     }
     .top,
@@ -310,7 +316,7 @@
       justify-content: space-between;
       gap: 8px;
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
     }
     .top {
@@ -318,11 +324,12 @@
       padding-bottom: 3px;
     }
     .masthead {
+      font-family: var(--serif);
       text-align: center;
-      font-weight: 900;
+      font-weight: 700;
       font-size: calc(34px * var(--fz));
-      letter-spacing: 0.3em;
-      text-indent: 0.3em;
+      letter-spacing: 0.12em;
+      text-indent: 0.12em;
       line-height: 1.15;
       padding: 6px 0 2px;
     }
@@ -335,7 +342,7 @@
     }
     .kicker {
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       letter-spacing: 0.14em;
       color: var(--red);
       font-weight: 700;
@@ -357,12 +364,12 @@
       font-size: calc(23px * var(--fz));
       line-height: 1.28;
       margin: 3px 0 5px;
-      font-weight: 900;
+      font-weight: 700;
     }
     .deck {
-      font-size: calc(13px * var(--fz));
+      font-size: calc(14px * var(--fz));
       color: var(--ink2);
-      line-height: 1.55;
+      line-height: 1.8;
       margin: 0 0 8px;
       padding-bottom: 7px;
       border-bottom: 1px solid var(--line);
@@ -371,9 +378,9 @@
       column-count: 2;
       column-gap: 14px;
       column-rule: 1px solid var(--line);
-      font-size: calc(12.5px * var(--fz));
-      line-height: 1.75;
-      text-align: justify;
+      font-size: calc(14px * var(--fz));
+      line-height: 1.8;
+      text-align: start;
     }
     .cols p {
       margin: 0 0 6px;
@@ -386,12 +393,12 @@
       float: left;
       font-size: calc(34px * var(--fz));
       line-height: 1;
-      font-weight: 900;
+      font-weight: 700;
       margin: 3px 5px 0 0;
     }
     .by {
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
       margin-top: 4px;
     }
@@ -409,8 +416,8 @@
     }
     .more-news p {
       margin: 0;
-      font-size: calc(12.5px * var(--fz));
-      line-height: 1.7;
+      font-size: calc(14px * var(--fz));
+      line-height: 1.8;
     }
     .slips {
       display: grid;
@@ -447,8 +454,8 @@
       border: 2px solid var(--red);
       color: var(--red);
       font-family: var(--sans);
-      font-weight: 900;
-      font-size: 11px;
+      font-weight: 700;
+      font-size: calc(12px * var(--fz));
       padding: 1px 5px;
       transform: rotate(-12deg);
       letter-spacing: 0.1em;
@@ -459,8 +466,8 @@
       line-height: 1.35;
     }
     .slip p {
-      font-size: calc(12px * var(--fz));
-      line-height: 1.7;
+      font-size: calc(14px * var(--fz));
+      line-height: 1.8;
       margin: 0 0 6px;
       color: var(--ink2);
     }
@@ -490,14 +497,14 @@
     }
     summary .t {
       font-family: var(--sans);
-      font-weight: 900;
+      font-weight: 700;
       font-size: calc(12px * var(--fz));
-      letter-spacing: 0.3em;
+      letter-spacing: 0.12em;
       white-space: nowrap;
     }
     summary .n {
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
       white-space: nowrap;
     }
@@ -506,7 +513,7 @@
     }
     summary .car {
       font-family: var(--sans);
-      font-size: calc(11px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink2);
       border: 1px solid var(--line);
       border-radius: 3px;
@@ -534,7 +541,7 @@
     .serial h2 {
       font-size: calc(16px * var(--fz));
       margin: 2px 0 4px;
-      font-weight: 900;
+      font-weight: 700;
       display: flex;
       justify-content: space-between;
       align-items: baseline;
@@ -543,7 +550,7 @@
     .serial h2 em {
       font-style: normal;
       font-family: var(--sans);
-      font-size: calc(11px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink2);
       font-weight: 700;
       white-space: nowrap;
@@ -566,8 +573,8 @@
       background: repeating-linear-gradient(45deg, var(--ink) 0 2px, var(--meter) 2px 4px);
     }
     .sum {
-      font-size: calc(12px * var(--fz));
-      line-height: 1.65;
+      font-size: calc(14px * var(--fz));
+      line-height: 1.8;
       color: var(--ink2);
       margin: 0 0 5px;
     }
@@ -579,8 +586,8 @@
       list-style: none;
       margin: 0;
       padding: 0;
-      font-size: calc(12px * var(--fz));
-      line-height: 1.55;
+      font-size: calc(14px * var(--fz));
+      line-height: 1.8;
     }
     .steps li {
       display: flex;
@@ -615,12 +622,12 @@
     }
     .steps .planned {
       color: var(--ink3);
-      font-style: italic;
+      font-style: normal;
     }
     .steps .w {
       margin-left: auto;
       font-family: var(--sans);
-      font-size: calc(10px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
       white-space: nowrap;
       font-style: normal;
@@ -629,12 +636,12 @@
       margin-top: 6px;
       background: var(--paper2);
       padding: 6px 8px;
-      font-size: calc(11.5px * var(--fz));
-      line-height: 1.6;
+      font-size: calc(14px * var(--fz));
+      line-height: 1.8;
     }
     .ways b {
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       letter-spacing: 0.12em;
       color: var(--ink2);
       display: block;
@@ -657,13 +664,13 @@
     }
     .bd b {
       font-size: calc(15px * var(--fz));
-      font-weight: 900;
+      font-weight: 700;
       letter-spacing: 0.12em;
     }
     .bd i {
       font-style: normal;
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
     }
     .fresh {
@@ -678,18 +685,18 @@
       gap: 10px 14px;
     }
     .nw {
-      font-size: calc(12px * var(--fz));
-      line-height: 1.72;
-      text-align: justify;
+      font-size: calc(14px * var(--fz));
+      line-height: 1.8;
+      text-align: start;
     }
     .fresh .nw {
-      font-size: calc(13.5px * var(--fz));
+      font-size: calc(15px * var(--fz));
       line-height: 1.8;
     }
     .nw h4 {
       margin: 0 0 2px;
-      font-size: calc(13.5px * var(--fz));
-      font-weight: 900;
+      font-size: calc(15px * var(--fz));
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -704,7 +711,7 @@
     .nw time {
       display: block;
       font-family: var(--sans);
-      font-size: calc(10px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
       margin: -1px 0 3px;
       font-style: normal;
@@ -716,14 +723,14 @@
     .src {
       display: block;
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       letter-spacing: 0.12em;
       font-weight: 700;
       font-style: normal;
     }
     .tag {
       font-family: var(--sans);
-      font-size: calc(10px * var(--fz));
+      font-size: calc(12px * var(--fz));
       font-weight: 700;
       padding: 0 5px;
       border-radius: 2px;
@@ -739,7 +746,7 @@
       color: #1f1c17;
     }
     .nw.old {
-      color: var(--ink3);
+      color: var(--ink2);
     }
     .nw.old h4 {
       color: var(--ink2);
@@ -761,7 +768,7 @@
     }
     .nw .more {
       font-family: var(--sans);
-      font-size: calc(10.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink3);
       cursor: pointer;
     }
@@ -789,7 +796,7 @@
     }
     .news .nw.ads h4 {
       justify-content: center;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.08em;
       border-bottom: 1px solid var(--line);
       padding-bottom: 2px;
       margin-bottom: 4px;
@@ -797,7 +804,7 @@
     .nw.tea {
       padding: 4px 0 4px 10px;
       border-left: 1px dotted var(--line);
-      font-style: italic;
+      font-style: normal;
     }
     .nw.tea h4 {
       font-style: normal;
@@ -811,7 +818,7 @@
       gap: 10px;
       margin: 14px 0 4px;
       font-family: var(--sans);
-      font-size: calc(11.5px * var(--fz));
+      font-size: calc(12px * var(--fz));
       color: var(--ink2);
     }
     .oldhead::after {
@@ -820,8 +827,8 @@
       border-top: 1px dashed var(--line);
     }
     .oldhead .t {
-      font-weight: 900;
-      letter-spacing: 0.2em;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       color: var(--ink);
     }
     .sw {
@@ -859,7 +866,7 @@
       display: none;
     }
     .none {
-      font-size: calc(12px * var(--fz));
+      font-size: calc(14px * var(--fz));
       color: var(--ink3);
       padding: 4px 0 8px;
     }
