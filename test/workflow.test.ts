@@ -140,7 +140,7 @@ test('格式失敗重試後才提交，取消逾時請求也不寫入提案', as
   controller.dispose();
 });
 
-test('主連線失敗才使用設定中的備援，排隊任務可立即取消', async () => {
+test('主連線失敗使用備援，不同任務可並行且可個別取消', async () => {
   const platform = new ControlledPlatform();
   platform.outputs.push(async () => {
     throw new Error('API unavailable');
@@ -160,22 +160,30 @@ test('主連線失敗才使用設定中的備援，排隊任務可立即取消',
   });
   controller.config.jobs.update.fallback = ['備援'];
   controller.config.jobs.update.retries = 0;
-  await controller.initialize();
-  await controller.run('update');
-  assert.equal(controller.jobs[0].state, 'success');
-  assert.equal(platform.requests, 2);
-  platform.outputs.push(() => new Promise(() => {}));
-  const active = controller.run('update');
-  await tick();
-  const queued = controller.run('reshape');
-  await tick();
-  assert.equal(controller.jobs[0].state, 'queued');
-  controller.cancel(controller.jobs[0].id);
-  await queued;
-  assert.equal(controller.jobs[0].state, 'cancelled');
-  controller.cancelAll();
-  await active;
-  controller.dispose();
+  controller.config.sources.maxInputCharacters = 200000;
+  try {
+    await controller.initialize();
+    await controller.run('update');
+    assert.equal(controller.jobs[0].state, 'success');
+    assert.equal(platform.requests, 2);
+    platform.outputs.push(
+      () => new Promise(() => {}),
+      () => new Promise(() => {}),
+    );
+    const active = controller.run('update');
+    await tick();
+    const parallel = controller.run('reshape');
+    await tick();
+    assert.equal(controller.jobs[0].state, 'running');
+    assert.equal(platform.requests, 4, '更新及改樹請求可同時執行');
+    controller.cancel(controller.jobs[0].id);
+    await parallel;
+    assert.equal(controller.jobs[0].state, 'cancelled');
+    controller.cancelAll();
+    await active;
+  } finally {
+    controller.dispose();
+  }
 });
 
 test('卸載後清除尚未處理的新樓通知，不讓舊腳本再次呼叫 API', async () => {
@@ -295,7 +303,7 @@ test('背景生成期間的玩家操作保留，回應套用到最新國策而�
   }
 });
 
-test('並行任務回應依序保存，後一筆保留先前已保存的結果', async () => {
+test('舊總並行上限被忽略，不同任務並行後依序保存且保留所有結果', async () => {
   const platform = new ControlledPlatform();
   const releases: ((value: string) => void)[] = [];
   platform.outputs.push(
@@ -313,8 +321,10 @@ test('並行任務回應依序保存，後一筆保留先前已保存的結果',
     await tick();
     await commit(snapshot, state);
   };
+  const config = platform.loadConfig();
+  platform.loadConfig = () => ({ ...config, concurrency: 1 });
   const controller = new FocusController(platform);
-  controller.config.concurrency = 2;
+  assert.equal(Object.hasOwn(controller.config, 'concurrency'), false);
   controller.config.sources.maxInputCharacters = 200000;
   try {
     const first = controller.run('update');

@@ -35,7 +35,7 @@ await writeFile(join(output, 'THIRD_PARTY_NOTICES.txt'), notices.join('\n\n'), '
 const exported = {
   type: 'script',
   enabled: true,
-  name: '【命定之詩】國策檔案 v0.14.9 骨架版',
+  name: '【命定之詩】國策檔案 v0.14.10 骨架版',
   id: '3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13',
   content: script,
   info: '正文完成後於背景演化的國策樹。需酒館助手與 MVU。從懸浮球開啟；請先設定可靠故事時間欄位與 API。',

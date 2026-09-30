@@ -1983,3 +1983,10 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - 每條路由保留 primaryMaxConcurrency／fallbackMaxConcurrencies：0 不限，主要滿載可用備援，總量可能超過主要上限。不是把路由數字當所有連線的合計上限。
 - 等待路由額度時顯示 queued，取得後顯示 running；既有取消信號移除排隊並釋放額度。同國同類任務去重、序列保存到最新狀態照舊，多國互不覆蓋。
 - 只更新主腳本，正則及 MVU 資料格式不變；160 項測試與待人工驗收步驟見 VALIDATION.md。
+
+
+## 60. v0.14.10：移除一般頁總任務數與排隊限制（2026-09-30）
+
+- 使用者要求刪除第 59 節留下的「其他任務同時執行數」。ConfigSchema／defaultConfig 移除 concurrency，UI 刪除欄位及草稿賦值，草稿的設定頁存在判斷改用仍保留的 runLog 欄位，避免移除欄位後其他設定不能保存。
+- FocusController 移除 active、waiters 及總量取得／歸還空位流程；所有任務依既有各任務 RoutePool 管理請求。舊 concurrency 值不生效，下次設定保存移除。
+- 不改同類任務去重、取消、序列寫入與自動排程的步驟順序；路由額度不是跨任務共用的合計上限。更新主腳本即可，報紙正則不變；驗證見 VALIDATION.md。

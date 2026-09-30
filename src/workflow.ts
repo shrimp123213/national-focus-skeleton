@@ -47,10 +47,8 @@ export class FocusController {
   private progress = new Map<string, SkeletonProgress>();
   private listeners = new Set<() => void>();
   private aborters = new Map<string, AbortController>();
-  private active = 0;
   private runEpoch = 0;
   private writes: Promise<unknown> = Promise.resolve();
-  private waiters: (() => void)[] = [];
   private automatic: Promise<void> | null = null;
   private pendingReady = false;
   private disposed = false;
@@ -293,7 +291,7 @@ export class FocusController {
       id,
       kind,
       state: 'queued',
-      message: '等待任務空位',
+      message: '準備任務',
       time: new Date().toLocaleTimeString(),
       ...(candidate ? { label: candidate.name, candidate } : {}),
       ...(periodWork ? { periodWork, label: `${candidate?.name} · 換期` } : {}),
@@ -302,31 +300,11 @@ export class FocusController {
     this.jobs = this.jobs.slice(0, 40);
     this.aborters.set(id, aborter);
     this.notify();
-    let acquired = false;
     let sourceSignal: AbortSignal | undefined;
     const cancelSource = () => aborter.abort();
     const periods: { candidate: Candidate; work: PeriodWork }[] = [];
     try {
-      while (kind !== 'generate' && this.active >= this.config.concurrency) {
-        await new Promise<void>((resolve, reject) => {
-          const wake = () => {
-            aborter.signal.removeEventListener('abort', cancel);
-            resolve();
-          };
-          const cancel = () => {
-            this.waiters = this.waiters.filter((waiter) => waiter !== wake);
-            reject(new Error('任務已取消'));
-          };
-          aborter.signal.addEventListener('abort', cancel, { once: true });
-          this.waiters.push(wake);
-        });
-      }
       aborter.signal.throwIfAborted();
-      // Country generation is governed only by the generation task's per-route request caps.
-      if (kind !== 'generate') {
-        this.active++;
-        acquired = true;
-      }
       status.state = 'running';
       status.started = Date.now();
       status.message = '正在分析本樓資料';
@@ -495,10 +473,6 @@ export class FocusController {
     } finally {
       sourceSignal?.removeEventListener('abort', cancelSource);
       status.finished = Date.now();
-      if (acquired) {
-        this.active--;
-        this.waiters.shift()?.();
-      }
       this.aborters.delete(id);
       this.notify();
     }

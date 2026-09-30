@@ -1244,7 +1244,7 @@ export function mountUI(
           ['long', '長期'],
         ],
         state?.settings.pace ?? 'standard',
-      )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">其他任務同時執行數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>限制辨識國家、更新局勢與評估改樹。生成及換期只由「任務 › 生成國策樹 › 此連線同時請求數」限制。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在當前角色的主世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未設定角色主世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
+      )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在當前角色的主世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未設定角色主世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
       <div class="settings-section" ${settingsTab !== 'apis' ? 'hidden' : ''}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'jobs' ? 'hidden' : ''}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'sources' ? 'hidden' : ''}><div id="source-panel"></div></div>`,
@@ -1305,11 +1305,9 @@ export function mountUI(
     backdrop.querySelector('.modal-body')?.scrollTo(0, 0);
   }
   function readSettingsDraft(): void {
-    const configInput = backdrop.querySelector<HTMLInputElement>('[data-config="concurrency"]');
-    if (!configInput) {
+    if (!backdrop.querySelector('[data-config="runLog"]')) {
       return;
     }
-    draft.concurrency = Number(configInput.value);
     draft.runLog =
       backdrop.querySelector<HTMLInputElement>('[data-config="runLog"]')?.checked ?? draft.runLog;
     draft.newsPrompt =

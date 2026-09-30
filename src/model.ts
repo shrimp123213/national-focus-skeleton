@@ -592,7 +592,6 @@ export const ConfigSchema = z.object({
   apis: z.array(ApiSchema).min(1),
   defaultApi: z.string().default(''),
   apiBindings: z.record(z.string(), z.string()).default({}),
-  concurrency: z.number().int().min(1).max(4),
   /** Keep recent request messages and model output in memory for debugging. */
   runLog: z.boolean().default(false),
   /** Add the recent-news digest to the story prompt. */
@@ -629,7 +628,6 @@ export function defaultConfig(): Config {
   return ConfigSchema.parse({
     apis: [{ name: '目前連線', url: '', model: '', proxy: '' }],
     defaultApi: '目前連線',
-    concurrency: 1,
     jobs: {
       identify: { ...job },
       generate: { ...job, timeout: 600 },

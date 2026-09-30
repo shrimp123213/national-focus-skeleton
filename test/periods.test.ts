@@ -453,10 +453,9 @@ async function waitForRequests(check: () => boolean): Promise<void> {
 }
 
 for (const cap of [1, 2, 0]) {
-  test(`多國初次生成依連線上限 ${cap} 並行，忽略一般上限並保留所有結果`, async () => {
+  test(`多國初次生成依連線上限 ${cap} 並行並保留所有結果`, async () => {
     const platform = new PeriodPlatform();
     const controller = controllerFor(platform);
-    controller.config.concurrency = 1;
     controller.config.jobs.generate.primaryMaxConcurrency = cap;
     const candidates = [0, 1, 2].map((i) => ({
       id: `new_${i}`,
@@ -482,7 +481,7 @@ for (const cap of [1, 2, 0]) {
       await waitForRequests(() => platform.calls === expected);
       await new Promise((resolve) => setTimeout(resolve, 10));
       assert.equal(platform.calls, expected, '額度滿時其餘國家不得呼叫 API');
-      assert.equal(peak, expected, '一般任務數 1 不得限制多國生成');
+      assert.equal(peak, expected, '依生成任務的連線額度啟動');
       releases[0]();
       for (let i = 1; i < candidates.length; i++) {
         await waitForRequests(() => releases.length > i);
@@ -571,7 +570,6 @@ test('多國換期共用生成連線額度並保存各國新期', async () => {
     name: '鄰國',
   };
   const controller = controllerFor(platform);
-  controller.config.concurrency = 1;
   controller.config.jobs.generate.primaryMaxConcurrency = 2;
   const releases: (() => void)[] = [];
   platform.outputs.push(async () =>
