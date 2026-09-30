@@ -1,4 +1,5 @@
 import { installCountry } from './engine';
+import { normalizeBranchReferences } from './branch-references';
 import { assertReachable, assertCapabilityOrder, assertMutexChoices } from './reachability';
 import { z } from 'zod';
 import {
@@ -229,7 +230,7 @@ export function validateTree(
   const size = snapshot.state.settings.size;
   const [min, max] = sizeLimits[size];
   {
-    const raw = normalizeGenerated(reply);
+    const raw = normalizeGenerated(normalizeBranchReferences(reply));
     requireThat(raw.id === candidate.id, '生成的國家 ID 與選取國家不一致');
     requireThat(
       raw.nodes.length >= 1 && raw.nodes.length <= max,
@@ -243,11 +244,12 @@ export function validateTree(
         '分支 ID 與名稱不可重複',
       );
     }
-    requireThat(
-      raw.nodes.every((n) => raw.branches.some((b) => b.name === n.branch)) &&
-        raw.branches.every((b) => raw.nodes.some((n) => n.branch === b.name)),
-      '節點分支須存在，每個分支須有國策',
-    );
+    for (const branch of raw.branches) {
+      requireThat(
+        raw.nodes.some((node) => node.branch === branch.name),
+        `分支「${branch.name}」沒有任何國策`,
+      );
+    }
     assertTurningPoints(
       raw.nodes,
       raw.branches.map((b) => b.name),
@@ -292,7 +294,7 @@ export async function generateCountry(
         return ask('generate', plan.data, plan.schema, plan.validate, '單次生成完整國策樹');
       })()
     : await generateBySkeleton(snapshot, candidate, ask, progress, segmentMax, retries);
-  const normalized = normalizeGenerated(raw);
+  const normalized = normalizeGenerated(normalizeBranchReferences(raw));
   return TreeSchema.parse({ ...normalized, nodes: layoutTree(normalized.nodes) });
 }
 /** Story days without progress after which an ongoing event is flagged for review. */

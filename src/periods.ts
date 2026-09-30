@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeBranchReferences } from './branch-references';
 import { installCountry, validateGraph } from './engine';
 import { GeneratedTreeSchema, validateTopology } from './generation';
 import { layoutTree } from './layout';
@@ -46,7 +47,7 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   const anchor = periodAnchor(old, transition.invalidateActive);
   const number = old.period.number + 1;
   const prefix = `p${number}_`;
-  const generated = reply.tree;
+  const generated = normalizeBranchReferences(reply.tree);
   if (generated.id !== old.id) {
     throw new Error('下一期國家 ID 不一致');
   }

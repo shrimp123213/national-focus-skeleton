@@ -39,7 +39,7 @@ export const NodeSchema = z
   .object({
     id: Id,
     name: Text,
-    branch: Text,
+    branch: Text.describe('所屬分支的 name，須逐字對應 branches[].name；不要填分支 ID'),
     description: Text,
     reason: Text,
     icon: z.enum(['crown', 'industry', 'army', 'trade', 'science', 'diplomacy']),

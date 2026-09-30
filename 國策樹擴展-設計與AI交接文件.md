@@ -1938,3 +1938,12 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - 使用者附件是 MVU 載入腳本，指向 MagicalAstrogy/MagVarUpdate 的 artifact/bundle.js。核對上游 commit `b13b43bac24d585f2b523c12e423bb803fa9dd7c`：`BEFORE_MESSAGE_UPDATE` 在保存前發出；「重新處理變量」經 handleVariablesInMessage 保存後以 refresh: affected 刷新樓層；「重新读取初始变量」保存後呼叫 setChatMessage。附件採浮動網址，使用者快取中的實際版本未驗證。
 - 不新增展開讀取、通用變量攔截或第三方工作流通知。沒有通知且沒有刷新樓層的外部寫入不保證同步；MVU 的手動重新處理可重建樓層卡片。不新增 AI 請求，維持既有閱讀狀態保留機制。
 - 更新腳本與卡片正則，重新載入聊天；其他正則、資料格式與任務預設不變。驗證及待人工驗收項目見 VALIDATION.md。
+
+
+## 55. v0.14.5：生成分支引用相容與 UI 決定（2026-09-30）
+
+- 使用者選擇保留原版 UI，docs/polish-preview 僅作獨立樣品，不納入正式介面。
+- 實際生成回應的 nodes[].branch 填入 branches[].id，既有驗證只比 name，造成 13 個節點皆有分支仍被判定缺少分支。新增 normalizeBranchReferences，首次生成的驗證與提交、換期套用都先轉成名稱；維持存檔、布局、UI 的既有名稱契約，不掃描舊存檔。
+- 僅接受完全相符且唯一的 id 或 name。找不到、對應多個分支都報具體錯誤，不猜測、不補建或刪掉分支；原有重複 ID／名稱及其他圖形、能力檢查保留。首次生成的空分支錯誤改帶分支名稱。
+- NodeSchema.branch 說明明確要求模型輸出 branches[].name；既有使用者提示詞不覆寫。這是本機資料格式相容，不增加修復請求或 AI 呼叫。手製樹匯入仍依既有名稱格式，這次附的修正版已先轉換名稱。
+- 回歸與使用者資料本機重播通過；僅需更新腳本，報紙正則、任務預設及資料版本不变。詳見 VALIDATION.md。

@@ -20450,7 +20450,7 @@ ${DATA_TOKEN}`;
   var NodeSchema = external_exports.object({
     id: Id,
     name: Text,
-    branch: Text,
+    branch: Text.describe("所屬分支的 name，須逐字對應 branches[].name；不要填分支 ID"),
     description: Text,
     reason: Text,
     icon: external_exports.enum(["crown", "industry", "army", "trade", "science", "diplomacy"]),
@@ -22802,6 +22802,23 @@ ${managed}
     }
   };
 
+  // src/branch-references.ts
+  function normalizeBranchReferences(tree) {
+    const nodes = tree.nodes.map((node2) => {
+      const matches = tree.branches.filter(
+        (branch) => branch.name === node2.branch || branch.id === node2.branch
+      );
+      if (!matches.length) {
+        throw new Error(`國策「${node2.id}」引用不存在的分支「${node2.branch}」，請使用 branches 中的名稱或 ID`);
+      }
+      if (matches.length > 1) {
+        throw new Error(`國策「${node2.id}」的分支「${node2.branch}」對應多個分支，請使用唯一名稱或 ID`);
+      }
+      return { ...node2, branch: matches[0].name };
+    });
+    return { ...tree, nodes };
+  }
+
   // src/reachability.ts
   function solver(nodes, capabilitySources = /* @__PURE__ */ new Map()) {
     const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -24402,7 +24419,7 @@ ${formatIssues(checked2.problems)}`
     const size = snapshot.state.settings.size;
     const [min, max] = sizeLimits[size];
     {
-      const raw = normalizeGenerated(reply);
+      const raw = normalizeGenerated(normalizeBranchReferences(reply));
       requireThat3(raw.id === candidate.id, "生成的國家 ID 與選取國家不一致");
       requireThat3(
         raw.nodes.length >= 1 && raw.nodes.length <= max,
@@ -24414,10 +24431,12 @@ ${formatIssues(checked2.problems)}`
           "分支 ID 與名稱不可重複"
         );
       }
-      requireThat3(
-        raw.nodes.every((n) => raw.branches.some((b) => b.name === n.branch)) && raw.branches.every((b) => raw.nodes.some((n) => n.branch === b.name)),
-        "節點分支須存在，每個分支須有國策"
-      );
+      for (const branch of raw.branches) {
+        requireThat3(
+          raw.nodes.some((node2) => node2.branch === branch.name),
+          `分支「${branch.name}」沒有任何國策`
+        );
+      }
       assertTurningPoints(
         raw.nodes,
         raw.branches.map((b) => b.name)
@@ -24446,7 +24465,7 @@ ${formatIssues(checked2.problems)}`
       const plan = generationPlan(snapshot, candidate);
       return ask("generate", plan.data, plan.schema, plan.validate, "單次生成完整國策樹");
     })() : await generateBySkeleton(snapshot, candidate, ask, progress, segmentMax, retries);
-    const normalized = normalizeGenerated(raw);
+    const normalized = normalizeGenerated(normalizeBranchReferences(raw));
     return TreeSchema.parse({ ...normalized, nodes: layoutTree(normalized.nodes) });
   }
   var staleEventDays = 120;
@@ -24569,7 +24588,7 @@ ${formatIssues(checked2.problems)}`
     const anchor2 = periodAnchor(old, transition.invalidateActive);
     const number4 = old.period.number + 1;
     const prefix = `p${number4}_`;
-    const generated = reply.tree;
+    const generated = normalizeBranchReferences(reply.tree);
     if (generated.id !== old.id) {
       throw new Error("下一期國家 ID 不一致");
     }

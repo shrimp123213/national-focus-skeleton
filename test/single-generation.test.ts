@@ -203,6 +203,78 @@ test('每國僅一次 API 取得完整樹，完整來源同時送入並於本機
   assert.deepEqual(loaded.countries.testland.progress, country.progress);
 });
 
+test('生成回覆使用分支 ID 或混合名稱時，本機轉換後一次請求即可保存完整樹', async () => {
+  for (const mixed of [false, true]) {
+    const platform = new SingleCountryPlatform();
+    const generate = platform.generate.bind(platform);
+    let response: Record<string, any>;
+    platform.generate = async (messages) => {
+      const result = await generate(messages);
+      response = JSON.parse(result.content);
+      response.nodes.forEach((node: Record<string, any>, index: number) => {
+        if (!mixed || index % 2 === 0) {
+          node.branch = response.branches.find(
+            (branch: Record<string, any>) => branch.name === node.branch,
+          ).id;
+        }
+      });
+      return { content: JSON.stringify(response) };
+    };
+    const controller = new FocusController(platform);
+    try {
+      await controller.run('generate', candidate);
+      assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+      assert.equal(platform.calls.length, 1);
+      assert.equal(platform.commits, 1);
+      const country = platform.state.countries.testland;
+      assert.equal(Object.keys(country.nodes).length, 15);
+      for (const node of Object.values(country.nodes)) {
+        const source = response!.nodes.find((item: Record<string, any>) => item.id === node.id);
+        assert.equal(node.branch, `分支${node.id[1]}`);
+        assert.deepEqual(node.effects, source.effects);
+        assert.deepEqual(node.prerequisites, source.prerequisites);
+      }
+    } finally {
+      controller.dispose();
+    }
+  }
+});
+
+test('不存在、空白或歧義分支仍拒絕保存，錯誤指出具體分支', async () => {
+  const cases = [
+    { kind: 'missing', expected: /b0_0.*不存在.*missing_branch/ },
+    { kind: 'empty', expected: /分支「空分支」沒有任何國策/ },
+    { kind: 'ambiguous', expected: /b0_0.*b0.*多個分支/ },
+  ];
+  for (const item of cases) {
+    const platform = new SingleCountryPlatform();
+    const generate = platform.generate.bind(platform);
+    platform.generate = async (messages) => {
+      const result = await generate(messages);
+      const response = JSON.parse(result.content);
+      if (item.kind === 'missing') {
+        response.nodes[0].branch = 'missing_branch';
+      } else if (item.kind === 'empty') {
+        response.branches.push({ ...response.branches[0], id: 'empty', name: '空分支' });
+      } else {
+        response.branches[1].name = 'b0';
+        response.nodes[0].branch = 'b0';
+      }
+      return { content: JSON.stringify(response) };
+    };
+    const controller = new FocusController(platform);
+    try {
+      await controller.run('generate', candidate);
+      assert.equal(controller.jobs[0].state, 'failed');
+      assert.match(controller.jobs[0].message, item.expected);
+      assert.equal(platform.commits, 0);
+      assert.equal(platform.calls.length, 1);
+    } finally {
+      controller.dispose();
+    }
+  }
+});
+
 test('歷史國策不重新要求當年的能力，也不重發歷史效果', async () => {
   const platform = new SingleCountryPlatform();
   platform.historical = true;

@@ -120,6 +120,18 @@ test('換期承接 active 的 ID、投入、工期與效果帳本；往期只存
   assert.equal(before.countries.land.period.number, 1);
 });
 
+test('換期回覆接受分支 ID，保存名稱並保留原承接國策，不改寫輸入', () => {
+  const state = fixture();
+  const next = reply();
+  next.tree.nodes[0].branch = 'agenda';
+  const original = structuredClone(next);
+  const after = transitionPeriod(state, transition, next);
+  assert.equal(after.countries.land.nodes.p2_new.branch, '國家議程');
+  assert.equal(after.countries.land.nodes.old_active.branch, '國家議程');
+  assert.equal(after.countries.land.branches.length, 1);
+  assert.deepEqual(next, original);
+});
+
 test('paused、waiting 與失效 active 改承接最新完成；無完成節點則新建起點', () => {
   for (const status of ['paused', 'waiting'] as const) {
     const state = fixture();
