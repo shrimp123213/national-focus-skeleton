@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TavernPlatform, type TavernApi } from '../src/tavern';
-import { defaultConfig } from '../src/model';
+import { ConfigSchema, defaultConfig } from '../src/model';
 import { demoState } from '../src/demo';
 import { storyDay } from '../src/platform';
 import { applyDeepSeek } from '../src/api-config';
@@ -670,7 +670,7 @@ test('提交新新聞時標記所在樓層並在正文末尾加標籤；標籤�
   }
 });
 
-test('有提示詞模板擴展時，國策以聊天世界書條目讀取樓層變量；舊樓層與注入模式改用注入', async () => {
+test('有提示詞模板擴展時，國策以角色主世界書條目讀取樓層變量；舊樓層與注入模式改用注入', async () => {
   const env = environment();
   let book: any[] = [];
   let created = 0;
@@ -678,7 +678,8 @@ test('有提示詞模板擴展時，國策以聊天世界書條目讀取樓層�
   let injected = '';
   Object.assign(env.api, {
     EjsTemplate: {},
-    getChatWorldbookName: () => 'chat-book',
+    getChatWorldbookName: () => 'unused-chat-book',
+    getCharWorldbookNames: () => ({ primary: 'chat-book', additional: [] }),
     getOrCreateChatWorldbook: async () => {
       created++;
       return 'chat-book';
@@ -743,7 +744,11 @@ function bookEnvironment() {
   let chat = () => env.api.SillyTavern.getCurrentChatId();
   Object.assign(env.api, {
     EjsTemplate: {},
-    getChatWorldbookName: () => (books.has(`book-${chat()}`) ? `book-${chat()}` : null),
+    getChatWorldbookName: () => 'separate-chat-book',
+    getCharWorldbookNames: () => ({
+      primary: books.has(`book-${chat()}`) ? `book-${chat()}` : null,
+      additional: [],
+    }),
     getOrCreateChatWorldbook: async () => {
       const name = `book-${chat()}`;
       if (!books.has(name)) {
@@ -777,12 +782,17 @@ function bookEnvironment() {
   return { env, books, state, settle, countries };
 }
 
-test('沒有聊天世界書時不建立新書，保留注入並提示選擇；可手動選既有書並清理前一目標', async () => {
+test('無角色主世界書時不使用聊天、附加或全域書；設定主書後寫入並清理本次追蹤的前一目標', async () => {
   const { env, books, state, settle } = bookEnvironment();
   let creations = 0;
+  let primary: string | null = null;
+  const unrelated = { name: '原有設定', content: '保留', strategy: { type: 'constant', keys: [] } };
+  books.set('chat-only', [unrelated]);
+  books.set('additional-only', [unrelated]);
   Object.assign(env.api, {
-    getChatWorldbookName: () => null,
-    getGlobalWorldbookNames: () => ['manual-a', 'manual-b'],
+    getCharWorldbookNames: () => ({ primary, additional: ['additional-only'] }),
+    getChatWorldbookName: () => 'chat-only',
+    getGlobalWorldbookNames: () => ['chat-only'],
     getOrCreateChatWorldbook: async () => {
       creations++;
       return 'unexpected';
@@ -797,45 +807,49 @@ test('沒有聊天世界書時不建立新書，保留注入並提示選擇；�
     await settle();
     assert.equal(creations, 0);
     assert.match(state.injected, /各國動向/);
-    assert.match(state.warnings[0], /尚未綁定聊天世界書/);
-    const unrelated = { name: '原有設定', content: '保留', strategy: { type: 'constant', keys: [] } };
-    books.set('manual-a', [unrelated]);
-    books.set('manual-b', []);
-    const selected = { ...defaultConfig(), promptBookName: 'manual-a' };
-    env.platform.inject((await env.platform.read(selected)).state);
+    assert.match(state.warnings[0], /當前角色尚未設定主世界書/);
+    assert.deepEqual(books.get('chat-only'), [unrelated]);
+    assert.deepEqual(books.get('additional-only'), [unrelated]);
+    books.set('primary-a', [unrelated]);
+    books.set('primary-b', []);
+    primary = 'primary-a';
+    env.platform.inject((await env.platform.read(defaultConfig())).state);
     await settle();
     assert.equal(state.injected, '');
-    assert.ok(books.get('manual-a')!.some((e) => e.name === '國策檔案-世界概況'));
-    env.platform.inject((await env.platform.read({ ...selected, promptBookName: 'manual-b' })).state);
+    assert.ok(books.get('primary-a')!.some((e) => e.name === '國策檔案-世界概況'));
+    primary = 'primary-b';
+    env.platform.inject((await env.platform.read(defaultConfig())).state);
     await settle();
-    assert.deepEqual(books.get('manual-a'), [unrelated]);
-    assert.ok(books.get('manual-b')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.deepEqual(books.get('primary-a'), [unrelated]);
+    assert.ok(books.get('primary-b')!.some((e) => e.name === '國策檔案-世界概況'));
     assert.equal(creations, 0);
   } finally {
     env.platform.dispose();
   }
 });
 
-test('手動目標尚未啟用時可寫入條目，但保留直接注入以免正文缺少國策資料', async () => {
+test('舊手動世界書設定被忽略，只寫角色主書且保留其他書', async () => {
   const { env, books, state, settle } = bookEnvironment();
   try {
-    books.set('unbound', []);
-    const config = { ...defaultConfig(), promptBookName: 'unbound' };
+    books.set('old-manual', []);
+    const config = ConfigSchema.parse({ ...defaultConfig(), promptBookName: 'old-manual' });
+    assert.equal(Object.hasOwn(config, 'promptBookName'), false);
     const empty = await env.platform.read(config);
     env.getData().国策 = { ...demoState(), day: empty.day };
     const initial = await env.platform.read(config);
     await env.platform.commit(initial, initial.state);
     env.platform.inject((await env.platform.read(config)).state);
     await settle();
-    assert.ok(books.get('unbound')!.some((e) => e.name === '國策檔案-世界概況'));
-    assert.match(state.injected, /各國動向/);
-    assert.match(state.warnings[0], /未在本聊天啟用/);
+    assert.ok(books.get('book-chat-a')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.deepEqual(books.get('old-manual'), []);
+    assert.equal(state.injected, '');
+    assert.equal(state.warnings.length, 0);
   } finally {
     env.platform.dispose();
   }
 });
 
-test('聊天世界書同步失敗時保留直接注入並提示一次；之後成功才交給條目，不重複送出', async () => {
+test('角色主世界書同步失敗時保留直接注入並提示一次；之後成功才交給條目，不重複送出', async () => {
   const { env, books, state, settle } = bookEnvironment();
   try {
     const empty = await env.platform.read(defaultConfig());

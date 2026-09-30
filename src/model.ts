@@ -598,13 +598,11 @@ export const ConfigSchema = z.object({
   /** Add the recent-news digest to the story prompt. */
   newsPrompt: z.boolean().default(true),
   /**
-   * How the story model receives the country data: chat worldbook entries that read the floor's
+   * How the story model receives the country data: character primary worldbook entries that read the floor's
    * `国策.prompt` through ST-Prompt-Template (Workflow Assistant / addon-mvu style), or one injected
    * message. Without ST-Prompt-Template the worldbook mode falls back to injection.
    */
   promptMode: z.enum(['worldbook', 'inject']).default('worldbook'),
-  /** Empty uses the existing chat binding. A name selects an existing book, never creates one. */
-  promptBookName: z.string().trim().default(''),
   /** Country detail entries: always sent (blue, like the Workflow Assistant world state) or on keywords (green). */
   countryEntries: z.enum(['constant', 'keyword']).default('constant'),
   /** Workflow Assistant task presets: task settings and sources, without API routes. */

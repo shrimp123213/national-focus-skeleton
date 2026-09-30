@@ -1756,6 +1756,29 @@ code {
   color: var(--gold);
   margin-bottom: 12px;
 }
+.request-log > summary,
+.log-part > summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.request-log > .job-title {
+  margin-bottom: 0;
+}
+.request-log[open] > .job-title {
+  margin-bottom: 12px;
+}
+.log-part {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+.log-part > summary {
+  color: var(--text);
+  font-size: 13px;
+}
+.log-part .field {
+  margin-top: 10px;
+}
 .candidate {
   display: flex;
   gap: 12px;

@@ -888,7 +888,7 @@ export class TavernPlatform implements Platform {
     );
   }
   /**
-   * Keep this script's chat worldbook entries in line with the countries on this floor, then hand
+   * Keep this script's character primary worldbook entries in line with the countries on this floor, then hand
    * the prompt over from injection to the entries. The job is bound to the chat and floor it was
    * queued for and checks that again after every wait. A chat without countries never gets a
    * worldbook; injection mode removes the entries this script made before.
@@ -904,11 +904,9 @@ export class TavernPlatform implements Platform {
           return;
         }
         const wanted = view ? bookEntries(view, this.config?.countryEntries !== 'keyword') : [];
-        const name = this.config?.promptBookName || api.getChatWorldbookName?.('current') || null;
+        const name = api.getCharWorldbookNames('current').primary?.trim() || null;
         if (!name && wanted.length) {
-          throw new Error(
-            '尚未綁定聊天世界書。請先綁定，或到「設定 › 一般 › 寫入世界書」選擇既有世界書；不會自動建立新書。',
-          );
+          throw new Error('當前角色尚未設定主世界書。請在酒館的角色設定中綁定主世界書；不會自動建立新書。');
         }
         const previous = this.writtenBook?.chat === source.chat ? this.writtenBook.name : null;
         if (previous && previous !== name) {
@@ -934,7 +932,7 @@ export class TavernPlatform implements Platform {
         }
         if (reconcileBook(current, wanted) !== null) {
           await api.updateWorldbookWith(name, (entries) => reconcileBook(entries, wanted) ?? entries);
-          console.info('[國策檔案] 已更新聊天世界書條目', name);
+          console.info('[國策檔案] 已更新角色主世界書條目', name);
           if (!this.bookCurrent(source)) {
             return;
           }
@@ -963,7 +961,7 @@ export class TavernPlatform implements Platform {
         this.bookWarned = false;
       })
       .catch((error) => {
-        console.warn('[國策檔案] 聊天世界書條目更新失敗', error);
+        console.warn('[國策檔案] 角色主世界書條目更新失敗', error);
         if (this.bookCurrent(source) && !this.bookWarned) {
           this.bookWarned = true;
           api.toastr?.warning(

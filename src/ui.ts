@@ -1059,7 +1059,7 @@ export function mountUI(
     const entries = controller.logs.filter((log) => log.jobId === jobId).reverse();
     const block = (label: string, text: string, rows = 8) =>
       text
-        ? `<label class="field">${label}<textarea readonly rows="${rows}">${escape(text)}</textarea></label>`
+        ? `<details class="log-part"><summary>${escape(label)}</summary><div class="field"><textarea aria-label="${escape(label)}" readonly rows="${rows}">${escape(text)}</textarea></div></details>`
         : '';
     openModal(
       'log',
@@ -1067,7 +1067,7 @@ export function mountUI(
       `<p class="muted">只供除錯，不含 API 金鑰。</p>${entries
         .map(
           (log) =>
-            `<article class="job-card"><div class="job-title">${escape(jobNames[log.kind as keyof typeof jobNames] ?? log.kind)}${log.stage ? ` · ${escape(log.stage)}` : ''} · ${escape(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1000).toFixed(1)} 秒 · ${escape(log.time)}</div>${log.error ? `<p class="modal-error">${escape(log.error)}</p>` : '<p class="muted">✓ 格式通過</p>'}${log.messages
+            `<details class="job-card request-log"><summary class="job-title">${log.error ? '失敗' : '格式通過'} · ${escape(jobNames[log.kind as keyof typeof jobNames] ?? log.kind)}${log.stage ? ` · ${escape(log.stage)}` : ''} · ${escape(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1000).toFixed(1)} 秒 · ${escape(log.time)}</summary>${log.error ? `<p class="modal-error">${escape(log.error)}</p>` : '<p class="muted">✓ 格式通過</p>'}${log.messages
               .map((message, index) =>
                 block(
                   `#${index + 1} ${message.role} · ${message.content.length.toLocaleString()} 字元`,
@@ -1077,7 +1077,7 @@ export function mountUI(
               )
               .join(
                 '',
-              )}${block('推理內容', log.reasoning, 6)}${block(`模型回應 · ${log.output.length.toLocaleString()} 字元`, log.output)}</article>`,
+              )}${block('推理內容', log.reasoning, 6)}${block(`模型回應 · ${log.output.length.toLocaleString()} 字元`, log.output)}</details>`,
         )
         .join('')}`,
       '<button data-modal="jobs">返回任務</button>',
@@ -1244,29 +1244,12 @@ export function mountUI(
           ['long', '長期'],
         ],
         state?.settings.pace ?? 'standard',
-      )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在選定的既有世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未綁定世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">寫入世界書<input data-config="promptBookName" list="prompt-book-names" value="${escape(draft.promptBookName)}" placeholder="留空：使用當前聊天綁定的世界書"><datalist id="prompt-book-names"></datalist><small>可選擇或輸入既有世界書名稱。留空時只使用聊天綁定，不會改用角色主世界書；切換目標會清理上一個寫入目標中的國策條目。此設定不改變聊天的世界書綁定。</small><small id="prompt-book-status"></small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
+      )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在當前角色的主世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未設定角色主世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
       <div class="settings-section" ${settingsTab !== 'apis' ? 'hidden' : ''}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'jobs' ? 'hidden' : ''}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'sources' ? 'hidden' : ''}><div id="source-panel"></div></div>`,
       settingsFooter,
     );
-    const bookNames = backdrop.querySelector<HTMLDataListElement>('#prompt-book-names')!;
-    const bookStatus = backdrop.querySelector<HTMLElement>('#prompt-book-status')!;
-    void controller.platform
-      .worldbooks()
-      .then(({ all }) => {
-        if (bookNames.isConnected) {
-          bookNames.innerHTML = [...new Set(all)]
-            .sort()
-            .map((name) => `<option value="${escape(name)}"></option>`)
-            .join('');
-        }
-      })
-      .catch(() => {
-        if (bookStatus.isConnected) {
-          bookStatus.textContent = '無法載入世界書清單，可手動輸入既有名稱。';
-        }
-      });
     apiPanel = mountApiPanel(controller, backdrop.querySelector<HTMLElement>('#api-panel')!, (update) => {
       readSettingsDraft();
       draft = update(draft);
@@ -1335,9 +1318,6 @@ export function mountUI(
     if (countryEntries === 'constant' || countryEntries === 'keyword') {
       draft.countryEntries = countryEntries;
     }
-    draft.promptBookName =
-      backdrop.querySelector<HTMLInputElement>('[data-config="promptBookName"]')?.value.trim() ??
-      draft.promptBookName;
     const promptMode = backdrop.querySelector<HTMLSelectElement>('[data-config="promptMode"]')?.value;
     if (promptMode === 'worldbook' || promptMode === 'inject') {
       draft.promptMode = promptMode;
