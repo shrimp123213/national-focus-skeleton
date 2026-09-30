@@ -17,6 +17,8 @@ export type NewsBar = {
   location: string;
   insiders: string[];
   newsPath: string;
+  timePath?: string;
+  locationPath?: string;
   updated: Record<string, string>;
   changed: string[];
 };
@@ -93,6 +95,8 @@ export function buildNewsBar(input: {
   time: string;
   location: string;
   newsPath: string;
+  timePath?: string;
+  locationPath?: string;
   news: unknown;
   previousNews?: unknown;
   hasPrevious: boolean;
@@ -112,6 +116,8 @@ export function buildNewsBar(input: {
     location: input.location,
     insiders: insiders(input.state, input.location),
     newsPath: input.newsPath,
+    timePath: input.timePath,
+    locationPath: input.locationPath,
     updated,
     changed,
   };

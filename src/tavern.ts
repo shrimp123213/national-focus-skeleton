@@ -174,6 +174,7 @@ export class TavernPlatform implements Platform {
   private writtenBook: { chat: string; name: string } | null = null;
   private disposed = false;
   private annotating: Promise<void> | null = null;
+  private newsQueue: Promise<void> = Promise.resolve();
   private generating = false;
   private mvuBusy = false;
   private readyIdentity = '';
@@ -203,6 +204,21 @@ export class TavernPlatform implements Platform {
         this.stops.push(() => listener.stop());
       }
     };
+    listen('national-focus:refresh-news', (messageId: unknown) => {
+      if (typeof messageId !== 'number' || !Number.isInteger(messageId) || messageId < 0) {
+        return;
+      }
+      const signal = this.sourceRun.signal;
+      this.newsQueue = this.newsQueue
+        .then(async () => {
+          await this.annotating;
+          if (this.disposed || signal.aborted) {
+            return;
+          }
+          await this.annotate(messageId);
+        })
+        .catch((error) => console.warn('[國策檔案] 無法更新本樓快訊資料：', error));
+    });
     for (const name of ['CHAT_CHANGED', 'MESSAGE_SWIPED', 'MESSAGE_DELETED']) {
       listen(api.tavern_events[name], () => {
         this.pending = null;
@@ -569,10 +585,10 @@ export class TavernPlatform implements Platform {
    * AI floor of a chat with national data shows its news bar. Floors without national data are
    * left alone. Only this script's `国策` is written; the card's own news is read, never changed.
    */
-  private async annotate(): Promise<void> {
+  private async annotate(messageId?: number): Promise<void> {
     const signal = this.sourceRun.signal;
     const mvu = this.api.Mvu;
-    const message = this.current();
+    const message = messageId === undefined ? this.current() : this.api.getChatMessages(messageId)[0];
     const config = this.config ?? this.loadConfig();
     if (!mvu || !message || message.role !== 'assistant') {
       return;
@@ -583,10 +599,15 @@ export class TavernPlatform implements Platform {
     if (!data?.stat_data || !parsed.success) {
       return;
     }
-    const earlier = this.api
-      .getChatMessages(`0-${Math.max(0, id - 1)}`)
-      .filter((item) => item.role === 'assistant' && item.message_id < id)
-      .at(-1);
+    // Find the nearest earlier AI floor without cloning the full chat history.
+    let earlier: Message | undefined;
+    for (let previousId = id - 1; previousId >= 0; previousId--) {
+      const item = this.api.getChatMessages(previousId)[0];
+      if (item?.role === 'assistant' && item.message_id < id) {
+        earlier = item;
+        break;
+      }
+    }
     const before = earlier ? mvu.getMvuData({ type: 'message', message_id: earlier.message_id }) : undefined;
     const sources = config.sources;
     const carried = (data.国策 as { 快讯?: NewsBar }).快讯;
@@ -596,6 +617,8 @@ export class TavernPlatform implements Platform {
       time: timeText(valueAt(data.stat_data, sources.timePath)),
       location: timeText(valueAt(data.stat_data, sources.locationPath)),
       newsPath: sources.newsPath,
+      timePath: sources.timePath,
+      locationPath: sources.locationPath,
       news: valueAt(data.stat_data, sources.newsPath),
       previousNews: before?.stat_data ? valueAt(before.stat_data, sources.newsPath) : undefined,
       hasPrevious: Boolean(before?.stat_data),

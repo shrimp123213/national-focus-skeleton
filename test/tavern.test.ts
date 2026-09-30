@@ -930,12 +930,14 @@ test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新�
   };
   const current = env.api.getChatMessages;
   env.api.getChatMessages = (range, options) =>
-    typeof range === 'number'
-      ? current(range, options)
-      : [
-          { message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一樓'], message: '上一樓' },
-          ...current(-1),
-        ];
+    range === 1
+      ? [{ message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一樓'], message: '上一樓' }]
+      : typeof range === 'number'
+        ? current(range, options)
+        : [
+            { message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一樓'], message: '上一樓' },
+            ...current(-1),
+          ];
   let seen: unknown;
   env.platform.onReady(() => {
     seen = structuredClone(floors[3].国策.快讯);
@@ -962,6 +964,22 @@ test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新�
     await env.platform.commit(snapshot, next);
     assert.deepEqual(floors[3].国策.快讯.changed, ['快讯/军事']);
     assert.deepEqual(floors[3].国策.快讯.insiders, ['augustium']);
+    const previousFloor = structuredClone(floors[1]);
+    const policy = structuredClone(floors[3].国策.countries);
+    let extraReady = 0;
+    env.platform.onReady(() => {
+      extraReady++;
+    });
+    floors[3].stat_data.新闻.快讯.经济 = '本樓稍後更新';
+    floors[3].stat_data.世界.时间 = '491年6月20日 12:00';
+    env.emit('national-focus:refresh-news', 3);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(floors[3].国策.快讯.changed, ['快讯/军事', '快讯/经济']);
+    assert.equal(floors[3].国策.快讯.updated['快讯/经济'], '491年6月20日 12:00');
+    assert.equal(floors[3].国策.快讯.timePath, '世界.时间');
+    assert.deepEqual(floors[3].国策.countries, policy);
+    assert.deepEqual(floors[1], previousFloor);
+    assert.equal(extraReady, 0, '刷新報紙不得重新啟動國策工作');
   } finally {
     env.platform.dispose();
   }

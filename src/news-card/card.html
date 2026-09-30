@@ -952,689 +952,805 @@
         });
       };
       var floor = getCurrentMessageId();
-      var vars = getVariables({ type: 'message', message_id: floor }) || {};
-      var state = vars['国策'];
-      if (!state || !state.countries || !state.events) {
-        return;
-      }
-      var stat = vars.stat_data || {};
-      var bar = state['快讯'] || {};
-      var countries = state.countries;
-      var insiders =
-        bar.insiders ||
-        Object.keys(countries).filter(function (id) {
-          return countries[id].enabled && countries[id].control === 'player';
+      var render = function (vars) {
+        var state = vars['国策'];
+        if (!state || !state.countries || !state.events) {
+          root.hidden = true;
+          root.innerHTML = '';
+          return;
+        }
+        var stat = vars.stat_data || {};
+        var bar = state['快讯'] || {};
+        var countries = state.countries;
+        var insiders =
+          bar.insiders ||
+          Object.keys(countries).filter(function (id) {
+            return countries[id].enabled && countries[id].control === 'player';
+          });
+        var nameOf = function (id) {
+          return (countries[id] && countries[id].name) || id;
+        };
+        var inside = function (event) {
+          return (event.countries || []).filter(function (id) {
+            return insiders.indexOf(id) >= 0;
+          });
+        };
+        var visible = function (event) {
+          return event.public || inside(event).length > 0;
+        };
+        var rank = { world: 3, major: 2, minor: 1 };
+        var weight = function (event) {
+          var focus = event.source && event.source.kind === 'focus' && event.importance !== 'minor';
+          return (focus ? 10 : 0) + (rank[event.importance] || 1) + (event.scope === 'front' ? 0.5 : 0);
+        };
+        var all = Object.keys(state.events).map(function (id) {
+          return state.events[id];
         });
-      var nameOf = function (id) {
-        return (countries[id] && countries[id].name) || id;
-      };
-      var inside = function (event) {
-        return (event.countries || []).filter(function (id) {
-          return insiders.indexOf(id) >= 0;
+        var fresh = all
+          .filter(function (event) {
+            return event.shownAt === floor && visible(event);
+          })
+          .sort(function (a, b) {
+            return weight(b) - weight(a) || a.at - b.at;
+          });
+        var headlines = fresh.filter(function (event) {
+          return event.public;
         });
-      };
-      var visible = function (event) {
-        return event.public || inside(event).length > 0;
-      };
-      var rank = { world: 3, major: 2, minor: 1 };
-      var weight = function (event) {
-        var focus = event.source && event.source.kind === 'focus' && event.importance !== 'minor';
-        return (focus ? 10 : 0) + (rank[event.importance] || 1) + (event.scope === 'front' ? 0.5 : 0);
-      };
-      var all = Object.keys(state.events).map(function (id) {
-        return state.events[id];
-      });
-      var fresh = all
-        .filter(function (event) {
-          return event.shownAt === floor && visible(event);
-        })
-        .sort(function (a, b) {
-          return weight(b) - weight(a) || a.at - b.at;
+        var secrets = fresh.filter(function (event) {
+          return !event.public;
         });
-      var headlines = fresh.filter(function (event) {
-        return event.public;
-      });
-      var secrets = fresh.filter(function (event) {
-        return !event.public;
-      });
-      var serials = all
-        .filter(function (event) {
-          // Running stories, and ones that ended on this floor after running for a while.
-          return (
-            visible(event) &&
-            (event.status === 'ongoing' ||
-              (event.touchedAt === floor &&
-                ((event.steps || []).length > 0 || (event.timeline || []).length > 1)))
-          );
-        })
-        .sort(function (a, b) {
-          var touched = Number(b.touchedAt === floor) - Number(a.touchedAt === floor);
-          var last = function (event) {
-            return Math.max.apply(
-              null,
-              [event.at].concat(
-                (event.timeline || []).map(function (t) {
-                  return t.at;
-                }),
-              ),
+        var serials = all
+          .filter(function (event) {
+            // Running stories, and ones that ended on this floor after running for a while.
+            return (
+              visible(event) &&
+              (event.status === 'ongoing' ||
+                (event.touchedAt === floor &&
+                  ((event.steps || []).length > 0 || (event.timeline || []).length > 1)))
             );
-          };
-          return touched || last(b) - last(a);
+          })
+          .sort(function (a, b) {
+            var touched = Number(b.touchedAt === floor) - Number(a.touchedAt === floor);
+            var last = function (event) {
+              return Math.max.apply(
+                null,
+                [event.at].concat(
+                  (event.timeline || []).map(function (t) {
+                    return t.at;
+                  }),
+                ),
+              );
+            };
+            return touched || last(b) - last(a);
+          });
+        var progressed = serials.filter(function (event) {
+          return event.touchedAt === floor;
         });
-      var progressed = serials.filter(function (event) {
-        return event.touchedAt === floor;
-      });
-      // The card's own news: every field, the ones changed on this floor first and larger.
-      var path = String(bar.newsPath || '新闻').split('.');
-      var source = path.reduce(function (value, key) {
-        return value && typeof value === 'object' ? value[key] : undefined;
-      }, stat);
-      var text = function (item) {
-        if (Array.isArray(item) && item.length && typeof item[0] !== 'object') return String(item[0]);
-        return typeof item === 'string' ? item : item == null ? '' : JSON.stringify(item);
-      };
-      var boards = [];
-      if (source && typeof source === 'object') {
-        Object.keys(source).forEach(function (board, index) {
-          var content = source[board];
-          var fields = [];
-          if (content && typeof content === 'object' && !Array.isArray(content)) {
-            Object.keys(content).forEach(function (field) {
-              fields.push({ key: board + '/' + field, name: field, text: text(content[field]) });
-            });
-          } else {
-            fields.push({ key: board, name: board, text: text(content) });
-          }
-          var style = /留言|悬赏|懸賞/.test(board) ? 'ads' : /茶|社交|逸闻|逸聞/.test(board) ? 'tea' : 'k';
-          boards.push({ name: board, style: index === 0 ? 'k' : style, fields: fields });
-        });
-      }
-      var changed = bar.changed || [];
-      var updated = bar.updated || {};
-      var freshNews = [];
-      var oldCount = 0;
-      boards.forEach(function (board) {
-        board.fields.forEach(function (field) {
-          field.board = board;
-          field.fresh = changed.indexOf(field.key) >= 0;
-          if (field.fresh) freshNews.push(field);
-          else oldCount++;
-        });
-      });
-      var total = fresh.length + freshNews.length;
-      var quiet = total === 0 && progressed.length === 0;
-
-      // Display settings follow the player across chats (Tavern Helper global variables).
-      var settingsKey = 'national_focus_newspaper';
-      var settings = { dark: false, fz: 1, serials: true, pages: true, old: true };
-      try {
-        var saved =
-          (typeof getVariables === 'function' && (getVariables({ type: 'global' }) || {})[settingsKey]) ||
-          JSON.parse(localStorage.getItem(settingsKey) || 'null');
-        if (saved && typeof saved === 'object') {
-          Object.keys(settings).forEach(function (key) {
-            if (typeof saved[key] === typeof settings[key]) settings[key] = saved[key];
+        // The card's own news: every field, the ones changed on this floor first and larger.
+        var path = String(bar.newsPath || '新闻').split('.');
+        var source = path.reduce(function (value, key) {
+          return value && typeof value === 'object' ? value[key] : undefined;
+        }, stat);
+        var text = function (item) {
+          if (Array.isArray(item) && item.length && typeof item[0] !== 'object') return String(item[0]);
+          return typeof item === 'string' ? item : item == null ? '' : JSON.stringify(item);
+        };
+        var boards = [];
+        if (source && typeof source === 'object') {
+          Object.keys(source).forEach(function (board, index) {
+            var content = source[board];
+            var fields = [];
+            if (content && typeof content === 'object' && !Array.isArray(content)) {
+              Object.keys(content).forEach(function (field) {
+                fields.push({ key: board + '/' + field, name: field, text: text(content[field]) });
+              });
+            } else {
+              fields.push({ key: board, name: board, text: text(content) });
+            }
+            var style = /留言|悬赏|懸賞/.test(board) ? 'ads' : /茶|社交|逸闻|逸聞/.test(board) ? 'tea' : 'k';
+            boards.push({ name: board, style: index === 0 ? 'k' : style, fields: fields });
           });
         }
-      } catch (error) {}
-      var save = function () {
+        var changed = bar.changed || [];
+        var updated = bar.updated || {};
+        var freshNews = [];
+        var oldCount = 0;
+        boards.forEach(function (board) {
+          board.fields.forEach(function (field) {
+            field.board = board;
+            field.fresh = changed.indexOf(field.key) >= 0;
+            if (field.fresh) freshNews.push(field);
+            else oldCount++;
+          });
+        });
+        var total = fresh.length + freshNews.length;
+        var quiet = total === 0 && progressed.length === 0;
+
+        // Display settings follow the player across chats (Tavern Helper global variables).
+        var settingsKey = 'national_focus_newspaper';
+        var settings = { dark: false, fz: 1, serials: true, pages: true, old: true };
         try {
-          if (typeof insertOrAssignVariables === 'function') {
-            var patch = {};
-            patch[settingsKey] = settings;
-            insertOrAssignVariables(patch, { type: 'global' });
-          } else {
-            localStorage.setItem(settingsKey, JSON.stringify(settings));
+          var saved =
+            (typeof getVariables === 'function' && (getVariables({ type: 'global' }) || {})[settingsKey]) ||
+            JSON.parse(localStorage.getItem(settingsKey) || 'null');
+          if (saved && typeof saved === 'object') {
+            Object.keys(settings).forEach(function (key) {
+              if (typeof saved[key] === typeof settings[key]) settings[key] = saved[key];
+            });
           }
         } catch (error) {}
-      };
-      var sizes = [0.9, 1, 1.15, 1.3, 1.5];
+        var save = function () {
+          try {
+            if (typeof insertOrAssignVariables === 'function') {
+              var patch = {};
+              patch[settingsKey] = settings;
+              insertOrAssignVariables(patch, { type: 'global' });
+            } else {
+              localStorage.setItem(settingsKey, JSON.stringify(settings));
+            }
+          } catch (error) {}
+        };
+        var sizes = [0.9, 1, 1.15, 1.3, 1.5];
 
-      var first = function (value) {
-        return String(value || '').split(/(?<=[。！？])/)[0];
-      };
-      var headlineOf = function (event) {
-        return event.headline || event.title;
-      };
-      var lead = headlines[0];
-      var stripHeadline = lead
-        ? headlineOf(lead)
-        : secrets[0]
-          ? headlineOf(secrets[0]) + '（內部密報）'
-          : freshNews[0]
-            ? freshNews[0].board.name + '・' + freshNews[0].name + '：' + first(freshNews[0].text)
-            : progressed[0]
-              ? headlineOf(progressed[0]) + '：' + (progressed[0].current || '有新進展')
-              : '本樓沒有新消息・進行中事件 ' + serials.length + ' 件';
-      // An extra edition for public news of an important focus or of world importance.
-      var extra = headlines.some(function (event) {
-        return (
-          (event.source && event.source.kind === 'focus' && event.importance !== 'minor') ||
-          event.importance === 'world'
-        );
-      });
-      var flags = function (event) {
-        return (event.countries || []).map(nameOf).join('、');
-      };
-      var paragraphs = function (value) {
-        return String(value || '')
-          .split(/\n+/)
-          .filter(Boolean);
-      };
-      var linkedFocus = function (event) {
-        var source = event.source || {};
-        var country = countries[source.country];
-        return country && source.node && (country.nodes[source.node] || source.name)
-          ? { country: country, node: country.nodes[source.node] || { id: source.node, name: source.name } }
-          : null;
-      };
-      // Focuses that follow the one an event carries out and can still be taken.
-      var ways = function (event) {
-        var link = linkedFocus(event);
-        if (!link) return [];
-        var country = link.country;
-        return Object.keys(country.nodes)
-          .map(function (id) {
-            return country.nodes[id];
-          })
-          .filter(function (node) {
-            var progress = country.progress[node.id] || {};
-            var lock = node.mutex && country.locks[node.mutex.group];
-            return (
-              (progress.status === 'idle' || !progress.status) &&
-              !(lock && lock.route !== node.mutex.route) &&
-              (node.prerequisites || []).some(function (group) {
-                return group.indexOf(link.node.id) >= 0;
-              })
-            );
-          })
-          .slice(0, 3);
-      };
-      var steps = function (event) {
-        var list = event.steps || [];
-        if (!list.length) {
-          return (event.timeline || []).slice(-3).map(function (entry, index, items) {
-            return {
-              text: entry.text,
-              state: index === items.length - 1 && event.status === 'ongoing' ? 'active' : 'done',
-            };
-          });
-        }
-        return list;
-      };
-      var glyph = { done: '✓', active: '▶', pending: '○', planned: '◷' };
-      var resultName = { achieved: '已達成', abandoned: '已終止', failed: '已失敗' };
+        var first = function (value) {
+          return String(value || '').split(/(?<=[。！？])/)[0];
+        };
+        var headlineOf = function (event) {
+          return event.headline || event.title;
+        };
+        var lead = headlines[0];
+        var stripHeadline = lead
+          ? headlineOf(lead)
+          : secrets[0]
+            ? headlineOf(secrets[0]) + '（內部密報）'
+            : freshNews[0]
+              ? freshNews[0].board.name + '・' + freshNews[0].name + '：' + first(freshNews[0].text)
+              : progressed[0]
+                ? headlineOf(progressed[0]) + '：' + (progressed[0].current || '有新進展')
+                : '本樓沒有新消息・進行中事件 ' + serials.length + ' 件';
+        // An extra edition for public news of an important focus or of world importance.
+        var extra = headlines.some(function (event) {
+          return (
+            (event.source && event.source.kind === 'focus' && event.importance !== 'minor') ||
+            event.importance === 'world'
+          );
+        });
+        var flags = function (event) {
+          return (event.countries || []).map(nameOf).join('、');
+        };
+        var paragraphs = function (value) {
+          return String(value || '')
+            .split(/\n+/)
+            .filter(Boolean);
+        };
+        var linkedFocus = function (event) {
+          var source = event.source || {};
+          var country = countries[source.country];
+          return country && source.node && (country.nodes[source.node] || source.name)
+            ? { country: country, node: country.nodes[source.node] || { id: source.node, name: source.name } }
+            : null;
+        };
+        // Focuses that follow the one an event carries out and can still be taken.
+        var ways = function (event) {
+          var link = linkedFocus(event);
+          if (!link) return [];
+          var country = link.country;
+          return Object.keys(country.nodes)
+            .map(function (id) {
+              return country.nodes[id];
+            })
+            .filter(function (node) {
+              var progress = country.progress[node.id] || {};
+              var lock = node.mutex && country.locks[node.mutex.group];
+              return (
+                (progress.status === 'idle' || !progress.status) &&
+                !(lock && lock.route !== node.mutex.route) &&
+                (node.prerequisites || []).some(function (group) {
+                  return group.indexOf(link.node.id) >= 0;
+                })
+              );
+            })
+            .slice(0, 3);
+        };
+        var steps = function (event) {
+          var list = event.steps || [];
+          if (!list.length) {
+            return (event.timeline || []).slice(-3).map(function (entry, index, items) {
+              return {
+                text: entry.text,
+                state: index === items.length - 1 && event.status === 'ongoing' ? 'active' : 'done',
+              };
+            });
+          }
+          return list;
+        };
+        var glyph = { done: '✓', active: '▶', pending: '○', planned: '◷' };
+        var resultName = { achieved: '已達成', abandoned: '已終止', failed: '已失敗' };
 
-      var html = [];
-      html.push(
-        '<div class="strip" id="strip">' +
-          (extra ? '<span class="extra">號外</span>' : '') +
-          '<span class="mast">阿斯塔利亞快訊</span>' +
-          (bar.time ? '<span class="date">' + esc(bar.time) + '</span>' : '') +
-          (total ? '<span class="cnt">本期 ' + total + ' 則</span>' : '') +
-          '<span class="hl">' +
-          esc(stripHeadline) +
-          '</span>' +
-          '<span class="ctl"><button class="b" data-fz="-">A−</button><span class="v" id="fzv"></span><button class="b" data-fz="+">A+</button><span class="sep"></span><button class="b" id="mode"></button></span>' +
-          '<button class="toggle" id="toggle"></button></div>',
-      );
-      // Index.
-      var index = [];
-      var item = function (target, title, small, extraClass, isNew) {
-        return (
-          '<a class="it ' +
-          (extraClass || '') +
-          '" data-go="' +
-          target +
-          '">' +
-          (isNew ? '<span class="new"></span>' : '') +
-          esc(title) +
-          '<small>' +
-          esc(small) +
-          '</small></a>'
+        var html = [];
+        html.push(
+          '<div class="strip" id="strip">' +
+            (extra ? '<span class="extra">號外</span>' : '') +
+            '<span class="mast">阿斯塔利亞快訊</span>' +
+            (bar.time ? '<span class="date">' + esc(bar.time) + '</span>' : '') +
+            (total ? '<span class="cnt">本期 ' + total + ' 則</span>' : '') +
+            '<span class="hl">' +
+            esc(stripHeadline) +
+            '</span>' +
+            '<span class="ctl"><button class="b" data-fz="-">A−</button><span class="v" id="fzv"></span><button class="b" data-fz="+">A+</button><span class="sep"></span><button class="b" id="mode"></button></span>' +
+            '<button class="toggle" id="toggle"></button></div>',
         );
-      };
-      if (headlines.length) {
-        index.push(
-          '<div class="grp"><h6>頭版</h6>' +
-            headlines
-              .map(function (event, i) {
-                return item('h' + i, headlineOf(event), flags(event), '', true);
-              })
-              .join('') +
-            '</div>',
-        );
-      }
-      if (secrets.length) {
-        index.push(
-          '<div class="grp"><h6>內部密報</h6>' +
-            secrets
-              .map(function (event, i) {
-                return item(
-                  's' + i,
-                  event.title,
-                  '未公開・' + inside(event).map(nameOf).join('、'),
-                  'secret',
-                  true,
-                );
-              })
-              .join('') +
-            '</div>',
-        );
-      }
-      if (serials.length) {
-        index.push(
-          '<div class="grp"><h6>連載追蹤</h6>' +
-            serials
-              .map(function (event, i) {
-                var list = event.steps || [];
-                var done = list.filter(function (step) {
-                  return step.state === 'done';
-                }).length;
-                return item(
-                  'e' + i,
-                  event.title + (list.length ? ' ' + done + '/' + list.length : ''),
-                  event.touchedAt === floor
-                    ? '本樓有進展'
-                    : event.status === 'ongoing'
-                      ? '進行中'
-                      : '本樓結束',
-                  '',
-                  event.touchedAt === floor,
-                );
-              })
-              .join('') +
-            '</div>',
-        );
-      }
-      if (boards.length) {
-        index.push(
-          '<div class="grp"><h6>本報各版・本樓更新</h6>' +
-            freshNews
-              .map(function (field) {
-                return item('n-' + field.key, field.name, field.board.name, '', true);
-              })
-              .join('') +
-            item('oldhead', '舊聞 ' + oldCount + ' 欄', '全部版面', '', false) +
-            '</div>',
-        );
-      }
-      html.push(
-        '<div class="board"><nav class="index"><div class="ih"><b>本期要目</b><div>' +
-          esc(bar.time || '') +
-          '</div></div><div class="groups">' +
-          index.join('') +
-          '</div><div class="foot"><button class="btn" data-emit="events">事件紀錄</button><button class="btn" data-emit="panel">開啟國策面板</button></div></nav><main class="paper" id="paper">',
-      );
-      html.push(
-        '<div class="top"><span>' +
-          (total ? '本期 ' + total + ' 則' : '本期無新消息') +
-          (secrets.length ? '・內部密報 ' + secrets.length + ' 則' : '') +
-          '</span><span>國策與世界</span></div><div class="masthead">阿斯塔利亞快訊</div><div class="sub"><span>' +
-          esc(bar.time || '') +
-          '</span><span>' +
-          esc(
-            String(bar.location || '')
-              .split('-')
-              .filter(Boolean)
-              .slice(-2)
-              .join('・') || '',
-          ) +
-          '</span></div>',
-      );
-      // Front page.
-      if (headlines.length || secrets.length) {
-        var front = '<section class="front' + (secrets.length && headlines.length ? '' : ' solo') + '">';
+        // Index.
+        var index = [];
+        var item = function (target, title, small, extraClass, isNew) {
+          return (
+            '<a class="it ' +
+            (extraClass || '') +
+            '" data-go="' +
+            target +
+            '">' +
+            (isNew ? '<span class="new"></span>' : '') +
+            esc(title) +
+            '<small>' +
+            esc(small) +
+            '</small></a>'
+          );
+        };
         if (headlines.length) {
-          var body = paragraphs(lead.description);
-          var focus = linkedFocus(lead);
-          front +=
-            '<article class="lead" id="h0"><div class="kicker">' +
-            esc(
-              (lead.importance === 'world' ? '世界新聞' : '各國新聞') +
-                (lead.source && lead.source.kind === 'focus' && lead.importance !== 'minor'
-                  ? '・重要國策'
-                  : '') +
-                '・' +
-                flags(lead),
-            ) +
-            '</div><h1>' +
-            esc(headlineOf(lead)) +
-            '</h1>' +
-            (lead.headline && lead.headline !== lead.title
-              ? '<p class="deck">' + esc(lead.title) + '</p>'
-              : '') +
-            '<div class="cols">' +
-            body
-              .map(function (line, i) {
-                return '<p' + (i === 0 ? ' class="dc"' : '') + '>' + esc(line) + '</p>';
-              })
-              .join('') +
-            (lead.current ? '<p>' + esc(lead.current) + '</p>' : '') +
-            '</div>' +
-            (focus
-              ? '<div class="by">國策：' + esc(focus.country.name) + '「' + esc(focus.node.name) + '」</div>'
-              : '') +
-            headlines
-              .slice(1)
-              .map(function (event, i) {
-                return (
-                  '<div class="more-news"><article id="h' +
-                  (i + 1) +
-                  '"><div class="kicker plain">' +
-                  esc(flags(event)) +
-                  '</div><h3>' +
-                  esc(headlineOf(event)) +
-                  '</h3><p>' +
-                  esc(event.description) +
-                  '</p></article></div>'
-                );
-              })
-              .join('') +
-            '</article>';
+          index.push(
+            '<div class="grp"><h6>頭版</h6>' +
+              headlines
+                .map(function (event, i) {
+                  return item('h' + i, headlineOf(event), flags(event), '', true);
+                })
+                .join('') +
+              '</div>',
+          );
         }
         if (secrets.length) {
-          front +=
-            '<aside class="slips">' +
-            secrets
-              .map(function (event, i) {
-                return (
-                  '<div class="slip" id="s' +
-                  i +
-                  '"><div class="kicker">內部密報・' +
-                  esc(inside(event).map(nameOf).join('、')) +
-                  '</div><h3>' +
-                  esc(headlineOf(event)) +
-                  '</h3>' +
-                  paragraphs(event.description)
-                    .map(function (line) {
-                      return '<p>' + esc(line) + '</p>';
-                    })
-                    .join('') +
-                  (event.current ? '<p>' + esc(event.current) + '</p>' : '') +
-                  '<span class="stamp">未公開</span></div>'
-                );
-              })
-              .join('') +
-            '</aside>';
+          index.push(
+            '<div class="grp"><h6>內部密報</h6>' +
+              secrets
+                .map(function (event, i) {
+                  return item(
+                    's' + i,
+                    event.title,
+                    '未公開・' + inside(event).map(nameOf).join('、'),
+                    'secret',
+                    true,
+                  );
+                })
+                .join('') +
+              '</div>',
+          );
         }
-        html.push(front + '</section>');
-      }
-      // Serials: running stories and their progress.
-      if (serials.length) {
+        if (serials.length) {
+          index.push(
+            '<div class="grp"><h6>連載追蹤</h6>' +
+              serials
+                .map(function (event, i) {
+                  var list = event.steps || [];
+                  var done = list.filter(function (step) {
+                    return step.state === 'done';
+                  }).length;
+                  return item(
+                    'e' + i,
+                    event.title + (list.length ? ' ' + done + '/' + list.length : ''),
+                    event.touchedAt === floor
+                      ? '本樓有進展'
+                      : event.status === 'ongoing'
+                        ? '進行中'
+                        : '本樓結束',
+                    '',
+                    event.touchedAt === floor,
+                  );
+                })
+                .join('') +
+              '</div>',
+          );
+        }
+        if (boards.length) {
+          index.push(
+            '<div class="grp"><h6>本報各版・本樓更新</h6>' +
+              freshNews
+                .map(function (field) {
+                  return item('n-' + field.key, field.name, field.board.name, '', true);
+                })
+                .join('') +
+              item('oldhead', '舊聞 ' + oldCount + ' 欄', '全部版面', '', false) +
+              '</div>',
+          );
+        }
         html.push(
-          '<details class="fold" id="f-serials"' +
-            (settings.serials ? ' open' : '') +
-            '><summary><span class="t">連載追蹤</span><span class="n">進行中 ' +
-            serials.filter(function (event) {
-              return event.status === 'ongoing';
-            }).length +
-            ' 件・本樓進展 <b>' +
-            progressed.length +
-            '</b></span><span class="car"></span></summary><section class="serials">' +
-            serials
-              .map(function (event, i) {
-                var list = steps(event);
-                var planned = event.steps || [];
-                var done = planned.filter(function (step) {
-                  return step.state === 'done';
-                }).length;
-                var meter = planned.length
-                  ? '<div class="meter">' +
-                    planned
-                      .map(function (step) {
-                        return (
-                          '<i class="' +
-                          (step.state === 'done' ? 'f' : step.state === 'active' ? 'a' : '') +
-                          '"></i>'
-                        );
+          '<div class="board"><nav class="index"><div class="ih"><b>本期要目</b><div>' +
+            esc(bar.time || '') +
+            '</div></div><div class="groups">' +
+            index.join('') +
+            '</div><div class="foot"><button class="btn" data-emit="events">事件紀錄</button><button class="btn" data-emit="panel">開啟國策面板</button></div></nav><main class="paper" id="paper">',
+        );
+        html.push(
+          '<div class="top"><span>' +
+            (total ? '本期 ' + total + ' 則' : '本期無新消息') +
+            (secrets.length ? '・內部密報 ' + secrets.length + ' 則' : '') +
+            '</span><span>國策與世界</span></div><div class="masthead">阿斯塔利亞快訊</div><div class="sub"><span>' +
+            esc(bar.time || '') +
+            '</span><span>' +
+            esc(
+              String(bar.location || '')
+                .split('-')
+                .filter(Boolean)
+                .slice(-2)
+                .join('・') || '',
+            ) +
+            '</span></div>',
+        );
+        // Front page.
+        if (headlines.length || secrets.length) {
+          var front = '<section class="front' + (secrets.length && headlines.length ? '' : ' solo') + '">';
+          if (headlines.length) {
+            var body = paragraphs(lead.description);
+            var focus = linkedFocus(lead);
+            front +=
+              '<article class="lead" id="h0"><div class="kicker">' +
+              esc(
+                (lead.importance === 'world' ? '世界新聞' : '各國新聞') +
+                  (lead.source && lead.source.kind === 'focus' && lead.importance !== 'minor'
+                    ? '・重要國策'
+                    : '') +
+                  '・' +
+                  flags(lead),
+              ) +
+              '</div><h1>' +
+              esc(headlineOf(lead)) +
+              '</h1>' +
+              (lead.headline && lead.headline !== lead.title
+                ? '<p class="deck">' + esc(lead.title) + '</p>'
+                : '') +
+              '<div class="cols">' +
+              body
+                .map(function (line, i) {
+                  return '<p' + (i === 0 ? ' class="dc"' : '') + '>' + esc(line) + '</p>';
+                })
+                .join('') +
+              (lead.current ? '<p>' + esc(lead.current) + '</p>' : '') +
+              '</div>' +
+              (focus
+                ? '<div class="by">國策：' +
+                  esc(focus.country.name) +
+                  '「' +
+                  esc(focus.node.name) +
+                  '」</div>'
+                : '') +
+              headlines
+                .slice(1)
+                .map(function (event, i) {
+                  return (
+                    '<div class="more-news"><article id="h' +
+                    (i + 1) +
+                    '"><div class="kicker plain">' +
+                    esc(flags(event)) +
+                    '</div><h3>' +
+                    esc(headlineOf(event)) +
+                    '</h3><p>' +
+                    esc(event.description) +
+                    '</p></article></div>'
+                  );
+                })
+                .join('') +
+              '</article>';
+          }
+          if (secrets.length) {
+            front +=
+              '<aside class="slips">' +
+              secrets
+                .map(function (event, i) {
+                  return (
+                    '<div class="slip" id="s' +
+                    i +
+                    '"><div class="kicker">內部密報・' +
+                    esc(inside(event).map(nameOf).join('、')) +
+                    '</div><h3>' +
+                    esc(headlineOf(event)) +
+                    '</h3>' +
+                    paragraphs(event.description)
+                      .map(function (line) {
+                        return '<p>' + esc(line) + '</p>';
                       })
                       .join('') +
-                    '</div>'
-                  : '';
-                var link = linkedFocus(event);
-                var next = ways(event);
-                var latest = (event.timeline || []).slice(-1)[0];
-                return (
-                  '<article class="serial' +
-                  (event.public ? '' : ' inside') +
-                  '" id="e' +
-                  i +
-                  '"><div class="kicker' +
-                  (event.public ? ' plain' : '') +
-                  '">' +
-                  esc(
-                    (link ? '國策執行' : '事件') +
-                      '・' +
-                      (event.public ? '公開' : '未公開') +
-                      '・' +
-                      flags(event),
-                  ) +
-                  '</div><h2>' +
-                  esc(event.title) +
-                  '<em>' +
-                  (planned.length
-                    ? '第 ' + done + '／' + planned.length + ' 步'
-                    : event.status === 'ongoing'
-                      ? '進行中'
-                      : esc(resultName[event.result] || '已結束')) +
-                  '</em></h2>' +
-                  meter +
-                  '<p class="sum"><b>起因</b>' +
-                  esc(first(event.description)) +
-                  '<br><b>現況</b>' +
-                  esc(event.current || (latest ? latest.text : '')) +
-                  '</p><ul class="steps">' +
-                  list
-                    .map(function (step, index) {
-                      var isNew = event.touchedAt === floor && step.state === 'active';
-                      return (
-                        '<li class="' +
-                        esc(step.state) +
-                        '"><span class="g">' +
-                        (glyph[step.state] || '·') +
-                        '</span><span class="t">' +
-                        esc(step.text) +
-                        '</span>' +
-                        (step.when || isNew
-                          ? '<span class="w">' + esc(step.when || '本樓') + '</span>'
-                          : '') +
-                        '</li>'
-                      );
-                    })
-                    .join('') +
-                  '</ul>' +
-                  (next.length
-                    ? '<div class="ways"><b>可能走向（後續國策）</b>' +
-                      next
-                        .map(function (node) {
+                    (event.current ? '<p>' + esc(event.current) + '</p>' : '') +
+                    '<span class="stamp">未公開</span></div>'
+                  );
+                })
+                .join('') +
+              '</aside>';
+          }
+          html.push(front + '</section>');
+        }
+        // Serials: running stories and their progress.
+        if (serials.length) {
+          html.push(
+            '<details class="fold" id="f-serials"' +
+              (settings.serials ? ' open' : '') +
+              '><summary><span class="t">連載追蹤</span><span class="n">進行中 ' +
+              serials.filter(function (event) {
+                return event.status === 'ongoing';
+              }).length +
+              ' 件・本樓進展 <b>' +
+              progressed.length +
+              '</b></span><span class="car"></span></summary><section class="serials">' +
+              serials
+                .map(function (event, i) {
+                  var list = steps(event);
+                  var planned = event.steps || [];
+                  var done = planned.filter(function (step) {
+                    return step.state === 'done';
+                  }).length;
+                  var meter = planned.length
+                    ? '<div class="meter">' +
+                      planned
+                        .map(function (step) {
                           return (
-                            '<div>' +
-                            esc(node.name) +
-                            '：' +
-                            esc(first(node.description).slice(0, 40)) +
-                            '</div>'
+                            '<i class="' +
+                            (step.state === 'done' ? 'f' : step.state === 'active' ? 'a' : '') +
+                            '"></i>'
                           );
                         })
                         .join('') +
                       '</div>'
-                    : '') +
-                  '</article>'
-                );
-              })
-              .join('') +
-            '</section></details>',
-        );
-      }
-      // The card's own news pages.
-      if (boards.length) {
-        var field = function (item, isFresh) {
-          var time = updated[item.key];
-          return (
-            '<article class="nw ' +
-            item.board.style +
-            (isFresh ? ' upd' : ' old') +
-            '" id="n-' +
-            esc(item.key) +
-            '">' +
-            (isFresh ? '<span class="src">' + esc(item.board.name) + '</span>' : '') +
-            '<h4>' +
-            esc(item.name) +
-            '<span class="tag">' +
-            (isFresh ? '本樓更新' : '舊聞') +
-            '</span></h4>' +
-            (time ? '<time>更新於 ' + esc(time) + '</time>' : '') +
-            '<p>' +
-            esc(item.text) +
-            '</p>' +
-            (isFresh ? '' : '<span class="more">全文 ▾</span>') +
-            '</article>'
+                    : '';
+                  var link = linkedFocus(event);
+                  var next = ways(event);
+                  var latest = (event.timeline || []).slice(-1)[0];
+                  return (
+                    '<article class="serial' +
+                    (event.public ? '' : ' inside') +
+                    '" id="e' +
+                    i +
+                    '"><div class="kicker' +
+                    (event.public ? ' plain' : '') +
+                    '">' +
+                    esc(
+                      (link ? '國策執行' : '事件') +
+                        '・' +
+                        (event.public ? '公開' : '未公開') +
+                        '・' +
+                        flags(event),
+                    ) +
+                    '</div><h2>' +
+                    esc(event.title) +
+                    '<em>' +
+                    (planned.length
+                      ? '第 ' + done + '／' + planned.length + ' 步'
+                      : event.status === 'ongoing'
+                        ? '進行中'
+                        : esc(resultName[event.result] || '已結束')) +
+                    '</em></h2>' +
+                    meter +
+                    '<p class="sum"><b>起因</b>' +
+                    esc(first(event.description)) +
+                    '<br><b>現況</b>' +
+                    esc(event.current || (latest ? latest.text : '')) +
+                    '</p><ul class="steps">' +
+                    list
+                      .map(function (step, index) {
+                        var isNew = event.touchedAt === floor && step.state === 'active';
+                        return (
+                          '<li class="' +
+                          esc(step.state) +
+                          '"><span class="g">' +
+                          (glyph[step.state] || '·') +
+                          '</span><span class="t">' +
+                          esc(step.text) +
+                          '</span>' +
+                          (step.when || isNew
+                            ? '<span class="w">' + esc(step.when || '本樓') + '</span>'
+                            : '') +
+                          '</li>'
+                        );
+                      })
+                      .join('') +
+                    '</ul>' +
+                    (next.length
+                      ? '<div class="ways"><b>可能走向（後續國策）</b>' +
+                        next
+                          .map(function (node) {
+                            return (
+                              '<div>' +
+                              esc(node.name) +
+                              '：' +
+                              esc(first(node.description).slice(0, 40)) +
+                              '</div>'
+                            );
+                          })
+                          .join('') +
+                        '</div>'
+                      : '') +
+                    '</article>'
+                  );
+                })
+                .join('') +
+              '</section></details>',
           );
-        };
+        }
+        // The card's own news pages.
+        if (boards.length) {
+          var field = function (item, isFresh) {
+            var time = updated[item.key];
+            return (
+              '<article class="nw ' +
+              item.board.style +
+              (isFresh ? ' upd' : ' old') +
+              '" id="n-' +
+              esc(item.key) +
+              '">' +
+              (isFresh ? '<span class="src">' + esc(item.board.name) + '</span>' : '') +
+              '<h4>' +
+              esc(item.name) +
+              '<span class="tag">' +
+              (isFresh ? '本樓更新' : '舊聞') +
+              '</span></h4>' +
+              (time ? '<time>更新於 ' + esc(time) + '</time>' : '') +
+              '<p>' +
+              esc(item.text) +
+              '</p>' +
+              (isFresh ? '' : '<span class="more">全文 ▾</span>') +
+              '</article>'
+            );
+          };
+          html.push(
+            '<details class="fold" id="f-pages"' +
+              (settings.pages ? ' open' : '') +
+              '><summary><span class="t">本報各版</span><span class="n">本樓更新 <b>' +
+              freshNews.length +
+              '</b>・舊聞 ' +
+              oldCount +
+              '</span><span class="car"></span></summary><div class="bd fresh-head"><b>本期更新</b><i>與上一個 AI 樓層不同的欄位</i></div>' +
+              (freshNews.length
+                ? '<div class="fresh">' +
+                  freshNews
+                    .map(function (item) {
+                      return field(item, true);
+                    })
+                    .join('') +
+                  '</div>'
+                : '<p class="none">本樓沒有更新的新聞。</p>') +
+              '<div class="oldhead" id="oldhead"><span class="t">舊聞</span><span>' +
+              oldCount +
+              ' 欄，依角色卡原本的順序</span><span class="sw' +
+              (settings.old ? ' on' : '') +
+              '" id="oldsw"><i></i>顯示舊聞</span></div><div class="oldbody' +
+              (settings.old ? '' : ' off') +
+              '" id="oldbody">' +
+              boards
+                .map(function (board) {
+                  var old = board.fields.filter(function (item) {
+                    return !item.fresh;
+                  });
+                  return old.length
+                    ? '<div class="bd"><b>' +
+                        esc(board.name) +
+                        '</b><i>舊聞 ' +
+                        old.length +
+                        ' 欄</i></div><div class="news">' +
+                        old
+                          .map(function (item) {
+                            return field(item, false);
+                          })
+                          .join('') +
+                        '</div>'
+                    : '';
+                })
+                .join('') +
+              '</div></details>',
+          );
+        }
         html.push(
-          '<details class="fold" id="f-pages"' +
-            (settings.pages ? ' open' : '') +
-            '><summary><span class="t">本報各版</span><span class="n">本樓更新 <b>' +
-            freshNews.length +
-            '</b>・舊聞 ' +
-            oldCount +
-            '</span><span class="car"></span></summary><div class="bd fresh-head"><b>本期更新</b><i>與上一個 AI 樓層不同的欄位</i></div>' +
-            (freshNews.length
-              ? '<div class="fresh">' +
-                freshNews
-                  .map(function (item) {
-                    return field(item, true);
-                  })
-                  .join('') +
-                '</div>'
-              : '<p class="none">本樓沒有更新的新聞。</p>') +
-            '<div class="oldhead" id="oldhead"><span class="t">舊聞</span><span>' +
-            oldCount +
-            ' 欄，依角色卡原本的順序</span><span class="sw' +
-            (settings.old ? ' on' : '') +
-            '" id="oldsw"><i></i>顯示舊聞</span></div><div class="oldbody' +
-            (settings.old ? '' : ' off') +
-            '" id="oldbody">' +
-            boards
-              .map(function (board) {
-                var old = board.fields.filter(function (item) {
-                  return !item.fresh;
-                });
-                return old.length
-                  ? '<div class="bd"><b>' +
-                      esc(board.name) +
-                      '</b><i>舊聞 ' +
-                      old.length +
-                      ' 欄</i></div><div class="news">' +
-                      old
-                        .map(function (item) {
-                          return field(item, false);
-                        })
-                        .join('') +
-                      '</div>'
-                  : '';
-              })
-              .join('') +
-            '</div></details>',
+          '<div class="colophon"><span>本報各版取自角色卡的新聞變量，只讀不改；時間為最後更新的故事時間</span></div></main></div>',
         );
-      }
-      html.push(
-        '<div class="colophon"><span>本報各版取自角色卡的新聞變量，只讀不改；時間為最後更新的故事時間</span></div></main></div>',
-      );
-      root.innerHTML = html.join('');
-      root.hidden = false;
-      if (quiet) root.classList.add('quiet');
+        root.innerHTML = html.join('');
+        root.hidden = false;
+        root.classList.toggle('quiet', quiet);
 
-      var paper = document.getElementById('paper');
-      try {
-        var height = window.top && window.top.innerHeight;
-        if (height)
-          root.style.setProperty('--maxh', Math.max(360, Math.min(760, Math.round(height * 0.75))) + 'px');
-      } catch (error) {}
-      var apply = function () {
-        root.classList.toggle('dark', settings.dark);
-        root.style.setProperty('--fz', String(settings.fz));
-        document.getElementById('fzv').textContent = Math.round(settings.fz * 100) + '%';
-        document.getElementById('mode').textContent = settings.dark ? '☀ 淺色' : '☾ 深色';
-        document.getElementById('toggle').textContent = root.classList.contains('open')
-          ? '收起 ▴'
-          : quiet
-            ? '翻閱 ▾'
-            : '展開 ▾';
-      };
-      apply();
-      document.getElementById('strip').addEventListener('click', function (event) {
-        var button = event.target.closest ? event.target.closest('button') : null;
-        if (button && button.dataset.fz) {
-          var at = sizes.indexOf(settings.fz);
-          at = Math.max(
-            0,
-            Math.min(sizes.length - 1, (at < 0 ? 1 : at) + (button.dataset.fz === '+' ? 1 : -1)),
-          );
-          settings.fz = sizes[at];
-          save();
-        } else if (button && button.id === 'mode') {
-          settings.dark = !settings.dark;
-          save();
-        } else {
-          root.classList.toggle('open');
-        }
+        var paper = document.getElementById('paper');
+        try {
+          var height = window.top && window.top.innerHeight;
+          if (height)
+            root.style.setProperty('--maxh', Math.max(360, Math.min(760, Math.round(height * 0.75))) + 'px');
+        } catch (error) {}
+        var apply = function () {
+          root.classList.toggle('dark', settings.dark);
+          root.style.setProperty('--fz', String(settings.fz));
+          document.getElementById('fzv').textContent = Math.round(settings.fz * 100) + '%';
+          document.getElementById('mode').textContent = settings.dark ? '☀ 淺色' : '☾ 深色';
+          document.getElementById('toggle').textContent = root.classList.contains('open')
+            ? '收起 ▴'
+            : quiet
+              ? '翻閱 ▾'
+              : '展開 ▾';
+        };
         apply();
-      });
-      root.addEventListener('click', function (event) {
-        var target = event.target;
-        var go = target.closest ? target.closest('[data-go]') : null;
-        if (go) {
-          root.querySelectorAll('.it').forEach(function (it) {
-            it.classList.remove('on');
-          });
-          go.classList.add('on');
-          var node = document.getElementById(go.dataset.go);
-          if (!node) return;
-          var fold = node.closest('details');
-          if (fold) fold.open = true;
-          if (node.classList.contains('old')) {
-            if (!settings.old) document.getElementById('oldsw').click();
-            node.classList.add('full');
+        document.getElementById('strip').addEventListener('click', function (event) {
+          var button = event.target.closest ? event.target.closest('button') : null;
+          if (button && button.dataset.fz) {
+            var at = sizes.indexOf(settings.fz);
+            at = Math.max(
+              0,
+              Math.min(sizes.length - 1, (at < 0 ? 1 : at) + (button.dataset.fz === '+' ? 1 : -1)),
+            );
+            settings.fz = sizes[at];
+            save();
+          } else if (button && button.id === 'mode') {
+            settings.dark = !settings.dark;
+            save();
+          } else {
+            root.classList.toggle('open');
           }
-          paper.scrollTo({ top: node.offsetTop - paper.offsetTop - 10, behavior: 'smooth' });
-          node.classList.remove('flash');
-          void node.offsetWidth;
-          node.classList.add('flash');
-          return;
-        }
-        var more = target.closest ? target.closest('.more') : null;
-        if (more) {
-          var article = more.parentNode;
-          article.classList.toggle('full');
-          more.textContent = article.classList.contains('full') ? '收起 ▴' : '全文 ▾';
-          return;
-        }
-        var sw = target.closest ? target.closest('#oldsw') : null;
-        if (sw) {
-          settings.old = !settings.old;
-          sw.classList.toggle('on', settings.old);
-          document.getElementById('oldbody').classList.toggle('off', !settings.old);
-          save();
-          return;
-        }
-        var emit = target.closest ? target.closest('[data-emit]') : null;
-        if (emit) {
-          // The national focus script listens and opens its panel or event log.
-          eventEmit('national-focus:open-news', floor, emit.dataset.emit);
-        }
-      });
-      ['serials', 'pages'].forEach(function (key) {
-        var fold = document.getElementById('f-' + key);
-        if (fold) {
-          fold.addEventListener('toggle', function () {
-            if (settings[key] !== fold.open) {
-              settings[key] = fold.open;
-              save();
+          apply();
+        });
+        root.onclick = function (event) {
+          var target = event.target;
+          var go = target.closest ? target.closest('[data-go]') : null;
+          if (go) {
+            root.querySelectorAll('.it').forEach(function (it) {
+              it.classList.remove('on');
+            });
+            go.classList.add('on');
+            var node = document.getElementById(go.dataset.go);
+            if (!node) return;
+            var fold = node.closest('details');
+            if (fold) fold.open = true;
+            if (node.classList.contains('old')) {
+              if (!settings.old) document.getElementById('oldsw').click();
+              node.classList.add('full');
             }
-          });
+            paper.scrollTo({ top: node.offsetTop - paper.offsetTop - 10, behavior: 'smooth' });
+            node.classList.remove('flash');
+            void node.offsetWidth;
+            node.classList.add('flash');
+            return;
+          }
+          var more = target.closest ? target.closest('.more') : null;
+          if (more) {
+            var article = more.parentNode;
+            article.classList.toggle('full');
+            more.textContent = article.classList.contains('full') ? '收起 ▴' : '全文 ▾';
+            return;
+          }
+          var sw = target.closest ? target.closest('#oldsw') : null;
+          if (sw) {
+            settings.old = !settings.old;
+            sw.classList.toggle('on', settings.old);
+            document.getElementById('oldbody').classList.toggle('off', !settings.old);
+            save();
+            return;
+          }
+          var emit = target.closest ? target.closest('[data-emit]') : null;
+          if (emit) {
+            // The national focus script listens and opens its panel or event log.
+            eventEmit('national-focus:open-news', floor, emit.dataset.emit);
+          }
+        };
+        ['serials', 'pages'].forEach(function (key) {
+          var fold = document.getElementById('f-' + key);
+          if (fold) {
+            fold.addEventListener('toggle', function () {
+              if (settings[key] !== fold.open) {
+                settings[key] = fold.open;
+                save();
+              }
+            });
+          }
+        });
+      };
+      var lastData = '';
+      var lastNews = '';
+      var stopped = false;
+      var warned = false;
+      var at = function (value, path) {
+        return String(path)
+          .split('.')
+          .reduce(function (item, key) {
+            return item && typeof item === 'object' ? item[key] : undefined;
+          }, value);
+      };
+      var refresh = function () {
+        if (stopped) {
+          return;
         }
-      });
+        try {
+          // Read only this floor's saved variables. Generic variable writes emit no save event.
+          var vars = getVariables({ type: 'message', message_id: floor }) || {};
+          var state = vars['国策'] || {};
+          var bar = state['快讯'] || {};
+          var countries = Object.keys(state.countries || {}).map(function (id) {
+            var country = state.countries[id];
+            return [id, country.name, country.keywords, country.enabled, country.control];
+          });
+          var news = JSON.stringify([
+            at(vars.stat_data, bar.newsPath || '新闻'),
+            at(vars.stat_data, bar.timePath || '世界.时间'),
+            at(vars.stat_data, bar.locationPath || '世界.地点'),
+            countries,
+          ]);
+          var policies = Object.keys(state.countries || {}).map(function (id) {
+            var country = state.countries[id];
+            return [
+              id,
+              country.locks,
+              Object.keys(country.nodes || {}).map(function (nodeId) {
+                var node = country.nodes[nodeId];
+                return [
+                  nodeId,
+                  node.name,
+                  node.prerequisites,
+                  node.mutex,
+                  country.progress && country.progress[nodeId] && country.progress[nodeId].status,
+                ];
+              }),
+            ];
+          });
+          var data = JSON.stringify([news, state.events, bar, policies]);
+          if (data !== lastData) {
+            var paper = document.getElementById('paper');
+            var scroll = paper ? paper.scrollTop : 0;
+            var folds = Array.from(root.querySelectorAll('details[id]')).map(function (item) {
+              return [item.id, item.open];
+            });
+            var expanded = Array.from(root.querySelectorAll('.full[id]')).map(function (item) {
+              return item.id;
+            });
+            var selected = root.querySelector('.it.on');
+            var selectedId = selected && selected.dataset.go;
+            render(vars);
+            folds.forEach(function (item) {
+              var node = document.getElementById(item[0]);
+              if (node) {
+                node.open = item[1];
+              }
+            });
+            expanded.forEach(function (id) {
+              var node = document.getElementById(id);
+              if (node) {
+                node.classList.add('full');
+                var button = node.querySelector('.more');
+                if (button) {
+                  button.textContent = '收起 ▴';
+                }
+              }
+            });
+            root.querySelectorAll('.it').forEach(function (item) {
+              item.classList.toggle('on', item.dataset.go === selectedId);
+            });
+            paper = document.getElementById('paper');
+            if (paper) {
+              paper.scrollTop = scroll;
+            }
+            lastData = data;
+          }
+          // Recompute freshness and dates only when the saved news inputs actually change.
+          if (news !== lastNews && state.countries && state.events) {
+            eventEmit('national-focus:refresh-news', floor);
+            lastNews = news;
+          }
+          warned = false;
+        } catch (error) {
+          if (!warned) {
+            console.warn('[國策報紙] 讀取本樓變量失敗，稍後重試：', error);
+          }
+          warned = true;
+        }
+      };
+      refresh();
+      var timer = setInterval(refresh, 1000);
+      window.addEventListener(
+        'pagehide',
+        function () {
+          stopped = true;
+          clearInterval(timer);
+          root.onclick = null;
+        },
+        { once: true },
+      );
     })();
   </script>
 </body>
