@@ -172,7 +172,7 @@ export function mountTaskPanel(
         <div class="route-row"><label class="field">主要連線<select data-t="api">${options(apis, job.api)}</select></label><label class="field cap">此連線同時請求數<input type="number" min="0" max="16" data-t="primaryMaxConcurrency" value="${job.primaryMaxConcurrency}"></label></div>
         <div data-fallbacks>${fallbackRows}</div>
         <button data-task-action="fb-add" ${config.apis.length ? '' : 'disabled'}>＋ 新增備援</button>
-        <small class="block-note">失敗時依序改用備援。「此連線同時請求數」只限制這項任務在該連線上同時送出的請求，0 為不限；主要連線滿載時直接改用有空位的備援。所有任務合計的上限在「一般 › 同時執行的任務數」。</small>
+        <small class="block-note">失敗時依序改用備援。「此連線同時請求數」只限制這項任務在該連線上同時送出的請求，0 為不限；主要連線滿載時直接改用有空位的備援。生成國策樹與換期只受此處限制；其他任務另受「一般 › 其他任務同時執行數」限制。</small>
         <div data-model-note>${modelNote(kind, config)}</div>
       </details>
       <details class="task-block" open><summary>執行設定</summary><div class="form-grid">

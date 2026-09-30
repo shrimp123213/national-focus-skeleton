@@ -269,14 +269,8 @@ export class FocusController {
     this.notify();
   }
   async enable(candidates: Candidate[]): Promise<void> {
-    const epoch = this.runEpoch;
-    // Each successful country takes a fresh snapshot. Failure keeps previous successes.
-    for (const candidate of candidates) {
-      await this.run('generate', candidate);
-      if (this.disposed || epoch !== this.runEpoch || !this.state?.countries[candidate.id]) {
-        break;
-      }
-    }
+    // Route pools limit requests; independent countries keep their own result and failure state.
+    await Promise.all(candidates.map((candidate) => this.run('generate', candidate)));
   }
   async run(kind: JobKind, candidate?: Candidate, periodWork?: PeriodWork): Promise<void> {
     if (this.disposed) {
@@ -313,7 +307,7 @@ export class FocusController {
     const cancelSource = () => aborter.abort();
     const periods: { candidate: Candidate; work: PeriodWork }[] = [];
     try {
-      while (this.active >= this.config.concurrency) {
+      while (kind !== 'generate' && this.active >= this.config.concurrency) {
         await new Promise<void>((resolve, reject) => {
           const wake = () => {
             aborter.signal.removeEventListener('abort', cancel);
@@ -328,8 +322,11 @@ export class FocusController {
         });
       }
       aborter.signal.throwIfAborted();
-      this.active++;
-      acquired = true;
+      // Country generation is governed only by the generation task's per-route request caps.
+      if (kind !== 'generate') {
+        this.active++;
+        acquired = true;
+      }
       status.state = 'running';
       status.started = Date.now();
       status.message = '正在分析本樓資料';
@@ -500,17 +497,14 @@ export class FocusController {
       status.finished = Date.now();
       if (acquired) {
         this.active--;
+        this.waiters.shift()?.();
       }
       this.aborters.delete(id);
-      this.waiters.shift()?.();
       this.notify();
     }
-    // Release the update job's slot before starting its per-country background generation.
-    for (const period of periods) {
-      if (this.disposed || aborter.signal.aborted) {
-        break;
-      }
-      await this.run('generate', period.candidate, period.work);
+    // Each country's next period shares the same generation route pools as initial trees.
+    if (!this.disposed && !aborter.signal.aborted) {
+      await Promise.all(periods.map((period) => this.run('generate', period.candidate, period.work)));
     }
   }
   /**
@@ -631,7 +625,13 @@ export class FocusController {
     }
     const pool = this.pool(kind, chain);
     // Start on the first route with a free slot, then fail over through the rest of the chain.
+    status.state = 'queued';
+    status.message = '等待 API 連線空位';
+    this.notify();
     const first = await pool.acquire(chain, signal);
+    status.state = 'running';
+    status.message = stageMessage;
+    this.notify();
     const index = chain.indexOf(first);
     const order = [...chain.slice(index), ...chain.slice(0, index)];
     for (const [position, route] of order.entries()) {

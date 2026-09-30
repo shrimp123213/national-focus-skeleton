@@ -30791,13 +30791,7 @@ ${managed}
       this.notify();
     }
     async enable(candidates) {
-      const epoch = this.runEpoch;
-      for (const candidate of candidates) {
-        await this.run("generate", candidate);
-        if (this.disposed || epoch !== this.runEpoch || !this.state?.countries[candidate.id]) {
-          break;
-        }
-      }
+      await Promise.all(candidates.map((candidate) => this.run("generate", candidate)));
     }
     async run(kind, candidate, periodWork) {
       if (this.disposed) {
@@ -30828,7 +30822,7 @@ ${managed}
       const cancelSource = () => aborter.abort();
       const periods = [];
       try {
-        while (this.active >= this.config.concurrency) {
+        while (kind !== "generate" && this.active >= this.config.concurrency) {
           await new Promise((resolve, reject) => {
             const wake = () => {
               aborter.signal.removeEventListener("abort", cancel);
@@ -30843,8 +30837,10 @@ ${managed}
           });
         }
         aborter.signal.throwIfAborted();
-        this.active++;
-        acquired = true;
+        if (kind !== "generate") {
+          this.active++;
+          acquired = true;
+        }
         status.state = "running";
         status.started = Date.now();
         status.message = "正在分析本樓資料";
@@ -30990,16 +30986,13 @@ ${managed}
         status.finished = Date.now();
         if (acquired) {
           this.active--;
+          this.waiters.shift()?.();
         }
         this.aborters.delete(id);
-        this.waiters.shift()?.();
         this.notify();
       }
-      for (const period of periods) {
-        if (this.disposed || aborter.signal.aborted) {
-          break;
-        }
-        await this.run("generate", period.candidate, period.work);
+      if (!this.disposed && !aborter.signal.aborted) {
+        await Promise.all(periods.map((period) => this.run("generate", period.candidate, period.work)));
       }
     }
     /**
@@ -31097,7 +31090,13 @@ ${json2}`
         }
       }
       const pool = this.pool(kind, chain);
+      status.state = "queued";
+      status.message = "等待 API 連線空位";
+      this.notify();
       const first = await pool.acquire(chain, signal);
+      status.state = "running";
+      status.message = stageMessage;
+      this.notify();
       const index = chain.indexOf(first);
       const order = [...chain.slice(index), ...chain.slice(0, index)];
       for (const [position, route] of order.entries()) {
@@ -32802,7 +32801,7 @@ ${NEWS_TAG}` }], {
         <div class="route-row"><label class="field">主要連線<select data-t="api">${options(apis, job.api)}</select></label><label class="field cap">此連線同時請求數<input type="number" min="0" max="16" data-t="primaryMaxConcurrency" value="${job.primaryMaxConcurrency}"></label></div>
         <div data-fallbacks>${fallbackRows}</div>
         <button data-task-action="fb-add" ${config2.apis.length ? "" : "disabled"}>＋ 新增備援</button>
-        <small class="block-note">失敗時依序改用備援。「此連線同時請求數」只限制這項任務在該連線上同時送出的請求，0 為不限；主要連線滿載時直接改用有空位的備援。所有任務合計的上限在「一般 › 同時執行的任務數」。</small>
+        <small class="block-note">失敗時依序改用備援。「此連線同時請求數」只限制這項任務在該連線上同時送出的請求，0 為不限；主要連線滿載時直接改用有空位的備援。生成國策樹與換期只受此處限制；其他任務另受「一般 › 其他任務同時執行數」限制。</small>
         <div data-model-note>${modelNote(kind, config2)}</div>
       </details>
       <details class="task-block" open><summary>執行設定</summary><div class="form-grid">
@@ -35031,7 +35030,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【僅顯示
             ["long", "長期"]
           ],
           state?.settings.pace ?? "standard"
-        )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">同時執行的任務數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>所有任務合計，預設 1 最穩定。單一連線的請求數在「任務 › API 路由」。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>在當前角色的主世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未設定角色主世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
+        )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="field">其他任務同時執行數<input data-config="concurrency" type="number" min="1" max="4" value="${draft.concurrency}"><small>限制辨識國家、更新局勢與評估改樹。生成及換期只由「任務 › 生成國策樹 › 此連線同時請求數」限制。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>在當前角色的主世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未設定角色主世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
       <div class="settings-section" ${settingsTab !== "apis" ? "hidden" : ""}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "jobs" ? "hidden" : ""}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "sources" ? "hidden" : ""}><div id="source-panel"></div></div>`,

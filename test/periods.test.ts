@@ -432,3 +432,176 @@ test('取消換期只丟棄新生成結果，保留已提交的局勢和原樹',
   assert.ok(platform.data.receipts.includes('switch'));
   assert.equal(platform.data.events.project.status, 'ongoing');
 });
+
+function generatedCountry(id: string, name = id) {
+  return {
+    ...tree,
+    id,
+    name,
+    nodes: tree.nodes.map(({ x, y, ...content }) => content),
+  };
+}
+
+async function waitForRequests(check: () => boolean): Promise<void> {
+  for (let i = 0; i < 200; i++) {
+    if (check()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  }
+  assert.fail('請求未在期限內進入預期狀態');
+}
+
+for (const cap of [1, 2, 0]) {
+  test(`多國初次生成依連線上限 ${cap} 並行，忽略一般上限並保留所有結果`, async () => {
+    const platform = new PeriodPlatform();
+    const controller = controllerFor(platform);
+    controller.config.concurrency = 1;
+    controller.config.jobs.generate.primaryMaxConcurrency = cap;
+    const candidates = [0, 1, 2].map((i) => ({
+      id: `new_${i}`,
+      name: `新國 ${i}`,
+      description: '新國',
+      evidence: '世界書',
+    }));
+    const releases: (() => void)[] = [];
+    let active = 0;
+    let peak = 0;
+    for (const candidate of candidates) {
+      platform.outputs.push(async () => {
+        active++;
+        peak = Math.max(peak, active);
+        await new Promise<void>((resolve) => releases.push(resolve));
+        active--;
+        return JSON.stringify(generatedCountry(candidate.id, candidate.name));
+      });
+    }
+    const work = controller.enable(candidates);
+    try {
+      const expected = cap || candidates.length;
+      await waitForRequests(() => platform.calls === expected);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      assert.equal(platform.calls, expected, '額度滿時其餘國家不得呼叫 API');
+      assert.equal(peak, expected, '一般任務數 1 不得限制多國生成');
+      releases[0]();
+      for (let i = 1; i < candidates.length; i++) {
+        await waitForRequests(() => releases.length > i);
+        releases[i]();
+      }
+      await work;
+      assert.equal(peak, expected);
+      assert.ok(
+        controller.jobs.every((job) => job.state === 'success'),
+        JSON.stringify(controller.jobs),
+      );
+      for (const candidate of candidates) {
+        assert.equal(platform.data.countries[candidate.id].name, candidate.name);
+      }
+      assert.ok(platform.data.countries.land, '保留原有國家');
+    } finally {
+      controller.dispose();
+      releases.forEach((release) => release());
+      await work;
+    }
+  });
+}
+
+test('並行批次單國失敗不阻止其他國家保存；重複國家只送一次', async () => {
+  const platform = new PeriodPlatform();
+  const controller = controllerFor(platform);
+  controller.config.jobs.generate.primaryMaxConcurrency = 2;
+  const candidates = ['bad', 'good'].map((id) => ({ id, name: id, description: id, evidence: '世界書' }));
+  platform.outputs.push(
+    async () => '{invalid',
+    async () => JSON.stringify(generatedCountry('good')),
+  );
+  try {
+    await controller.enable([candidates[0], candidates[1], candidates[1]]);
+    assert.equal(platform.calls, 2);
+    assert.equal(platform.data.countries.bad, undefined);
+    assert.ok(platform.data.countries.good);
+    assert.equal(controller.jobs.find((job) => job.candidate?.id === 'bad')?.state, 'failed');
+    assert.equal(controller.jobs.find((job) => job.candidate?.id === 'good')?.state, 'success');
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('取消並行生成會取消連線排隊，延遲回應不保存', async () => {
+  const platform = new PeriodPlatform();
+  const controller = controllerFor(platform);
+  controller.config.jobs.generate.primaryMaxConcurrency = 1;
+  let release!: (value: string) => void;
+  platform.outputs.push(
+    () =>
+      new Promise<string>((resolve) => {
+        release = resolve;
+      }),
+  );
+  const candidates = ['first', 'second'].map((id) => ({ id, name: id, description: id, evidence: '世界書' }));
+  const work = controller.enable(candidates);
+  try {
+    await waitForRequests(
+      () => platform.calls === 1 && controller.jobs.some((job) => job.state === 'queued'),
+    );
+    controller.cancelAll();
+    await work;
+    release(JSON.stringify(generatedCountry('first')));
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.equal(platform.calls, 1);
+    assert.ok(controller.jobs.every((job) => job.state === 'cancelled'));
+    assert.equal(platform.data.countries.first, undefined);
+    assert.equal(platform.data.countries.second, undefined);
+    platform.outputs.push(async () => JSON.stringify(generatedCountry('first')));
+    await controller.enable([candidates[0]]);
+    assert.equal(platform.calls, 2, '取消後連線額度可重用');
+    assert.ok(platform.data.countries.first);
+  } finally {
+    controller.dispose();
+    release?.('{}');
+    await work;
+  }
+});
+
+test('多國換期共用生成連線額度並保存各國新期', async () => {
+  const platform = new PeriodPlatform();
+  platform.data.countries.peer = {
+    ...structuredClone(platform.data.countries.land),
+    id: 'peer',
+    name: '鄰國',
+  };
+  const controller = controllerFor(platform);
+  controller.config.concurrency = 1;
+  controller.config.jobs.generate.primaryMaxConcurrency = 2;
+  const releases: (() => void)[] = [];
+  platform.outputs.push(async () =>
+    JSON.stringify({ ...update, transitions: [transition, { ...transition, country: 'peer' }] }),
+  );
+  for (const id of ['land', 'peer']) {
+    platform.outputs.push(async () => {
+      await new Promise<void>((resolve) => releases.push(resolve));
+      const result = reply();
+      result.tree.id = id;
+      return JSON.stringify(result);
+    });
+  }
+  const work = controller.run('update');
+  try {
+    await waitForRequests(() => releases.length === 2);
+    assert.equal(platform.calls, 3, '更新一次後同時生成兩國下一期');
+    releases[1]();
+    releases[0]();
+    await work;
+    assert.ok(
+      controller.jobs.every((job) => job.state === 'success'),
+      JSON.stringify(controller.jobs),
+    );
+    assert.equal(platform.data.countries.land.period.number, 2);
+    assert.equal(platform.data.countries.peer.period.number, 2);
+    assert.equal(platform.data.events.project.status, 'ongoing');
+  } finally {
+    controller.dispose();
+    releases.forEach((release) => release());
+    await work;
+  }
+});

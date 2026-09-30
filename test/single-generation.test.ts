@@ -287,7 +287,7 @@ test('歷史國策不重新要求當年的能力，也不重發歷史效果', as
   assert.equal(platform.calls.length, 1);
 });
 
-test('取消與結構錯誤均不提交，取消多國任務後不繼續下一國', async () => {
+test('取消與結構錯誤均不提交，連線限額 1 時取消後不執行排隊國家', async () => {
   for (const defect of ['route', 'capability', 'reference']) {
     const platform = new SingleCountryPlatform();
     platform.invalid = defect;
@@ -299,17 +299,23 @@ test('取消與結構錯誤均不提交，取消多國任務後不繼續下一�
   }
   const platform = new SingleCountryPlatform();
   platform.block = true;
+  platform.config.jobs.generate.primaryMaxConcurrency = 1;
   const controller = new FocusController(platform);
   const run = controller.enable([candidate, { ...candidate, id: 'second' }]);
-  for (let i = 0; i < 100 && !platform.calls.length; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 2));
+  try {
+    for (let i = 0; i < 100 && !platform.calls.length; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+    assert.equal(platform.calls.length, 1);
+    controller.cancelAll();
+    await run;
+    assert.ok(controller.jobs.every((job) => job.state === 'cancelled'));
+    assert.equal(platform.commits, 0);
+    assert.equal(platform.calls.length, 1);
+  } finally {
+    controller.dispose();
+    await run;
   }
-  assert.equal(platform.calls.length, 1);
-  controller.cancelAll();
-  await run;
-  assert.equal(controller.jobs[0].state, 'cancelled');
-  assert.equal(platform.commits, 0);
-  assert.equal(platform.calls.length, 1);
 });
 
 test('只有失敗才依既有重試設定再次請求，不追加分支或審查請求', async () => {
