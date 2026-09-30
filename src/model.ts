@@ -8,7 +8,7 @@ export const Id = z
 const Text = z.string().min(1).max(8000);
 const Day = z.number().finite().nonnegative();
 /** negate=true means the fact or capability must NOT hold (skeleton edition, handoff doc section 32). */
-const Negate = z.boolean().optional().describe('true＝必須「沒有」這個能力或事實；省略為 false');
+const Negate = z.boolean().optional().describe('true＝必须「没有」这个能力或事实；省略为 false');
 export const RequirementSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('fact'), id: Id, label: Text, negate: Negate }).strict(),
   z.object({ kind: z.literal('capability'), id: Id, label: Text, negate: Negate }).strict(),
@@ -20,7 +20,7 @@ export const RequirementSchema = z.discriminatedUnion('kind', [
 const When = z
   .array(RequirementSchema)
   .optional()
-  .describe('條件式效果：完成時這些條件都成立才生效；省略為無條件');
+  .describe('条件式效果：完成时这些条件都成立才生效；省略为无条件');
 export const EffectSchema = z.discriminatedUnion('kind', [
   z
     .object({
@@ -39,7 +39,7 @@ export const NodeSchema = z
   .object({
     id: Id,
     name: Text,
-    branch: Text.describe('所屬分支的 name，須逐字對應 branches[].name；不要填分支 ID'),
+    branch: Text.describe('所属分支的 name，须逐字对应 branches[].name；不要填分支 ID'),
     description: Text,
     reason: Text,
     icon: z.enum(['crown', 'industry', 'army', 'trade', 'science', 'diplomacy']),
@@ -53,15 +53,15 @@ export const NodeSchema = z
       .describe('AND of OR groups：[[a,b],[c]] 表示完成 a 或 b，且完成 c'),
     requirements: z
       .array(RequirementSchema)
-      .describe('開始本國策前必須已成立的條件；不可引用本國策自己的 effects'),
-    sustain: z.array(RequirementSchema).describe('推進期間必須持續成立的條件；不可引用本國策自己的 effects'),
+      .describe('开始本国策前必须已成立的条件；不可引用本国策自己的 effects'),
+    sustain: z.array(RequirementSchema).describe('推进期间必须持续成立的条件；不可引用本国策自己的 effects'),
     outcomes: z
       .array(RequirementSchema)
       .describe(
-        '工期滿後、正式完成前必須由劇情取得的外部成果（例如他國同意、勘查完成）。這是完成條件，不是本國策的產出；產出只寫在 effects',
+        '工期满后、正式完成前必须由剧情取得的外部成果（例如他国同意、勘查完成）。这是完成条件，不是本国策的产出；产出只写在 effects',
       ),
-    investments: z.array(Text).describe('投入的人力、物資或機構，簡短名詞'),
-    effects: z.array(EffectSchema).describe('本國策完成時產生的能力、承諾或數值變動'),
+    investments: z.array(Text).describe('投入的人力、物资或机构，简短名词'),
+    effects: z.array(EffectSchema).describe('本国策完成时产生的能力、承诺或数值变动'),
     mutex: z
       .object({ group: Id, route: Id, lock: z.enum(['complete', 'start']), reason: Text })
       .strict()
@@ -69,7 +69,7 @@ export const NodeSchema = z
     impact: z
       .enum(['normal', 'pivotal'])
       .default('normal')
-      .describe('pivotal＝重要國策：影響重大、值得公告的國策，完成時發布新聞事件'),
+      .describe('pivotal＝重要国策：影响重大、值得公告的国策，完成时发布新闻事件'),
     /**
      * v0.13: `ongoing` means the decision is made on completion but the work goes on (a survey, a
      * long construction); completion opens one execution event that the update task carries on.
@@ -78,19 +78,19 @@ export const NodeSchema = z
     execution: z
       .enum(['once', 'ongoing'])
       .optional()
-      .describe('ongoing＝完成後仍需持續執行（工程、長期改革），完成時自動建立執行事件；省略為 once'),
+      .describe('ongoing＝完成后仍需持续执行（工程、长期改革），完成时自动建立执行事件；省略为 once'),
     news: z
       .object({
-        headline: Text.describe('像報紙頭條的一句話'),
-        body: Text.describe('新聞內文，寫出世界如何看待此事'),
+        headline: Text.describe('像报纸头条的一句话'),
+        body: Text.describe('新闻内文，写出世界如何看待此事'),
         option: z
-          .object({ label: Text.describe('唯一選項的按鈕文字'), text: z.string().default('') })
+          .object({ label: Text.describe('唯一选项的按钮文字'), text: z.string().default('') })
           .strict(),
       })
       .strict()
       .nullable()
       .default(null)
-      .describe('重要國策完成時的新聞；pivotal 必填，normal 為 null'),
+      .describe('重要国策完成时的新闻；pivotal 必填，normal 为 null'),
   })
   .strict();
 export const CapabilitySchema = z.object({ id: Id, name: Text, active: z.boolean(), reason: Text }).strict();
@@ -119,11 +119,11 @@ export const relationKinds = [
   'replacement',
 ] as const;
 export const relationKindNames: Record<(typeof relationKinds)[number], string> = {
-  exchange: '利益交換',
+  exchange: '利益交换',
   synergy: '政策配合',
-  opportunity: '機會成本',
-  context: '情境差異',
-  deferred: '延後兌現',
+  opportunity: '机会成本',
+  context: '情境差异',
+  deferred: '延后兑现',
   replacement: '制度替代',
 };
 /**
@@ -135,7 +135,7 @@ export const RelationSchema = z
     from: Id,
     to: Id,
     kind: z.enum(relationKinds),
-    change: Text.describe('選了 from 之後，to 的哪些選項、收益、代價或時機會改變'),
+    change: Text.describe('选了 from 之后，to 的哪些选项、收益、代价或时机会改变'),
     via: z.array(z.string()).default([]),
   })
   .strict();
@@ -158,7 +158,7 @@ export const TreeSchema = z
     /** Skeleton edition: words the story uses for this country; they trigger its chat worldbook entry. */
     keywords: z.array(z.string().min(1).max(24)).max(8).optional(),
     analysis: z.string().default(''),
-    periodTitle: z.string().max(80).default('當前議程'),
+    periodTitle: z.string().max(80).default('当前议程'),
     agenda: z.string().max(800).default(''),
     longTerm: z
       .array(z.object({ id: Id, text: z.string().min(1).max(200) }).strict())
@@ -211,8 +211,8 @@ export const CountrySchema = TreeSchema.omit({ nodes: true, historical: true, ca
 });
 export const EventOptionSchema = z
   .object({
-    label: Text.describe('唯一選項的按鈕文字，例如「這下有得忙了」'),
-    text: z.string().default('').describe('選項說明；效果寫在 changes，可以沒有效果'),
+    label: Text.describe('唯一选项的按钮文字，例如「这下有得忙了」'),
+    text: z.string().default('').describe('选项说明；效果写在 changes，可以没有效果'),
   })
   .strict();
 /** One planned or finished step of an event, fully replaced on each update (v0.13). */
@@ -221,13 +221,13 @@ export const EventStepSchema = z
     text: Text,
     state: z
       .enum(['done', 'active', 'pending', 'planned'])
-      .describe('done 已完成、active 進行中、pending 待辦、planned 預定'),
-    when: z.string().max(40).optional().describe('故事時間，例如「6 月初」；可省略'),
+      .describe('done 已完成、active 进行中、pending 待办、planned 预定'),
+    when: z.string().max(40).optional().describe('故事时间，例如「6 月初」；可省略'),
   })
   .strict();
 export const EventResultSchema = z
   .enum(['achieved', 'abandoned', 'failed'])
-  .describe('結束方式：achieved 達成、abandoned 終止、failed 失敗');
+  .describe('结束方式：achieved 达成、abandoned 终止、failed 失败');
 const EventChangesSchema = z.array(z.object({ country: Id, effects: z.array(EffectSchema) }).strict());
 export const EventSchema = z
   .object({
@@ -243,14 +243,14 @@ export const EventSchema = z
     scope: z
       .enum(['front', 'back'])
       .default('back')
-      .describe('front＝與目前正文或玩家國直接相關；back＝鏡頭外的世界動態'),
+      .describe('front＝与目前正文或玩家国直接相关；back＝镜头外的世界动态'),
     importance: z.enum(['minor', 'major', 'world']).default('minor'),
-    headline: z.string().default('').describe('新聞頭條；空白時使用 title'),
+    headline: z.string().default('').describe('新闻头条；空白时使用 title'),
     status: z
       .enum(['ongoing', 'resolved'])
       .default('resolved')
-      .describe('ongoing＝之後還會推進；resolved＝已結束'),
-    settle: z.string().default('').describe('ongoing 事件的結算條件'),
+      .describe('ongoing＝之后还会推进；resolved＝已结束'),
+    settle: z.string().default('').describe('ongoing 事件的结算条件'),
     option: EventOptionSchema.default({ label: '知道了', text: '' }),
     timeline: z.array(z.object({ at: Day, text: Text }).strict()).default([]),
     /** v0.13: one sentence on where things stand now (results, what is left, what blocks it). */
@@ -280,16 +280,16 @@ export const EventSchema = z
   .strict();
 export const EventUpdateSchema = z
   .object({
-    id: Id.describe('要推進的既有 ongoing 事件 id'),
-    text: Text.describe('本期進展'),
+    id: Id.describe('要推进的既有 ongoing 事件 id'),
+    text: Text.describe('本期进展'),
     status: z.enum(['ongoing', 'resolved']).optional(),
-    headline: z.string().optional().describe('本期進展的新聞頭條'),
+    headline: z.string().optional().describe('本期进展的新闻头条'),
     public: z.boolean().optional(),
-    current: z.string().max(400).optional().describe('整句取代現況：已確認成果、尚待達成、目前阻力'),
-    steps: z.array(EventStepSchema).max(12).optional().describe('整份取代步驟清單'),
-    changes: EventChangesSchema.optional().describe('這次進展產生的能力、承諾或數值變化；只套用一次'),
-    result: EventResultSchema.optional().describe('填寫即表示事件結束'),
-    report: z.boolean().optional().describe('true＝這次進展值得當作新聞報導；一般進展省略'),
+    current: z.string().max(400).optional().describe('整句取代现况：已确认成果、尚待达成、目前阻力'),
+    steps: z.array(EventStepSchema).max(12).optional().describe('整份取代步骤清单'),
+    changes: EventChangesSchema.optional().describe('这次进展产生的能力、承诺或数值变化；只套用一次'),
+    result: EventResultSchema.optional().describe('填写即表示事件结束'),
+    report: z.boolean().optional().describe('true＝这次进展值得当作新闻报导；一般进展省略'),
   })
   .strict();
 export const SettingsSchema = z.object({
@@ -338,7 +338,7 @@ export const ProposalSchema = z
                   .object({ country: Id, node: Id })
                   .strict()
                   .optional()
-                  .describe('這個事件承接執行的國策；一項國策最多一個事件'),
+                  .describe('这个事件承接执行的国策；一项国策最多一个事件'),
               }),
             ),
             selections: z.array(z.object({ country: Id, node: Id, reason: Text }).strict()),
@@ -366,7 +366,7 @@ export const ProposalSchema = z
           .strict(),
       )
       .default([])
-      .describe('本期主要目的已完成或已不適配時直接換期；無需換期填空，禁止為關閉 autoPeriod 的國家換期'),
+      .describe('本期主要目的已完成或已不适配时直接换期；无需换期填空，禁止为关闭 autoPeriod 的国家换期'),
   })
   .strict();
 export const CandidatesSchema = z
@@ -543,9 +543,9 @@ export const SourcesSchema = z.preprocess(
       variables: z.array(z.string()).default([]),
       extra: z.string().default(''),
       timePath: z.string().min(1).default('世界.时间'),
-      /** v0.13: the player's location (大陸方位-區域-勢力-…), for the countries the player is inside. */
+      /** v0.13: the player's location (大陆方位-区域-势力-…), for the countries the player is inside. */
       locationPath: z.string().min(1).default('世界.地点'),
-      /** v0.13: the card's own news (MVU), shown in the newspaper's 本報各版. */
+      /** v0.13: the card's own news (MVU), shown in the newspaper's 本报各版. */
       newsPath: z.string().min(1).default('新闻'),
     })
     .transform((settings) => {
@@ -626,8 +626,8 @@ export function defaultConfig(): Config {
     interval: 1,
   };
   return ConfigSchema.parse({
-    apis: [{ name: '目前連線', url: '', model: '', proxy: '' }],
-    defaultApi: '目前連線',
+    apis: [{ name: '目前连线', url: '', model: '', proxy: '' }],
+    defaultApi: '目前连线',
     jobs: {
       identify: { ...job },
       generate: { ...job, timeout: 600 },

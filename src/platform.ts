@@ -64,7 +64,7 @@ export type JobStatus = {
 export type RunLogEntry = {
   jobId: string;
   kind: string;
-  /** What this request was for, e.g. 「修正骨架（第 1/3 輪，5 個問題）」. */
+  /** What this request was for, e.g. 「修正骨架（第 1/3 轮，5 个问题）」. */
   stage?: string;
   time: string;
   route: string;
@@ -142,7 +142,7 @@ export function storyDay(raw: unknown): number {
     }
   }
   throw new Error(
-    '無法辨識故事時間。支援「复兴纪元490年-10月-15日-星期三-14:25」、YYYY-MM-DD HH:mm、YYYY年M月D日或非負數值日序；請確認設定的來源路徑與日期有效，不會以現實時間代算。',
+    '无法辨识故事时间。支援「复兴纪元490年-10月-15日-星期三-14:25」、YYYY-MM-DD HH:mm、YYYY年M月D日或非负数值日序；请确认设定的来源路径与日期有效，不会以现实时间代算。',
   );
 }
 export function stamp(value: unknown): string {

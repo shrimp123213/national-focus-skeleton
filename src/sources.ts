@@ -29,13 +29,13 @@ export type SourceReport = {
 export class InputSizeError extends Error {}
 
 export const placeholders = {
-  $1: '劇情世界書',
-  $2: '工作流托管條目',
-  $5: '紀要索引',
-  $6: '記憶回溯',
+  $1: '剧情世界书',
+  $2: '工作流托管条目',
+  $5: '纪要索引',
+  $6: '记忆回溯',
   $7: 'AI 上下文',
-  $8: '使用者輸入',
-  $U: '使用者設定與主角資料',
+  $8: '使用者输入',
+  $U: '使用者设定与主角资料',
   $C: '角色描述',
 } as const;
 export type Placeholder = keyof typeof placeholders;
@@ -219,19 +219,19 @@ export function entryExclusion(
 ): string {
   const name = normalizedEntryName(entry.name);
   if (summaryIndexEntry(name)) {
-    return '紀要索引專用（$5）';
+    return '纪要索引专用（$5）';
   }
   if (memoryEntry(name)) {
-    return '記憶回溯專用（$6）';
+    return '记忆回溯专用（$6）';
   }
   if (managedEntry(name)) {
-    return '工作流托管條目（$2）';
+    return '工作流托管条目（$2）';
   }
   if (protagonistEntry(name, names)) {
-    return '主角資料專用（$U）';
+    return '主角资料专用（$U）';
   }
   if (!databaseEntry(name) && blockedWords.some((word) => entry.name.includes(word))) {
-    return '規則／變量／格式條目';
+    return '规则／变量／格式条目';
   }
   return '';
 }
@@ -607,7 +607,7 @@ export async function buildSourceContext(input: SourceInput) {
         ? ''
         : selectedEntry(entry, selection)
           ? ''
-          : '未勾選';
+          : '未勾选';
     entryReports.push({ book: entry.book, uid: entry.uid, name: entry.name, characters: 0, status });
     if (status) {
       return;
@@ -632,7 +632,7 @@ export async function buildSourceContext(input: SourceInput) {
     }
   }
   for (const row of entryReports) {
-    row.status ||= '未觸發';
+    row.status ||= '未触发';
   }
   const worldbook = excludeContext(worldParts.join('\n\n'), effective.context.contextExcludeRules);
 
@@ -657,7 +657,7 @@ export async function buildSourceContext(input: SourceInput) {
     const raw = indexRow?.content || formatSummaryIndex(input.tables) || formatOutlineTable(input.tables);
     summaryIndex = (await render(raw, 'slash_command')).trim();
     if (!summaryIndex) {
-      notes.push('$5 找不到紀要索引條目或資料庫表格，未送出。');
+      notes.push('$5 找不到纪要索引条目或资料库表格，未送出。');
     }
   }
 
@@ -853,7 +853,7 @@ export function assertInputSize(messages: PromptMessage[], limit: number): void 
   const count = messageCharacters(messages);
   if (count > limit) {
     throw new InputSizeError(
-      `輸入過大：${count.toLocaleString()} 字元，超過上限 ${limit.toLocaleString()}。未呼叫 API；請在「世界書與上下文」預覽並調整條目、提取／排除規則、提示詞段或上限。字元數不是 Token 數。`,
+      `输入过大：${count.toLocaleString()} 字元，超过上限 ${limit.toLocaleString()}。未呼叫 API；请在「世界书与上下文」预览并调整条目、提取／排除规则、提示词段或上限。字元数不是 Token 数。`,
     );
   }
 }

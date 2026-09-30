@@ -12,7 +12,7 @@ const prompt = [
   { role: 'user' as const, content: 'prompt' },
 ];
 
-test('模型清單使用指定端點與金鑰，去重排序且不觸發生成', async () => {
+test('模型清单使用指定端点与金钥，去重排序且不触发生成', async () => {
   const env = environment();
   let requests = 0;
   try {
@@ -36,7 +36,7 @@ test('模型清單使用指定端點與金鑰，去重排序且不觸發生成',
   }
 });
 
-test('進階連線透過酒館服務送出全部設定，保留取消信號且不改動 MVU', async () => {
+test('进阶连线透过酒馆服务送出全部设定，保留取消信号且不改动 MVU', async () => {
   const env = environment();
   const request = new AbortController();
   try {
@@ -53,7 +53,7 @@ test('進階連線透過酒館服務送出全部設定，保留取消信號且�
     );
     const before = structuredClone(env.getData());
     env.api.generateRaw = async () => {
-      assert.fail('不得回退丟失進階設定');
+      assert.fail('不得回退丢失进阶设定');
     };
     env.api.SillyTavern.getContext = () => ({
       ChatCompletionService: {
@@ -92,7 +92,7 @@ test('進階連線透過酒館服務送出全部設定，保留取消信號且�
   }
 });
 
-test('API 預設與金鑰保存可重載，且完全不寫入樓層變量', () => {
+test('API 预设与金钥保存可重载，且完全不写入楼层变量', () => {
   const env = environment();
   try {
     const before = structuredClone(env.getData());
@@ -107,7 +107,7 @@ test('API 預設與金鑰保存可重載，且完全不寫入樓層變量', () =
   }
 });
 
-test('從世界時間讀取復興紀元格式並保存最外層國策，保留原時間文字', async () => {
+test('从世界时间读取复兴纪元格式并保存最外层国策，保留原时间文字', async () => {
   const env = environment();
   try {
     const time = '复兴纪元490年-10月-15日-星期三-14:25';
@@ -122,7 +122,7 @@ test('從世界時間讀取復興紀元格式並保存最外層國策，保留�
   }
 });
 
-test('預設六萬輸出 Token 會送給目前酒館連線，且不覆寫來源與模型', async () => {
+test('预设六万输出 Token 会送给目前酒馆连线，且不覆写来源与模型', async () => {
   const env = environment();
   let sent: Record<string, any> | undefined;
   env.api.generateRaw = async (config) => {
@@ -151,7 +151,7 @@ test('預設六萬輸出 Token 會送給目前酒館連線，且不覆寫來源�
   }
 });
 
-test('自訂 API 送出設定的輸出上限，既有手動設定不因預設改動而被覆蓋', async () => {
+test('自订 API 送出设定的输出上限，既有手动设定不因预设改动而被覆盖', async () => {
   const env = environment();
   let sent: Record<string, any> | undefined;
   env.api.generateRaw = async (config) => {
@@ -174,15 +174,15 @@ test('自訂 API 送出設定的輸出上限，既有手動設定不因預設改
   }
 });
 
-test('來源只讀角色或明確手選世界書，預覽使用傳入草稿且手選空白不回退', async () => {
+test('来源只读角色或明确手选世界书，预览使用传入草稿且手选空白不回退', async () => {
   const env = environment();
   const loaded: string[] = [];
   try {
     env.api.getGlobalWorldbookNames = () => {
-      throw new Error('不可自動讀取全域世界書');
+      throw new Error('不可自动读取全域世界书');
     };
-    env.api.getCharWorldbookNames = () => ({ primary: '角色書', additional: ['附加書', '角色書'] });
-    env.api.getWorldbookNames = () => ['角色書', '附加書', '手選書', '全域書'];
+    env.api.getCharWorldbookNames = () => ({ primary: '角色书', additional: ['附加书', '角色书'] });
+    env.api.getWorldbookNames = () => ['角色书', '附加书', '手选书', '全域书'];
     env.api.getWorldbook = async (book) => {
       loaded.push(book);
       return [
@@ -194,18 +194,18 @@ test('來源只讀角色或明確手選世界書，預覽使用傳入草稿且�
     await env.platform.read(config);
     assert.deepEqual(loaded, []);
     const character = await env.platform.read(config, 'identify');
-    assert.deepEqual(loaded, ['角色書', '附加書']);
-    assert.match(JSON.stringify(character.context), /角色書/);
-    assert.doesNotMatch(JSON.stringify(character.context), /全域書/);
+    assert.deepEqual(loaded, ['角色书', '附加书']);
+    assert.match(JSON.stringify(character.context), /角色书/);
+    assert.doesNotMatch(JSON.stringify(character.context), /全域书/);
     loaded.length = 0;
     config.sources.worldbook = { source: 'manual', manualSelection: [], enabledEntries: {} };
     const empty = await env.platform.read(config, 'identify');
     assert.deepEqual(loaded, []);
     assert.equal((empty.context as { worldbook: string }).worldbook, '');
-    config.sources.worldbook.manualSelection = ['手選書'];
+    config.sources.worldbook.manualSelection = ['手选书'];
     const manual = await env.platform.read(config, 'identify');
-    assert.deepEqual(loaded, ['手選書']);
-    assert.match(JSON.stringify(manual.context), /手選書/);
+    assert.deepEqual(loaded, ['手选书']);
+    assert.match(JSON.stringify(manual.context), /手选书/);
     assert.equal(env.platform.loadConfig().sources.worldbook.source, 'character');
     assert.ok(manual.sourceReport);
     assert.equal(manual.sourceReport.characters, JSON.stringify(manual.context).length);
@@ -214,31 +214,31 @@ test('來源只讀角色或明確手選世界書，預覽使用傳入草稿且�
   }
 });
 
-test('只渲染已選且觸發的世界書巨集，來源報告計算展開後內容', async () => {
+test('只渲染已选且触发的世界书巨集，来源报告计算展开后内容', async () => {
   const env = environment();
   const rendered: string[] = [];
   try {
-    env.api.getCharWorldbookNames = () => ({ primary: '角色書', additional: [] });
+    env.api.getCharWorldbookNames = () => ({ primary: '角色书', additional: [] });
     env.api.getWorldbook = async () => [
       { uid: 1, name: '地理', enabled: true, content: '{{land}}', strategy: { type: 'constant', keys: [] } },
       {
         uid: 2,
-        name: '無關',
+        name: '无关',
         enabled: true,
         content: '{{huge}}',
-        strategy: { type: 'selective', keys: ['未出現的關鍵字'] },
+        strategy: { type: 'selective', keys: ['未出现的关键字'] },
       },
     ];
     env.api.substitudeMacros = (text) => {
       rendered.push(text);
-      return text.replace('{{land}}', '帝國位於大陸中央');
+      return text.replace('{{land}}', '帝国位于大陆中央');
     };
     const config = defaultConfig();
     config.sources.memoryRecallRecentCount = 0;
     const snapshot = await env.platform.read(config, 'generate');
-    assert.match(JSON.stringify(snapshot.context), /帝國位於大陸中央/);
+    assert.match(JSON.stringify(snapshot.context), /帝国位于大陆中央/);
     assert.ok(!rendered.includes('{{huge}}'));
-    assert.equal(snapshot.sourceReport?.entries[0].characters, '帝國位於大陸中央'.length);
+    assert.equal(snapshot.sourceReport?.entries[0].characters, '帝国位于大陆中央'.length);
     assert.equal(snapshot.sourceReport?.characters, JSON.stringify(snapshot.context).length);
   } finally {
     env.platform.dispose();
@@ -248,7 +248,7 @@ test('只渲染已選且觸發的世界書巨集，來源報告計算展開後�
 function environment() {
   const listeners = new Map<string, ((...args: any[]) => void)[]>();
   let data: any = {
-    stat_data: { 世界: { 时间: 100 }, 角色: { 金幣: 50 } },
+    stat_data: { 世界: { 时间: 100 }, 角色: { 金币: 50 } },
     schema: {
       type: 'object',
       properties: { 世界: { type: 'object', extensible: false } },
@@ -329,10 +329,10 @@ function environment() {
     api,
     getData: () => data,
     changeExternal: () => {
-      data.stat_data.角色.金幣 = 70;
+      data.stat_data.角色.金币 = 70;
     },
     edit: () => {
-      text = '編輯後的正文';
+      text = '编辑后的正文';
     },
     text: () => text,
     next: () => {
@@ -351,7 +351,7 @@ function environment() {
     },
   };
 }
-test('國策保存完成才通知報紙，保存失敗不通知', async () => {
+test('国策保存完成才通知报纸，保存失败不通知', async () => {
   const env = environment();
   const notifications: unknown[][] = [];
   env.api.eventEmit = (event, ...args) => {
@@ -374,16 +374,16 @@ test('國策保存完成才通知報紙，保存失敗不通知', async () => {
     await committing;
     assert.deepEqual(notifications, [['national-focus:news-saved', 3]]);
     env.api.Mvu!.replaceMvuData = async () => {
-      throw new Error('存檔失敗');
+      throw new Error('存档失败');
     };
-    await assert.rejects(env.platform.commit(snapshot, snapshot.state), /存檔失敗/);
+    await assert.rejects(env.platform.commit(snapshot, snapshot.state), /存档失败/);
     assert.equal(notifications.length, 1);
   } finally {
     env.platform.dispose();
   }
 });
 
-test('國策寫入樓層最外層，保留完整 stat_data、初始化資料與既有 schema', async () => {
+test('国策写入楼层最外层，保留完整 stat_data、初始化资料与既有 schema', async () => {
   const env = environment();
   try {
     const before = structuredClone(env.getData());
@@ -401,7 +401,7 @@ test('國策寫入樓層最外層，保留完整 stat_data、初始化資料與�
   }
 });
 for (const change of ['generation-start', 'swipe', 'chat', 'deleted'] as const) {
-  test(`生命週期事件 ${change} 取消舊任務，遲到結果不回寫`, async () => {
+  test(`生命周期事件 ${change} 取消旧任务，迟到结果不回写`, async () => {
     const env = environment();
     try {
       const snapshot = await env.platform.read(defaultConfig());
@@ -415,12 +415,12 @@ for (const change of ['generation-start', 'swipe', 'chat', 'deleted'] as const) 
   });
 }
 
-test('舊版完整樹與進度可讀取，成功保存才移到最外層且不改寫其他變量', async () => {
+test('旧版完整树与进度可读取，成功保存才移到最外层且不改写其他变量', async () => {
   const env = environment();
   try {
     const legacy = demoState();
     env.getData().stat_data.国策 = legacy;
-    env.getData().schema = '沒有用別管這個';
+    env.getData().schema = '没有用别管这个';
     env.getData()._post_process_inject_var_baseline = { original: true };
     const before = structuredClone(env.getData());
     const snapshot = await env.platform.read(defaultConfig());
@@ -438,7 +438,7 @@ test('舊版完整樹與進度可讀取，成功保存才移到最外層且不�
   }
 });
 
-test('兩位置同時有資料時以最外層為準，無效最外層資料明確報錯', async () => {
+test('两位置同时有资料时以最外层为准，无效最外层资料明确报错', async () => {
   const env = environment();
   try {
     const root = demoState();
@@ -455,7 +455,7 @@ test('兩位置同時有資料時以最外層為準，無效最外層資料明�
   }
 });
 
-test('保存不比較國策或世界變量指紋，保留其他變量的最新值', async () => {
+test('保存不比较国策或世界变量指纹，保留其他变量的最新值', async () => {
   const env = environment();
   try {
     env.getData().国策 = demoState();
@@ -465,14 +465,14 @@ test('保存不比較國策或世界變量指紋，保留其他變量的最新�
     env.edit();
     await env.platform.commit(snapshot, snapshot.state);
     assert.equal(env.getData().国策.day, snapshot.state.day);
-    assert.equal(env.getData().stat_data.角色.金幣, 70);
+    assert.equal(env.getData().stat_data.角色.金币, 70);
   } finally {
     env.platform.dispose();
   }
 });
 
 for (const legacy of [false, true]) {
-  test(`一般 MVU 更新保留${legacy ? '舊版' : '最外層'}國策且允許世界變量更新`, () => {
+  test(`一般 MVU 更新保留${legacy ? '旧版' : '最外层'}国策且允许世界变量更新`, () => {
     const env = environment();
     try {
       const state = demoState();
@@ -498,7 +498,7 @@ for (const legacy of [false, true]) {
     }
   });
 }
-test('收到正文而一般 MVU 尚未寫入時，不啟動背景任務；兩者完成後只觸發一次', async () => {
+test('收到正文而一般 MVU 尚未写入时，不启动背景任务；两者完成后只触发一次', async () => {
   const env = environment();
   let count = 0;
   env.platform.onReady(() => {
@@ -510,7 +510,7 @@ test('收到正文而一般 MVU 尚未寫入時，不啟動背景任務；兩者
     env.emit('generation-end');
     await new Promise((resolve) => setTimeout(resolve, 250));
     assert.equal(count, 0);
-    await assert.rejects(env.platform.read(defaultConfig()), /等待本樓/);
+    await assert.rejects(env.platform.read(defaultConfig()), /等待本楼/);
     env.emit('mvu-write', { message_content: '正文' });
     await new Promise((resolve) => setTimeout(resolve, 450));
     assert.equal(count, 1);
@@ -518,13 +518,13 @@ test('收到正文而一般 MVU 尚未寫入時，不啟動背景任務；兩者
     env.emit('generation-end');
     env.emit('mvu-write', { message_content: env.text() });
     await new Promise((resolve) => setTimeout(resolve, 250));
-    assert.equal(count, 1, '同樓層重複完成事件不得重新啟動');
+    assert.equal(count, 1, '同楼层重复完成事件不得重新启动');
     await env.platform.read(defaultConfig());
   } finally {
     env.platform.dispose();
   }
 });
-test('新正文一開始就取消舊任務，即使新樓尚未插入', async () => {
+test('新正文一开始就取消旧任务，即使新楼尚未插入', async () => {
   const env = environment();
   try {
     const snapshot = await env.platform.read(defaultConfig());
@@ -535,7 +535,7 @@ test('新正文一開始就取消舊任務，即使新樓尚未插入', async ()
   }
 });
 
-test('舊存檔的正文依據不再驗證，編輯後可繼續讀取', async () => {
+test('旧存档的正文依据不再验证，编辑后可继续读取', async () => {
   const env = environment();
   try {
     const snapshot = await env.platform.read(defaultConfig());
@@ -552,13 +552,13 @@ test('舊存檔的正文依據不再驗證，編輯後可繼續讀取', async ()
   }
 });
 
-test('同次來源讀取共用一份聊天記錄，提交不讀取或雜湊歷史正文', async () => {
+test('同次来源读取共用一份聊天记录，提交不读取或杂凑历史正文', async () => {
   const env = environment();
   const messages = [
-    { message_id: 0, role: 'user', message: '起點', swipe_id: 0, swipes: ['起點'] },
-    { message_id: 1, role: 'assistant', message: '第一樓', swipe_id: 0, swipes: ['第一樓'] },
-    { message_id: 2, role: 'user', message: '繼續', swipe_id: 0, swipes: ['繼續'] },
-    { message_id: 3, role: 'assistant', message: '第二樓', swipe_id: 0, swipes: ['第二樓'] },
+    { message_id: 0, role: 'user', message: '起点', swipe_id: 0, swipes: ['起点'] },
+    { message_id: 1, role: 'assistant', message: '第一楼', swipe_id: 0, swipes: ['第一楼'] },
+    { message_id: 2, role: 'user', message: '继续', swipe_id: 0, swipes: ['继续'] },
+    { message_id: 3, role: 'assistant', message: '第二楼', swipe_id: 0, swipes: ['第二楼'] },
   ];
   const ranges: (string | number)[] = [];
   env.api.getChatMessages = (range) => {
@@ -581,21 +581,21 @@ test('同次來源讀取共用一份聊天記錄，提交不讀取或雜湊歷�
     assert.deepEqual(ranges, ['0-3']);
     assert.equal(saved.turn, 2);
     assert.equal(Object.hasOwn(saved, 'historyHash'), false);
-    assert.match(JSON.stringify(saved.context), /第二樓/);
+    assert.match(JSON.stringify(saved.context), /第二楼/);
 
     // A later floor can continue even when older story text was edited.
     env.next();
     env.next();
     messages.push(
-      { message_id: 4, role: 'user', message: '再繼續', swipe_id: 0, swipes: ['再繼續'] },
-      { message_id: 5, role: 'assistant', message: '第三樓', swipe_id: 0, swipes: ['第三樓'] },
+      { message_id: 4, role: 'user', message: '再继续', swipe_id: 0, swipes: ['再继续'] },
+      { message_id: 5, role: 'assistant', message: '第三楼', swipe_id: 0, swipes: ['第三楼'] },
     );
     ranges.length = 0;
     const next = await env.platform.read(config, 'update');
     assert.deepEqual(ranges, ['0-5']);
     assert.equal(next.turn, 3);
     ranges.length = 0;
-    messages[1].message = '舊樓已被靜默編輯';
+    messages[1].message = '旧楼已被静默编辑';
     await env.platform.commit(next, next.state);
     assert.ok(!ranges.some((range) => typeof range === 'string' && range.startsWith('0-')));
     await env.platform.read(config, 'update');
@@ -604,7 +604,7 @@ test('同次來源讀取共用一份聊天記錄，提交不讀取或雜湊歷�
   }
 });
 
-test('quiet 背景生成不會被當成新的正文或封鎖手動讀取', async () => {
+test('quiet 背景生成不会被当成新的正文或封锁手动读取', async () => {
   const env = environment();
   try {
     env.emit('generation-start', 'quiet', {}, false);
@@ -617,7 +617,7 @@ test('quiet 背景生成不會被當成新的正文或封鎖手動讀取', async
   }
 });
 
-test('提交新新聞時標記所在樓層並在正文末尾加標籤；標籤不算正文編輯，也不重複加入', async () => {
+test('提交新新闻时标记所在楼层并在正文末尾加标签；标签不算正文编辑，也不重复加入', async () => {
   const { EventSchema } = await import('../src/model');
   const env = environment();
   try {
@@ -627,8 +627,8 @@ test('提交新新聞時標記所在樓層並在正文末尾加標籤；標籤�
       id: 'news',
       at: state.day,
       countries: ['x'],
-      title: '邊境集結',
-      description: '兩國軍隊在邊境集結。',
+      title: '边境集结',
+      description: '两国军队在边境集结。',
       evidence: '正文',
       origin: 'story',
       public: true,
@@ -651,9 +651,9 @@ test('提交新新聞時標記所在樓層並在正文末尾加標籤；標籤�
       injected = '';
     };
     env.platform.inject(again.state);
-    assert.match(injected, /【近期國際大事】[\s\S]*邊境集結/);
+    assert.match(injected, /【近期国际大事】[\s\S]*边境集结/);
     env.platform.inject(again.state, false);
-    assert.doesNotMatch(injected, /近期國際大事/);
+    assert.doesNotMatch(injected, /近期国际大事/);
     const floor = await env.platform.readNews(3);
     assert.deepEqual(
       floor?.events.map((event) => event.id),
@@ -670,7 +670,7 @@ test('提交新新聞時標記所在樓層並在正文末尾加標籤；標籤�
   }
 });
 
-test('有提示詞模板擴展時，國策以角色主世界書條目讀取樓層變量；舊樓層與注入模式改用注入', async () => {
+test('有提示词模板扩展时，国策以角色主世界书条目读取楼层变量；旧楼层与注入模式改用注入', async () => {
   const env = environment();
   let book: any[] = [];
   let created = 0;
@@ -710,12 +710,12 @@ test('有提示詞模板擴展時，國策以角色主世界書條目讀取樓�
     const old = await env.platform.read(defaultConfig());
     env.platform.inject(old.state);
     await settle();
-    assert.match(injected, /各國動向[\s\S]*<國策動態>/);
-    assert.ok(book.some((entry) => entry.name === '國策檔案-世界概況'));
-    assert.ok(book.some((entry) => entry.name.startsWith('國策檔案-國家-')));
+    assert.match(injected, /各国动向[\s\S]*<国策动态>/);
+    assert.ok(book.some((entry) => entry.name === '国策档案-世界概况'));
+    assert.ok(book.some((entry) => entry.name.startsWith('国策档案-国家-')));
     // After a save the floor carries its own view: the entries render it and nothing is injected.
     await env.platform.commit(old, old.state);
-    assert.match(env.getData().国策.prompt.overview, /各國動向/);
+    assert.match(env.getData().国策.prompt.overview, /各国动向/);
     const saved = await env.platform.read(defaultConfig());
     const before = writes;
     env.platform.inject(saved.state);
@@ -727,8 +727,8 @@ test('有提示詞模板擴展時，國策以角色主世界書條目讀取樓�
     const again = await env.platform.read(config);
     env.platform.inject(again.state);
     await settle();
-    assert.match(injected, /各國動向/);
-    assert.ok(!book.some((entry) => entry.name.startsWith('國策檔案-')));
+    assert.match(injected, /各国动向/);
+    assert.ok(!book.some((entry) => entry.name.startsWith('国策档案-')));
   } finally {
     env.platform.dispose();
   }
@@ -763,7 +763,7 @@ function bookEnvironment() {
     updateWorldbookWith: async (name: string, updater: (entries: any[]) => any[]) => {
       if (state.failNext > 0) {
         state.failNext--;
-        throw new Error('寫入失敗');
+        throw new Error('写入失败');
       }
       books.set(name, updater(structuredClone(books.get(name) ?? [])));
     },
@@ -778,15 +778,15 @@ function bookEnvironment() {
   });
   const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
   const countries = (name: string) =>
-    (books.get(name) ?? []).filter((e) => e.name.startsWith('國策檔案-國家-')).map((e) => e.name);
+    (books.get(name) ?? []).filter((e) => e.name.startsWith('国策档案-国家-')).map((e) => e.name);
   return { env, books, state, settle, countries };
 }
 
-test('無角色主世界書時不使用聊天、附加或全域書；設定主書後寫入並清理本次追蹤的前一目標', async () => {
+test('无角色主世界书时不使用聊天、附加或全域书；设定主书后写入并清理本次追踪的前一目标', async () => {
   const { env, books, state, settle } = bookEnvironment();
   let creations = 0;
   let primary: string | null = null;
-  const unrelated = { name: '原有設定', content: '保留', strategy: { type: 'constant', keys: [] } };
+  const unrelated = { name: '原有设定', content: '保留', strategy: { type: 'constant', keys: [] } };
   books.set('chat-only', [unrelated]);
   books.set('additional-only', [unrelated]);
   Object.assign(env.api, {
@@ -806,8 +806,8 @@ test('無角色主世界書時不使用聊天、附加或全域書；設定主�
     env.platform.inject((await env.platform.read(defaultConfig())).state);
     await settle();
     assert.equal(creations, 0);
-    assert.match(state.injected, /各國動向/);
-    assert.match(state.warnings[0], /當前角色尚未設定主世界書/);
+    assert.match(state.injected, /各国动向/);
+    assert.match(state.warnings[0], /当前角色尚未设定主世界书/);
     assert.deepEqual(books.get('chat-only'), [unrelated]);
     assert.deepEqual(books.get('additional-only'), [unrelated]);
     books.set('primary-a', [unrelated]);
@@ -816,19 +816,19 @@ test('無角色主世界書時不使用聊天、附加或全域書；設定主�
     env.platform.inject((await env.platform.read(defaultConfig())).state);
     await settle();
     assert.equal(state.injected, '');
-    assert.ok(books.get('primary-a')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.ok(books.get('primary-a')!.some((e) => e.name === '国策档案-世界概况'));
     primary = 'primary-b';
     env.platform.inject((await env.platform.read(defaultConfig())).state);
     await settle();
     assert.deepEqual(books.get('primary-a'), [unrelated]);
-    assert.ok(books.get('primary-b')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.ok(books.get('primary-b')!.some((e) => e.name === '国策档案-世界概况'));
     assert.equal(creations, 0);
   } finally {
     env.platform.dispose();
   }
 });
 
-test('舊手動世界書設定被忽略，只寫角色主書且保留其他書', async () => {
+test('旧手动世界书设定被忽略，只写角色主书且保留其他书', async () => {
   const { env, books, state, settle } = bookEnvironment();
   try {
     books.set('old-manual', []);
@@ -840,7 +840,7 @@ test('舊手動世界書設定被忽略，只寫角色主書且保留其他書',
     await env.platform.commit(initial, initial.state);
     env.platform.inject((await env.platform.read(config)).state);
     await settle();
-    assert.ok(books.get('book-chat-a')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.ok(books.get('book-chat-a')!.some((e) => e.name === '国策档案-世界概况'));
     assert.deepEqual(books.get('old-manual'), []);
     assert.equal(state.injected, '');
     assert.equal(state.warnings.length, 0);
@@ -849,7 +849,7 @@ test('舊手動世界書設定被忽略，只寫角色主書且保留其他書',
   }
 });
 
-test('角色主世界書同步失敗時保留直接注入並提示一次；之後成功才交給條目，不重複送出', async () => {
+test('角色主世界书同步失败时保留直接注入并提示一次；之后成功才交给条目，不重复送出', async () => {
   const { env, books, state, settle } = bookEnvironment();
   try {
     const empty = await env.platform.read(defaultConfig());
@@ -861,22 +861,22 @@ test('角色主世界書同步失敗時保留直接注入並提示一次；之�
     state.failNext = 2;
     env.platform.inject(saved.state);
     await settle();
-    assert.match(state.injected, /各國動向/, 'the story still gets the data');
+    assert.match(state.injected, /各国动向/, 'the story still gets the data');
     assert.equal(state.warnings.length, 1);
     env.platform.inject(saved.state);
     await settle();
-    assert.match(state.injected, /各國動向/);
+    assert.match(state.injected, /各国动向/);
     assert.equal(state.warnings.length, 1, 'one warning per failure streak');
     env.platform.inject(saved.state);
     await settle();
     assert.equal(state.injected, '', 'handed over to the worldbook after a successful sync');
-    assert.ok(books.get('book-chat-a')!.some((e) => e.name === '國策檔案-世界概況'));
+    assert.ok(books.get('book-chat-a')!.some((e) => e.name === '国策档案-世界概况'));
   } finally {
     env.platform.dispose();
   }
 });
 
-test('世界書工作綁定來源聊天與樓層：切換聊天或排入較新的工作後，舊工作不寫入', async () => {
+test('世界书工作绑定来源聊天与楼层：切换聊天或排入较新的工作后，旧工作不写入', async () => {
   const { env, books, state, settle, countries } = bookEnvironment();
   try {
     const empty = await env.platform.read(defaultConfig());
@@ -908,39 +908,39 @@ test('世界書工作綁定來源聊天與樓層：切換聊天或排入較新�
     await settle();
     assert.deepEqual(
       countries('book-chat-b'),
-      Object.keys(fewer.countries).map((id) => `國策檔案-國家-${id}`),
+      Object.keys(fewer.countries).map((id) => `国策档案-国家-${id}`),
     );
   } finally {
     env.platform.dispose();
   }
 });
 
-test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新聞更新時間逐樓承接、所在國家算內部，並加上標籤', async () => {
+test('每个完成的 AI 楼层在背景任务之前写入快讯条资料：新闻更新时间逐楼承接、所在国家算内部，并加上标签', async () => {
   const { createState, installCountry } = await import('../src/engine');
   const env = environment();
   let state = installCountry(
     createState(0),
     {
       id: 'augustium',
-      name: '奧古斯提姆帝國',
-      description: '帝國',
+      name: '奥古斯提姆帝国',
+      description: '帝国',
       stability: 50,
       warSupport: 50,
-      evidence: '測試',
+      evidence: '测试',
       capabilities: [],
       historical: [],
       nodes: [
         {
           id: 'a',
-          name: '國策',
-          branch: '主線',
-          description: '內容',
-          reason: '測試',
+          name: '国策',
+          branch: '主线',
+          description: '内容',
+          reason: '测试',
           icon: 'crown',
           x: 0,
           y: 0,
           days: 10,
-          durationReason: '測試',
+          durationReason: '测试',
           prerequisites: [],
           requirements: [],
           sustain: [],
@@ -977,11 +977,11 @@ test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新�
   const current = env.api.getChatMessages;
   env.api.getChatMessages = (range, options) =>
     range === 1
-      ? [{ message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一樓'], message: '上一樓' }]
+      ? [{ message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一楼'], message: '上一楼' }]
       : typeof range === 'number'
         ? current(range, options)
         : [
-            { message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一樓'], message: '上一樓' },
+            { message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一楼'], message: '上一楼' },
             ...current(-1),
           ];
   let seen: unknown;
@@ -1016,7 +1016,7 @@ test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新�
     env.platform.onReady(() => {
       extraReady++;
     });
-    floors[3].stat_data.新闻.快讯.经济 = '本樓稍後更新';
+    floors[3].stat_data.新闻.快讯.经济 = '本楼稍后更新';
     floors[3].stat_data.世界.时间 = '491年6月20日 12:00';
     const notifications: unknown[][] = [];
     env.api.eventEmit = (event, ...args) => {
@@ -1030,14 +1030,14 @@ test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新�
     assert.equal(floors[3].国策.快讯.timePath, '世界.时间');
     assert.deepEqual(floors[3].国策.countries, policy);
     assert.deepEqual(floors[1], previousFloor);
-    assert.equal(extraReady, 0, '刷新報紙不得重新啟動國策工作');
+    assert.equal(extraReady, 0, '刷新报纸不得重新启动国策工作');
     assert.deepEqual(notifications, [['national-focus:news-saved', 3]]);
   } finally {
     env.platform.dispose();
   }
 });
 
-test('沒有國策資料的樓層不寫快訊條，也不加標籤', async () => {
+test('没有国策资料的楼层不写快讯条，也不加标签', async () => {
   const env = environment();
   try {
     env.emit('generation-start');

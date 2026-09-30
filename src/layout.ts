@@ -6,7 +6,7 @@ export function layoutTree<T extends Pick<FocusNode, 'id' | 'branch' | 'prerequi
 ): (T & { x: number; y: number })[] {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   if (byId.size !== nodes.length) {
-    throw new Error('國策 ID 重複');
+    throw new Error('国策 ID 重复');
   }
   const levels = new Map<string, number>();
   const visiting = new Set<string>();
@@ -17,10 +17,10 @@ export function layoutTree<T extends Pick<FocusNode, 'id' | 'branch' | 'prerequi
     }
     const node = byId.get(id);
     if (!node) {
-      throw new Error(`不存在的前置國策：${id}`);
+      throw new Error(`不存在的前置国策：${id}`);
     }
     if (visiting.has(id)) {
-      throw new Error('國策前置形成循環');
+      throw new Error('国策前置形成循环');
     }
     visiting.add(id);
     let result = 0;

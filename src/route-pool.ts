@@ -38,7 +38,7 @@ export class RoutePool {
       };
       const cancel = () => {
         this.waiters = this.waiters.filter((item) => item !== waiter);
-        reject(signal?.reason ?? new Error('任務已取消'));
+        reject(signal?.reason ?? new Error('任务已取消'));
       };
       signal?.addEventListener('abort', cancel, { once: true });
       this.waiters.push(waiter);

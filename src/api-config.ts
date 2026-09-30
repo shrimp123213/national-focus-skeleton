@@ -12,10 +12,10 @@ function yamlObject(text: string, label: string): Record<string, unknown> {
   try {
     value = parse(text);
   } catch {
-    throw new Error(`${label}必須是有效的 YAML object`);
+    throw new Error(`${label}必须是有效的 YAML object`);
   }
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`${label}必須是 YAML object`);
+    throw new Error(`${label}必须是 YAML object`);
   }
   return value as Record<string, unknown>;
 }
@@ -32,7 +32,7 @@ export function excludedParams(text: string): string[] {
           .map((v) => v.trim())
           .filter(Boolean);
   if (!Array.isArray(value) || !value.every((v) => typeof v === 'string' && v.trim())) {
-    throw new Error('排除主體參數須為欄位名稱列表');
+    throw new Error('排除主体参数须为栏位名称列表');
   }
   return [...new Set(value.map((v) => v.trim()))];
 }
@@ -44,27 +44,27 @@ export function validateApi(input: unknown): ApiPreset {
   api.model = api.model.trim();
   api.proxy = api.proxy.trim();
   if (!api.name) {
-    throw new Error('預設名稱不可空白');
+    throw new Error('预设名称不可空白');
   }
   if (api.url) {
     let url: URL;
     try {
       url = new URL(api.url);
     } catch {
-      throw new Error('API URL 必須是完整的 http 或 https 網址');
+      throw new Error('API URL 必须是完整的 http 或 https 网址');
     }
     if (!['http:', 'https:'].includes(url.protocol)) {
-      throw new Error('API URL 必須使用 http 或 https');
+      throw new Error('API URL 必须使用 http 或 https');
     }
     if (!api.model) {
-      throw new Error('自訂 API 請填寫模型名稱，或載入模型後選擇');
+      throw new Error('自订 API 请填写模型名称，或载入模型后选择');
     }
   }
-  yamlObject(api.bodyParams, '附加主體參數');
-  yamlObject(api.requestHeaders, '附加請求標頭');
+  yamlObject(api.bodyParams, '附加主体参数');
+  yamlObject(api.requestHeaders, '附加请求标头');
   excludedParams(api.excludeBodyParams);
   if (hasAdvancedApi(api) && (!api.url || api.proxy)) {
-    throw new Error('進階參數請使用明確的 API URL 與模型，並清空酒館代理預設名稱');
+    throw new Error('进阶参数请使用明确的 API URL 与模型，并清空酒馆代理预设名称');
   }
   return api;
 }
@@ -97,11 +97,11 @@ export function saveApiPreset(
   const api = validateApi(input);
   const next = structuredClone(config);
   if (next.apis.some((item) => item.name === api.name && item.name !== original)) {
-    throw new Error('API 名稱不可重複');
+    throw new Error('API 名称不可重复');
   }
   const index = next.apis.findIndex((item) => item.name === original);
   if (original !== null && index < 0) {
-    throw new Error('原 API 預設已不存在，請重新開啟設定');
+    throw new Error('原 API 预设已不存在，请重新开启设定');
   }
   if (index < 0) {
     next.apis.push(api);
@@ -128,7 +128,7 @@ export function saveApiPreset(
 
 export function deleteApiPreset(config: Config, name: string): Config {
   if (config.apis.length === 1) {
-    throw new Error('至少保留一個 API 預設');
+    throw new Error('至少保留一个 API 预设');
   }
   const next = structuredClone(config);
   next.apis = next.apis.filter((api) => api.name !== name);
@@ -150,7 +150,7 @@ export function deleteApiPreset(config: Config, name: string): Config {
 }
 
 export function deepSeekOptions(api: ApiPreset): { strict: boolean; cot: boolean } {
-  const body = yamlObject(api.bodyParams, '附加主體參數');
+  const body = yamlObject(api.bodyParams, '附加主体参数');
   return {
     strict: (body.response_format as { type?: string } | undefined)?.type === 'json_object',
     cot: (body.thinking as { type?: string } | undefined)?.type === 'enabled',
@@ -159,7 +159,7 @@ export function deepSeekOptions(api: ApiPreset): { strict: boolean; cot: boolean
 
 export function applyDeepSeek(api: ApiPreset, strict: boolean, cot: boolean): ApiPreset {
   const next = structuredClone(api);
-  const body = yamlObject(api.bodyParams, '附加主體參數');
+  const body = yamlObject(api.bodyParams, '附加主体参数');
   body.thinking = { type: cot ? 'enabled' : 'disabled' };
   if (strict) {
     body.response_format = { type: 'json_object' };
@@ -177,7 +177,7 @@ export function applyDeepSeek(api: ApiPreset, strict: boolean, cot: boolean): Ap
 }
 
 export function customRequest(api: ApiPreset, messages: PromptMessage[], secret: string) {
-  const headers = yamlObject(api.requestHeaders, '附加請求標頭');
+  const headers = yamlObject(api.requestHeaders, '附加请求标头');
   if (secret && !Object.keys(headers).some((key) => key.toLowerCase() === 'authorization')) {
     headers.Authorization = `Bearer ${secret}`;
   }
@@ -208,12 +208,12 @@ export function redactApiError(error: unknown, apis: ApiPreset[]): string {
   for (const api of apis) {
     const secrets = [api.apiKey, api.requestHeaders];
     try {
-      secrets.push(...Object.values(yamlObject(api.requestHeaders, '標頭')).map(String));
+      secrets.push(...Object.values(yamlObject(api.requestHeaders, '标头')).map(String));
     } catch {
       // Invalid drafts are reported without echoing their YAML source.
     }
     for (const secret of secrets.filter(Boolean).sort((a, b) => b.length - a.length)) {
-      text = text.replaceAll(secret, '[隱藏憑證]');
+      text = text.replaceAll(secret, '[隐藏凭证]');
     }
   }
   return text;
@@ -226,7 +226,7 @@ export function structuredApi(api: ApiPreset): ApiPreset {
     return api;
   }
   const next = structuredClone(api);
-  const body = yamlObject(api.bodyParams, '附加主體參數');
+  const body = yamlObject(api.bodyParams, '附加主体参数');
   if (!('response_format' in body)) {
     body.response_format = { type: 'json_object' };
     next.bodyParams = stringify(body);
@@ -244,7 +244,7 @@ export function structuredApi(api: ApiPreset): ApiPreset {
  */
 export function setStrictJson(api: ApiPreset, strict: boolean): ApiPreset {
   const next = structuredClone(api);
-  const body = yamlObject(api.bodyParams, '附加主體參數');
+  const body = yamlObject(api.bodyParams, '附加主体参数');
   if (strict) {
     body.response_format = { type: 'json_object' };
     next.excludeBodyParams = [

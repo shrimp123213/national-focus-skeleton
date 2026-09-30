@@ -58,8 +58,8 @@ export function mountHud(options: HudOptions) {
   hud.className = 'hud';
   hud.hidden = true;
   hud.setAttribute('role', 'status');
-  hud.setAttribute('aria-label', '國策任務進度');
-  hud.innerHTML = `<header class="hud-head" title="拖曳可移動懸浮球與本視窗"><i class="status-dot"></i><strong>國策任務</strong><span class="hud-count"></span><span class="hud-actions"><button data-hud="stop" class="danger" title="取消全部執行中與排隊的任務">停止</button><button data-hud="log" title="開啟任務紀錄">紀錄</button><button data-hud="collapse" class="icon" aria-label="收合"></button><button data-hud="dismiss" class="icon" aria-label="關閉已完成項目" title="關閉已完成項目">×</button></span></header><div class="hud-bar"><i></i></div><ul class="hud-list"></ul>`;
+  hud.setAttribute('aria-label', '国策任务进度');
+  hud.innerHTML = `<header class="hud-head" title="拖曳可移动悬浮球与本视窗"><i class="status-dot"></i><strong>国策任务</strong><span class="hud-count"></span><span class="hud-actions"><button data-hud="stop" class="danger" title="取消全部执行中与排队的任务">停止</button><button data-hud="log" title="开启任务纪录">纪录</button><button data-hud="collapse" class="icon" aria-label="收合"></button><button data-hud="dismiss" class="icon" aria-label="关闭已完成项目" title="关闭已完成项目">×</button></span></header><div class="hud-bar"><i></i></div><ul class="hud-list"></ul>`;
   root.append(hud);
   const head = hud.querySelector<HTMLElement>('.hud-head')!;
   const count = hud.querySelector<HTMLElement>('.hud-count')!;
@@ -132,17 +132,17 @@ export function mountHud(options: HudOptions) {
     const active = running + queued;
     const finished = jobs.length - active;
     count.textContent = active
-      ? [running && `${running} 執行中`, queued && `${queued} 排隊`].filter(Boolean).join(' · ')
+      ? [running && `${running} 执行中`, queued && `${queued} 排队`].filter(Boolean).join(' · ')
       : failed
-        ? `${failed} 項失敗`
+        ? `${failed} 项失败`
         : '已完成';
     dot.className = `status-dot ${active ? 'busy' : failed ? 'failed' : 'done'}`;
     button('stop').hidden = !active;
     button('dismiss').hidden = Boolean(active);
     const collapse = button('collapse');
     collapse.textContent = collapsed ? '▴' : '▾';
-    collapse.setAttribute('aria-label', collapsed ? '展開' : '收合');
-    collapse.title = collapsed ? '展開清單' : '收合清單';
+    collapse.setAttribute('aria-label', collapsed ? '展开' : '收合');
+    collapse.title = collapsed ? '展开清单' : '收合清单';
     hud.classList.toggle('collapsed', collapsed);
     bar.classList.toggle('indeterminate', finished === 0);
     fill.style.width = `${Math.round((finished / jobs.length) * 100)}%`;
@@ -157,7 +157,7 @@ export function mountHud(options: HudOptions) {
               ? elapsed(job.finished - job.started)
               : '';
         const detail = options.message(job);
-        return `<li class="hud-item ${job.state}">${symbols[job.state]}<div class="hud-text"><b>${escape(name)}${job.label ? ` · ${escape(job.label)}` : ''}</b><small title="${escape(detail)}">${escape(detail)}${job.route && job.state === 'success' ? ` · ${escape(job.route)}` : ''}</small></div><time>${time}</time>${job.state !== 'queued' && job.state !== 'running' ? `<button class="icon" data-hud-dismiss="${escape(job.id)}" aria-label="關閉此項">×</button>` : ''}</li>`;
+        return `<li class="hud-item ${job.state}">${symbols[job.state]}<div class="hud-text"><b>${escape(name)}${job.label ? ` · ${escape(job.label)}` : ''}</b><small title="${escape(detail)}">${escape(detail)}${job.route && job.state === 'success' ? ` · ${escape(job.route)}` : ''}</small></div><time>${time}</time>${job.state !== 'queued' && job.state !== 'running' ? `<button class="icon" data-hud-dismiss="${escape(job.id)}" aria-label="关闭此项">×</button>` : ''}</li>`;
       })
       .join('');
     const wasHidden = hud.hidden;

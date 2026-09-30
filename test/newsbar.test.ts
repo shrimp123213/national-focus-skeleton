@@ -4,7 +4,7 @@ import { createState, installCountry } from '../src/engine';
 import { demoTree } from '../src/demo-tree';
 import { buildNewsBar, foldChinese, insiders, newsFields } from '../src/newsbar';
 
-test('角色卡新聞攤平成「板塊/欄位」，也接受舊 MVU 的 [值, 說明]', () => {
+test('角色卡新闻摊平成「板块/栏位」，也接受旧 MVU 的 [值, 说明]', () => {
   assert.deepEqual(newsFields({ 快讯: { 军事: '甲', 经济: ['乙', '说明'] }, 单栏: '丙' }), {
     '快讯/军事': '甲',
     '快讯/经济': '乙',
@@ -13,7 +13,7 @@ test('角色卡新聞攤平成「板塊/欄位」，也接受舊 MVU 的 [值, �
   assert.deepEqual(newsFields(undefined), {});
 });
 
-test('玩家所在地用簡繁都能對上國名或關鍵字；玩家選策的國家一律算在內', () => {
+test('玩家所在地用简繁都能对上国名或关键字；玩家选策的国家一律算在内', () => {
   assert.equal(foldChinese('奧古斯提姆帝國・鐵爐堡'), '奥古斯提姆帝国・铁炉堡');
   const state = installCountry(createState(0), { ...demoTree(), keywords: ['鐵爐堡'] }, 0);
   state.countries.augustium.control = 'ai';
@@ -24,7 +24,7 @@ test('玩家所在地用簡繁都能對上國名或關鍵字；玩家選策的�
   assert.deepEqual(insiders(state, ''), ['augustium']);
 });
 
-test('沒有上一個 AI 樓層時全部算新聞；之後只有改變的欄位更新時間', () => {
+test('没有上一个 AI 楼层时全部算新闻；之后只有改变的栏位更新时间', () => {
   const state = createState(0);
   const first = buildNewsBar({
     state,

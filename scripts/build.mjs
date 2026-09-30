@@ -35,16 +35,16 @@ await writeFile(join(output, 'THIRD_PARTY_NOTICES.txt'), notices.join('\n\n'), '
 const exported = {
   type: 'script',
   enabled: true,
-  name: '【命定之詩】國策檔案 v0.14.10 骨架版',
+  name: '【命定之诗】国策档案 v0.14.11 骨架版',
   id: '3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13',
   content: script,
-  info: '正文完成後於背景演化的國策樹。需酒館助手與 MVU。從懸浮球開啟；請先設定可靠故事時間欄位與 API。',
+  info: '正文完成后于背景演化的国策树。需酒馆助手与 MVU。从悬浮球开启；请先设定可靠故事时间栏位与 API。',
   button: { enabled: true, buttons: [] },
   data: {},
   export_with: { data: false, button: true },
 };
 await writeFile(join(output, '國策檔案-骨架版-酒館助手.json'), JSON.stringify(exported, null, 2), 'utf8');
-const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>國策檔案 · UI 測試</title><style>html,body{margin:0;min-height:100%;background:#141d18;color:#e3ddc9;font:14px system-ui}body>main{padding:10vh 7vw;max-width:600px}h1{font-family:Georgia,serif;font-size:38px;font-weight:400}p{color:#aeb69f;line-height:1.9}</style></head><body><main><small>NATIONAL FOCUS ARCHIVE</small><h1>國策檔案</h1><p>離線 UI 測試頁。右下角的獅鷲懸浮球可以重新開啟面板。所有示範資料只存在本頁記憶體，不會呼叫 AI 或連接酒館。</p><p>你可以拖曳、縮放、點選國策、切換國家，以及用「測試操作」推進進度。重新整理會恢復示範。</p></main><script>${preview.replaceAll('</script', '<\\/script')}</script></body></html>`;
+const html = `<!doctype html><html lang="zh-Hans"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>国策档案 · UI 测试</title><style>html,body{margin:0;min-height:100%;background:#141d18;color:#e3ddc9;font:14px system-ui}body>main{padding:10vh 7vw;max-width:600px}h1{font-family:Georgia,serif;font-size:38px;font-weight:400}p{color:#aeb69f;line-height:1.9}</style></head><body><main><small>NATIONAL FOCUS ARCHIVE</small><h1>国策档案</h1><p>离线 UI 测试页。右下角的狮鹫悬浮球可以重新开启面板。所有示范资料只存在本页记忆体，不会呼叫 AI 或连接酒馆。</p><p>你可以拖曳、缩放、点选国策、切换国家，以及用「测试操作」推进进度。重新整理会恢复示范。</p></main><script>${preview.replaceAll('</script', '<\\/script')}</script></body></html>`;
 await writeFile(join(output, 'UI測試.html'), html, 'utf8');
 await writeFile(join(output, 'index.html'), html, 'utf8');
 // News card: the script appends <国策快讯/> to a floor that published news; this display regex
@@ -71,7 +71,7 @@ const regex = (id, scriptName, extra) => ({
 await writeFile(
   join(output, '國策快訊-卡片正則.json'),
   JSON.stringify(
-    regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b01', '國策快訊卡片', {
+    regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b01', '国策快讯卡片', {
       replaceString: `\`\`\`\n${card}\n\`\`\``,
       markdownOnly: true,
       maxDepth: cardDepth,
@@ -85,7 +85,7 @@ await writeFile(
 await writeFile(
   join(output, '國策快訊-舊樓層隱藏正則.json'),
   JSON.stringify(
-    regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b03', '國策快訊舊樓層隱藏', {
+    regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b03', '国策快讯旧楼层隐藏', {
       markdownOnly: true,
       minDepth: cardDepth + 1,
     }),
@@ -97,14 +97,14 @@ await writeFile(
 await writeFile(
   join(output, '國策快訊-提示移除正則.json'),
   JSON.stringify(
-    regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b02', '國策快訊不送給模型', { promptOnly: true }),
+    regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b02', '国策快讯不送给模型', { promptOnly: true }),
     null,
     4,
   ),
   'utf8',
 );
 // Offline check of the card with a stand-in for the Tavern Helper iframe functions.
-const cardPreview = `<!doctype html><html lang="zh-Hant"><head><meta charset="UTF-8"><title>國策快訊卡片預覽</title></head><body style="background:#141d18;padding:24px"><script>window.__emitted=[];window.getCurrentMessageId=()=>7;window.getVariables=(o)=>o&&o.type==='global'?(window.__global||{}):window.__variables;window.insertOrAssignVariables=(v)=>{window.__global=Object.assign(window.__global||{},v);};window.__listeners=new Map();window.eventOn=(event,callback)=>{const group=window.__listeners.get(event)||new Set();group.add(callback);window.__listeners.set(event,group);return {stop:()=>group.delete(callback)};};window.eventEmit=(event,...args)=>{window.__emitted.push([event,...args]);for(const callback of window.__listeners.get(event)||[]){callback(...args);}return Promise.resolve();};</script><iframe id="card" style="width:100%;border:0;height:900px"></iframe><script>const source=${JSON.stringify(card).replaceAll('</script', '<\\/script')};window.showCard=(variables)=>{window.__variables=variables;const frame=document.getElementById('card');frame.srcdoc='<script>for (const k of ["getCurrentMessageId","getVariables","eventEmit","eventOn","insertOrAssignVariables"]) window[k]=parent[k];<\\/script>'+source;};</script></body></html>`;
+const cardPreview = `<!doctype html><html lang="zh-Hans"><head><meta charset="UTF-8"><title>国策快讯卡片预览</title></head><body style="background:#141d18;padding:24px"><script>window.__emitted=[];window.getCurrentMessageId=()=>7;window.getVariables=(o)=>o&&o.type==='global'?(window.__global||{}):window.__variables;window.insertOrAssignVariables=(v)=>{window.__global=Object.assign(window.__global||{},v);};window.__listeners=new Map();window.eventOn=(event,callback)=>{const group=window.__listeners.get(event)||new Set();group.add(callback);window.__listeners.set(event,group);return {stop:()=>group.delete(callback)};};window.eventEmit=(event,...args)=>{window.__emitted.push([event,...args]);for(const callback of window.__listeners.get(event)||[]){callback(...args);}return Promise.resolve();};</script><iframe id="card" style="width:100%;border:0;height:900px"></iframe><script>const source=${JSON.stringify(card).replaceAll('</script', '<\\/script')};window.showCard=(variables)=>{window.__variables=variables;const frame=document.getElementById('card');frame.srcdoc='<script>for (const k of ["getCurrentMessageId","getVariables","eventEmit","eventOn","insertOrAssignVariables"]) window[k]=parent[k];<\\/script>'+source;};</script></body></html>`;
 await writeFile(join(output, '國策快訊-卡片預覽.html'), cardPreview, 'utf8');
 console.log(
   'Built: dist/國策檔案-骨架版-酒館助手.json, dist/national-focus.js, dist/UI測試.html, dist/國策快訊-*.json',

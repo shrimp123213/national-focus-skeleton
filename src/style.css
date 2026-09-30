@@ -1,4 +1,4 @@
-/* 國策檔案 v0.4 · 戰情檔案館介面
+/* 国策档案 v0.4 · 战情档案馆介面
  * Tokens first; every colour below derives from them so states stay consistent. */
 :host {
   all: initial;
@@ -2184,7 +2184,7 @@ code {
   text-align: left;
 }
 
-/* ---------- Tasks tab (任務) ---------- */
+/* ---------- Tasks tab (任务) ---------- */
 .preset-bar {
   padding: 14px 16px;
   border: 1px solid var(--line-strong);
@@ -2894,7 +2894,7 @@ button.icon {
   margin-bottom: 18px;
 }
 
-/* ---------- News window (國際快訊) ---------- */
+/* ---------- News window (国际快讯) ---------- */
 .event-timeline {
   margin: 6px 0;
   padding-left: 18px;
@@ -3192,7 +3192,7 @@ button.icon {
 }
 
 /* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;
-   the control select and 更新局勢 open from ⋯ (the top picker lists names only). */
+   the control select and 更新局势 open from ⋯ (the top picker lists names only). */
 .nation-more-btn,
 .control-tag {
   display: none;

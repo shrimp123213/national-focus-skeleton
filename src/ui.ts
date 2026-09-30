@@ -1,5 +1,5 @@
 import { periodBar, periodNote, periodControl, anchorNotice, anchorBadge, historyBody } from './period-ui';
-import { blockers, changeCountry, pauseFocus, resultNames, startFocus } from './engine';
+import { blockers, changeCountry, isHistoricalEvidence, pauseFocus, resultNames, startFocus } from './engine';
 import { icon } from './icons';
 import { layoutTree } from './layout';
 import { mutexRoutes } from './reachability';
@@ -27,19 +27,19 @@ const escape = (value: unknown): string =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 const statuses: Record<string, string> = {
-  idle: '尚未開始',
-  active: '進行中',
-  paused: '已暫停',
-  waiting: '等待條件',
+  idle: '尚未开始',
+  active: '进行中',
+  paused: '已暂停',
+  waiting: '等待条件',
   completed: '已完成',
-  terminated: '已終止',
+  terminated: '已终止',
 };
 const jobNames = taskNames;
 const jobStates: Record<string, string> = {
-  queued: '排隊中',
-  running: '執行中',
+  queued: '排队中',
+  running: '执行中',
   success: '完成',
-  failed: '失敗',
+  failed: '失败',
   cancelled: '已取消',
 };
 const checked = (value: boolean) => (value ? 'checked' : '');
@@ -80,10 +80,11 @@ export function mountUI(
   },
 ): () => void {
   const host = doc.createElement('div');
+  host.lang = 'zh-Hans';
   host.id = 'national-focus-root';
   doc.body.append(host);
   const root = host.attachShadow({ mode: 'open' });
-  root.innerHTML = `<style>${css}</style><button class="orb" title="開啟國策樹" aria-label="開啟國策樹">${icon('eagle')}<span class="count" hidden></span></button><section class="shell" aria-label="國策樹面板" hidden></section><div class="modal-backdrop" hidden></div>`;
+  root.innerHTML = `<style>${css}</style><button class="orb" title="开启国策树" aria-label="开启国策树">${icon('eagle')}<span class="count" hidden></span></button><section class="shell" aria-label="国策树面板" hidden></section><div class="modal-backdrop" hidden></div>`;
   const shell = root.querySelector<HTMLElement>('.shell')!;
   const orb = root.querySelector<HTMLButtonElement>('.orb')!;
   const backdrop = root.querySelector<HTMLElement>('.modal-backdrop')!;
@@ -99,7 +100,7 @@ export function mountUI(
   let pan = { x: 45, y: 45 };
   let detailsOpen = false;
   let routesOpen = (doc.defaultView?.innerWidth ?? 1200) > 760;
-  /** Phone layout: the control select and 更新局勢 sit behind the nation bar's ⋯ button. */
+  /** Phone layout: the control select and 更新局势 sit behind the nation bar's ⋯ button. */
   let nationMore = false;
   const openPops = new Set<string>();
   let open = controller.platform.demo;
@@ -323,16 +324,16 @@ export function mountUI(
       nodeId = country.current || Object.keys(country.nodes)[0];
     }
     const controlLabel = (c: Country) =>
-      !c.enabled ? '已停用' : c.calibration ? '待校準' : c.control === 'player' ? '玩家選策' : 'AI 演化';
+      !c.enabled ? '已停用' : c.calibration ? '待校准' : c.control === 'player' ? '玩家选策' : 'AI 演化';
     const tabs = countries
       .map(
         (c) =>
           `<button class="nation-tab ${c.id === countryId ? 'active' : ''} ${c.control}" data-country="${escape(c.id)}" title="${escape(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === 'player' ? 'eagle' : 'crown')}</span><span class="tab-copy"><strong>${escape(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`,
       )
       .join('');
-    const command = `<header class="command"><div class="brand-mark" title="國策檔案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>國策檔案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="國家">${tabs}<button class="nation-tab add" data-action="countries" title="管理國家" aria-label="管理國家">＋</button></nav><label class="nation-picker"><span class="sr">切換國家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理國家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有國名與內容均為介面示範">離線示範</span>' : ''}<div class="date-chip" title="故事內日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : '—'}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="設定" aria-label="設定"><span class="cmd-icon">⚙</span><span class="cmd-text">設定</span></button><button class="cmd-btn close" data-action="close" aria-label="關閉面板">×</button></header>`;
+    const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为介面示范">离线示范</span>' : ''}<div class="date-chip" title="故事内日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : '—'}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设定" aria-label="设定"><span class="cmd-icon">⚙</span><span class="cmd-text">设定</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
     const error = controller.error
-      ? `<div class="error-banner" role="alert"><span>${escape(controller.error)}</span><button data-action="refresh">重新讀取</button></div>`
+      ? `<div class="error-banner" role="alert"><span>${escape(controller.error)}</span><button data-action="refresh">重新读取</button></div>`
       : '';
     let body: string;
     if (country && state) {
@@ -344,27 +345,27 @@ export function mountUI(
           : 0;
       const agenda =
         current && currentProgress
-          ? `<button class="agenda ${currentProgress.status}" data-action="open-current" title="查看主國策"><span class="agenda-icon">${icon(current.icon)}</span><span class="agenda-copy"><small>主國策 · ${statuses[currentProgress.status]}</small><strong>${escape(current.name)}</strong><span class="agenda-bar"><i style="width:${percent}%"></i></span><span class="agenda-meta"><span>${currentProgress.days.toFixed(1)} / ${current.days} 日</span><span>${currentProgress.status === 'waiting' ? '工期已滿 · 等待成果' : `尚餘 ${Math.max(0, current.days - currentProgress.days).toFixed(1)} 日`}</span></span></span></button>`
-          : `<div class="agenda empty-agenda"><span class="agenda-icon">${icon('crown')}</span><span class="agenda-copy"><small>主國策</small><strong>${country.control === 'player' ? '尚未選定' : 'AI 評估中'}</strong><span class="agenda-meta"><span>${country.control === 'player' ? '在樹上點選可開始的國策' : '下次局勢更新時依情勢選策'}</span></span></span></div>`;
+          ? `<button class="agenda ${currentProgress.status}" data-action="open-current" title="查看主国策"><span class="agenda-icon">${icon(current.icon)}</span><span class="agenda-copy"><small>主国策 · ${statuses[currentProgress.status]}</small><strong>${escape(current.name)}</strong><span class="agenda-bar"><i style="width:${percent}%"></i></span><span class="agenda-meta"><span>${currentProgress.days.toFixed(1)} / ${current.days} 日</span><span>${currentProgress.status === 'waiting' ? '工期已满 · 等待成果' : `尚余 ${Math.max(0, current.days - currentProgress.days).toFixed(1)} 日`}</span></span></span></button>`
+          : `<div class="agenda empty-agenda"><span class="agenda-icon">${icon('crown')}</span><span class="agenda-copy"><small>主国策</small><strong>${country.control === 'player' ? '尚未选定' : 'AI 评估中'}</strong><span class="agenda-meta"><span>${country.control === 'player' ? '在树上点选可开始的国策' : '下次局势更新时依情势选策'}</span></span></span></div>`;
       const gauge = (label: string, value: number, kind: string) =>
         `<div class="gauge ${kind}" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><div class="gauge-head"><small>${label}</small><strong>${value}</strong></div><div class="gauge-track"><i style="width:${value}%"></i></div></div>`;
       const stats = branchStats(country);
       const total = Object.keys(country.nodes).length;
       const doneAll = stats.reduce((sum, b) => sum + b.done, 0);
-      const routes = `<aside class="routes ${routesOpen ? 'open' : ''}" aria-label="路線導覽"><div class="routes-head"><strong>路線</strong><small>${doneAll} / ${total} 完成</small><button class="ghost" data-action="routes" aria-label="收起路線面板">‹</button></div><div class="search-row"><label><span class="sr">搜尋國策</span><input id="focus-search" placeholder="搜尋國策名稱或內容" value="${escape(query)}"></label><button data-action="search-next">下一項</button></div><ul class="route-list">${stats
+      const routes = `<aside class="routes ${routesOpen ? 'open' : ''}" aria-label="路线导览"><div class="routes-head"><strong>路线</strong><small>${doneAll} / ${total} 完成</small><button class="ghost" data-action="routes" aria-label="收起路线面板">‹</button></div><div class="search-row"><label><span class="sr">搜寻国策</span><input id="focus-search" placeholder="搜寻国策名称或内容" value="${escape(query)}"></label><button data-action="search-next">下一项</button></div><ul class="route-list">${stats
         .map(
           (b) =>
-            `<li class="${b.name === branch ? 'active' : ''} ${collapsed.has(b.name) ? 'folded' : ''}"><button class="route-jump" data-jump-branch="${escape(b.name)}"><span class="route-name">${b.active ? '<i class="route-live" title="主國策所在路線"></i>' : ''}${escape(b.name)}</span><span class="route-count">${b.done}/${b.total}</span><span class="route-bar"><i style="width:${Math.round((b.done / b.total) * 100)}%"></i></span></button><button class="route-fold" data-fold-branch="${escape(b.name)}" aria-label="${collapsed.has(b.name) ? '展開' : '收合'}${escape(b.name)}" aria-expanded="${!collapsed.has(b.name)}" title="${collapsed.has(b.name) ? '展開路線' : '收合路線'}">${collapsed.has(b.name) ? '＋' : '−'}</button></li>`,
+            `<li class="${b.name === branch ? 'active' : ''} ${collapsed.has(b.name) ? 'folded' : ''}"><button class="route-jump" data-jump-branch="${escape(b.name)}"><span class="route-name">${b.active ? '<i class="route-live" title="主国策所在路线"></i>' : ''}${escape(b.name)}</span><span class="route-count">${b.done}/${b.total}</span><span class="route-bar"><i style="width:${Math.round((b.done / b.total) * 100)}%"></i></span></button><button class="route-fold" data-fold-branch="${escape(b.name)}" aria-label="${collapsed.has(b.name) ? '展开' : '收合'}${escape(b.name)}" aria-expanded="${!collapsed.has(b.name)}" title="${collapsed.has(b.name) ? '展开路线' : '收合路线'}">${collapsed.has(b.name) ? '＋' : '−'}</button></li>`,
         )
         .join(
           '',
-        )}</ul><div class="route-actions"><button data-action="isolate">只看此路線</button><button data-action="expand-all">全部展開</button></div></aside>`;
-      body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2>${escape(country.name)}</h2><small class="control-tag">${controlLabel(country)} · 故事日 ${state.day.toFixed(1)}</small><p>${escape(country.description)}</p></div></div><div class="gauges">${gauge('穩定度', country.stability, 'stability')}${gauge('戰爭支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式與更新局勢" title="控制方式與更新局勢">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家選策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文與 MVU 重新評估">更新局勢</button></div></section>
-      ${periodBar(country, controller.jobs)}<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="國策畫布，可拖曳平移，滾輪或雙指縮放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="開啟路線面板">路線 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>圖例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>進行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暫停</li><li><i class="sw available"></i>可開始</li><li><i class="sw locked"></i>條件未滿</li><li><i class="sw terminated"></i>已終止／路線鎖定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>擇一前置</li><li><i class="ln cross"></i>跨路線依賴</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主國策">◎ 主國策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支與國策之間的關係">⇄ 關係</button>' : ''}<div class="zoom-controls"><button data-action="zoom-out" aria-label="縮小">−</button><button data-action="fit" title="顯示整棵樹"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>測試操作</summary><small>只改離線示範，不呼叫 API</small><button data-action="demo-days">故事時間 ＋7 日</button><button data-action="demo-outcome">完成聯運勘查</button><button data-action="demo-news">發布示範事件</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">載入分期：局勢突變</button><button data-action="demo-period-complete">載入分期：議程完成</button><button data-action="demo-period-next">推進事件／演示換期</button>' : ''}<button data-action="demo-reset">重設示範</button></details>` : ''}<aside class="drawer ${detailsOpen ? 'open' : ''}" aria-label="國策詳情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
+        )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
+      body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2>${escape(country.name)}</h2><small class="control-tag">${controlLabel(country)} · 故事日 ${state.day.toFixed(1)}</small><p>${escape(country.description)}</p></div></div><div class="gauges">${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
+      ${periodBar(country, controller.jobs)}<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖曳平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="显示整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">载入分期：局势突变</button><button data-action="demo-period-complete">载入分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${detailsOpen ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
     } else {
-      body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '為這個世界選擇方向' : '連接你的故事'}</h2><p>${state ? '先辨識本局國家，再勾選要啟用的對象。國策內容會依你選擇的世界書與劇情生成。' : '國策樹需要一則已完成的正文，以及本樓可讀取的 MVU 變數。你仍可先設定 API 與來源。'}</p><div class="row"><button class="primary" data-action="countries">選擇啟用國家</button><button data-action="settings">設定來源與 API</button></div></div></section>`;
+      body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '为这个世界选择方向' : '连接你的故事'}</h2><p>${state ? '先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。' : '国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设定 API 与来源。'}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设定来源与 API</button></div></div></section>`;
     }
-    shell.innerHTML = `${command}${error}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 項國策` : ''}</span><button class="linkish" data-action="events">事件紀錄</button></footer>`;
+    shell.innerHTML = `${command}${error}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ''}</span><button class="linkish" data-action="events">事件纪录</button></footer>`;
     if (country) {
       drawTree(country);
       bindCanvas();
@@ -394,7 +395,7 @@ export function mountUI(
   }
   function renderTaskButton(busy: number): string {
     const failures = unseenFailures().length;
-    return `<button class="cmd-btn ${busy ? 'busy' : ''}" data-action="jobs" title="任務" aria-label="任務${busy ? `，${busy} 項進行中` : ''}${failures ? `，${failures} 項失敗` : ''}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : '☰'}</span><span class="cmd-text">任務${busy ? ` ${busy}` : ''}</span>${failures ? '<i class="alert-dot" aria-hidden="true"></i>' : ''}</button>`;
+    return `<button class="cmd-btn ${busy ? 'busy' : ''}" data-action="jobs" title="任务" aria-label="任务${busy ? `，${busy} 项进行中` : ''}${failures ? `，${failures} 项失败` : ''}"><span class="cmd-icon">${busy ? '<i class="spinner"></i>' : '☰'}</span><span class="cmd-text">任务${busy ? ` ${busy}` : ''}</span>${failures ? '<i class="alert-dot" aria-hidden="true"></i>' : ''}</button>`;
   }
   function renderTaskSummary(): string {
     const summary = taskSummary();
@@ -410,17 +411,17 @@ export function mountUI(
     if (active.length) {
       const job = active.find((item) => item.state === 'running') ?? active[0];
       const name = `${jobNames[job.kind as JobKind] ?? job.kind}${job.label ? `（${job.label}）` : ''}`;
-      const more = active.length > 1 ? `，另有 ${active.length - 1} 項` : '';
+      const more = active.length > 1 ? `，另有 ${active.length - 1} 项` : '';
       return { text: `${name}：${jobMessage(job)}${more}`, state: 'busy' };
     }
     const failed = unseenFailures().length;
     if (failed) {
-      return { text: `${failed} 項任務失敗，點此查看`, state: 'failed' };
+      return { text: `${failed} 项任务失败，点此查看`, state: 'failed' };
     }
     const last = controller.jobs.find((job) => job.state === 'success');
     return last
       ? { text: `上次完成：${jobNames[last.kind as JobKind] ?? last.kind} · ${last.time}`, state: '' }
-      : { text: '任務待命', state: '' };
+      : { text: '任务待命', state: '' };
   }
   function effectText(e: FocusNode['effects'][number]): string {
     const when = e.when?.length ? `若${e.when.map((r) => r.label).join('且')}：` : '';
@@ -428,14 +429,14 @@ export function mountUI(
   }
   function effectBody(e: FocusNode['effects'][number]): string {
     return e.kind === 'capability'
-      ? `${e.active ? '建立／恢復' : '失效'}：${e.name}`
+      ? `${e.active ? '建立／恢复' : '失效'}：${e.name}`
       : e.kind === 'commitment'
-        ? `承諾：${e.name}`
-        : `${e.kind === 'stability' ? '穩定度' : '戰爭支持度'} ${e.value >= 0 ? '+' : ''}${e.value}`;
+        ? `承诺：${e.name}`
+        : `${e.kind === 'stability' ? '稳定度' : '战争支持度'} ${e.value >= 0 ? '+' : ''}${e.value}`;
   }
   function renderDetails(country: Country, node: FocusNode | undefined): string {
     if (!node) {
-      return '<p class="muted">點選國策查看詳情。</p>';
+      return '<p class="muted">点选国策查看详情。</p>';
     }
     const progress = country.progress[node.id];
     const reasons = blockers(country, node);
@@ -444,7 +445,7 @@ export function mountUI(
     const list = (items: string[]) =>
       items.length
         ? `<ul>${items.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>`
-        : '<p class="muted">無</p>';
+        : '<p class="muted">无</p>';
     const route = country.branches.find((b) => b.name === node.branch);
     const stateClass =
       progress.status === 'idle' && reasons.length
@@ -454,13 +455,13 @@ export function mountUI(
           : progress.status;
     const stateLabel =
       stateClass === 'locked'
-        ? '條件未滿'
+        ? '条件未满'
         : stateClass === 'available'
-          ? '可開始'
+          ? '可开始'
           : statuses[progress.status];
     const conditions = [
-      ...node.requirements.map((r) => ['啟動', r.label]),
-      ...node.sustain.map((r) => ['持續', r.label]),
+      ...node.requirements.map((r) => ['启动', r.label]),
+      ...node.sustain.map((r) => ['持续', r.label]),
       ...node.outcomes.map((r) => ['成果', r.label]),
     ];
     // Starting a route that locks on start closes the other routes for good: say so and confirm.
@@ -475,49 +476,49 @@ export function mountUI(
           .flatMap(([, route]) => route.heads.map((head) => head.name))
       : [];
     const startable = !(reasons.length || country.current || progress.status === 'completed');
-    // 改選: pause the current focus and start this one in one step (it keeps its invested days).
+    // 改选: pause the current focus and start this one in one step (it keeps its invested days).
     const switchable =
       !isCurrent && Boolean(country.current) && !reasons.length && progress.status !== 'completed';
     const running = country.current ? country.nodes[country.current] : undefined;
-    const verb = switchable ? '改選' : '開始';
+    const verb = switchable ? '改选' : '开始';
     const act = switchable ? 'switch' : 'start';
     const startButton = isCurrent
-      ? '<button data-action="pause">暫停目前國策</button>'
+      ? '<button data-action="pause">暂停目前国策</button>'
       : locking && (startable || switchable)
         ? lockConfirm === node.id
-          ? `<div class="lock-confirm" role="alert"><p>${verb}後會立即鎖定路線，以下路線將無法再選：<strong>${rivals.map(escape).join('、')}</strong></p><div class="row"><button class="primary" data-action="${act}">確認${verb}</button><button data-action="lock-cancel">取消</button></div></div>`
-          : `<button class="primary" data-action="lock-ask">${verb}並鎖定路線</button>`
+          ? `<div class="lock-confirm" role="alert"><p>${verb}后会立即锁定路线，以下路线将无法再选：<strong>${rivals.map(escape).join('、')}</strong></p><div class="row"><button class="primary" data-action="${act}">确认${verb}</button><button data-action="lock-cancel">取消</button></div></div>`
+          : `<button class="primary" data-action="lock-ask">${verb}并锁定路线</button>`
         : switchable
-          ? '<button class="primary" data-action="switch">改選此國策</button>'
-          : `<button class="primary" data-action="start" ${startable ? '' : 'disabled'}>${progress.status === 'paused' ? '恢復國策' : progress.status === 'completed' ? '國策已完成' : '開始此國策'}</button>`;
+          ? '<button class="primary" data-action="switch">改选此国策</button>'
+          : `<button class="primary" data-action="start" ${startable ? '' : 'disabled'}>${progress.status === 'paused' ? '恢复国策' : progress.status === 'completed' ? '国策已完成' : '开始此国策'}</button>`;
     const action =
       country.control === 'player'
-        ? `<div class="drawer-action">${startButton}${switchable && running ? `<small>會暫停「${escape(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之後可恢復），${progress.status === 'paused' ? '恢復' : '開始'}此國策。</small>` : ''}${reasons.length ? `<ul class="blockers">${reasons.map((r) => `<li>${escape(r)}</li>`).join('')}</ul>` : ''}</div>`
-        : `<div class="drawer-action"><small>AI 依情勢選擇後續國策；切換為「玩家選策」即可介入。</small></div>`;
-    return `<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="關閉詳情">×</button><span class="drawer-emblem">${icon(node.icon)}</span><div><span class="drawer-branch">${escape(node.branch)}</span><h3>${escape(node.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node.days} 日</span></div></header>
+        ? `<div class="drawer-action">${startButton}${switchable && running ? `<small>会暂停「${escape(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之后可恢复），${progress.status === 'paused' ? '恢复' : '开始'}此国策。</small>` : ''}${reasons.length ? `<ul class="blockers">${reasons.map((r) => `<li>${escape(r)}</li>`).join('')}</ul>` : ''}</div>`
+        : `<div class="drawer-action"><small>AI 依情势选择后续国策；切换为「玩家选策」即可介入。</small></div>`;
+    return `<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="关闭详情">×</button><span class="drawer-emblem">${icon(node.icon)}</span><div><span class="drawer-branch">${escape(node.branch)}</span><h3>${escape(node.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node.days} 日</span></div></header>
       <div class="drawer-body">${anchorNotice(country, node)}${progress.started !== null ? `<div class="drawer-progress"><div class="row between"><small>有效工期</small><strong>${progress.days.toFixed(1)} / ${node.days} 日</strong></div><div class="bar"><i style="width:${percent}%"></i></div>${progress.evidence ? `<small>${escape(progress.evidence)}</small>` : ''}</div>` : ''}
       ${action}
       <p class="description">${escape(node.description)}</p>
-      <section class="detail-section"><h4>前置國策</h4>${node.prerequisites.length ? `<div class="prereqs">${node.prerequisites.map((group) => `<div class="prereq-group">${group.map((id, i) => `${i ? '<span class="or">或</span>' : ''}<button class="chip ${country.progress[id].status === 'completed' ? 'done' : ''}" data-goto="${escape(id)}">${escape(country.nodes[id].name)}</button>`).join('')}</div>`).join('<span class="and">且</span>')}</div>` : '<p class="muted">此路線的起點</p>'}</section>
+      <section class="detail-section"><h4>前置国策</h4>${node.prerequisites.length ? `<div class="prereqs">${node.prerequisites.map((group) => `<div class="prereq-group">${group.map((id, i) => `${i ? '<span class="or">或</span>' : ''}<button class="chip ${country.progress[id].status === 'completed' ? 'done' : ''}" data-goto="${escape(id)}">${escape(country.nodes[id].name)}</button>`).join('')}</div>`).join('<span class="and">且</span>')}</div>` : '<p class="muted">此路线的起点</p>'}</section>
       <section class="detail-section"><h4>完成效果</h4>${list(
         node.effects.map(
           (e) =>
             effectText(e) +
             (e.when?.length && progress.status === 'completed'
-              ? progress.evidence.startsWith('歷史承接：')
-                ? '（歷史承接，實際效果未記錄）'
+              ? isHistoricalEvidence(progress.evidence)
+                ? '（历史承接，实际效果未记录）'
                 : progress.applied.includes(e.id)
                   ? '（已生效）'
-                  : '（條件未成立，未生效）'
+                  : '（条件未成立，未生效）'
               : ''),
         ),
       )}</section>
-      ${conditions.length ? `<section class="detail-section"><h4>條件</h4><ul class="conditions">${conditions.map(([kind, label]) => `<li><span class="cond-kind">${kind}</span>${escape(label)}</li>`).join('')}</ul></section>` : ''}
-      ${node.impact === 'pivotal' ? `<section class="detail-section pivotal-note"><h4>重要國策</h4><p>完成時發布新聞${node.news ? `：「${escape(node.news.headline)}」` : ''}。</p></section>` : ''}
+      ${conditions.length ? `<section class="detail-section"><h4>条件</h4><ul class="conditions">${conditions.map(([kind, label]) => `<li><span class="cond-kind">${kind}</span>${escape(label)}</li>`).join('')}</ul></section>` : ''}
+      ${node.impact === 'pivotal' ? `<section class="detail-section pivotal-note"><h4>重要国策</h4><p>完成时发布新闻${node.news ? `：「${escape(node.news.headline)}」` : ''}。</p></section>` : ''}
       ${node.mutex ? mutexNote(country, node) : ''}
-      <section class="detail-section"><h4>投入與工期</h4>${list(node.investments)}${node.durationReason ? `<details class="fold"><summary>工期理由</summary><p class="reason">${escape(node.durationReason)}</p></details>` : ''}</section>
-      ${route ? `<section class="detail-section"><h4>路線抉擇 · ${escape(route.name)}</h4><p>${escape(route.purpose)}</p><dl class="route-facts"><dt>支持者</dt><dd>${escape(route.supporters)}</dd><dt>阻力</dt><dd>${escape(route.opposition)}</dd><dt>取捨</dt><dd>${escape(route.tradeoff)}</dd><dt>終點</dt><dd>${escape(route.destination)}</dd></dl></section>` : ''}
-      ${node.reason ? `<details class="detail-section fold"><summary><h4>設計依據</h4></summary><p class="reason">${escape(node.reason)}</p></details>` : ''}</div>`;
+      <section class="detail-section"><h4>投入与工期</h4>${list(node.investments)}${node.durationReason ? `<details class="fold"><summary>工期理由</summary><p class="reason">${escape(node.durationReason)}</p></details>` : ''}</section>
+      ${route ? `<section class="detail-section"><h4>路线抉择 · ${escape(route.name)}</h4><p>${escape(route.purpose)}</p><dl class="route-facts"><dt>支持者</dt><dd>${escape(route.supporters)}</dd><dt>阻力</dt><dd>${escape(route.opposition)}</dd><dt>取舍</dt><dd>${escape(route.tradeoff)}</dd><dt>终点</dt><dd>${escape(route.destination)}</dd></dl></section>` : ''}
+      ${node.reason ? `<details class="detail-section fold"><summary><h4>设计依据</h4></summary><p class="reason">${escape(node.reason)}</p></details>` : ''}</div>`;
   }
   /** Name the competing routes, so a mutex never looks like it has no counterpart. */
   function mutexNote(country: Country, node: FocusNode): string {
@@ -528,11 +529,11 @@ export function mountUI(
     const chips = (list: FocusNode[]) =>
       list.map((n) => `<button class="chip" data-goto="${escape(n.id)}">${escape(n.name)}</button>`).join('');
     const lock =
-      node.mutex!.lock === 'start' ? '開始路線起點時即作出不可撤回的承諾' : '完成路線起點後鎖定其他路線';
-    return `<section class="detail-section mutex-note"><h4>互斥路線</h4><p>${escape(node.mutex!.reason)}</p>${
+      node.mutex!.lock === 'start' ? '开始路线起点时即作出不可撤回的承诺' : '完成路线起点后锁定其他路线';
+    return `<section class="detail-section mutex-note"><h4>互斥路线</h4><p>${escape(node.mutex!.reason)}</p>${
       others.length
-        ? `<p class="mutex-rivals"><small>${head ? '本國策是這條路線的起點，與以下路線互斥：' : `本國策屬於「${escape(own.heads.map((n) => n.name).join('／'))}」開啟的路線，與以下路線互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([, route]) => chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>`
-        : '<small>這個互斥組沒有其他路線，實際上不會鎖定任何國策（舊版生成的資料）。</small>'
+        ? `<p class="mutex-rivals"><small>${head ? '本国策是这条路线的起点，与以下路线互斥：' : `本国策属于「${escape(own.heads.map((n) => n.name).join('／'))}」开启的路线，与以下路线互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([, route]) => chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>`
+        : '<small>这个互斥组没有其他路线，实际上不会锁定任何国策（旧版生成的资料）。</small>'
     }</section>`;
   }
   function nodeState(country: Country, node: FocusNode): string {
@@ -651,9 +652,9 @@ export function mountUI(
             : stateClass === 'paused'
               ? `Ⅱ ${p.days.toFixed(0)} / ${node.days} 日`
               : stateClass === 'sealed'
-                ? '路線已鎖定'
+                ? '路线已锁定'
                 : stateClass === 'terminated'
-                  ? '已終止'
+                  ? '已终止'
                   : `${node.days} 日`;
     };
     tree.innerHTML = `<svg class="connectors" width="${treeSize.width}" height="${treeSize.height}" aria-hidden="true">${lines.join('')}</svg>${[
@@ -668,7 +669,7 @@ export function mountUI(
       .filter(([b]) => collapsed.has(b))
       .map(
         ([b, p]) =>
-          `<button class="branch-summary" data-jump-branch="${escape(b)}" style="left:${p.x}px;top:${p.y}px;width:${NODE_W}px"><strong>${escape(b)}</strong><span>${nodes.filter((n) => n.branch === b).length} 項國策已收合 · 點選展開</span></button>`,
+          `<button class="branch-summary" data-jump-branch="${escape(b)}" style="left:${p.x}px;top:${p.y}px;width:${NODE_W}px"><strong>${escape(b)}</strong><span>${nodes.filter((n) => n.branch === b).length} 项国策已收合 · 点选展开</span></button>`,
       )
       .join('')}${drawn
       .map((node) => {
@@ -679,7 +680,7 @@ export function mountUI(
           (query && !`${node.name} ${node.description}`.includes(query)) ||
           (branch && node.branch !== branch);
         const isCurrent = country.current === node.id;
-        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-icon">${icon(node.icon)}</span><span class="node-text"><span class="node-name">${escape(node.name)}</span><span class="node-meta">${escape(meta(node, stateClass))}</span></span>${anchorBadge(country, node)}${heads.has(node.id) ? '<span class="node-flag" title="互斥路線的分歧點">⇋</span>' : ''}${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要國策：完成時發布新聞">✦</span>' : ''}${p.started !== null && stateClass !== 'completed' ? `<span class="node-progress"><i style="width:${Math.min(100, (p.days / node.days) * 100)}%"></i></span>` : ''}</button>`;
+        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-icon">${icon(node.icon)}</span><span class="node-text"><span class="node-name">${escape(node.name)}</span><span class="node-meta">${escape(meta(node, stateClass))}</span></span>${anchorBadge(country, node)}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${p.started !== null && stateClass !== 'completed' ? `<span class="node-progress"><i style="width:${Math.min(100, (p.days / node.days) * 100)}%"></i></span>` : ''}</button>`;
       })
       .join('')}`;
     const minimap = shell.querySelector<SVGSVGElement>('.minimap-svg');
@@ -701,7 +702,7 @@ export function mountUI(
     const searchButton = shell.querySelector<HTMLButtonElement>('[data-action="search-next"]');
     if (searchButton) {
       const count = query ? nodes.filter((n) => `${n.name} ${n.description}`.includes(query)).length : 0;
-      searchButton.textContent = query ? `下一項 (${count})` : '下一項';
+      searchButton.textContent = query ? `下一项 (${count})` : '下一项';
       searchButton.disabled = count === 0;
     }
     transform();
@@ -936,7 +937,7 @@ export function mountUI(
     taskPanel = undefined;
     modal = name;
     backdrop.hidden = false;
-    backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="關閉對話框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
+    backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
     backdrop.querySelector<HTMLButtonElement>('button')?.focus();
     updateModalJobs();
   }
@@ -949,7 +950,7 @@ export function mountUI(
     const summary = taskSummary();
     pill.hidden = !summary.state || modal === 'jobs';
     pill.className = `modal-jobs ${summary.state}`;
-    pill.innerHTML = `${summary.state === 'busy' ? '<i class="spinner"></i>' : '<i class="status-dot failed"></i>'}${escape(summary.text.replace('，點此查看', ''))}`;
+    pill.innerHTML = `${summary.state === 'busy' ? '<i class="spinner"></i>' : '<i class="status-dot failed"></i>'}${escape(summary.text.replace('，点此查看', ''))}`;
   }
   function closeModal(): void {
     removing = '';
@@ -972,14 +973,14 @@ export function mountUI(
     }
     const existing = importing.entries.filter((entry) => controller.state?.countries[entry.tree.id]);
     const withStatus = importing.entries.some((entry) => entry.status);
-    return `<div class="import-panel"><h4>準備匯入：${escape(importing.file)}</h4><ul>${importing.entries
+    return `<div class="import-panel"><h4>准备汇入：${escape(importing.file)}</h4><ul>${importing.entries
       .map(
         (entry) =>
-          `<li><strong>${escape(entry.tree.name)}</strong> <code>${escape(entry.tree.id)}</code> · ${entry.tree.nodes.length} 項國策 · ${new Set(entry.tree.nodes.map((n) => n.branch)).size} 支分支${entry.status ? ' · 含進度' : ''}${controller.state?.countries[entry.tree.id] ? ' · <span class="warn">將取代現有國家</span>' : ''}</li>`,
+          `<li><strong>${escape(entry.tree.name)}</strong> <code>${escape(entry.tree.id)}</code> · ${entry.tree.nodes.length} 项国策 · ${new Set(entry.tree.nodes.map((n) => n.branch)).size} 支分支${entry.status ? ' · 含进度' : ''}${controller.state?.countries[entry.tree.id] ? ' · <span class="warn">将取代现有国家</span>' : ''}</li>`,
       )
       .join(
         '',
-      )}</ul><label class="check"><input type="checkbox" data-import-progress ${withStatus ? '' : 'disabled'} ${checked(importing.withProgress && withStatus)}>連同進度<small>保留檔案中的進度、能力與鎖定；匯入後需執行「更新局勢」從目前故事日校準。事件不匯入。</small></label>${existing.length ? `<label class="check"><input type="checkbox" data-import-replace ${checked(importing.replace)}>取代同 id 的國家（${existing.map((e) => escape(e.tree.name)).join('、')}）<small>原有的國策樹與進度會先刪除。</small></label>` : ''}<div class="tree-io-actions"><button class="primary" data-tree="import-confirm" ${existing.length && !importing.replace ? 'disabled' : ''}>確認匯入</button><button data-tree="import-cancel">取消</button></div></div>`;
+      )}</ul><label class="check"><input type="checkbox" data-import-progress ${withStatus ? '' : 'disabled'} ${checked(importing.withProgress && withStatus)}>连同进度<small>保留档案中的进度、能力与锁定；汇入后需执行「更新局势」从目前故事日校准。事件不汇入。</small></label>${existing.length ? `<label class="check"><input type="checkbox" data-import-replace ${checked(importing.replace)}>取代同 id 的国家（${existing.map((e) => escape(e.tree.name)).join('、')}）<small>原有的国策树与进度会先删除。</small></label>` : ''}<div class="tree-io-actions"><button class="primary" data-tree="import-confirm" ${existing.length && !importing.replace ? 'disabled' : ''}>确认汇入</button><button data-tree="import-cancel">取消</button></div></div>`;
   }
   function download(name: string, text: string): void {
     const link = doc.createElement('a');
@@ -1001,21 +1002,21 @@ export function mountUI(
       ...backdrop.querySelectorAll<HTMLInputElement>('[data-candidate]:checked'),
     ].map((e) => e.dataset.candidate);
     const created = countries.length
-      ? `<h3>已建立的國家</h3>${countries
+      ? `<h3>已建立的国家</h3>${countries
           .map(
             (c) =>
-              `<div class="candidate country-row"><strong class="country-name">${escape(c.name)}</strong>${periodControl(c)}<label class="switch-label"><input type="checkbox" data-enable="${escape(c.id)}" ${checked(c.enabled)}>啟用</label>${c.control === 'player' ? `<label class="switch-label" title="故事時間一次跳過很多天時，由 AI 替這個國家接著選下一項國策"><input type="checkbox" data-delegate="${escape(c.id)}" ${checked(c.skipDelegate)}>時間跳躍時由 AI 代選</label>` : '<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${
+              `<div class="candidate country-row"><strong class="country-name">${escape(c.name)}</strong>${periodControl(c)}<label class="switch-label"><input type="checkbox" data-enable="${escape(c.id)}" ${checked(c.enabled)}>启用</label>${c.control === 'player' ? `<label class="switch-label" title="故事时间一次跳过很多天时，由 AI 替这个国家接著选下一项国策"><input type="checkbox" data-delegate="${escape(c.id)}" ${checked(c.skipDelegate)}>时间跳跃时由 AI 代选</label>` : '<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${
                 removing === c.id
-                  ? `<div class="remove-confirm" role="alert"><small>刪除「${escape(c.name)}」的國策樹、進度與只涉及此國的事件？會寫入目前樓層；之後可從候選清單重新生成。</small><button class="danger" data-remove-confirm="${escape(c.id)}">確認刪除</button><button data-remove-cancel>取消</button></div>`
-                  : `<button data-tree-export="${escape(c.id)}">匯出</button><button class="danger" data-remove-country="${escape(c.id)}" ${busyJobs ? 'disabled title="有任務進行中，請等任務結束後再刪除"' : ''}>刪除國策樹</button>`
+                  ? `<div class="remove-confirm" role="alert"><small>删除「${escape(c.name)}」的国策树、进度与只涉及此国的事件？会写入目前楼层；之后可从候选清单重新生成。</small><button class="danger" data-remove-confirm="${escape(c.id)}">确认删除</button><button data-remove-cancel>取消</button></div>`
+                  : `<button data-tree-export="${escape(c.id)}">汇出</button><button class="danger" data-remove-country="${escape(c.id)}" ${busyJobs ? 'disabled title="有任务进行中，请等任务结束后再删除"' : ''}>删除国策树</button>`
               }</div>`,
           )
           .join(
             '',
-          )}${countries.some((c) => !c.enabled) ? '<small class="muted">重新啟用後，下一次局勢更新會先校準現況；停用期間不累積工期。</small>' : ''}<div class="separator"></div>`
+          )}${countries.some((c) => !c.enabled) ? '<small class="muted">重新启用后，下一次局势更新会先校准现况；停用期间不累积工期。</small>' : ''}<div class="separator"></div>`
       : '';
-    const body = `${created}<h3>新增國家</h3><p class="muted">先從本局資料辨識國家，再勾選要生成國策樹的對象。</p><button data-modal="identify" ${identifying ? 'disabled' : ''}>${identifying ? '正在辨識…' : '從目前資料辨識國家'}</button>${controller.candidates.map((c) => `<label class="candidate"><input type="checkbox" data-candidate="${escape(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape(c.name)}</strong><p>${escape(c.description)}</p><small>${escape(c.evidence)}</small></span></label>`).join('')}${!controller.candidates.length ? '<p class="muted">尚無待啟用的候選國家。</p>' : ''}<div class="separator"></div><details class="tree-io" ${importing || treeNotice ? 'open' : ''}><summary>國策樹檔案：匯入與匯出</summary><div class="tree-io-actions"><button data-tree="import" title="載入手寫、submod 或其他聊天匯出的國策樹">匯入國策樹</button><button data-tree="export-all" ${countries.length ? '' : 'disabled'} title="含完整進度，可用來備份或回報問題">匯出全部</button><button data-tree="copy-all" ${countries.length ? '' : 'disabled'}>複製全部 JSON</button><button data-tree="template">下載範本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice ? `<p class="api-status">${escape(treeNotice)}</p>` : ''}${importPanel()}</details>`;
-    const footer = `<button data-modal="close">返回</button><button class="primary" data-modal="enable" ${selectedCandidates.length ? '' : 'disabled'}>生成並啟用選取國家</button>`;
+    const body = `${created}<h3>新增国家</h3><p class="muted">先从本局资料辨识国家，再勾选要生成国策树的对象。</p><button data-modal="identify" ${identifying ? 'disabled' : ''}>${identifying ? '正在辨识…' : '从目前资料辨识国家'}</button>${controller.candidates.map((c) => `<label class="candidate"><input type="checkbox" data-candidate="${escape(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape(c.name)}</strong><p>${escape(c.description)}</p><small>${escape(c.evidence)}</small></span></label>`).join('')}${!controller.candidates.length ? '<p class="muted">尚无待启用的候选国家。</p>' : ''}<div class="separator"></div><details class="tree-io" ${importing || treeNotice ? 'open' : ''}><summary>国策树档案：汇入与汇出</summary><div class="tree-io-actions"><button data-tree="import" title="载入手写、submod 或其他聊天汇出的国策树">汇入国策树</button><button data-tree="export-all" ${countries.length ? '' : 'disabled'} title="含完整进度，可用来备份或回报问题">汇出全部</button><button data-tree="copy-all" ${countries.length ? '' : 'disabled'}>复制全部 JSON</button><button data-tree="template">下载范本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice ? `<p class="api-status">${escape(treeNotice)}</p>` : ''}${importPanel()}</details>`;
+    const footer = `<button data-modal="close">返回</button><button class="primary" data-modal="enable" ${selectedCandidates.length ? '' : 'disabled'}>生成并启用选取国家</button>`;
     if (!focus && modal === 'countries') {
       const section = backdrop.querySelector('.modal-body');
       if (section) {
@@ -1026,7 +1027,7 @@ export function mountUI(
         foot.innerHTML = footer;
       }
     } else {
-      openModal('countries', '管理國家', body, footer);
+      openModal('countries', '管理国家', body, footer);
     }
   }
   function showJobs(): void {
@@ -1045,14 +1046,14 @@ export function mountUI(
     const rows = controller.jobs
       .map(
         (j) =>
-          `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape(j.time)}</small>${j.inputCharacters !== undefined ? `<br><small>請求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ''}</div><div>${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${j.route ? ` · ${escape(j.route)}` : ''}<br>${message(j)}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button data-retry="${j.id}">重試</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">請求紀錄</button>` : ''}</div></div>`,
+          `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape(j.time)}</small>${j.inputCharacters !== undefined ? `<br><small>请求 ${j.inputCharacters.toLocaleString()} 字元</small>` : ''}</div><div>${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${j.route ? ` · ${escape(j.route)}` : ''}<br>${message(j)}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button data-retry="${j.id}">重试</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">请求纪录</button>` : ''}</div></div>`,
       )
       .join('');
-    const body = `<div class="job-actions"><button data-modal="run-reshape" title="劇情大幅改變時，修改尚未開始的國策">評估重大改樹</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任務</button></div>${rows || '<p class="muted">尚無任務紀錄。正文與一般變數更新完成後，國策任務會在背景執行，不會鎖住聊天；進度顯示在懸浮球上方。</p>'}${controller.config.runLog ? '<p class="muted">執行紀錄已開啟：請求內容只保存在此頁記憶體，重新整理即清除。</p>' : ''}`;
+    const body = `<div class="job-actions"><button data-modal="run-reshape" title="剧情大幅改变时，修改尚未开始的国策">评估重大改树</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任务</button></div>${rows || '<p class="muted">尚无任务纪录。正文与一般变数更新完成后，国策任务会在背景执行，不会锁住聊天；进度显示在悬浮球上方。</p>'}${controller.config.runLog ? '<p class="muted">执行纪录已开启：请求内容只保存在此页记忆体，重新整理即清除。</p>' : ''}`;
     if (modal === 'jobs') {
       backdrop.querySelector('.modal-body')!.innerHTML = body;
     } else {
-      openModal('jobs', '任務', body, '<button data-modal="close">返回</button>');
+      openModal('jobs', '任务', body, '<button data-modal="close">返回</button>');
     }
   }
   function showLog(jobId: string): void {
@@ -1063,11 +1064,11 @@ export function mountUI(
         : '';
     openModal(
       'log',
-      '請求紀錄',
-      `<p class="muted">只供除錯，不含 API 金鑰。</p>${entries
+      '请求纪录',
+      `<p class="muted">只供除错，不含 API 金钥。</p>${entries
         .map(
           (log) =>
-            `<details class="job-card request-log"><summary class="job-title">${log.error ? '失敗' : '格式通過'} · ${escape(jobNames[log.kind as keyof typeof jobNames] ?? log.kind)}${log.stage ? ` · ${escape(log.stage)}` : ''} · ${escape(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1000).toFixed(1)} 秒 · ${escape(log.time)}</summary>${log.error ? `<p class="modal-error">${escape(log.error)}</p>` : '<p class="muted">✓ 格式通過</p>'}${log.messages
+            `<details class="job-card request-log"><summary class="job-title">${log.error ? '失败' : '格式通过'} · ${escape(jobNames[log.kind as keyof typeof jobNames] ?? log.kind)}${log.stage ? ` · ${escape(log.stage)}` : ''} · ${escape(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1000).toFixed(1)} 秒 · ${escape(log.time)}</summary>${log.error ? `<p class="modal-error">${escape(log.error)}</p>` : '<p class="muted">✓ 格式通过</p>'}${log.messages
               .map((message, index) =>
                 block(
                   `#${index + 1} ${message.role} · ${message.content.length.toLocaleString()} 字元`,
@@ -1077,21 +1078,21 @@ export function mountUI(
               )
               .join(
                 '',
-              )}${block('推理內容', log.reasoning, 6)}${block(`模型回應 · ${log.output.length.toLocaleString()} 字元`, log.output)}</details>`,
+              )}${block('推理内容', log.reasoning, 6)}${block(`模型回应 · ${log.output.length.toLocaleString()} 字元`, log.output)}</details>`,
         )
         .join('')}`,
-      '<button data-modal="jobs">返回任務</button>',
+      '<button data-modal="jobs">返回任务</button>',
     );
   }
   type NewsEvent = State['events'][string];
   const newsKicker = (event: NewsEvent) =>
     event.source.kind === 'focus'
-      ? '國策事件'
+      ? '国策事件'
       : event.importance === 'world'
-        ? '世界新聞'
+        ? '世界新闻'
         : event.scope === 'front'
-          ? '身邊的消息'
-          : '各國動態';
+          ? '身边的消息'
+          : '各国动态';
   function newsEffects(state: State, event: NewsEvent): string {
     const parts = event.changes
       .filter((change) => change.effects.length)
@@ -1099,7 +1100,7 @@ export function mountUI(
         (change) =>
           `${state.countries[change.country]?.name ?? change.country}：${change.effects.map(effectText).join('、')}`,
       );
-    return parts.length ? parts.join('；') : '無直接影響';
+    return parts.length ? parts.join('；') : '无直接影响';
   }
   /** Skeleton edition: the core branch, the relations between focuses and independent branches. */
   function showRelations(): void {
@@ -1123,11 +1124,11 @@ export function mountUI(
     const independent = country.branches.filter((b) => b.independent);
     openModal(
       'relations',
-      `國策關係 · ${country.name}`,
-      `<p class="muted">國策之間如何互相影響；每條關係下方列出實現它的規則。點國策名稱可在樹上定位。</p>
-      ${core ? `<section class="rel-core"><h3>核心分支：${escape(core.name)}</h3>${core.coreReason ? `<p>${escape(core.coreReason)}</p>` : ''}<small>影響的其他分支：${reached.length ? reached.map(escape).join('、') : '無'}</small></section>` : ''}
-      ${relations.length ? `<ul class="rel-list">${relations.map((r) => `<li class="rel-card"><span class="tag">${escape(relationKindNames[r.kind] ?? r.kind)}</span><div class="rel-pair">${focus(r.from)}<span class="rel-arrow" title="關聯；實際方向見下方規則">↔</span>${focus(r.to)}</div><p>${escape(r.change)}</p>${r.via.length ? `<ul class="rel-via">${r.via.map((v) => `<li>${escape(v)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>` : '<p>這棵國策樹沒有記錄關係。較舊版本生成的樹、小型樹與匯入的樹可能沒有關係表。</p>'}
-      ${independent.length ? `<section class="rel-independent"><h3>獨立推進的分支</h3><dl>${independent.map((b) => `<dt>${escape(b.name)}</dt><dd>${escape(b.independent ?? '')}</dd>`).join('')}</dl></section>` : ''}`,
+      `国策关系 · ${country.name}`,
+      `<p class="muted">国策之间如何互相影响；每条关系下方列出实现它的规则。点国策名称可在树上定位。</p>
+      ${core ? `<section class="rel-core"><h3>核心分支：${escape(core.name)}</h3>${core.coreReason ? `<p>${escape(core.coreReason)}</p>` : ''}<small>影响的其他分支：${reached.length ? reached.map(escape).join('、') : '无'}</small></section>` : ''}
+      ${relations.length ? `<ul class="rel-list">${relations.map((r) => `<li class="rel-card"><span class="tag">${escape(relationKindNames[r.kind] ?? r.kind)}</span><div class="rel-pair">${focus(r.from)}<span class="rel-arrow" title="关联；实际方向见下方规则">↔</span>${focus(r.to)}</div><p>${escape(r.change)}</p>${r.via.length ? `<ul class="rel-via">${r.via.map((v) => `<li>${escape(v)}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>` : '<p>这棵国策树没有记录关系。较旧版本生成的树、小型树与汇入的树可能没有关系表。</p>'}
+      ${independent.length ? `<section class="rel-independent"><h3>独立推进的分支</h3><dl>${independent.map((b) => `<dt>${escape(b.name)}</dt><dd>${escape(b.independent ?? '')}</dd>`).join('')}</dl></section>` : ''}`,
       '<button data-modal="close">返回</button>',
     );
   }
@@ -1144,13 +1145,13 @@ export function mountUI(
     );
     const filters: [typeof eventFilter, string][] = [
       ['all', '全部'],
-      ['ongoing', '進行中'],
-      ['resolved', '已結束'],
-      ['secret', '未公開'],
+      ['ongoing', '进行中'],
+      ['resolved', '已结束'],
+      ['secret', '未公开'],
     ];
     const names = (e: (typeof all)[number]) =>
       e.countries.map((id) => state?.countries[id]?.name ?? id).join('、');
-    const toolbar = `<div class="event-filters">${filters.map(([id, label]) => `<button class="chip ${eventFilter === id ? 'active' : ''}" data-event-filter="${id}" aria-pressed="${eventFilter === id}">${label}</button>`).join('')}<select data-event-country aria-label="依國家篩選"><option value="">所有國家</option>${Object.values(
+    const toolbar = `<div class="event-filters">${filters.map(([id, label]) => `<button class="chip ${eventFilter === id ? 'active' : ''}" data-event-filter="${id}" aria-pressed="${eventFilter === id}">${label}</button>`).join('')}<select data-event-country aria-label="依国家筛选"><option value="">所有国家</option>${Object.values(
       state?.countries ?? {},
     )
       .map(
@@ -1161,15 +1162,15 @@ export function mountUI(
     const cards = events
       .map(
         (e) =>
-          `<article class="event-card"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape(names(e))}${e.public ? '' : ' · 未公開'}${e.status === 'ongoing' ? ' · 仍在發展' : e.result ? ` · ${resultNames[e.result]}` : ''}</span><h3>${escape(e.headline || e.title)}</h3><p>${escape(e.description)}</p>${e.current ? `<p class="event-current"><b>現況</b> ${escape(e.current)}</p>` : ''}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape(st.text)}${st.when ? ` <small>${escape(st.when)}</small>` : ''}</li>`).join('')}</ul>` : ''}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape(t.text)}</li>`).join('')}</ol>` : ''}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape(newsEffects(state, e))}</small>` : ''}<small>${escape(e.evidence)}</small></article>`,
+          `<article class="event-card"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape(names(e))}${e.public ? '' : ' · 未公开'}${e.status === 'ongoing' ? ' · 仍在发展' : e.result ? ` · ${resultNames[e.result]}` : ''}</span><h3>${escape(e.headline || e.title)}</h3><p>${escape(e.description)}</p>${e.current ? `<p class="event-current"><b>现况</b> ${escape(e.current)}</p>` : ''}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape(st.text)}${st.when ? ` <small>${escape(st.when)}</small>` : ''}</li>`).join('')}</ul>` : ''}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape(t.text)}</li>`).join('')}</ol>` : ''}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape(newsEffects(state, e))}</small>` : ''}<small>${escape(e.evidence)}</small></article>`,
       )
       .join('');
-    const body = `${all.length ? toolbar : ''}${cards || `<p class="muted">${all.length ? '沒有符合篩選的事件。' : '目前沒有事件。局勢更新會記錄各國發生的事，包括未公開的。'}</p>`}`;
+    const body = `${all.length ? toolbar : ''}${cards || `<p class="muted">${all.length ? '没有符合筛选的事件。' : '目前没有事件。局势更新会记录各国发生的事，包括未公开的。'}</p>`}`;
     if (modal === 'events') {
       backdrop.querySelector('.modal-body')!.innerHTML =
         `${body}<div class="modal-error" role="alert"></div>`;
     } else {
-      openModal('events', '國家事件紀錄', body, '<button data-modal="close">返回</button>');
+      openModal('events', '国家事件纪录', body, '<button data-modal="close">返回</button>');
     }
   }
   function optionList(values: [string, string][], value: string): string {
@@ -1180,7 +1181,7 @@ export function mountUI(
       .join('');
   }
   const settingsFooter =
-    '<button data-modal="close">取消</button><button class="primary" data-modal="save-settings">儲存設定</button>';
+    '<button data-modal="close">取消</button><button class="primary" data-modal="save-settings">储存设定</button>';
   /** Unsaved changes in the settings window (general, task and source forms; size and pace). */
   function settingsDirty(): boolean {
     if (modal !== 'settings') {
@@ -1212,7 +1213,7 @@ export function mountUI(
       const footer = backdrop.querySelector('.modal-footer');
       if (footer) {
         footer.innerHTML =
-          '<span class="unsaved">有未儲存的修改</span><button data-modal="keep-editing">繼續編輯</button><button class="danger" data-modal="discard">放棄修改</button><button class="primary" data-modal="save-settings">儲存並關閉</button>';
+          '<span class="unsaved">有未储存的修改</span><button data-modal="keep-editing">继续编辑</button><button class="danger" data-modal="discard">放弃修改</button><button class="primary" data-modal="save-settings">储存并关闭</button>';
         footer.querySelector<HTMLButtonElement>('[data-modal="keep-editing"]')?.focus();
       }
       return;
@@ -1223,28 +1224,28 @@ export function mountUI(
     const state = controller.state;
     const tabs = [
       ['general', '一般'],
-      ['apis', 'API 連線'],
-      ['jobs', '任務'],
-      ['sources', '世界書與上下文'],
+      ['apis', 'API 连线'],
+      ['jobs', '任务'],
+      ['sources', '世界书与上下文'],
     ];
     openModal(
       'settings',
-      '國策設定',
+      '国策设定',
       `<div class="tabs">${tabs.map(([id, name]) => `<button data-settings-tab="${id}" class="${settingsTab === id ? 'active' : ''}">${name}</button>`).join('')}</div>
-      <div class="settings-section" ${settingsTab !== 'general' ? 'hidden' : ''}><div class="form-grid"><label class="field">每期規模<select data-setting="size">${optionList(
+      <div class="settings-section" ${settingsTab !== 'general' ? 'hidden' : ''}><div class="form-grid"><label class="field">每期规模<select data-setting="size">${optionList(
         [
-          ['standard', '標準 · 每期 10–16 項'],
-          ['large', '大型 · 每期 16–24 項'],
+          ['standard', '标准 · 每期 10–16 项'],
+          ['large', '大型 · 每期 16–24 项'],
         ],
         state?.settings.size ?? 'standard',
-      )}</select><small>含前期承接節點，只影響新生成與下一期；數量是篇幅目標，不強制湊數。</small></label><label class="field">故事節奏<select data-setting="pace">${optionList(
+      )}</select><small>含前期承接节点，只影响新生成与下一期；数量是篇幅目标，不强制凑数。</small></label><label class="field">故事节奏<select data-setting="pace">${optionList(
         [
           ['fast', '快速'],
-          ['standard', '標準'],
-          ['long', '長期'],
+          ['standard', '标准'],
+          ['long', '长期'],
         ],
         state?.settings.pace ?? 'standard',
-      )}</select><small>AI 依世界設定估算實際工期，不會即時改寫既有工期。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期國際大事<small>最多 5 則，附在國策資料後，讓正文以公告、傳聞或對話自然帶出。</small></label><label class="field wide">國策資料提供給正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界書條目（預設）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在當前角色的主世界書建立「國策檔案-」條目，以 EJS 讀取當前樓層資料。未設定角色主世界書或缺少提示詞模板擴展時暫用直接注入，不會自動新建世界書。</small></label><label class="field wide">各國詳情條目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>藍燈：每次都送出（預設）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>綠燈：提到國名或關鍵字才送出</option></select><small>藍燈讓正文每次都看得到各國近況；綠燈較省篇幅。只影響正文看到什麼，不影響國策推進。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留執行紀錄<small>在「任務」視窗查看最近 20 次請求的提示詞與回應，只存在此頁記憶體，除錯後建議關閉。</small></label></div></div>
+      )}</select><small>AI 依世界设定估算实际工期，不会即时改写既有工期。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期国际大事<small>最多 5 则，附在国策资料后，让正文以公告、传闻或对话自然带出。</small></label><label class="field wide">国策资料提供给正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界书条目（预设）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在当前角色的主世界书建立「国策档案-」条目，以 EJS 读取当前楼层资料。未设定角色主世界书或缺少提示词模板扩展时暂用直接注入，不会自动新建世界书。</small></label><label class="field wide">各国详情条目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>蓝灯：每次都送出（预设）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>绿灯：提到国名或关键字才送出</option></select><small>蓝灯让正文每次都看得到各国近况；绿灯较省篇幅。只影响正文看到什么，不影响国策推进。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留执行纪录<small>在「任务」视窗查看最近 20 次请求的提示词与回应，只存在此页记忆体，除错后建议关闭。</small></label></div></div>
       <div class="settings-section" ${settingsTab !== 'apis' ? 'hidden' : ''}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'jobs' ? 'hidden' : ''}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'sources' ? 'hidden' : ''}><div id="source-panel"></div></div>`,
@@ -1585,7 +1586,7 @@ export function mountUI(
             try {
               raw = JSON.parse(text);
             } catch {
-              throw new Error('檔案不是有效的 JSON');
+              throw new Error('档案不是有效的 JSON');
             }
             importing = { file: file.name, entries: parseTreeFile(raw), withProgress: false, replace: false };
             treeNotice = '';
@@ -1594,7 +1595,7 @@ export function mountUI(
           .catch((error) => {
             const element = backdrop.querySelector('.modal-error');
             if (element) {
-              element.textContent = `匯入失敗：${error instanceof Error ? error.message : String(error)}`;
+              element.textContent = `汇入失败：${error instanceof Error ? error.message : String(error)}`;
             }
           });
       }
@@ -1677,7 +1678,7 @@ export function mountUI(
         if (target.dataset.treeExport) {
           const id = target.dataset.treeExport;
           download(
-            `國策樹-${controller.state!.countries[id].name}-${stamp()}.json`,
+            `国策树-${controller.state!.countries[id].name}-${stamp()}.json`,
             exportTrees(controller.state!, [id]),
           );
           return;
@@ -1687,21 +1688,21 @@ export function mountUI(
             backdrop.querySelector<HTMLInputElement>('[data-tree-file]')?.click();
             return;
           case 'export-all':
-            download(`國策樹-全部-${stamp()}.json`, exportTrees(controller.state!));
+            download(`国策树-全部-${stamp()}.json`, exportTrees(controller.state!));
             return;
           case 'copy-all': {
             const text = exportTrees(controller.state!);
             try {
               await navigator.clipboard.writeText(text);
-              treeNotice = `已複製 ${text.length.toLocaleString()} 字元的 JSON。`;
+              treeNotice = `已复制 ${text.length.toLocaleString()} 字元的 JSON。`;
             } catch {
-              throw new Error('瀏覽器不允許複製到剪貼簿，請改用「匯出全部」下載檔案。');
+              throw new Error('浏览器不允许复制到剪贴簿，请改用「汇出全部」下载档案。');
             }
             showCountries(false);
             return;
           }
           case 'template':
-            download('國策樹範本.json', treeTemplate());
+            download('国策树范本.json', treeTemplate());
             return;
           case 'import-cancel':
             importing = null;
@@ -1714,7 +1715,7 @@ export function mountUI(
               replace: pending.replace,
             });
             importing = null;
-            treeNotice = `已匯入 ${pending.entries.map((entry) => `「${entry.tree.name}」`).join('、')}。${pending.withProgress ? '請執行「更新局勢」校準進度。' : ''}`;
+            treeNotice = `已汇入 ${pending.entries.map((entry) => `「${entry.tree.name}」`).join('、')}。${pending.withProgress ? '请执行「更新局势」校准进度。' : ''}`;
             countryId = pending.entries[0].tree.id;
             nodeId = '';
             centeredCountry = '';
@@ -1794,7 +1795,7 @@ export function mountUI(
             );
             const candidates = controller.candidates.filter((c) => ids.includes(c.id));
             if (!candidates.length) {
-              throw new Error('請先勾選候選國家');
+              throw new Error('请先勾选候选国家');
             }
             closeModal();
             await controller.enable(candidates);

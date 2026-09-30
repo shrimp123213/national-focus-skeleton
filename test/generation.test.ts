@@ -6,7 +6,7 @@ import { layoutTree } from '../src/layout';
 import { workingState } from '../src/generation';
 import { demoTree } from '../src/demo-tree';
 
-test('136 節點示範的三條憲制路線均能到達共同終點與危機終點', () => {
+test('136 节点示范的三条宪制路线均能到达共同终点与危机终点', () => {
   for (const route of ['central', 'vassal', 'charter']) {
     let state = installCountry(createState(100), demoTree(), 100);
     assert.equal(Object.keys(state.countries.augustium.nodes).length, 136);
@@ -25,7 +25,7 @@ test('136 節點示範的三條憲制路線均能到達共同終點與危機終�
       state = applyProposal(state, {
         id: `step_${turn}`,
         until: state.day + node.days,
-        reason: '測試供給指定成果',
+        reason: '测试供给指定成果',
         steps: [
           {
             at: state.day,
@@ -33,7 +33,7 @@ test('136 節點示範的三條憲制路線均能到達共同終點與危機終�
             selections: [],
             facts: node.outcomes.flatMap((r) =>
               r.kind === 'fact'
-                ? [{ country: country.id, id: r.id, value: true, evidence: '測試實際成果', origin: 'story' }]
+                ? [{ country: country.id, id: r.id, value: true, evidence: '测试实际成果', origin: 'story' }]
                 : [],
             ),
           },
@@ -50,7 +50,7 @@ test('136 節點示範的三條憲制路線均能到達共同終點與危機終�
   }
 });
 
-test('300 個節點自動布局不重疊，跨分支前置位於子節點上方；循環會被拒絕', () => {
+test('300 个节点自动布局不重叠，跨分支前置位于子节点上方；循环会被拒绝', () => {
   const nodes = Array.from({ length: 300 }, (_, i) => ({
     id: `n${i}`,
     branch: `b${Math.floor(i / 30)}`,
@@ -65,11 +65,11 @@ test('300 個節點自動布局不重疊，跨分支前置位於子節點上方�
         { id: 'a', branch: 'a', prerequisites: [['b']] },
         { id: 'b', branch: 'b', prerequisites: [['a']] },
       ]),
-    /循環/,
+    /循环/,
   );
 });
 
-test('布局依前置位置排序，同中心節點保留原順序，跨分支不改動輸入', () => {
+test('布局依前置位置排序，同中心节点保留原顺序，跨分支不改动输入', () => {
   const nodes = [
     { id: 'left', branch: 'main', prerequisites: [] },
     { id: 'right', branch: 'main', prerequisites: [] },
@@ -93,7 +93,7 @@ test('布局依前置位置排序，同中心節點保留原順序，跨分支�
   assert.deepEqual(nodes, before);
 });
 
-test('互斥組至少兩條路線；路線起點是沒有同路線前置的國策', async () => {
+test('互斥组至少两条路线；路线起点是没有同路线前置的国策', async () => {
   const { assertMutexChoices, mutexRoutes } = await import('../src/reachability');
   const m = (route: string) => ({ group: 'g', route, lock: 'complete' as const, reason: 'r' });
   const nodes = [
@@ -112,10 +112,10 @@ test('互斥組至少兩條路線；路線起點是沒有同路線前置的國�
     ['a1', 'a2'],
   );
   assertMutexChoices(nodes);
-  assert.throws(() => assertMutexChoices(nodes.slice(0, 3)), /互斥組 g 只有一條路線/);
+  assert.throws(() => assertMutexChoices(nodes.slice(0, 3)), /互斥组 g 只有一条路线/);
 });
 
-test('骨架修正操作以 id 定位，壞操作略過並回報', async () => {
+test('骨架修正操作以 id 定位，坏操作略过并回报', async () => {
   const { applyPatch } = await import('../src/skeleton-patch');
   const root = {
     nodes: [
@@ -141,10 +141,10 @@ test('骨架修正操作以 id 定位，壞操作略過並回報', async () => {
   assert.equal(root.nodes[0].impact, 'pivotal');
 });
 
-test('生成指示使用分期與內容深度，不要求結構配額', async () => {
+test('生成指示使用分期与内容深度，不要求结构配额', async () => {
   const { DEFAULT_TASK } = await import('../src/prompts');
   assert.match(DEFAULT_TASK.generate, /10–16/);
-  assert.match(DEFAULT_TASK.generate, /沒有配額/);
+  assert.match(DEFAULT_TASK.generate, /没有配额/);
   assert.match(DEFAULT_TASK.generate, /stage=period/);
   assert.match(DEFAULT_TASK.update, /transitions/);
 });

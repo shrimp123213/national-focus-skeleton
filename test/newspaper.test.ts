@@ -59,7 +59,7 @@ function newspaper(transformHtml: (html: string) => string = (html) => html) {
   const root = new Element('nb');
   nodes.set('nb', root);
   let saved: Record<string, any> = {
-    stat_data: { 世界: { 时间: 100 }, 新闻: { 快讯: { 经济: '原來的新聞' } } },
+    stat_data: { 世界: { 时间: 100 }, 新闻: { 快讯: { 经济: '原来的新闻' } } },
     国策: { countries: {}, events: {}, 快讯: { newsPath: '新闻', changed: ['快讯/经济'], updated: {} } },
   };
   let now = 0;
@@ -148,7 +148,7 @@ function newspaper(transformHtml: (html: string) => string = (html) => html) {
   };
 }
 
-test('報紙經酒館額外 HTML 實體解碼後仍能啟動並安全顯示新聞', () => {
+test('报纸经酒馆额外 HTML 实体解码后仍能启动并安全显示新闻', () => {
   // messageFormatting decodes &amp; inside Markdown code blocks before the helper reads
   // their text into an iframe. Reproduce the resulting extra entity decode on the card.
   const entities: Record<string, string> = {
@@ -161,35 +161,35 @@ test('報紙經酒館額外 HTML 實體解碼後仍能啟動並安全顯示新�
   const card = newspaper((html) =>
     html.replace(/&(amp|lt|gt|quot|#39);/g, (_, entity: string) => entities[entity]),
   );
-  assert.equal(card.root.hidden, false, '空 events 也須顯示報紙');
-  card.data().stat_data.新闻.快讯.经济 = `<img src=x onerror="alert('x')"> & 新聞`;
+  assert.equal(card.root.hidden, false, '空 events 也须显示报纸');
+  card.data().stat_data.新闻.快讯.经济 = `<img src=x onerror="alert('x')"> & 新闻`;
   card.tick();
-  assert.ok(card.root.html.includes('&lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; 新聞'));
+  assert.ok(card.root.html.includes('&lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; 新闻'));
   assert.ok(!card.root.html.includes('<img src=x'));
   card.close();
 });
 
-test('報紙刷新自己樓層已保存的新聞與國策事件，無變動及其他變量不重繪', () => {
+test('报纸刷新自己楼层已保存的新闻与国策事件，无变动及其他变量不重绘', () => {
   const card = newspaper();
-  assert.match(card.root.html, /原來的新聞/);
+  assert.match(card.root.html, /原来的新闻/);
   assert.equal(card.draws(), 1);
   card.tick();
-  card.data().stat_data.角色 = { 金幣: 999 };
+  card.data().stat_data.角色 = { 金币: 999 };
   card.tick();
   assert.equal(card.draws(), 1);
   card.root.classList.add('open');
   card.nodes.get('paper')!.scrollTop = 240;
-  card.data().stat_data.新闻.快讯.经济 = '變量保存後的新新聞';
+  card.data().stat_data.新闻.快讯.经济 = '变量保存后的新新闻';
   card.tick();
-  assert.match(card.root.html, /變量保存後的新新聞/);
+  assert.match(card.root.html, /变量保存后的新新闻/);
   assert.equal(card.root.classList.contains('open'), true);
   assert.equal(card.nodes.get('paper')!.scrollTop, 240);
   assert.deepEqual(card.messages.at(-1), ['national-focus:refresh-news', 3]);
   const requests = card.messages.length;
   card.data().国策.events.new = {
     id: 'new',
-    title: '國策背景工作剛完成',
-    description: '已保存的結果',
+    title: '国策背景工作刚完成',
+    description: '已保存的结果',
     countries: [],
     shownAt: 3,
     at: 100,
@@ -198,8 +198,8 @@ test('報紙刷新自己樓層已保存的新聞與國策事件，無變動及�
     status: 'resolved',
   };
   card.tick();
-  assert.match(card.root.html, /國策背景工作剛完成/);
-  assert.equal(card.messages.length, requests, '只更新國策事件不重算角色卡新聞');
+  assert.match(card.root.html, /国策背景工作刚完成/);
+  assert.equal(card.messages.length, requests, '只更新国策事件不重算角色卡新闻');
   const draws = card.draws();
   const reads = card.reads.length;
   card.close();
@@ -208,22 +208,22 @@ test('報紙刷新自己樓層已保存的新聞與國策事件，無變動及�
   assert.equal(card.reads.length, reads);
 });
 
-test('報紙無國策資料時仍等待本樓寫入，資料移除後清除舊內容', () => {
+test('报纸无国策资料时仍等待本楼写入，资料移除后清除旧内容', () => {
   const card = newspaper();
   const data = structuredClone(card.data());
   card.replace({ stat_data: {} });
   card.tick();
   assert.equal(card.root.hidden, true);
   assert.equal(card.root.html, '');
-  data.stat_data.新闻.快讯.经济 = '稍後寫入';
+  data.stat_data.新闻.快讯.经济 = '稍后写入';
   card.replace(data);
   card.tick();
   assert.equal(card.root.hidden, false);
-  assert.match(card.root.html, /稍後寫入/);
+  assert.match(card.root.html, /稍后写入/);
   card.close();
 });
 
-test('報紙閒置及展開收合不讀取，其他樓層保存不觸發更新', () => {
+test('报纸闲置及展开收合不读取，其他楼层保存不触发更新', () => {
   const card = newspaper();
   const reads = card.reads.length;
   card.advance(60_000);
@@ -239,18 +239,18 @@ test('報紙閒置及展開收合不讀取，其他樓層保存不觸發更新',
   card.close();
 });
 
-test('MVU 保存前通知只安排有限補查，合併重複通知，卸載取消補查', () => {
+test('MVU 保存前通知只安排有限补查，合并重复通知，卸载取消补查', () => {
   const card = newspaper();
   card.emit('mag_before_message_update', {});
   card.emit('mag_before_message_update', {});
   assert.equal(card.pending(), 3);
   card.advance(0);
-  assert.equal(card.draws(), 1, 'MVU 尚未保存時不重繪');
-  card.data().stat_data.新闻.快讯.经济 = 'MVU 稍後保存';
+  assert.equal(card.draws(), 1, 'MVU 尚未保存时不重绘');
+  card.data().stat_data.新闻.快讯.经济 = 'MVU 稍后保存';
   card.advance(250);
-  assert.match(card.root.html, /MVU 稍後保存/);
+  assert.match(card.root.html, /MVU 稍后保存/);
   card.advance(60_000);
-  assert.equal(card.reads.length, 4, '初次讀取加三次補查');
+  assert.equal(card.reads.length, 4, '初次读取加三次补查');
   assert.equal(card.pending(), 0);
   card.emit('mag_before_message_update', {});
   card.close();

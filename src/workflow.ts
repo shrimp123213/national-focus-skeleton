@@ -141,7 +141,7 @@ export class FocusController {
       const checkCancelled = () => {
         signal?.throwIfAborted();
         if (this.disposed || epoch !== this.runEpoch) {
-          throw new DOMException('任務已取消', 'AbortError');
+          throw new DOMException('任务已取消', 'AbortError');
         }
       };
       checkCancelled();
@@ -166,7 +166,7 @@ export class FocusController {
         )
       ) {
         throw new Error(
-          '故事時間已前進，請先完成「更新局勢」，再開始、暫停或交接國策；避免把新操作倒填至過去。',
+          '故事时间已前进，请先完成「更新局势」，再开始、暂停或交接国策；避免把新操作倒填至过去。',
         );
       }
       return operation(snapshot.state);
@@ -178,11 +178,11 @@ export class FocusController {
     parsed.apis = parsed.apis.map(validateApi);
     const names = new Set(parsed.apis.map((a) => a.name));
     if (names.size !== parsed.apis.length) {
-      throw new Error('API 名稱不可重複');
+      throw new Error('API 名称不可重复');
     }
     for (const job of Object.values(parsed.jobs)) {
       if (![job.api, ...job.fallback].every((name) => !name || names.has(name))) {
-        throw new Error('任務引用不存在的 API');
+        throw new Error('任务引用不存在的 API');
       }
     }
     this.platform.saveConfig(parsed);
@@ -291,10 +291,10 @@ export class FocusController {
       id,
       kind,
       state: 'queued',
-      message: '準備任務',
+      message: '准备任务',
       time: new Date().toLocaleTimeString(),
       ...(candidate ? { label: candidate.name, candidate } : {}),
-      ...(periodWork ? { periodWork, label: `${candidate?.name} · 換期` } : {}),
+      ...(periodWork ? { periodWork, label: `${candidate?.name} · 换期` } : {}),
     };
     this.jobs.unshift(status);
     this.jobs = this.jobs.slice(0, 40);
@@ -307,7 +307,7 @@ export class FocusController {
       aborter.signal.throwIfAborted();
       status.state = 'running';
       status.started = Date.now();
-      status.message = '正在分析本樓資料';
+      status.message = '正在分析本楼资料';
       this.notify();
       const snapshot = await this.platform.read(this.config, kind);
       sourceSignal = snapshot.signal;
@@ -320,7 +320,7 @@ export class FocusController {
         checkTransition(snapshot.state, periodWork.transition);
       }
       if (kind === 'generate' && !candidate) {
-        throw new Error('請先選擇要生成的候選國家');
+        throw new Error('请先选择要生成的候选国家');
       }
       const ask = async <S extends z.ZodType>(
         stage: string,
@@ -331,7 +331,7 @@ export class FocusController {
         shown?: z.ZodType,
       ): Promise<z.output<S>> => {
         aborter.signal.throwIfAborted();
-        status.message = label ?? (kind === 'generate' ? '單次生成完整國策樹' : '分析本樓局勢');
+        status.message = label ?? (kind === 'generate' ? '单次生成完整国策树' : '分析本楼局势');
         this.notify();
         return this.request(
           kind,
@@ -356,7 +356,7 @@ export class FocusController {
           this.progress.delete(this.progress.keys().next().value!);
         }
         if (progress.skeleton) {
-          status.message = `沿用先前完成的骨架與 ${Object.keys(progress.filled).length} 項內容`;
+          status.message = `沿用先前完成的骨架与 ${Object.keys(progress.filled).length} 项内容`;
           this.notify();
         }
       }
@@ -399,13 +399,13 @@ export class FocusController {
                 max: sizeLimits[snapshot.state.settings.size][1],
               },
               instructions:
-                '生成下一期與舊期摘要。tree.nodes 只輸出新節點，承接節點由程式原樣保留；新節點可引用 anchor 作必要前置，不相關議程可獨立推進。節點與互斥組使用 prefix。不得生成 historical 或改變既有能力、數值、事實及事件。保留仍有效的 longTerm 的 id 與原文，修訂理由寫 analysis。summary 只敘述已發生事實與舊期終止原因，不把新計畫當成果。總數含 anchor，以 limits 為篇幅目標，不湊數。',
+                '生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程式原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。',
             },
             PeriodReplySchema,
             (value) => {
               transitionPeriod(snapshot.state, periodWork.transition, value);
             },
-            '生成下一期與舊期摘要',
+            '生成下一期与旧期摘要',
           )
         : kind === 'generate'
           ? await generateCountry(
@@ -459,7 +459,7 @@ export class FocusController {
         this.progress.delete(progressKey);
       }
       status.state = 'success';
-      status.message = kind === 'identify' ? '候選國家已就緒，請勾選啟用' : '驗證通過，已保存至本樓';
+      status.message = kind === 'identify' ? '候选国家已就绪，请勾选启用' : '验证通过，已保存至本楼';
       await this.refresh();
     } catch (error) {
       const message = redactApiError(error, this.config.apis);
@@ -469,7 +469,7 @@ export class FocusController {
           : 'failed';
       // Logs omit model output and credentials; private proposal details stay in MVU.
       status.message =
-        status.state === 'cancelled' ? '已取消，未套用結果' : `未提交：${message.slice(0, 1500)}`;
+        status.state === 'cancelled' ? '已取消，未套用结果' : `未提交：${message.slice(0, 1500)}`;
     } finally {
       sourceSignal?.removeEventListener('abort', cancelSource);
       status.finished = Date.now();
@@ -526,9 +526,9 @@ export class FocusController {
     if (kind === 'generate') {
       const candidate = this.candidates[0] ?? {
         id: 'example_country',
-        name: '（執行時為勾選的國家）',
-        description: '預覽用示例候選國家',
-        evidence: '預覽',
+        name: '（执行时为勾选的国家）',
+        description: '预览用示例候选国家',
+        evidence: '预览',
       };
       // Larger sizes start with the skeleton request; preview that one.
       const segmented = isSegmented(snapshot.state.settings.size);
@@ -594,13 +594,13 @@ export class FocusController {
     ];
     for (const route of chain) {
       if (!this.config.apis.some((a) => a.name === route)) {
-        throw new Error('任務引用不存在的 API');
+        throw new Error('任务引用不存在的 API');
       }
     }
     const pool = this.pool(kind, chain);
     // Start on the first route with a free slot, then fail over through the rest of the chain.
     status.state = 'queued';
-    status.message = '等待 API 連線空位';
+    status.message = '等待 API 连线空位';
     this.notify();
     const first = await pool.acquire(chain, signal);
     status.state = 'running';
@@ -629,7 +629,7 @@ export class FocusController {
             status.inputCharacters = messageCharacters(messages);
             assertInputSize(messages, this.config.sources.maxInputCharacters);
             const reply = await new Promise<Awaited<ReturnType<Platform['generate']>>>((resolve, reject) => {
-              const stopWaiting = () => reject(new Error('API 任務已取消或逾時'));
+              const stopWaiting = () => reject(new Error('API 任务已取消或逾时'));
               request.signal.addEventListener('abort', stopWaiting, { once: true });
               this.platform
                 .generate(messages, api, api.apiKey, request.signal)
@@ -689,14 +689,14 @@ export class FocusController {
                       2000,
                     )
                   : error instanceof SyntaxError
-                    ? `回應不是完整的 JSON（${error.message}），可能超出輸出長度而被截斷；請精簡文字並輸出完整物件`
+                    ? `回应不是完整的 JSON（${error.message}），可能超出输出长度而被截断；请精简文字并输出完整物件`
                     : error instanceof Error
                       ? error.message.slice(0, 1000)
                       : '';
             feedback = reason
-              ? `上次回應未通過本機驗證：${reason}。請修正後重新輸出完整 JSON。`
-              : '前次回應未通過，請重新核對 Schema 與本階段所有約束。';
-            status.message = `${stageMessage} · ${route} 嘗試 ${attempt + 1}/${settings.retries + 1} 未通過${reason ? `：${reason.slice(0, 120)}` : ''}`;
+              ? `上次回应未通过本机验证：${reason}。请修正后重新输出完整 JSON。`
+              : '前次回应未通过，请重新核对 Schema 与本阶段所有约束。';
+            status.message = `${stageMessage} · ${route} 尝试 ${attempt + 1}/${settings.retries + 1} 未通过${reason ? `：${reason.slice(0, 120)}` : ''}`;
             this.notify();
           } finally {
             clearTimeout(timer);
@@ -708,7 +708,7 @@ export class FocusController {
       }
     }
     signal.throwIfAborted();
-    throw lastError ?? new Error('沒有可用的 API 回應');
+    throw lastError ?? new Error('没有可用的 API 回应');
   }
   private proposedState(kind: JobKind, snapshot: Snapshot, result: unknown, candidate?: Candidate): State {
     if (kind === 'identify') {
@@ -719,34 +719,34 @@ export class FocusController {
     if (kind === 'generate') {
       const tree = TreeSchema.parse(result);
       if (tree.id !== candidate?.id) {
-        throw new Error('生成的國家 ID 與選取國家不一致');
+        throw new Error('生成的国家 ID 与选取国家不一致');
       }
       const limits = sizeLimits;
       const [min, max] = limits[snapshot.state.settings.size];
       if (!tree.nodes.length || tree.nodes.length > max) {
-        throw new Error(`生成規模須為 ${min}–${max} 節點`);
+        throw new Error(`生成规模须为 ${min}–${max} 节点`);
       }
       return installCountry(snapshot.state, { ...tree, autoPeriod: true }, snapshot.day);
     }
     const proposal = ProposalSchema.parse(result);
     if (proposal.until !== snapshot.day) {
-      throw new Error('更新終點必須等於來源故事時間');
+      throw new Error('更新终点必须等于来源故事时间');
     }
     const next = applyProposal(snapshot.state, proposal, kind === 'reshape');
     if (proposal.transitions.length && kind !== 'update') {
-      throw new Error('只有局勢更新可發起換期');
+      throw new Error('只有局势更新可发起换期');
     }
     const countries = new Set<string>();
     for (const transition of proposal.transitions) {
       const country = next.countries[transition.country];
       if (!country) {
-        throw new Error('換期引用不存在的國家');
+        throw new Error('换期引用不存在的国家');
       }
       if (country.enabled && country.autoPeriod && !country.calibration) {
         checkTransition(next, transition);
       }
       if (countries.has(transition.country)) {
-        throw new Error('同一次更新不可對同國重複換期');
+        throw new Error('同一次更新不可对同国重复换期');
       }
       countries.add(transition.country);
     }

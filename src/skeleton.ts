@@ -91,11 +91,11 @@ export function formatIssues(issues: string[]): string {
   const unique = [...new Set(issues)];
   const shown = unique.slice(0, maxReportedIssues).map((issue, i) => `${i + 1}. ${issue}`);
   return unique.length > maxReportedIssues
-    ? [...shown, `另有 ${unique.length - maxReportedIssues} 個問題`].join('\n')
+    ? [...shown, `另有 ${unique.length - maxReportedIssues} 个问题`].join('\n')
     : shown.join('\n');
 }
 
-const Negate = z.boolean().optional().describe('true＝必須「沒有」；省略為 false');
+const Negate = z.boolean().optional().describe('true＝必须「没有」；省略为 false');
 const ConditionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('capability'), id: Id, negate: Negate }).strict(),
   z.object({ kind: z.literal('fact'), id: Id, negate: Negate }).strict(),
@@ -107,7 +107,7 @@ const Stats = z
   .object({ stability: Stat, warSupport: Stat })
   .strict()
   .default({ stability: 0, warSupport: 0 });
-/** An outcome that applies only when its conditions hold at completion (法工式配套、俄羅斯式情境). */
+/** An outcome that applies only when its conditions hold at completion (法工式配套、俄罗斯式情境). */
 const ConditionalSchema = z
   .object({
     when: z.array(ConditionSchema).min(1),
@@ -123,7 +123,7 @@ export const SkeletonNodeSchema = z
     id: Id,
     name: Text,
     branch: Text,
-    gist: Text.describe('40 字內：核心行動與預期成果'),
+    gist: Text.describe('40 字内：核心行动与预期成果'),
     prerequisites: z
       .array(z.array(Id).min(1))
       .max(100)
@@ -132,7 +132,7 @@ export const SkeletonNodeSchema = z
       .object({
         group: Id,
         route: Id,
-        lock: z.enum(['complete', 'start']).describe('start＝開始時就鎖定路線；complete＝完成時鎖定'),
+        lock: z.enum(['complete', 'start']).describe('start＝开始时就锁定路线；complete＝完成时锁定'),
       })
       .strict()
       .nullable(),
@@ -141,22 +141,22 @@ export const SkeletonNodeSchema = z
       .string()
       .nullable()
       .default(null)
-      .describe('pivotal 必填：新聞要報導的國家行動；normal 為 null'),
+      .describe('pivotal 必填：新闻要报导的国家行动；normal 为 null'),
     execution: z
       .enum(['once', 'ongoing'])
       .optional()
-      .describe('ongoing＝完成後仍需持續執行（工程、長期改革）；省略為一次完成'),
-    provides: z.array(Id).default([]).describe('完成時產生的能力 key（capabilityCatalog 或初始能力）'),
-    revokes: z.array(Id).default([]).describe('完成時撤銷的能力 key：制衡其他路線'),
-    stats: Stats.describe('完成時穩定度／戰爭支持度的增減'),
+      .describe('ongoing＝完成后仍需持续执行（工程、长期改革）；省略为一次完成'),
+    provides: z.array(Id).default([]).describe('完成时产生的能力 key（capabilityCatalog 或初始能力）'),
+    revokes: z.array(Id).default([]).describe('完成时撤销的能力 key：制衡其他路线'),
+    stats: Stats.describe('完成时稳定度／战争支持度的增减'),
     conditional: z
       .array(ConditionalSchema)
       .max(4)
       .default([])
-      .describe('條件式成果：完成時 when 全部成立才生效，例如依已選路線或當前局勢給不同成果'),
-    requirements: z.array(ConditionSchema).default([]).describe('開始前必須成立'),
-    sustain: z.array(ConditionSchema).default([]).describe('推進期間必須持續成立'),
-    outcomes: z.array(ConditionSchema).default([]).describe('工期滿後、完成前必須由劇情取得的外部成果'),
+      .describe('条件式成果：完成时 when 全部成立才生效，例如依已选路线或当前局势给不同成果'),
+    requirements: z.array(ConditionSchema).default([]).describe('开始前必须成立'),
+    sustain: z.array(ConditionSchema).default([]).describe('推进期间必须持续成立'),
+    outcomes: z.array(ConditionSchema).default([]).describe('工期满后、完成前必须由剧情取得的外部成果'),
   })
   .strict();
 export type SkeletonNode = z.output<typeof SkeletonNodeSchema>;
@@ -176,7 +176,7 @@ export const SkeletonSchema = TreeSchema.pick({
       .array(z.string().min(1).max(24))
       .max(8)
       .default([])
-      .describe('正文中指稱本國的詞：簡稱、首都、統治者、代表地名；不放通用詞'),
+      .describe('正文中指称本国的词：简称、首都、统治者、代表地名；不放通用词'),
     branches: z.array(BranchSchema).min(3).max(16),
     choices: z
       .array(
@@ -193,21 +193,21 @@ export const SkeletonSchema = TreeSchema.pick({
       )
       .min(1)
       .max(12)
-      .describe('互斥路線；同一組的路線可以分布在不同分支'),
+      .describe('互斥路线；同一组的路线可以分布在不同分支'),
     capabilityCatalog: z
       .array(z.object({ key: Id, name: Text }).strict())
       .default([])
-      .describe('國策會產生或撤銷的能力；初始能力列在 capabilities'),
+      .describe('国策会产生或撤销的能力；初始能力列在 capabilities'),
     facts: z
       .array(z.object({ id: Id, label: Text }).strict())
       .default([])
-      .describe('跨國策共用的劇情事實；fact 條件只能引用這裡的 id'),
+      .describe('跨国策共用的剧情事实；fact 条件只能引用这里的 id'),
     historical: z.array(z.object({ node: Id, evidence: Text }).strict()).default([]),
     relations: z
       .array(RelationSchema.omit({ via: true }))
       .max(40)
       .default([])
-      .describe('國策之間的關係：選了 from 之後，to 的選項、收益、代價或時機如何改變；必須由實際規則實現'),
+      .describe('国策之间的关系：选了 from 之后，to 的选项、收益、代价或时机如何改变；必须由实际规则实现'),
     nodes: z.array(SkeletonNodeSchema).min(1).max(300),
   })
   .strict();
@@ -221,22 +221,22 @@ export const FillNodeSchema = z
     icon: z.enum(['crown', 'industry', 'army', 'trade', 'science', 'diplomacy']),
     days: z.number().positive().max(36500),
     durationReason: Text,
-    investments: z.array(Text).min(1).max(4).describe('投入的人力、物資或機構，簡短名詞'),
+    investments: z.array(Text).min(1).max(4).describe('投入的人力、物资或机构，简短名词'),
     commitments: z
       .array(z.object({ key: Id, name: Text }).strict())
       .default([])
-      .describe('完成時立下的承諾（只影響本國策）'),
-    mutexReason: z.string().nullable().default(null).describe('有 mutex 時必填：玩家看到的鎖定理由'),
+      .describe('完成时立下的承诺（只影响本国策）'),
+    mutexReason: z.string().nullable().default(null).describe('有 mutex 时必填：玩家看到的锁定理由'),
     news: z
       .object({
-        headline: Text.describe('像報紙頭條，報導骨架的 action'),
-        body: Text.describe('世界如何反應'),
+        headline: Text.describe('像报纸头条，报导骨架的 action'),
+        body: Text.describe('世界如何反应'),
         option: z.object({ label: Text, text: z.string().default('') }).strict(),
       })
       .strict()
       .nullable()
       .default(null)
-      .describe('pivotal 必填；normal 為 null'),
+      .describe('pivotal 必填；normal 为 null'),
   })
   .strict();
 export type FillNode = z.output<typeof FillNodeSchema>;
@@ -268,7 +268,7 @@ function label(condition: Condition, names: Map<string, string>, facts: Map<stri
     case 'capability': {
       const name = names.get(condition.id) ?? condition.id;
       return negate
-        ? { kind: 'capability', id: condition.id, label: `沒有「${name}」`, negate: true }
+        ? { kind: 'capability', id: condition.id, label: `没有「${name}」`, negate: true }
         : { kind: 'capability', id: condition.id, label: name };
     }
     case 'fact': {
@@ -278,9 +278,9 @@ function label(condition: Condition, names: Map<string, string>, facts: Map<stri
         : { kind: 'fact', id: condition.id, label: text };
     }
     case 'stability':
-      return { kind: 'stability', minimum: condition.minimum, label: `穩定度 ≥ ${condition.minimum}` };
+      return { kind: 'stability', minimum: condition.minimum, label: `稳定度 ≥ ${condition.minimum}` };
     case 'warSupport':
-      return { kind: 'warSupport', minimum: condition.minimum, label: `戰爭支持度 ≥ ${condition.minimum}` };
+      return { kind: 'warSupport', minimum: condition.minimum, label: `战争支持度 ≥ ${condition.minimum}` };
   }
 }
 
@@ -464,7 +464,7 @@ export function assertRevocationsSafe(skeleton: Skeleton): void {
         }
         requireThat(
           restorers.some((r) => r.id !== node.id && !exclusive(r.id, node.id)),
-          `國策 ${revoker.id} 撤銷能力 ${key} 後，需要它的國策 ${node.id} 可能永遠無法推進；請讓兩者互斥、讓 ${node.id} 成為 ${revoker.id} 的必經前置，或讓一個以 ${revoker.id} 為必經前置的國策重新提供 ${key}`,
+          `国策 ${revoker.id} 撤销能力 ${key} 后，需要它的国策 ${node.id} 可能永远无法推进；请让两者互斥、让 ${node.id} 成为 ${revoker.id} 的必经前置，或让一个以 ${revoker.id} 为必经前置的国策重新提供 ${key}`,
         );
       }
     }
@@ -473,9 +473,9 @@ export function assertRevocationsSafe(skeleton: Skeleton): void {
 
 type Use = { key: string; where: string; negate: boolean };
 const stages = [
-  ['requirements', '開始條件'],
-  ['sustain', '推進條件'],
-  ['outcomes', '完成條件'],
+  ['requirements', '开始条件'],
+  ['sustain', '推进条件'],
+  ['outcomes', '完成条件'],
 ] as const;
 /** Capability and stat conditions a focus reads, including the `when` of its conditional outcomes. */
 function usesOf(node: SkeletonNode): {
@@ -497,11 +497,11 @@ function usesOf(node: SkeletonNode): {
     read(node[field], where);
   }
   for (const item of node.conditional) {
-    read(item.when, '條件式成果');
+    read(item.when, '条件式成果');
   }
   return { capabilities, stats };
 }
-const statNames: Record<string, string> = { stability: '穩定度', warSupport: '戰爭支持度' };
+const statNames: Record<string, string> = { stability: '稳定度', warSupport: '战争支持度' };
 /** What a focus changes on completion, conditional outcomes included. */
 function changesOf(node: SkeletonNode) {
   const all = [node, ...node.conditional];
@@ -528,12 +528,12 @@ function linksFrom(a: SkeletonNode, b: SkeletonNode, names: Map<string, string>)
   const uses = usesOf(b);
   for (const use of uses.capabilities) {
     const name = names.get(use.key) ?? use.key;
-    const need = `「${b.name}」的${use.where}${use.negate ? '要求沒有' : '需要'}「${name}」`;
+    const need = `「${b.name}」的${use.where}${use.negate ? '要求没有' : '需要'}「${name}」`;
     if (changes.provides.has(use.key)) {
       links.push({ choice: true, kind: 'capability', text: `「${a.name}」提供「${name}」→ ${need}` });
     }
     if (changes.revokes.has(use.key)) {
-      links.push({ choice: true, kind: 'capability', text: `「${a.name}」撤銷「${name}」→ ${need}` });
+      links.push({ choice: true, kind: 'capability', text: `「${a.name}」撤销「${name}」→ ${need}` });
     }
   }
   for (const stat of changes.stats) {
@@ -555,8 +555,8 @@ function relationLinks(from: SkeletonNode, to: SkeletonNode, names: Map<string, 
       kind: 'mutex',
       text:
         from.mutex.route === to.mutex.route
-          ? `「${from.name}」與「${to.name}」同屬互斥組 ${from.mutex.group} 的同一路線`
-          : `「${from.name}」與「${to.name}」是互斥組 ${from.mutex.group} 的不同路線`,
+          ? `「${from.name}」与「${to.name}」同属互斥组 ${from.mutex.group} 的同一路线`
+          : `「${from.name}」与「${to.name}」是互斥组 ${from.mutex.group} 的不同路线`,
     });
   }
   return links;
@@ -580,25 +580,25 @@ export function describeRelations(skeleton: Skeleton): (Relation & { choice: boo
 export function validateRelations(skeleton: Skeleton): void {
   const byId = new Map(skeleton.nodes.map((n) => [n.id, n]));
   for (const relation of skeleton.relations) {
-    requireThat(byId.has(relation.from), `關係的 from「${relation.from}」不是骨架中的國策`);
-    requireThat(byId.has(relation.to), `關係的 to「${relation.to}」不是骨架中的國策`);
-    requireThat(relation.from !== relation.to, `關係 ${relation.from} 不能指向自己`);
+    requireThat(byId.has(relation.from), `关系的 from「${relation.from}」不是骨架中的国策`);
+    requireThat(byId.has(relation.to), `关系的 to「${relation.to}」不是骨架中的国策`);
+    requireThat(relation.from !== relation.to, `关系 ${relation.from} 不能指向自己`);
   }
   const described = describeRelations(skeleton);
   for (const relation of described) {
     requireThat(
       relation.via.length,
-      `關係 ${relation.from} → ${relation.to}（${relationKindNames[relation.kind]}）沒有實際規則對應：請用前置、能力條件（含「必須沒有」）、條件式成果、數值門檻或互斥實現，或刪除這條關係`,
+      `关系 ${relation.from} → ${relation.to}（${relationKindNames[relation.kind]}）没有实际规则对应：请用前置、能力条件（含「必须没有」）、条件式成果、数值门槛或互斥实现，或删除这条关系`,
     );
   }
   const cores = skeleton.branches.filter((b) => b.core);
   requireThat(
     cores.length === 1,
-    `必須恰好有一支分支標記 core=true（本國最主要的戰略問題所在），本次有 ${cores.length} 支`,
+    `必须恰好有一支分支标记 core=true（本国最主要的战略问题所在），本次有 ${cores.length} 支`,
   );
   const core = cores[0];
   requireThat(core.coreReason?.trim(), `核心分支「${core.name}」缺少 coreReason`);
-  requireThat(!core.independent, `核心分支「${core.name}」不能標記為獨立`);
+  requireThat(!core.independent, `核心分支「${core.name}」不能标记为独立`);
   const branchOf = (id: string) => byId.get(id)!.branch;
   const crossing = described.filter((r) => branchOf(r.from) !== branchOf(r.to));
   const reached = new Set(
@@ -609,7 +609,7 @@ export function validateRelations(skeleton: Skeleton): void {
   const needed = coreReach(skeleton.branches.length);
   requireThat(
     reached.size >= needed,
-    `核心分支「${core.name}」至少要改變 ${needed} 支其他分支的選擇（目前 ${reached.size} 支）：用能力條件（含「必須沒有」）、條件式成果、數值門檻或互斥建立關係；單純的前置不算`,
+    `核心分支「${core.name}」至少要改变 ${needed} 支其他分支的选择（目前 ${reached.size} 支）：用能力条件（含「必须没有」）、条件式成果、数值门槛或互斥建立关系；单纯的前置不算`,
   );
   const names = capabilityNames(skeleton);
   for (const branch of skeleton.branches) {
@@ -618,10 +618,10 @@ export function validateRelations(skeleton: Skeleton): void {
     }
     const involved = crossing.some((r) => branchOf(r.from) === branch.name || branchOf(r.to) === branch.name);
     if (branch.independent !== undefined) {
-      requireThat(branch.independent.trim(), `分支「${branch.name}」的 independent 不可為空白`);
+      requireThat(branch.independent.trim(), `分支「${branch.name}」的 independent 不可为空白`);
       requireThat(
         !involved,
-        `分支「${branch.name}」標記為獨立，卻參與跨分支關係；請刪除 independent，或刪除這些關係`,
+        `分支「${branch.name}」标记为独立，却参与跨分支关系；请删除 independent，或删除这些关系`,
       );
       // Independence is judged by the rules, not by the relation list: no capability or mutex
       // link with another branch, and no prerequisite across branches except a common starting
@@ -637,7 +637,7 @@ export function validateRelations(skeleton: Skeleton): void {
         const crosses = inside.has(child.id) !== inside.has(parent.id);
         requireThat(
           !crosses || parent.prerequisites.length === 0,
-          `分支「${branch.name}」標記為獨立，但「${child.name}」以其他分支中後期的「${parent.name}」為前置；獨立分支只能和別支共用起點國策（沒有前置的國策），請刪除 independent 並寫成關係，或調整前置`,
+          `分支「${branch.name}」标记为独立，但「${child.name}」以其他分支中后期的「${parent.name}」为前置；独立分支只能和别支共用起点国策（没有前置的国策），请删除 independent 并写成关系，或调整前置`,
         );
       }
       for (const a of own) {
@@ -645,14 +645,14 @@ export function validateRelations(skeleton: Skeleton): void {
           const link = relationLinks(a, b, names).find((l) => l.kind === 'capability' || l.kind === 'mutex');
           requireThat(
             !link,
-            `分支「${branch.name}」標記為獨立，但規則上與分支「${b.branch}」互相影響（${link?.text}）；請刪除 independent 並寫成關係，或移除這條規則`,
+            `分支「${branch.name}」标记为独立，但规则上与分支「${b.branch}」互相影响（${link?.text}）；请删除 independent 并写成关系，或移除这条规则`,
           );
         }
       }
     } else {
       requireThat(
         involved,
-        `分支「${branch.name}」沒有參與任何跨分支關係；請加入關係，或寫 independent 說明它在本樹涵蓋的時期與議題內為何可以獨立推進`,
+        `分支「${branch.name}」没有参与任何跨分支关系；请加入关系，或写 independent 说明它在本树涵盖的时期与议题内为何可以独立推进`,
       );
     }
   }
@@ -702,7 +702,7 @@ export function assertConditionsFeasible(skeleton: Skeleton): void {
         const negate = c.negate === true;
         requireThat(
           !wanted.has(c.id) || wanted.get(c.id) === negate,
-          `國策 ${node.id} 同時要求有與沒有「${name}」，條件互相矛盾`,
+          `国策 ${node.id} 同时要求有与没有「${name}」，条件互相矛盾`,
         );
         wanted.set(c.id, negate);
       }
@@ -729,12 +729,12 @@ export function assertConditionsFeasible(skeleton: Skeleton): void {
             : [];
           requireThat(
             !surely || usable.length,
-            `國策 ${node.id} 的${where}要求沒有「${name}」，但它開始前一定已有「${name}」，而且沒有能在它之前完成的國策撤銷「${name}」`,
+            `国策 ${node.id} 的${where}要求没有「${name}」，但它开始前一定已有「${name}」，而且没有能在它之前完成的国策撤销「${name}」`,
           );
         } else {
           requireThat(
             initial.has(c.id) || plainProviders.has(c.id) || !anyProviders.has(c.id),
-            `能力「${name}」只由條件式成果提供，不能作為國策 ${node.id} 的${where}；請改為無條件提供，或只在其他條件式成果的 when 中使用`,
+            `能力「${name}」只由条件式成果提供，不能作为国策 ${node.id} 的${where}；请改为无条件提供，或只在其他条件式成果的 when 中使用`,
           );
         }
       }
@@ -756,54 +756,54 @@ export function skeletonProblems(snapshot: Snapshot, candidate: Candidate, skele
   // A short skeleton is completed by inserting focuses, so it never stops the other checks.
   const count =
     nodes.length < min
-      ? `骨架須有 ${min}–${max} 個國策，本次有 ${nodes.length} 個：請用 insert /nodes/- 新增至少 ${min - nodes.length} 個國策，接在既有國策之後，優先補在較短的分支`
+      ? `骨架须有 ${min}–${max} 个国策，本次有 ${nodes.length} 个：请用 insert /nodes/- 新增至少 ${min - nodes.length} 个国策，接在既有国策之后，优先补在较短的分支`
       : nodes.length > max
-        ? `骨架須有 ${min}–${max} 個國策，本次有 ${nodes.length} 個：請用 remove 刪除至少 ${nodes.length - max} 個國策，並移除指向它們的前置與關係`
+        ? `骨架须有 ${min}–${max} 个国策，本次有 ${nodes.length} 个：请用 remove 删除至少 ${nodes.length - max} 个国策，并移除指向它们的前置与关系`
         : '';
   const basic = collect(issues, () => {
-    requireThat(skeleton.id === candidate.id, '骨架的國家 id 必須等於 candidate.id');
+    requireThat(skeleton.id === candidate.id, '骨架的国家 id 必须等于 candidate.id');
     requireThat(
       skeleton.branches.length >= fewest && skeleton.branches.length <= most,
-      `分支數須為 ${fewest}–${most}，本次有 ${skeleton.branches.length} 支；規模靠分支的深度與互斥路線，而不是更多分支`,
+      `分支数须为 ${fewest}–${most}，本次有 ${skeleton.branches.length} 支；规模靠分支的深度与互斥路线，而不是更多分支`,
     );
     for (const key of ['id', 'name'] as const) {
       requireThat(
         new Set(skeleton.branches.map((b) => b[key])).size === skeleton.branches.length,
-        '分支 id 與 name 不可重複',
+        '分支 id 与 name 不可重复',
       );
     }
-    requireThat(new Set(nodes.map((n) => n.id)).size === nodes.length, '國策 id 不可重複');
+    requireThat(new Set(nodes.map((n) => n.id)).size === nodes.length, '国策 id 不可重复');
     const branchNames = new Set(skeleton.branches.map((b) => b.name));
     for (const node of nodes) {
       requireThat(
         branchNames.has(node.branch),
-        `國策 ${node.id} 的 branch「${node.branch}」不是任何分支的 name`,
+        `国策 ${node.id} 的 branch「${node.branch}」不是任何分支的 name`,
       );
     }
     for (const branch of skeleton.branches) {
       requireThat(
         nodes.some((n) => n.branch === branch.name),
-        `分支「${branch.name}」沒有任何國策`,
+        `分支「${branch.name}」没有任何国策`,
       );
     }
     const names = capabilityNames(skeleton);
     requireThat(
       new Set(skeleton.capabilityCatalog.map((c) => c.key)).size === skeleton.capabilityCatalog.length &&
         new Set(skeleton.capabilities.map((c) => c.id)).size === skeleton.capabilities.length,
-      '能力 key 不可重複',
+      '能力 key 不可重复',
     );
     const facts = new Set(skeleton.facts.map((f) => f.id));
-    requireThat(facts.size === skeleton.facts.length, 'facts 的 id 不可重複');
+    requireThat(facts.size === skeleton.facts.length, 'facts 的 id 不可重复');
     const declared = new Map(skeleton.choices.map((c) => [c.group, new Set(c.routes.map((r) => r.id))]));
-    requireThat(declared.size === skeleton.choices.length, 'choices 的 group 不可重複');
+    requireThat(declared.size === skeleton.choices.length, 'choices 的 group 不可重复');
     for (const node of nodes) {
       for (const key of [...changesOf(node).provides, ...changesOf(node).revokes]) {
-        requireThat(names.has(key), `國策 ${node.id} 的能力 ${key} 不在 capabilityCatalog 或初始能力中`);
+        requireThat(names.has(key), `国策 ${node.id} 的能力 ${key} 不在 capabilityCatalog 或初始能力中`);
       }
       for (const [i, item] of node.conditional.entries()) {
         requireThat(
           item.provides.length || item.revokes.length || item.stats.stability || item.stats.warSupport,
-          `國策 ${node.id} 的第 ${i + 1} 個條件式成果沒有任何效果`,
+          `国策 ${node.id} 的第 ${i + 1} 个条件式成果没有任何效果`,
         );
       }
       for (const condition of [
@@ -815,28 +815,28 @@ export function skeletonProblems(snapshot: Snapshot, candidate: Candidate, skele
         if (condition.kind === 'capability') {
           requireThat(
             names.has(condition.id),
-            `國策 ${node.id} 的能力條件 ${condition.id} 不在 capabilityCatalog 或初始能力中`,
+            `国策 ${node.id} 的能力条件 ${condition.id} 不在 capabilityCatalog 或初始能力中`,
           );
           // "Must not have K yet" before establishing K is fine; requiring K itself is circular.
           requireThat(
             condition.negate === true || !node.provides.includes(condition.id),
-            `國策 ${node.id} 的條件引用自己提供的能力 ${condition.id}`,
+            `国策 ${node.id} 的条件引用自己提供的能力 ${condition.id}`,
           );
         }
         if (condition.kind === 'fact') {
-          requireThat(facts.has(condition.id), `國策 ${node.id} 的 fact 條件 ${condition.id} 不在 facts 中`);
+          requireThat(facts.has(condition.id), `国策 ${node.id} 的 fact 条件 ${condition.id} 不在 facts 中`);
         }
       }
       requireThat(
         (node.impact === 'pivotal') === Boolean(node.action?.trim()),
         node.impact === 'pivotal'
-          ? `重要國策 ${node.id} 缺少 action（新聞要報導的國家行動）`
-          : `國策 ${node.id} 不是重要國策，action 應為 null`,
+          ? `重要国策 ${node.id} 缺少 action（新闻要报导的国家行动）`
+          : `国策 ${node.id} 不是重要国策，action 应为 null`,
       );
       if (node.mutex) {
         requireThat(
           declared.get(node.mutex.group)?.has(node.mutex.route) ?? false,
-          `國策 ${node.id} 的 mutex（${node.mutex.group}/${node.mutex.route}）不在 choices 中`,
+          `国策 ${node.id} 的 mutex（${node.mutex.group}/${node.mutex.route}）不在 choices 中`,
         );
       }
     }
@@ -844,13 +844,13 @@ export function skeletonProblems(snapshot: Snapshot, candidate: Candidate, skele
       for (const route of choice.routes) {
         requireThat(
           nodes.some((n) => n.mutex?.group === choice.group && n.mutex.route === route.id),
-          `互斥組 ${choice.group} 的路線 ${route.id}（${route.name}）沒有任何國策`,
+          `互斥组 ${choice.group} 的路线 ${route.id}（${route.name}）没有任何国策`,
         );
       }
     }
     const ids = new Set(nodes.map((n) => n.id));
     for (const entry of skeleton.historical) {
-      requireThat(ids.has(entry.node), `historical 的 ${entry.node} 不是骨架中的國策`);
+      requireThat(ids.has(entry.node), `historical 的 ${entry.node} 不是骨架中的国策`);
     }
   });
   if (!basic) {
@@ -895,11 +895,11 @@ function forksAndJoins(skeleton: Skeleton, built: ReturnType<typeof buildNode>[]
     }
     requireThat(
       [...children.values()].some((count) => count > 1),
-      `分支「${branch.name}」至少需要一處分岔：一個國策同時是兩個以上國策的前置`,
+      `分支「${branch.name}」至少需要一处分岔：一个国策同时是两个以上国策的前置`,
     );
     requireThat(
       own.some((n) => n.prerequisites.flat().length > 1),
-      `分支「${branch.name}」至少需要一處匯流：一個國策有兩個以上前置`,
+      `分支「${branch.name}」至少需要一处汇流：一个国策有两个以上前置`,
     );
   }
 }
@@ -907,7 +907,7 @@ function forksAndJoins(skeleton: Skeleton, built: ReturnType<typeof buildNode>[]
 /** Throwing form of skeletonProblems, for callers that need one error. */
 export function validateSkeleton(snapshot: Snapshot, candidate: Candidate, skeleton: Skeleton): void {
   const problems = skeletonProblems(snapshot, candidate, skeleton);
-  requireThat(!problems.length, `骨架有 ${problems.length} 個問題：\n${formatIssues(problems)}`);
+  requireThat(!problems.length, `骨架有 ${problems.length} 个问题：\n${formatIssues(problems)}`);
 }
 
 export function skeletonPlan(snapshot: Snapshot, candidate: Candidate, previousProblems: string[] = []) {
@@ -987,7 +987,7 @@ export function fixPlan(
     const applied = applyPatch(raw, reply.patch);
     requireThat(
       !reply.patch.length || applied.applied,
-      `沒有任何修正操作能套用：${applied.errors.slice(0, 5).join('；')}`,
+      `没有任何修正操作能套用：${applied.errors.slice(0, 5).join('；')}`,
     );
     outcome = { result: applied.result, errors: applied.errors };
   };
@@ -995,7 +995,7 @@ export function fixPlan(
     data,
     schema: PatchReplySchema,
     validate,
-    label: `修正骨架（${attempt}第 ${round}/${skeletonFixRounds} 輪，${problems.length} 個問題）`,
+    label: `修正骨架（${attempt}第 ${round}/${skeletonFixRounds} 轮，${problems.length} 个问题）`,
     outcome: () => outcome,
   };
 }
@@ -1109,15 +1109,15 @@ export function fillPlan(
       const fill = parsed.data;
       const node = byId.get(id)!;
       if (node.impact === 'pivotal' && !fill.news) {
-        rejected[id] = '重要國策必須填 news（headline 報導骨架的 action、body、option）';
+        rejected[id] = '重要国策必须填 news（headline 报导骨架的 action、body、option）';
         continue;
       }
       if (node.mutex && !fill.mutexReason?.trim()) {
-        rejected[id] = '有互斥路線的國策必須填 mutexReason';
+        rejected[id] = '有互斥路线的国策必须填 mutexReason';
         continue;
       }
       if (descriptions.has(fill.description.trim())) {
-        rejected[id] = 'description 與其他國策完全相同';
+        rejected[id] = 'description 与其他国策完全相同';
         continue;
       }
       descriptions.add(fill.description.trim());
@@ -1125,12 +1125,12 @@ export function fillPlan(
     }
     for (const id of batch) {
       if (!accepted[id] && !rejected[id]) {
-        rejected[id] = '回覆中沒有這個國策';
+        rejected[id] = '回复中没有这个国策';
       }
     }
     requireThat(
       Object.keys(accepted).length > 0,
-      `本批沒有任何國策通過：${Object.entries(rejected)
+      `本批没有任何国策通过：${Object.entries(rejected)
         .slice(0, 5)
         .map(([id, reason]) => `${id}（${reason}）`)
         .join('；')}`,
@@ -1207,7 +1207,7 @@ export async function generateBySkeleton(
       if (round === skeletonFixRounds) {
         requireThat(
           attempt < attempts,
-          `骨架修正 ${attempts * skeletonFixRounds} 輪（${attempts} 次嘗試）後仍有 ${checked.problems.length} 個問題（重跑會從目前的骨架繼續修正）：\n${formatIssues(checked.problems)}`,
+          `骨架修正 ${attempts * skeletonFixRounds} 轮（${attempts} 次尝试）后仍有 ${checked.problems.length} 个问题（重跑会从目前的骨架继续修正）：\n${formatIssues(checked.problems)}`,
         );
         attempt++;
         round = 0;
@@ -1244,7 +1244,7 @@ export async function generateBySkeleton(
     cap,
   );
   for (const [index, batch] of first.entries()) {
-    await run(batch, `填寫第 ${index + 1}/${first.length} 批（${batch.length} 項）`);
+    await run(batch, `填写第 ${index + 1}/${first.length} 批（${batch.length} 项）`);
   }
   for (let round = 1; round <= refillRounds; round++) {
     const missing = ids.filter((id) => !progress.filled[id]);
@@ -1252,16 +1252,16 @@ export async function generateBySkeleton(
       break;
     }
     for (const batch of fillBatches(missing, cap)) {
-      await run(batch, `補填 ${batch.length} 項（第 ${round} 輪）`);
+      await run(batch, `补填 ${batch.length} 项（第 ${round} 轮）`);
     }
   }
   const missing = ids.filter((id) => !progress.filled[id]);
   requireThat(
     !missing.length,
-    `補填 ${refillRounds} 輪後仍有 ${missing.length} 項沒有內容：${missing
+    `补填 ${refillRounds} 轮后仍有 ${missing.length} 项没有内容：${missing
       .slice(0, 5)
-      .map((id) => `${id}（${reasons[id] ?? '未回覆'}）`)
-      .join('；')}；重跑會沿用骨架與已完成的國策`,
+      .map((id) => `${id}（${reasons[id] ?? '未回复'}）`)
+      .join('；')}；重跑会沿用骨架与已完成的国策`,
   );
   const tree = mergeFill(skeleton, progress.filled);
   try {

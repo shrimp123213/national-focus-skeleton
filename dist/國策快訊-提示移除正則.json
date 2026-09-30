@@ -1,6 +1,6 @@
 {
     "id": "5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b02",
-    "scriptName": "國策快訊不送給模型",
+    "scriptName": "国策快讯不送给模型",
     "findRegex": "/<国策快讯\\s*\\/>/g",
     "replaceString": "",
     "trimStrings": [],

@@ -14,7 +14,7 @@ export type PromptView = {
 };
 
 export const promptHeader =
-  '以下是已確認的各國實際狀態，供後續正文承接。國家在背景推進自己的議程，影響只需依角色的處境與可知範圍自然呈現；遠方的政策可以暫時不進入正文。標示「未公開」的國策與事件只有該國高層、當事方與知情者知道，角色是否知情依其身分與處境判斷。已完成的國策與已發生的事件不可寫成尚在醞釀。國策描述是推動時的計畫與預期，實際結果以完成狀態、現行制度、承諾與消息的最新進展為準。穩定度與戰爭支持度只是輔助指標，局勢應依具體制度、事件與矛盾理解：穩定度高不代表沒有地方衝突，戰爭支持度高也不代表全民好戰。不要改寫已顯示正文，不要替玩家完成正在參與的行動。一般變數更新不得修改樓層變量最外層的「国策」（與 stat_data 並列），也不得在 stat_data 內建立「国策」；國策資料由國策腳本保存。未列出的私人國策不代表不存在。';
+  '以下是已确认的各国实际状态，供后续正文承接。国家在背景推进自己的议程，影响只需依角色的处境与可知范围自然呈现；远方的政策可以暂时不进入正文。标示「未公开」的国策与事件只有该国高层、当事方与知情者知道，角色是否知情依其身分与处境判断。已完成的国策与已发生的事件不可写成尚在酝酿。国策描述是推动时的计划与预期，实际结果以完成状态、现行制度、承诺与消息的最新进展为准。稳定度与战争支持度只是辅助指标，局势应依具体制度、事件与矛盾理解：稳定度高不代表没有地方冲突，战争支持度高也不代表全民好战。不要改写已显示正文，不要替玩家完成正在参与的行动。一般变数更新不得修改楼层变量最外层的「国策」（与 stat_data 并列），也不得在 stat_data 内建立「国策」；国策资料由国策脚本保存。未列出的私人国策不代表不存在。';
 
 /**
  * Like the Workflow Assistant world state: matters still in motion are given in full (the current
@@ -29,7 +29,7 @@ function clip(text: string, length: number): string {
 }
 function ago(state: State, day: number | null): string {
   if (day === null) {
-    return '開局前';
+    return '开局前';
   }
   const days = Math.max(0, Math.floor(state.day - day));
   return days === 0 ? '今日' : `${days} 天前`;
@@ -41,8 +41,8 @@ function progressText(country: Country): string {
   }
   const progress = country.progress[node.id];
   const status =
-    progress.status === 'waiting' ? '，工期已滿，等待成果' : progress.status === 'paused' ? '，暫停中' : '';
-  return `${node.name}（第 ${Math.min(Math.floor(progress.days), node.days)}／${node.days} 天${status}${progress.public ? '' : '，未公開'}）`;
+    progress.status === 'waiting' ? '，工期已满，等待成果' : progress.status === 'paused' ? '，暂停中' : '';
+  return `${node.name}（第 ${Math.min(Math.floor(progress.days), node.days)}／${node.days} 天${status}${progress.public ? '' : '，未公开'}）`;
 }
 function completedOf(country: Country) {
   return Object.entries(country.progress)
@@ -60,12 +60,12 @@ function chosenRoutes(country: Country): string[] {
         ['completed', 'active', 'waiting', 'paused'].includes(country.progress[node.id]?.status),
       )
       .sort((a, b) => (country.progress[a.id].started ?? 0) - (country.progress[b.id].started ?? 0));
-    return taken[0] ? `${taken[0].branch}：${taken[0].name}路線` : lock.reason;
+    return taken[0] ? `${taken[0].branch}：${taken[0].name}路线` : lock.reason;
   });
 }
-const stepMarks = { done: '已完成', active: '進行中', pending: '待辦', planned: '預定' } as const;
+const stepMarks = { done: '已完成', active: '进行中', pending: '待办', planned: '预定' } as const;
 /**
- * An ongoing event like a Workflow Assistant 事件脈絡: how it began, where it stands (`current`
+ * An ongoing event like a Workflow Assistant 事件脉络: how it began, where it stands (`current`
  * and its plan), and the latest progress; older progress is only counted, so a long project does
  * not grow the prompt without end.
  */
@@ -75,19 +75,19 @@ function eventHistory(state: State, event: State['events'][string]): string {
   const recent = timeline.slice(-limits.progress);
   const older = timeline.length - recent.length;
   const lines = [
-    `- ${event.headline || event.title}（始於${when(event.at)}，仍在發展${event.public ? '' : '，未公開'}）：${event.description.replace(/\s+/g, ' ').trim()}`,
+    `- ${event.headline || event.title}（始于${when(event.at)}，仍在发展${event.public ? '' : '，未公开'}）：${event.description.replace(/\s+/g, ' ').trim()}`,
   ];
   if (event.current) {
-    lines.push(`  現況：${event.current}`);
+    lines.push(`  现况：${event.current}`);
   }
   if (event.steps?.length) {
     const done = event.steps.filter((step) => step.state === 'done').length;
     lines.push(
-      `  步驟（${done}／${event.steps.length}）：${event.steps.map((step) => `${step.text}［${stepMarks[step.state]}${step.when ? `，${step.when}` : ''}］`).join('；')}`,
+      `  步骤（${done}／${event.steps.length}）：${event.steps.map((step) => `${step.text}［${stepMarks[step.state]}${step.when ? `，${step.when}` : ''}］`).join('；')}`,
     );
   }
   if (older) {
-    lines.push(`  - 更早 ${older} 則進展從略`);
+    lines.push(`  - 更早 ${older} 则进展从略`);
   }
   lines.push(...recent.map((step) => `  - ${when(step.at)}：${step.text}`));
   return lines.join('\n');
@@ -104,14 +104,14 @@ export function promptView(state: State, news = true): PromptView {
   const lines = countries.map((country) => {
     const current = progressText(country);
     const [latest] = completedOf(country);
-    return `- ${country.name}：穩定度 ${Math.round(country.stability)}／戰爭支持度 ${Math.round(country.warSupport)}｜推進中：${current || '無'}${latest ? `｜最近完成：${latest.node.name}（${ago(state, latest.day)}${latest.known ? '' : '，未公開'}）` : ''}`;
+    return `- ${country.name}：稳定度 ${Math.round(country.stability)}／战争支持度 ${Math.round(country.warSupport)}｜推进中：${current || '无'}${latest ? `｜最近完成：${latest.node.name}（${ago(state, latest.day)}${latest.known ? '' : '，未公开'}）` : ''}`;
   });
   const digest = news ? newsDigest(state) : '';
   const overview =
     countries.length || digest
       ? [
           promptHeader,
-          countries.length ? `【各國動向】（故事日 ${Math.floor(state.day)}）\n${lines.join('\n')}` : '',
+          countries.length ? `【各国动向】（故事日 ${Math.floor(state.day)}）\n${lines.join('\n')}` : '',
           digest,
         ]
           .filter(Boolean)
@@ -130,25 +130,25 @@ export function promptView(state: State, news = true): PromptView {
           sections.push(`前期（故事日 ${lastPeriod.start}–${lastPeriod.end}）：${lastPeriod.summary}`);
         }
         if (country.longTerm.length) {
-          sections.push(`長期方向：${country.longTerm.map((goal) => goal.text).join('；')}`);
+          sections.push(`长期方向：${country.longTerm.map((goal) => goal.text).join('；')}`);
         }
         const current = country.current ? country.nodes[country.current] : undefined;
         if (current) {
-          sections.push(`推進中：${progressText(country)}：${clip(current.description, limits.description)}`);
+          sections.push(`推进中：${progressText(country)}：${clip(current.description, limits.description)}`);
         }
         const completed = completedOf(country);
         const routes = chosenRoutes(country);
         if (routes.length) {
-          sections.push(`已選定路線：${routes.join('、')}`);
+          sections.push(`已选定路线：${routes.join('、')}`);
         }
         if (completed.length) {
           const recent = new Set(completed.slice(0, limits.detailed).map(({ node }) => node.id));
           const detailed = completed.filter(({ node }) => recent.has(node.id) || node.impact === 'pivotal');
           sections.push(
-            `重要與近期完成：\n${detailed
+            `重要与近期完成：\n${detailed
               .map(
                 ({ node, day, known }) =>
-                  `- ${node.name}（${ago(state, day)}${node.impact === 'pivotal' ? '，重要國策' : ''}${known ? '' : '，未公開'}）：${clip(node.description, limits.description)}`,
+                  `- ${node.name}（${ago(state, day)}${node.impact === 'pivotal' ? '，重要国策' : ''}${known ? '' : '，未公开'}）：${clip(node.description, limits.description)}`,
               )
               .join('\n')}`,
           );
@@ -160,11 +160,11 @@ export function promptView(state: State, news = true): PromptView {
           for (const { node, known } of [...completed].reverse()) {
             byBranch.set(node.branch, [
               ...(byBranch.get(node.branch) ?? []),
-              `${node.name}${known ? '' : '（未公開）'}`,
+              `${node.name}${known ? '' : '（未公开）'}`,
             ]);
           }
           sections.push(
-            `已完成國策（共 ${completed.length} 項，依分支、由早到晚）：\n${[...byBranch]
+            `已完成国策（共 ${completed.length} 项，依分支、由早到晚）：\n${[...byBranch]
               .sort(([a], [b]) => branchOrder(a) - branchOrder(b))
               .map(([branch, names]) => `- ${branch}：${names.join('、')}`)
               .join('\n')}`,
@@ -174,25 +174,25 @@ export function promptView(state: State, news = true): PromptView {
           .filter((capability) => capability.active)
           .map((capability) => capability.name);
         if (capabilities.length) {
-          sections.push(`現行制度與成果：${capabilities.join('、')}`);
+          sections.push(`现行制度与成果：${capabilities.join('、')}`);
         }
         const commitments = Object.values(country.commitments);
         if (commitments.length) {
-          sections.push(`承諾：${commitments.join('、')}`);
+          sections.push(`承诺：${commitments.join('、')}`);
         }
         const own = events.filter((event) => event.countries.includes(country.id));
         const ongoing = own.filter((event) => event.status === 'ongoing');
         const resolved = own.filter((event) => event.status !== 'ongoing').slice(0, limits.resolvedEvents);
         if (ongoing.length || resolved.length) {
           sections.push(
-            `相關事件：\n${[
+            `相关事件：\n${[
               ...ongoing.map((event) => eventHistory(state, event)),
               ...resolved.map((event) => `- ${eventText(event, (day) => ago(state, day))}`),
             ].join('\n')}`,
           );
         }
         if (sections.length === 1) {
-          sections.push('目前沒有推進中或已完成的國策。');
+          sections.push('目前没有推进中或已完成的国策。');
         }
         const keys = [...new Set([country.name, ...(country.keywords ?? [])])];
         return [country.id, { name: country.name, keys, text: sections.join('\n') }];
@@ -205,12 +205,30 @@ export function promptView(state: State, news = true): PromptView {
 export function promptText(view: PromptView): string {
   const details = Object.values(view.countries).map((country) => country.text);
   return view.overview
-    ? `${view.overview}${details.length ? `\n\n<國策動態>\n${details.join('\n\n')}\n</國策動態>` : ''}`
+    ? `${view.overview}${details.length ? `\n\n<国策动态>\n${details.join('\n\n')}\n</国策动态>` : ''}`
     : '';
 }
 
 /** Chat worldbook entries that render `国策.prompt` of the floor being answered. */
-export const bookPrefix = '國策檔案-';
+export const bookPrefix = '国策档案-';
+
+/** Migrate only our old fixed name segments, leaving country IDs and player metadata intact. */
+function currentBookName(name: string): string | null {
+  if (name.startsWith(bookPrefix)) {
+    return name;
+  }
+  const legacyPrefix = '國策檔案-';
+  if (!name.startsWith(legacyPrefix)) {
+    return null;
+  }
+  const suffix = name.slice(legacyPrefix.length);
+  const fixed: Record<string, string> = {
+    世界概況: '世界概况',
+    '國家動態-包裹-上': '国家动态-包裹-上',
+    '國家動態-包裹-下': '国家动态-包裹-下',
+  };
+  return bookPrefix + (fixed[suffix] ?? (suffix.startsWith('國家-') ? `国家-${suffix.slice(3)}` : suffix));
+}
 export const bookOrder = { overview: 99990, open: 99991, country: 99992, close: 99993 } as const;
 export type BookEntry = {
   name: string;
@@ -227,31 +245,31 @@ export function bookEntries(view: PromptView, constant = true): BookEntry[] {
   }
   return [
     {
-      name: `${bookPrefix}世界概況`,
+      name: `${bookPrefix}世界概况`,
       constant: true,
       keys: [],
       content: read('overview'),
       order: bookOrder.overview,
     },
     {
-      name: `${bookPrefix}國家動態-包裹-上`,
+      name: `${bookPrefix}国家动态-包裹-上`,
       constant: true,
       keys: [],
-      content: '<國策動態>',
+      content: '<国策动态>',
       order: bookOrder.open,
     },
     ...ids.map((id) => ({
-      name: `${bookPrefix}國家-${id}`,
+      name: `${bookPrefix}国家-${id}`,
       constant,
       keys: view.countries[id].keys,
       content: read(`countries.${id}.text`),
       order: bookOrder.country,
     })),
     {
-      name: `${bookPrefix}國家動態-包裹-下`,
+      name: `${bookPrefix}国家动态-包裹-下`,
       constant: true,
       keys: [],
-      content: '</國策動態>',
+      content: '</国策动态>',
       order: bookOrder.close,
     },
   ];
@@ -282,23 +300,30 @@ export function reconcileBook(
   let changed = false;
   const kept: WorldbookEntryLike[] = [];
   for (const entry of existing) {
-    if (!entry.name.startsWith(bookPrefix)) {
+    const name = currentBookName(entry.name);
+    if (name === null) {
       kept.push(entry);
       continue;
     }
-    const target = byName.get(entry.name);
+    const target = byName.get(name);
     if (!target) {
       changed = true;
       continue;
     }
-    byName.delete(entry.name);
+    byName.delete(name);
     const type = target.constant ? 'constant' : 'selective';
     const keys = entry.strategy.keys.map(String);
     const missing = target.keys.filter((key) => !keys.includes(key));
-    if (entry.content !== target.content || entry.strategy.type !== type || missing.length) {
+    if (
+      entry.name !== target.name ||
+      entry.content !== target.content ||
+      entry.strategy.type !== type ||
+      missing.length
+    ) {
       changed = true;
       kept.push({
         ...entry,
+        name: target.name,
         content: target.content,
         strategy: { ...entry.strategy, type, keys: [...entry.strategy.keys, ...missing] },
       });

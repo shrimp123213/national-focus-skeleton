@@ -10,6 +10,12 @@ import {
   EventSchema,
 } from './model';
 
+export const HISTORY_PREFIX = '历史承接：';
+/** Old saves used the traditional prefix; it is data, not a translated UI label. */
+export function isHistoricalEvidence(evidence: string): boolean {
+  return evidence.startsWith(HISTORY_PREFIX) || evidence.startsWith('歷史承接：');
+}
+
 function requireThat(value: unknown, message: string): asserts value {
   if (!value) {
     throw new Error(message);
@@ -31,8 +37,8 @@ export function validateGraph(nodes: Record<string, FocusNode>): void {
   const visiting = new Set<string>();
   const visited = new Set<string>();
   function visit(id: string): void {
-    requireThat(nodes[id], `不存在的前置國策：${id}`);
-    requireThat(!visiting.has(id), '國策前置形成循環');
+    requireThat(nodes[id], `不存在的前置国策：${id}`);
+    requireThat(!visiting.has(id), '国策前置形成循环');
     if (visited.has(id)) {
       return;
     }
@@ -47,15 +53,15 @@ export function validateGraph(nodes: Record<string, FocusNode>): void {
   for (const node of Object.values(nodes)) {
     visit(node.id);
     const position = `${node.x},${node.y}`;
-    requireThat(!coordinates.has(position), `國策布局重疊：${node.name}`);
+    requireThat(!coordinates.has(position), `国策布局重叠：${node.name}`);
     coordinates.add(position);
-    requireThat(new Set(node.effects.map((e) => e.id)).size === node.effects.length, '效果 ID 重複');
+    requireThat(new Set(node.effects.map((e) => e.id)).size === node.effects.length, '效果 ID 重复');
   }
 }
 export function installCountry(input: State, raw: unknown, day: number): State {
   const tree = TreeSchema.parse(raw);
-  requireThat(!input.countries[tree.id], '國家已存在，請使用重新啟用或局部改樹');
-  requireThat(new Set(tree.nodes.map((n) => n.id)).size === tree.nodes.length, '國策 ID 重複');
+  requireThat(!input.countries[tree.id], '国家已存在，请使用重新启用或局部改树');
+  requireThat(new Set(tree.nodes.map((n) => n.id)).size === tree.nodes.length, '国策 ID 重复');
   const state = structuredClone(input);
   const nodes = Object.fromEntries(tree.nodes.map((n) => [n.id, n]));
   validateGraph(nodes);
@@ -91,14 +97,14 @@ export function installCountry(input: State, raw: unknown, day: number): State {
     };
   }
   for (const item of historical) {
-    requireThat(nodes[item.node], '歷史承接引用不存在的國策');
+    requireThat(nodes[item.node], '历史承接引用不存在的国策');
     const node = nodes[item.node];
     country.progress[item.node] = {
       status: 'completed',
       days: node.days,
       started: null,
       completed: day,
-      evidence: `歷史承接：${item.evidence}`,
+      evidence: `${HISTORY_PREFIX}${item.evidence}`,
       investments: [],
       applied: node.effects.map((e) => e.id),
       public: true,
@@ -125,13 +131,13 @@ export function conditionMet(country: Country, requirement: Requirement): boolea
 export function blockers(country: Country, node: FocusNode): string[] {
   const reasons: string[] = [];
   if (!country.enabled || country.calibration) {
-    reasons.push(country.calibration ? '等待重新啟用校準' : '此國尚未啟用');
+    reasons.push(country.calibration ? '等待重新启用校准' : '此国尚未启用');
   }
   if (country.progress[node.id]?.status === 'completed') {
-    reasons.push('此國策已完成');
+    reasons.push('此国策已完成');
   }
   if (country.progress[node.id]?.status === 'terminated') {
-    reasons.push('此國策已終止');
+    reasons.push('此国策已终止');
   }
   for (const group of node.prerequisites) {
     if (!group.some((id) => country.progress[id]?.status === 'completed')) {
@@ -143,7 +149,7 @@ export function blockers(country: Country, node: FocusNode): string[] {
     country.locks[node.mutex.group] &&
     country.locks[node.mutex.group].route !== node.mutex.route
   ) {
-    reasons.push(`路線已鎖定：${country.locks[node.mutex.group].reason}`);
+    reasons.push(`路线已锁定：${country.locks[node.mutex.group].reason}`);
   }
   for (const requirement of node.requirements) {
     if (!conditionMet(country, requirement)) {
@@ -155,14 +161,14 @@ export function blockers(country: Country, node: FocusNode): string[] {
 function lockRoute(country: Country, node: FocusNode): void {
   if (node.mutex) {
     const existing = country.locks[node.mutex.group];
-    requireThat(!existing || existing.route === node.mutex.route, '互斥路線衝突');
+    requireThat(!existing || existing.route === node.mutex.route, '互斥路线冲突');
     country.locks[node.mutex.group] = { route: node.mutex.route, reason: node.mutex.reason };
   }
 }
 function select(country: Country, nodeId: string): void {
-  requireThat(!country.current, '請先暫停目前的主國策');
+  requireThat(!country.current, '请先暂停目前的主国策');
   const node = country.nodes[nodeId];
-  requireThat(node, '國策不存在');
+  requireThat(node, '国策不存在');
   const reasons = blockers(country, node);
   requireThat(reasons.length === 0, reasons.join('；'));
   const progress = country.progress[nodeId];
@@ -179,8 +185,8 @@ function select(country: Country, nodeId: string): void {
 export function startFocus(input: State, countryId: string, nodeId: string): State {
   const state = structuredClone(input);
   const country = state.countries[countryId];
-  requireThat(country, '國家不存在');
-  requireThat(country.control === 'player', '請先切換為玩家選策');
+  requireThat(country, '国家不存在');
+  requireThat(country.control === 'player', '请先切换为玩家选策');
   select(country, nodeId);
   state.revision++;
   return state;
@@ -188,8 +194,8 @@ export function startFocus(input: State, countryId: string, nodeId: string): Sta
 export function pauseFocus(input: State, countryId: string): State {
   const state = structuredClone(input);
   const country = state.countries[countryId];
-  requireThat(country?.current, '沒有進行中的國策');
-  requireThat(country.control === 'player', '請先切換為玩家選策');
+  requireThat(country?.current, '没有进行中的国策');
+  requireThat(country.control === 'player', '请先切换为玩家选策');
   country.progress[country.current].status = 'paused';
   country.current = '';
   state.revision++;
@@ -223,7 +229,7 @@ function settle(country: Country, at: number, completed?: Completion[]): void {
   const progress = country.progress[node.id];
   if (!node.sustain.every((r) => conditionMet(country, r))) {
     progress.status = 'waiting';
-    progress.evidence = '持續條件未滿足';
+    progress.evidence = '持续条件未满足';
     return;
   }
   if (progress.days < node.days) {
@@ -232,7 +238,7 @@ function settle(country: Country, at: number, completed?: Completion[]): void {
   }
   if (!node.outcomes.every((r) => conditionMet(country, r))) {
     progress.status = 'waiting';
-    progress.evidence = '工期已達標，等待實際成果';
+    progress.evidence = '工期已达标，等待实际成果';
     return;
   }
   lockRoute(country, node);
@@ -242,17 +248,17 @@ function settle(country: Country, at: number, completed?: Completion[]): void {
     (item) => !progress.applied.includes(item.id) && (item.when ?? []).every((r) => conditionMet(country, r)),
   );
   for (const item of due) {
-    effect(country, { ...item, when: [] }, `國策完成：${node.name}`);
+    effect(country, { ...item, when: [] }, `国策完成：${node.name}`);
     progress.applied.push(item.id);
   }
   progress.status = 'completed';
   progress.completed = at;
-  progress.evidence = '有效工期與成果條件均已滿足';
+  progress.evidence = '有效工期与成果条件均已满足';
   country.current = '';
   completed?.push({ country: country.id, node: node.id, at });
 }
 function advance(country: Country, at: number, completed?: Completion[]): void {
-  requireThat(at >= country.cursor, '故事時間不可倒退');
+  requireThat(at >= country.cursor, '故事时间不可倒退');
   if (country.current) {
     const node = country.nodes[country.current];
     const progress = country.progress[node.id];
@@ -339,21 +345,21 @@ export function eventText(event: StoryEvent, when: (day: number) => string): str
   const state = latest
     ? event.status === 'resolved'
       ? `，${resultNames[event.result ?? 'ended']}`
-      : '，仍在發展'
+      : '，仍在发展'
     : event.status === 'ongoing'
-      ? '，仍在發展'
+      ? '，仍在发展'
       : '';
-  const now = event.current ? `現況：${event.current}` : '';
+  const now = event.current ? `现况：${event.current}` : '';
   const body = latest
-    ? `起因：${first}最新進展（${when(latest.at)}）：${latest.text}${now && event.status === 'ongoing' ? now : ''}`
+    ? `起因：${first}最新进展（${when(latest.at)}）：${latest.text}${now && event.status === 'ongoing' ? now : ''}`
     : `${first}${now}`;
-  return `${event.headline || event.title}：${body}（始於${when(event.at)}${state}${event.public ? '' : '，未公開'}）`;
+  return `${event.headline || event.title}：${body}（始于${when(event.at)}${state}${event.public ? '' : '，未公开'}）`;
 }
 export const resultNames = {
-  achieved: '已達成',
-  abandoned: '已終止',
-  failed: '已失敗',
-  ended: '已結束',
+  achieved: '已达成',
+  abandoned: '已终止',
+  failed: '已失败',
+  ended: '已结束',
 } as const;
 
 /** Recent major events as plain text for the story model; unpublished ones are marked. */
@@ -368,11 +374,11 @@ export function newsDigest(state: State, limit = 5, days = 30): string {
     .slice(0, limit)
     .map((event) => {
       const names = event.countries.map((id) => state.countries[id]?.name ?? id).join('、');
-      const scope = event.importance === 'world' ? '世界' : event.scope === 'front' ? '身邊' : '各國';
+      const scope = event.importance === 'world' ? '世界' : event.scope === 'front' ? '身边' : '各国';
       return `- 〔${scope}〕${eventText(event, (day) => `故事日 ${Math.floor(day)}`)}（${names}）`;
     });
   return lines.length
-    ? `【近期國際大事】（供正文自然承接；標示「未公開」的只有當事方與知情者知道）\n${lines.join('\n')}\n呈現方式：可透過公告、報紙、傳聞、商旅或 NPC 對話自然帶出，不必一次全部寫入；不得替玩家行動，也不得改變已寫出的正文。`
+    ? `【近期国际大事】（供正文自然承接；标示「未公开」的只有当事方与知情者知道）\n${lines.join('\n')}\n呈现方式：可透过公告、报纸、传闻、商旅或 NPC 对话自然带出，不必一次全部写入；不得替玩家行动，也不得改变已写出的正文。`
     : '';
 }
 
@@ -417,7 +423,7 @@ function publishCompletions(state: State, completed: Completion[]): void {
     }
     const pivotal = node.impact === 'pivotal';
     const news = node.news ?? {
-      headline: pivotal ? `${country.name}完成「${node.name}」` : `${country.name}開始執行「${node.name}」`,
+      headline: pivotal ? `${country.name}完成「${node.name}」` : `${country.name}开始执行「${node.name}」`,
       body: node.description,
       option: { label: '知道了', text: '' },
     };
@@ -427,7 +433,7 @@ function publishCompletions(state: State, completed: Completion[]): void {
       countries: [item.country],
       title: node.name,
       description: pivotal ? news.body : node.description,
-      evidence: `國策完成：${node.name}`,
+      evidence: `国策完成：${node.name}`,
       origin: 'story',
       public: country.progress[item.node].public,
       changes: [],
@@ -435,9 +441,9 @@ function publishCompletions(state: State, completed: Completion[]): void {
       importance: pivotal ? 'major' : 'minor',
       headline: news.headline,
       status: ongoing ? 'ongoing' : 'resolved',
-      ...(ongoing ? { settle: `「${node.name}」的工作全部完成，或正式終止` } : {}),
+      ...(ongoing ? { settle: `「${node.name}」的工作全部完成，或正式终止` } : {}),
       option: news.option,
-      timeline: [{ at: item.at, text: pivotal ? news.body : `國策完成，開始執行：${node.name}` }],
+      timeline: [{ at: item.at, text: pivotal ? news.body : `国策完成，开始执行：${node.name}` }],
       source: { kind: 'focus', country: item.country, node: item.node },
       touchedAt: null,
     });
@@ -468,7 +474,7 @@ function enforceEventLimits(state: State, before: Map<string, number>): void {
     const [country, scope] = key.split('\0') as [string, 'front' | 'back'];
     requireThat(
       count <= eventLimits[scope] || count <= (before.get(key) ?? 0),
-      `${state.countries[country]?.name ?? country}進行中的${scope === 'front' ? '前台' : '後台'}事件已有 ${count} 件，上限 ${eventLimits[scope]} 件；請把新進展併入既有事件（eventUpdates），或不要新增。不要為了騰出名額結束仍在進行的事件`,
+      `${state.countries[country]?.name ?? country}进行中的${scope === 'front' ? '前台' : '后台'}事件已有 ${count} 件，上限 ${eventLimits[scope]} 件；请把新进展并入既有事件（eventUpdates），或不要新增。不要为了腾出名额结束仍在进行的事件`,
     );
   }
   const resolved = Object.values(state.events)
@@ -487,13 +493,13 @@ function applyChanges(
   at: number,
   reason: string,
 ): void {
-  requireThat(new Set(changes.map((c) => c.country)).size === changes.length, '事件同一國家變更重複');
+  requireThat(new Set(changes.map((c) => c.country)).size === changes.length, '事件同一国家变更重复');
   for (const change of changes) {
-    requireThat(event.countries.includes(change.country), '事件變更對象不在參與國家中');
+    requireThat(event.countries.includes(change.country), '事件变更对象不在参与国家中');
     const country = state.countries[change.country];
-    requireThat(country?.enabled, '事件效果引用未啟用國家');
-    requireThat(country.cursor <= at, '不能修改國家開始追蹤前的事件');
-    requireThat(new Set(change.effects.map((e) => e.id)).size === change.effects.length, '事件效果 ID 重複');
+    requireThat(country?.enabled, '事件效果引用未启用国家');
+    requireThat(country.cursor <= at, '不能修改国家开始追踪前的事件');
+    requireThat(new Set(change.effects.map((e) => e.id)).size === change.effects.length, '事件效果 ID 重复');
     for (const item of change.effects) {
       effect(country, item, reason);
     }
@@ -505,13 +511,13 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
   if (input.receipts.includes(proposal.id)) {
     return input;
   }
-  requireThat(proposal.until >= input.day, '故事時間不可倒退');
+  requireThat(proposal.until >= input.day, '故事时间不可倒退');
   const state = structuredClone(input);
   const completed: Completion[] = [];
   const runningBefore = runningCounts(input);
   let previous = input.day;
   for (const step of proposal.steps) {
-    requireThat(step.at >= previous && step.at <= proposal.until, '事件未按故事時間排序');
+    requireThat(step.at >= previous && step.at <= proposal.until, '事件未按故事时间排序');
     for (const country of Object.values(state.countries)) {
       if (country.enabled && !country.calibration && country.cursor <= step.at) {
         advance(country, step.at, completed);
@@ -519,12 +525,12 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
     }
     for (const fact of step.facts) {
       const country = state.countries[fact.country];
-      requireThat(country?.enabled, '事實引用未啟用國家');
-      requireThat(country.cursor <= step.at, '不能修改國家開始追蹤前的事實');
+      requireThat(country?.enabled, '事实引用未启用国家');
+      requireThat(country.cursor <= step.at, '不能修改国家开始追踪前的事实');
       country.facts[fact.id] = { value: fact.value, evidence: fact.evidence };
     }
     for (const raw of step.events) {
-      requireThat(raw.at === step.at, '事件時間與步驟不一致');
+      requireThat(raw.at === step.at, '事件时间与步骤不一致');
       // Models write world events only; focus news and publishing floors belong to the script.
       const { focus, ...rest } = raw;
       const event: StoryEvent = {
@@ -538,22 +544,22 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
         const known = state.events[event.id];
         requireThat(
           known.title === event.title && known.at === event.at && known.description === event.description,
-          `事件 ID ${event.id} 已存在；推進既有事件請用 eventUpdates`,
+          `事件 ID ${event.id} 已存在；推进既有事件请用 eventUpdates`,
         );
         continue;
       }
       if (focus) {
         const country = state.countries[focus.country];
-        requireThat(country?.nodes[focus.node], `事件 ${event.id} 承接的國策 ${focus.node} 不存在`);
-        requireThat(event.countries.includes(focus.country), `事件 ${event.id} 承接的國策不屬於參與國家`);
+        requireThat(country?.nodes[focus.node], `事件 ${event.id} 承接的国策 ${focus.node} 不存在`);
+        requireThat(event.countries.includes(focus.country), `事件 ${event.id} 承接的国策不属于参与国家`);
         requireThat(
           ['active', 'waiting', 'paused', 'completed'].includes(country.progress[focus.node]?.status),
-          `事件 ${event.id} 承接的國策 ${country.nodes[focus.node].name} 尚未開始`,
+          `事件 ${event.id} 承接的国策 ${country.nodes[focus.node].name} 尚未开始`,
         );
         const existing = focusEvent(state, focus.country, focus.node);
         requireThat(
           !existing,
-          `國策 ${country.nodes[focus.node].name} 已有執行事件 ${existing?.id}；請用 eventUpdates 推進它，不要另建`,
+          `国策 ${country.nodes[focus.node].name} 已有执行事件 ${existing?.id}；请用 eventUpdates 推进它，不要另建`,
         );
       }
       applyChanges(state, event, event.changes, step.at, event.description);
@@ -561,12 +567,12 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
     }
     for (const update of step.eventUpdates) {
       const event = state.events[update.id];
-      requireThat(event, `要推進的事件 ${update.id} 不存在`);
-      requireThat(event.status === 'ongoing', `事件 ${update.id} 已結束，不能再推進`);
-      requireThat(step.at >= event.at, `事件 ${update.id} 的推進不能早於事件本身`);
+      requireThat(event, `要推进的事件 ${update.id} 不存在`);
+      requireThat(event.status === 'ongoing', `事件 ${update.id} 已结束，不能再推进`);
+      requireThat(step.at >= event.at, `事件 ${update.id} 的推进不能早于事件本身`);
       requireThat(
         !update.result || update.status !== 'ongoing',
-        `事件 ${update.id} 填了 result 表示已結束，status 不能是 ongoing`,
+        `事件 ${update.id} 填了 result 表示已结束，status 不能是 ongoing`,
       );
       if (update.changes?.length) {
         applyChanges(state, event, update.changes, step.at, update.text);
@@ -611,11 +617,11 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
     }
     for (const choice of step.selections) {
       const country = state.countries[choice.country];
-      requireThat(country?.enabled && !country.calibration, '選策國家不可用');
-      requireThat(country.cursor === step.at, '選策不能早於國家開始追蹤時間');
+      requireThat(country?.enabled && !country.calibration, '选策国家不可用');
+      requireThat(country.cursor === step.at, '选策不能早于国家开始追踪时间');
       requireThat(
         country.control === 'ai' || (country.skipDelegate && proposal.until > input.day),
-        '此國未授權 AI 代選',
+        '此国未授权 AI 代选',
       );
       select(country, choice.node);
       country.progress[choice.node].evidence = choice.reason;
@@ -624,10 +630,10 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
       const country = state.countries[publication.country];
       requireThat(
         country?.enabled && country.progress[publication.node]?.status === 'completed',
-        '只能公開已完成且已啟用國家的國策',
+        '只能公开已完成且已启用国家的国策',
       );
       country.progress[publication.node].public = true;
-      country.progress[publication.node].evidence += `；公開依據：${publication.evidence}`;
+      country.progress[publication.node].evidence += `；公开依据：${publication.evidence}`;
       const news = state.events[focusEventId(publication.country, publication.node)];
       if (news) {
         news.public = true;
@@ -644,23 +650,23 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
   enforceEventLimits(state, runningBefore);
   for (const id of proposal.calibrations) {
     const country = state.countries[id];
-    requireThat(country?.enabled && country.calibration, '校準對象不符合條件');
+    requireThat(country?.enabled && country.calibration, '校准对象不符合条件');
     country.calibration = false;
     country.cursor = proposal.until;
   }
-  requireThat(allowEdits || proposal.edits.length === 0, '只有重大改樹任務可修改國策樹');
+  requireThat(allowEdits || proposal.edits.length === 0, '只有重大改树任务可修改国策树');
   for (const edit of proposal.edits) {
     const country = state.countries[edit.country];
-    requireThat(country?.enabled, '改樹國家不存在或已停用');
-    requireThat(new Set(edit.nodes.map((n) => n.id)).size === edit.nodes.length, '改樹節點 ID 重複');
+    requireThat(country?.enabled, '改树国家不存在或已停用');
+    requireThat(new Set(edit.nodes.map((n) => n.id)).size === edit.nodes.length, '改树节点 ID 重复');
     for (const id of new Set([...edit.remove, ...edit.nodes.map((n) => n.id)])) {
       requireThat(
         !country.progress[id] || country.progress[id].status === 'idle',
-        '不可改寫已開始或已完成國策',
+        '不可改写已开始或已完成国策',
       );
     }
     for (const id of edit.remove) {
-      requireThat(country.nodes[id], '移除國策不存在');
+      requireThat(country.nodes[id], '移除国策不存在');
       delete country.nodes[id];
       delete country.progress[id];
     }
@@ -677,7 +683,7 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
         public: false,
       };
     }
-    requireThat(Object.keys(country.nodes).length <= 300, '單國國策超過 300 節點');
+    requireThat(Object.keys(country.nodes).length <= 300, '单国国策超过 300 节点');
     validateGraph(country.nodes);
     pruneRelations(country, new Set(edit.nodes.map((n) => n.id)));
     country.treeRevision++;
@@ -688,7 +694,7 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
   return state;
 }
 /** Marks a relation whose focus was rewritten; its rules were checked against the old focus. */
-export const STALE_RELATION = '改樹後未重新驗證：這條關係涉及的國策已改寫，上面的規則說明可能已不成立';
+export const STALE_RELATION = '改树后未重新验证：这条关系涉及的国策已改写，上面的规则说明可能已不成立';
 /**
  * After a reshape, drop relations to removed focuses and flag relations to rewritten ones, so the
  * tree stays consistent (and its own export can be imported again).
@@ -712,7 +718,7 @@ export function changeCountry(
 ): State {
   const state = structuredClone(input);
   const country = state.countries[id];
-  requireThat(country, '國家不存在');
+  requireThat(country, '国家不存在');
   if (patch.enabled === true && !country.enabled) {
     country.calibration = true;
     country.cursor = state.day;
@@ -727,7 +733,7 @@ export function changeCountry(
  */
 export function removeCountry(input: State, id: string): State {
   const state = structuredClone(input);
-  requireThat(state.countries[id], '國家不存在');
+  requireThat(state.countries[id], '国家不存在');
   delete state.countries[id];
   for (const [eventId, event] of Object.entries(state.events)) {
     event.countries = event.countries.filter((country) => country !== id);

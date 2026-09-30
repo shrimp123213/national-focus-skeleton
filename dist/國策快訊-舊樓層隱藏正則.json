@@ -1,6 +1,6 @@
 {
     "id": "5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b03",
-    "scriptName": "國策快訊舊樓層隱藏",
+    "scriptName": "国策快讯旧楼层隐藏",
     "findRegex": "/<国策快讯\\s*\\/>/g",
     "replaceString": "",
     "trimStrings": [],

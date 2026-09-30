@@ -47,7 +47,7 @@ function input(overrides: Partial<SourceInput> = {}): SourceInput {
   return {
     config,
     job: 'update',
-    messages: [{ message_id: 2, role: 'assistant', message: '帝國議會召開' }],
+    messages: [{ message_id: 2, role: 'assistant', message: '帝国议会召开' }],
     currentId: 2,
     entries: [],
     memoryEntries: [],
@@ -58,92 +58,92 @@ function input(overrides: Partial<SourceInput> = {}): SourceInput {
   };
 }
 
-test('遞迴掃描：第 0 層只看正文，遵守 delay_until、prevent_incoming 與 prevent_outgoing', () => {
+test('递回扫描：第 0 层只看正文，遵守 delay_until、prevent_incoming 与 prevent_outgoing', () => {
   const rows = [
-    entry(1, '議會', '提到港口與鐵路', ['議會']),
-    entry(2, '港口', '港口資料', ['港口']),
-    { ...entry(3, '鐵路', '不可被遞迴觸發', ['鐵路']), recursion: { prevent_incoming: true } },
-    { ...entry(4, '延後常駐', '第二層才加入', undefined), recursion: { delay_until: 2 } },
-    entry(5, '只在正文', '正文命中', ['帝國']),
+    entry(1, '议会', '提到港口与铁路', ['议会']),
+    entry(2, '港口', '港口资料', ['港口']),
+    { ...entry(3, '铁路', '不可被递回触发', ['铁路']), recursion: { prevent_incoming: true } },
+    { ...entry(4, '延后常驻', '第二层才加入', undefined), recursion: { delay_until: 2 } },
+    entry(5, '只在正文', '正文命中', ['帝国']),
   ];
   assert.deepEqual(
-    scanWorldbook(rows, '帝國議會').map((row) => row.uid),
+    scanWorldbook(rows, '帝国议会').map((row) => row.uid),
     [1, 2, 4, 5],
   );
   // The same entry that prevents incoming recursion still matches chat text at depth 0.
-  assert.ok(scanWorldbook(rows, '鐵路').some((row) => row.uid === 3));
+  assert.ok(scanWorldbook(rows, '铁路').some((row) => row.uid === 3));
   rows[0].recursion = { prevent_outgoing: true };
-  assert.ok(!scanWorldbook(rows, '議會').some((row) => row.uid === 2));
+  assert.ok(!scanWorldbook(rows, '议会').some((row) => row.uid === 2));
 });
 
-test('邊界規則：開標籤前綴不匹配斜線後或更長的標籤名', () => {
+test('边界规则：开标签前缀不匹配斜线后或更长的标签名', () => {
   const rules = {
     contextTurnCount: 3,
     contextExtractRules: [{ start: '<tp', end: '</tp>' }],
     contextExcludeRules: [],
   };
-  assert.equal(extractContext('<tp:note>冒號延續</tp>', rules).text, '<tp:note>冒號延續</tp>');
+  assert.equal(extractContext('<tp:note>冒号延续</tp>', rules).text, '<tp:note>冒号延续</tp>');
   assert.equal(extractContext('<tpx>否</tp>', rules).missed, true);
 });
 
-test('$1 只送條目正文、不帶條目名稱，並依位置、深度、順序與原始序排列', async () => {
+test('$1 只送条目正文、不带条目名称，并依位置、深度、顺序与原始序排列', async () => {
   const rows: SourceEntry[] = [
-    { ...entry(1, '後段', 'C'), position: { type: 'at_depth', depth: 1, order: 1 } },
+    { ...entry(1, '后段', 'C'), position: { type: 'at_depth', depth: 1, order: 1 } },
     { ...entry(2, '前段', 'A'), position: { type: 'before_character_definition', depth: 0, order: 5 } },
-    { ...entry(3, '深層', 'B'), position: { type: 'at_depth', depth: 4, order: 9 } },
+    { ...entry(3, '深层', 'B'), position: { type: 'at_depth', depth: 4, order: 9 } },
   ];
   const result = await buildSourceContext(input({ entries: rows }));
   assert.equal(result.context.worldbook, 'A\n\nB\n\nC');
-  assert.doesNotMatch(String(result.context.worldbook), /前段|後段|深層/);
+  assert.doesNotMatch(String(result.context.worldbook), /前段|后段|深层/);
 });
 
-test('$8 只取當前 AI 前一樓的使用者輸入，優先取輸入標籤並移除預設警告', async () => {
+test('$8 只取当前 AI 前一楼的使用者输入，优先取输入标签并移除预设警告', async () => {
   assert.equal(
-    cleanLatestUser('前言<本轮输入>第一次</本轮输入>\n<用户输入 id="x">最後輸入</用户输入>(⚠️: 預設提醒)'),
-    '最後輸入',
+    cleanLatestUser('前言<本轮输入>第一次</本轮输入>\n<用户输入 id="x">最后输入</用户输入>(⚠️: 预设提醒)'),
+    '最后输入',
   );
-  assert.equal(cleanLatestUser('我要前往港口\n以上是用户的本轮输入\n後續模板'), '我要前往港口');
+  assert.equal(cleanLatestUser('我要前往港口\n以上是用户的本轮输入\n后续模板'), '我要前往港口');
   const config = defaultConfig();
   config.sources.includeLatestUser = true;
   const base = input({ config });
   base.messages = [
-    { message_id: 1, role: 'user', message: '不相鄰的舊輸入' },
+    { message_id: 1, role: 'user', message: '不相邻的旧输入' },
     { message_id: 2, role: 'assistant', message: '正文' },
-    { message_id: 3, role: 'assistant', message: '續寫' },
+    { message_id: 3, role: 'assistant', message: '续写' },
   ];
   base.currentId = 3;
   assert.equal((await buildSourceContext(base)).context.user, undefined);
-  base.messages[1] = { message_id: 2, role: 'user', message: '<input>相鄰輸入</input>' };
-  assert.equal((await buildSourceContext(base)).context.user, '相鄰輸入');
+  base.messages[1] = { message_id: 2, role: 'user', message: '<input>相邻输入</input>' };
+  assert.equal((await buildSourceContext(base)).context.user, '相邻输入');
 });
 
-test('資料庫表格可選擇依工作流助手一律納入，否則仍受全不選限制', async () => {
+test('资料库表格可选择依工作流助手一律纳入，否则仍受全不选限制', async () => {
   const table = {
-    ...entry(1, 'TavernDB-ACU-CustomExport-国家状态-1', '# 國家\n\n| 國 |\n| --- |\n| 帝國 |'),
+    ...entry(1, 'TavernDB-ACU-CustomExport-国家状态-1', '# 国家\n\n| 国 |\n| --- |\n| 帝国 |'),
     enabled: false,
   };
-  const base = input({ entries: [table, entry(2, '一般', '一般條目')] });
+  const base = input({ entries: [table, entry(2, '一般', '一般条目')] });
   base.config.sources.worldbook.enabledEntries = { 本局: [] };
   assert.equal((await buildSourceContext(base)).context.worldbook, '');
   base.config.sources.autoIncludeTables = true;
   const result = await buildSourceContext(base);
-  assert.equal(result.context.worldbook, '| 國 |\n| --- |\n| 帝國 |');
-  assert.equal(result.report.entries[1].status, '未勾選');
+  assert.equal(result.context.worldbook, '| 国 |\n| --- |\n| 帝国 |');
+  assert.equal(result.report.entries[1].status, '未勾选');
 });
 
-test('$2／$5／$U／$C 預設不送，開啟後依來源規則組裝', async () => {
+test('$2／$5／$U／$C 预设不送，开启后依来源规则组装', async () => {
   const character: SourceEntry[] = [
-    entry(1, 'WorkflowHelper-國家關係', '托管關係', ['議會'], '角色書'),
-    { ...entry(2, 'WorkflowHelper-停用', '不送', undefined, '角色書'), enabled: false },
-    entry(3, 'TavernDB-ACU-CustomExport-主角信息-1', '主角是帝國外交官', undefined, '角色書'),
+    entry(1, 'WorkflowHelper-国家关系', '托管关系', ['议会'], '角色书'),
+    { ...entry(2, 'WorkflowHelper-停用', '不送', undefined, '角色书'), enabled: false },
+    entry(3, 'TavernDB-ACU-CustomExport-主角信息-1', '主角是帝国外交官', undefined, '角色书'),
   ];
-  const memory = [entry(9, 'TavernDB-ACU-CustomExport-纪要索引', '- AM0001 帝國成立')];
+  const memory = [entry(9, 'TavernDB-ACU-CustomExport-纪要索引', '- AM0001 帝国成立')];
   const base = input({
     characterEntries: character,
     memoryEntries: memory,
-    persona: '玩家設定',
+    persona: '玩家设定',
     character: '{{char}} 的描述',
-    renderEntry: async (text) => text.replaceAll('{{char}}', '命定之詩').replaceAll('{{user}}', '玩家'),
+    renderEntry: async (text) => text.replaceAll('{{char}}', '命定之诗').replaceAll('{{user}}', '玩家'),
   });
   let result = await buildSourceContext(base);
   for (const key of ['managedWorldbook', 'summaryIndex', 'persona', 'character']) {
@@ -156,40 +156,40 @@ test('$2／$5／$U／$C 預設不送，開啟後依來源規則組裝', async ()
     characterDescription: true,
   });
   result = await buildSourceContext(base);
-  assert.equal(result.context.managedWorldbook, '托管關係');
-  assert.equal(result.context.summaryIndex, '- AM0001 帝國成立');
+  assert.equal(result.context.managedWorldbook, '托管关系');
+  assert.equal(result.context.summaryIndex, '- AM0001 帝国成立');
   assert.equal(
     result.context.persona,
-    '<玩家初始设定>\n玩家設定\n</玩家初始设定>\n<玩家最新数据>\n主角是帝國外交官\n</玩家最新数据>',
+    '<玩家初始设定>\n玩家设定\n</玩家初始设定>\n<玩家最新数据>\n主角是帝国外交官\n</玩家最新数据>',
   );
-  assert.equal(result.context.character, '命定之詩 的描述');
+  assert.equal(result.context.character, '命定之诗 的描述');
   base.memoryEntries = [];
   base.tables = {
     sheet: {
       name: '纪要表',
       content: [
         ['', '概要', '编码索引'],
-        ['', '帝國成立', 'AM0001'],
+        ['', '帝国成立', 'AM0001'],
       ],
     },
   };
-  assert.match(String((await buildSourceContext(base)).context.summaryIndex), /帝國成立 \| 编码索引: AM0001/);
+  assert.match(String((await buildSourceContext(base)).context.summaryIndex), /帝国成立 \| 编码索引: AM0001/);
   assert.equal(formatSummaryIndex(null), '');
 });
 
-test('提示詞串的佔位符只替換一次，並把該來源移出 JSON', async () => {
+test('提示词串的占位符只替换一次，并把该来源移出 JSON', async () => {
   const config = defaultConfig();
   config.sources.memoryRecallRecentCount = 0;
   const custom = (fields: object) =>
     PromptItemSchema.parse({ id: `c${Math.random()}`, kind: 'custom', ...fields });
   config.jobs.update.prompts = normalizePrompts([
-    custom({ name: '世界', role: 'system', content: '世界資料：$1\n正文：$7' }),
+    custom({ name: '世界', role: 'system', content: '世界资料：$1\n正文：$7' }),
     ...config.jobs.update.prompts,
-    custom({ name: '預填', role: 'assistant', content: '{' }),
+    custom({ name: '预填', role: 'assistant', content: '{' }),
     custom({ name: '停用', enabled: false, content: '$C' }),
   ]);
   const result = await buildSourceContext(
-    input({ config, entries: [entry(1, '條目', '含有 $7 字樣的條目')] }),
+    input({ config, entries: [entry(1, '条目', '含有 $7 字样的条目')] }),
   );
   assert.equal(result.context.worldbook, undefined);
   assert.equal(result.context.history, undefined);
@@ -206,7 +206,7 @@ test('提示詞串的佔位符只替換一次，並把該來源移出 JSON', asy
   );
   assert.equal(
     result.prompts[0].content,
-    '世界資料：\n<worldbook_context>\n含有 $7 字樣的條目\n</worldbook_context>\n\n正文：帝國議會召開',
+    '世界资料：\n<worldbook_context>\n含有 $7 字样的条目\n</worldbook_context>\n\n正文：帝国议会召开',
   );
   assert.equal(result.prompts[1].content, DEFAULT_GUIDE);
   assert.equal(result.prompts[2].content, DEFAULT_TASK.update);
@@ -216,29 +216,29 @@ test('提示詞串的佔位符只替換一次，並把該來源移出 JSON', asy
   assert.ok(result.report.characters >= result.prompts[0].content.length);
 });
 
-test('舊版提示詞段與補充提示詞遷移成提示詞串，內建段各一且資料段必定啟用', () => {
+test('旧版提示词段与补充提示词迁移成提示词串，内建段各一且资料段必定启用', () => {
   const legacy = JSON.parse(JSON.stringify(defaultConfig()));
   delete legacy.jobs.update.prompts;
   Object.assign(legacy.jobs.update, {
-    prompt: '多寫外交',
+    prompt: '多写外交',
     segments: [
-      { name: '越獄', role: 'system', content: 'A', placement: 'before' },
-      { name: '預填', role: 'assistant', content: '{', placement: 'after', enabled: false },
+      { name: '越狱', role: 'system', content: 'A', placement: 'before' },
+      { name: '预填', role: 'assistant', content: '{', placement: 'after', enabled: false },
     ],
   });
   const migrated = ConfigSchema.parse(legacy);
   assert.deepEqual(
     migrated.jobs.update.prompts.map((p) => [p.kind, p.name, p.enabled]),
     [
-      ['custom', '越獄', true],
-      ['guide', '系統規則', true],
-      ['custom', '玩家補充任務指示', true],
-      ['task', '任務指示', true],
-      ['data', '任務資料', true],
-      ['custom', '預填', false],
+      ['custom', '越狱', true],
+      ['guide', '系统规则', true],
+      ['custom', '玩家补充任务指示', true],
+      ['task', '任务指示', true],
+      ['data', '任务资料', true],
+      ['custom', '预填', false],
     ],
   );
-  assert.equal(migrated.jobs.update.prompts[2].content, '多寫外交');
+  assert.equal(migrated.jobs.update.prompts[2].content, '多写外交');
   assert.deepEqual(
     migratePrompts({}).map((p) => p.kind),
     ['guide', 'task', 'data'],
@@ -259,7 +259,7 @@ test('舊版提示詞段與補充提示詞遷移成提示詞串，內建段各�
   );
 });
 
-test('金鑰與授權標頭拆出設定，重載時合併；其他標頭保留原本格式', () => {
+test('金钥与授权标头拆出设定，重载时合并；其他标头保留原本格式', () => {
   const config = defaultConfig();
   Object.assign(config.apis[0], {
     apiKey: 'sk-test',
@@ -309,7 +309,7 @@ function tavern(extensionSettings: Record<string, unknown> | undefined, storage 
   return { platform: new TavernPlatform(api, local), storage, saves: () => saves, api };
 }
 
-test('酒館平台把金鑰存入擴充設定，不留在 localStorage；舊版 localStorage 金鑰自動搬移', () => {
+test('酒馆平台把金钥存入扩充设定，不留在 localStorage；旧版 localStorage 金钥自动搬移', () => {
   const settings: Record<string, unknown> = {};
   const env = tavern(settings);
   try {
@@ -356,7 +356,7 @@ test('酒館平台把金鑰存入擴充設定，不留在 localStorage；舊版 
   }
 });
 
-test('Chat Completion 失敗時，基本參數回退 generateRaw，進階參數明確報錯；推理內容分開保存', async () => {
+test('Chat Completion 失败时，基本参数回退 generateRaw，进阶参数明确报错；推理内容分开保存', async () => {
   const env = tavern({});
   const messages: PromptMessage[] = [
     { role: 'system', content: 's' },
@@ -418,7 +418,7 @@ test('Chat Completion 失敗時，基本參數回退 generateRaw，進階參數�
   }
 });
 
-test('條目巨集依助手巨集開關與樓層深度處理，EJS 失敗時保留原文', async () => {
+test('条目巨集依助手巨集开关与楼层深度处理，EJS 失败时保留原文', async () => {
   const env = tavern({ tavern_helper: { macro: { enabled: false } } });
   const calls: string[] = [];
   Object.assign(env.api, {
@@ -464,9 +464,9 @@ test('條目巨集依助手巨集開關與樓層深度處理，EJS 失敗時保�
   }
 });
 
-test('寬鬆 JSON：移除代碼圍欄、思考標籤與前後文字，截斷回應仍明確失敗', () => {
+test('宽松 JSON：移除代码围栏、思考标签与前后文字，截断回应仍明确失败', () => {
   assert.deepEqual(parseJsonReply('```json\n{"a":1}\n```'), { a: 1 });
-  assert.deepEqual(parseJsonReply('<think>{"a":0}</think>說明 {不是JSON} 最終：{"a":{"b":"}"}} 完'), {
+  assert.deepEqual(parseJsonReply('<think>{"a":0}</think>说明 {不是JSON} 最终：{"a":{"b":"}"}} 完'), {
     a: { b: '}' },
   });
   assert.throws(() => parseJsonReply('{"nodes":['));
@@ -474,7 +474,7 @@ test('寬鬆 JSON：移除代碼圍欄、思考標籤與前後文字，截斷回
   assert.deepEqual(extractApiResult({ text: ' y ' }), { content: 'y' });
 });
 
-test('嚴格 JSON 只補缺少的參數，且不套用到沒有明確 URL 的連線', () => {
+test('严格 JSON 只补缺少的参数，且不套用到没有明确 URL 的连线', () => {
   const api = {
     ...defaultConfig().apis[0],
     url: 'https://example.invalid/v1',
@@ -493,17 +493,17 @@ test('嚴格 JSON 只補缺少的參數，且不套用到沒有明確 URL 的連
   assert.deepEqual(structuredApi(inherited), inherited);
 });
 
-test('路由並發：主要連線滿載時分流到備援，釋放後喚醒等待者，取消時移出佇列', async () => {
-  const pool = new RoutePool(routeLimits(['主', '備'], 1, [1]));
-  assert.equal(await pool.acquire(['主', '備']), '主');
-  assert.equal(await pool.acquire(['主', '備']), '備');
-  const waiting = pool.acquire(['主', '備']);
+test('路由并发：主要连线满载时分流到备援，释放后唤醒等待者，取消时移出伫列', async () => {
+  const pool = new RoutePool(routeLimits(['主', '备'], 1, [1]));
+  assert.equal(await pool.acquire(['主', '备']), '主');
+  assert.equal(await pool.acquire(['主', '备']), '备');
+  const waiting = pool.acquire(['主', '备']);
   const cancel = new AbortController();
   const cancelled = pool.acquire(['主'], cancel.signal);
   cancel.abort();
   await assert.rejects(cancelled);
-  pool.release('備');
-  assert.equal(await waiting, '備');
+  pool.release('备');
+  assert.equal(await waiting, '备');
   assert.equal(pool.count('主'), 1);
   assert.deepEqual(
     [...routeLimits(['a', 'b', 'c'], 0, [2]).entries()],
@@ -515,7 +515,7 @@ test('路由並發：主要連線滿載時分流到備援，釋放後喚醒等�
   );
 });
 
-test('任務請求依提示詞串排列訊息，資料段的 {{data}} 換成 JSON，執行紀錄保存提示詞、回應與推理', async () => {
+test('任务请求依提示词串排列讯息，资料段的 {{data}} 换成 JSON，执行纪录保存提示词、回应与推理', async () => {
   class Recording extends DemoPlatform {
     sent: PromptMessage[][] = [];
     override async generate(messages: PromptMessage[]) {
@@ -532,7 +532,7 @@ test('任務請求依提示詞串排列訊息，資料段的 {{data}} 換成 JSO
   config.jobs.identify.prompts = normalizePrompts([
     custom({ name: '前置', content: '前置段' }),
     ...config.jobs.identify.prompts.map((p) => (p.kind === 'task' ? { ...p, enabled: false } : p)),
-    custom({ name: '預填', role: 'assistant', content: '{' }),
+    custom({ name: '预填', role: 'assistant', content: '{' }),
   ]);
   controller.saveSettings(config);
   await controller.run('identify');
@@ -551,11 +551,11 @@ test('任務請求依提示詞串排列訊息，資料段的 {{data}} 換成 JSO
   // Without the token the JSON is appended; preview builds the same chain without calling the API.
   const edited = structuredClone(controller.config);
   edited.jobs.identify.prompts = edited.jobs.identify.prompts.map((p) =>
-    p.kind === 'data' ? { ...p, content: '資料如下' } : p,
+    p.kind === 'data' ? { ...p, content: '资料如下' } : p,
   );
   const preview = await controller.preview('identify', edited);
   assert.equal(platform.sent.length, 1);
-  assert.match(preview.find((m) => m.role === 'user')!.content, /^資料如下\n\{"job":"identify"/);
+  assert.match(preview.find((m) => m.role === 'user')!.content, /^资料如下\n\{"job":"identify"/);
   assert.equal(controller.config.jobs.identify.prompts.find((p) => p.kind === 'data')!.content, '');
   const generate = await controller.preview('generate');
   assert.match(generate.at(-1)!.content, /"limits":\{"min":/);
@@ -565,12 +565,12 @@ test('任務請求依提示詞串排列訊息，資料段的 {{data}} 換成 JSO
   controller.dispose();
 });
 
-test('任務預設保存、套用、匯出與匯入，不含 API 路由', () => {
+test('任务预设保存、套用、汇出与汇入，不含 API 路由', () => {
   let config = defaultConfig();
   config.jobs.update.api = '主力';
   config.jobs.update.retries = 3;
   config.jobs.update.prompts = config.jobs.update.prompts.map((p) =>
-    p.kind === 'task' ? { ...p, content: '自訂局勢更新指示' } : p,
+    p.kind === 'task' ? { ...p, content: '自订局势更新指示' } : p,
   );
   config.sources.memoryRecallRecentCount = 7;
   config.jobs.generate.segmentMax = 40;
@@ -584,13 +584,13 @@ test('任務預設保存、套用、匯出與匯入，不含 API 路由', () => 
   assert.ok(!text.includes('主力'));
 
   let other = defaultConfig();
-  other.jobs.update.api = '備用';
+  other.jobs.update.api = '备用';
   const imported = importTaskPresets(other, JSON.parse(text));
   assert.deepEqual(imported.names, ['外交向']);
   other = applyTaskPreset(imported.config, '外交向');
-  assert.equal(other.jobs.update.api, '備用');
+  assert.equal(other.jobs.update.api, '备用');
   assert.equal(other.jobs.update.retries, 3);
-  assert.equal(other.jobs.update.prompts.find((p) => p.kind === 'task')!.content, '自訂局勢更新指示');
+  assert.equal(other.jobs.update.prompts.find((p) => p.kind === 'task')!.content, '自订局势更新指示');
   assert.equal(other.sources.memoryRecallRecentCount, 7);
   assert.equal(other.jobs.generate.segmentMax, 40);
   assert.equal(other.jobs.generate.recommendedModel, 'deepseek-chat');
@@ -598,29 +598,29 @@ test('任務預設保存、套用、匯出與匯入，不含 API 路由', () => 
   assert.equal(other.jobs.update.strictJson, false);
   assert.ok(!text.includes('strictJson'));
   assert.equal(ConfigSchema.parse(other).taskPresets.length, 1);
-  assert.throws(() => saveTaskPreset(other, '  '), /名稱/);
+  assert.throws(() => saveTaskPreset(other, '  '), /名称/);
   assert.throws(
     () => importTaskPresets(other, { name: '世界后台引擎', tasks: [{ promptGroups: [] }] }),
-    /工作流助手的預設檔/,
+    /工作流助手的预设档/,
   );
   assert.throws(
     () =>
       importTaskPresets(other, { kind: 'national-focus-task-presets', version: 1, presets: [{ name: 'x' }] }),
-    /任務預設檔內容有誤：presets\.0\.jobs/,
+    /任务预设档内容有误：presets\.0\.jobs/,
   );
-  assert.throws(() => importTaskPresets(other, { foo: 1 }), /這不是國策任務預設檔/);
+  assert.throws(() => importTaskPresets(other, { foo: 1 }), /这不是国策任务预设档/);
   other = deleteTaskPreset(other, '外交向');
   assert.equal(other.activeTaskPreset, '');
-  assert.throws(() => exportTaskPresets(other), /沒有/);
+  assert.throws(() => exportTaskPresets(other), /没有/);
 });
 
-test('記憶體金鑰儲存供離線頁使用', () => {
+test('记忆体金钥储存供离线页使用', () => {
   const store = new MemorySecretStore();
   store.save({ version: 1, byPreset: { a: { apiKey: 'k' } } });
   assert.deepEqual(store.load(), { version: 1, byPreset: { a: { apiKey: 'k' } } });
 });
 
-test('生成常見誤用在本機修正：outcomes 重複自身產出、被需要卻漏列的歷史能力', async () => {
+test('生成常见误用在本机修正：outcomes 重复自身产出、被需要却漏列的历史能力', async () => {
   const { normalizeGenerated } = await import('../src/generation');
   const effect = (key: string) => ({
     id: `e_${key}`,
@@ -657,7 +657,7 @@ test('生成常見誤用在本機修正：outcomes 重複自身產出、被需�
   assert.deepEqual(tree.nodes.find((n) => n.id === 'cycle')!.requirements, []);
 });
 
-test('驗證失敗的重試會把本機驗證原因回饋給模型，並顯示在任務狀態', async () => {
+test('验证失败的重试会把本机验证原因回馈给模型，并显示在任务状态', async () => {
   class Retrying extends DemoPlatform {
     prompts: string[] = [];
     override async generate(messages: PromptMessage[]) {
@@ -681,11 +681,11 @@ test('驗證失敗的重試會把本機驗證原因回饋給模型，並顯示�
   assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
   assert.equal(platform.prompts.length, 2);
   assert.equal(JSON.parse(platform.prompts[0]).correction, '');
-  assert.match(JSON.parse(platform.prompts[1]).correction, /本機驗證：更新終點必須等於來源故事時間/);
+  assert.match(JSON.parse(platform.prompts[1]).correction, /本机验证：更新终点必须等于来源故事时间/);
   controller.dispose();
 });
 
-test('模型把前置寫成物件、平鋪陣列或 any 群組時在本機修正；不明的 API 錯誤附上常見原因', async () => {
+test('模型把前置写成物件、平铺阵列或 any 群组时在本机修正；不明的 API 错误附上常见原因', async () => {
   const { repairReply } = await import('../src/repair');
   const { explainOpaqueError } = await import('../src/tavern');
   const fixed = repairReply({
@@ -707,11 +707,11 @@ test('模型把前置寫成物件、平鋪陣列或 any 群組時在本機修正
   assert.equal(fixed.nodes[2].mutex, null);
   assert.equal(fixed.nodes[4].mutex, null);
   assert.deepEqual(fixed.edits[0].nodes[0].prerequisites, [['a']]);
-  assert.match(explainOpaqueError('Error: <none>'), /沒有提供原因/);
+  assert.match(explainOpaqueError('Error: <none>'), /没有提供原因/);
   assert.equal(explainOpaqueError('429 rate limited'), '429 rate limited');
 });
 
-test('刪除國策樹：移除國家與只涉及它的事件，共同事件保留給其他國家，國家回到候選清單', async () => {
+test('删除国策树：移除国家与只涉及它的事件，共同事件保留给其他国家，国家回到候选清单', async () => {
   const { removeCountry } = await import('../src/engine');
   const platform = new DemoPlatform();
   const controller = new FocusController(platform);
@@ -722,7 +722,7 @@ test('刪除國策樹：移除國家與只涉及它的事件，共同事件保�
     at: state.day,
     title: '事件',
     description: '描述',
-    evidence: '依據',
+    evidence: '依据',
     origin: 'story' as const,
     public: true,
   };
@@ -746,7 +746,7 @@ test('刪除國策樹：移除國家與只涉及它的事件，共同事件保�
     [second],
   );
   assert.deepEqual(next.settings.observing, []);
-  assert.throws(() => removeCountry(next, first), /國家不存在/);
+  assert.throws(() => removeCountry(next, first), /国家不存在/);
 
   const name = state.countries[first].name;
   await controller.removeCountry(first);

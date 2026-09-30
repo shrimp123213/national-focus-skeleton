@@ -21,8 +21,8 @@ type Update = (config: Config) => Config;
 
 /**
  * Owns the API editor so saving connections never needs an MVU write. Edits to the selected
- * preset are a draft saved by the panel's own 保存預設 button (the window stays open, as in
- * Workflow Assistant) or by the window's 儲存設定 (`commit`); choosing, adding, deleting and
+ * preset are a draft saved by the panel's own 保存预设 button (the window stays open, as in
+ * Workflow Assistant) or by the window's 储存设定 (`commit`); choosing, adding, deleting and
  * starring presets apply at once.
  */
 export function mountApiPanel(
@@ -63,7 +63,7 @@ export function mountApiPanel(
   }
   function save(update: Update): void {
     if (controller.platform.chatId() !== chatId) {
-      throw new Error('聊天已切換，請重新開啟 API 設定');
+      throw new Error('聊天已切换，请重新开启 API 设定');
     }
     controller.saveSettings(update(controller.config));
     onSaved(update);
@@ -88,7 +88,7 @@ export function mountApiPanel(
     original = null;
     deletePending = false;
     draft = ApiSchema.parse({
-      name: `連線 ${controller.config.apis.length + 1}`,
+      name: `连线 ${controller.config.apis.length + 1}`,
       url: '',
       model: '',
       proxy: '',
@@ -98,7 +98,7 @@ export function mountApiPanel(
     models = [];
     requestVersion++;
     busy = false;
-    status = '按「保存預設」建立新預設，並設為目前聊天使用。';
+    status = '按「保存预设」建立新预设，并设为目前聊天使用。';
   }
   function choose(name: string): void {
     save((config) => ({
@@ -121,10 +121,10 @@ export function mountApiPanel(
   function secretNotice(): string {
     const location = controller.platform.secretLocation?.();
     return location === 'tavern'
-      ? 'API 金鑰另存於酒館擴充設定（隨帳號保存，並以 IndexedDB 備份），不會寫入樓層變量、劇情或匯出檔。'
+      ? 'API 金钥另存于酒馆扩充设定（随帐号保存，并以 IndexedDB 备份），不会写入楼层变量、剧情或汇出档。'
       : location === 'memory'
-        ? '離線測試頁：保存只留在本頁記憶體，重新整理即清除。'
-        : '找不到酒館擴充設定，金鑰暫存於此瀏覽器的 localStorage（未加密）；不寫入樓層變量或劇情。';
+        ? '离线测试页：保存只留在本页记忆体，重新整理即清除。'
+        : '找不到酒馆扩充设定，金钥暂存于此浏览器的 localStorage（未加密）；不写入楼层变量或剧情。';
   }
   function render(): void {
     const field = (key: keyof ApiPreset, label: string, type = 'text', extra = '') =>
@@ -137,28 +137,28 @@ export function mountApiPanel(
     } catch {
       // Keep invalid YAML visible for correction without losing the draft.
     }
-    host.innerHTML = `<h3>API 預設</h3><p class="muted">切換目前聊天的預設；★ 為未指定聊天使用的全域預設。各項任務可另外指定主要與備援連線。修改內容按下方「保存預設」保存，不會關閉視窗；頁尾「儲存設定」也會一併保存。</p>
-      ${legacyStrict.length ? `<p class="notice">舊版設定中「${legacyStrict.map((kind) => taskNames[kind]).join('」「')}」在任務設定開啟了嚴格 JSON。此選項已改到這裡：請在這些任務使用的 API 預設勾選「嚴格 JSON 回應」。儲存設定後不再提示。</p>` : ''}
-      <div class="api-actions"><label class="field api-picker">目前 API 預設<select data-api-select>${original === null ? '<option value="" selected>新增預設（尚未保存）</option>' : ''}${controller.config.apis.map((api) => `<option value="${escape(api.name)}" ${api.name === original ? 'selected' : ''}>${api.name === controller.config.defaultApi ? '★ ' : ''}${escape(api.name)}</option>`).join('')}</select></label><button data-api-action="default" ${original === null ? 'disabled' : ''} title="設為全域預設">${original === controller.config.defaultApi ? '★ 全域預設' : '☆ 設為全域預設'}</button><button data-api-action="new">＋ 新增</button><button data-api-action="delete" ${original === null || controller.config.apis.length === 1 ? 'disabled' : ''}>刪除</button></div>
-      ${pending ? `<div class="api-actions confirm-row"><span>「${escape(savedDraft.name)}」有未儲存的修改。</span><button class="primary" data-api-action="switch-save">儲存後${pending.name === null ? '新增' : '切換'}</button><button class="danger" data-api-action="switch-discard">放棄修改</button><button data-api-action="switch-cancel">取消</button></div>` : ''}
-      ${deletePending ? '<div class="api-actions"><span>刪除此預設？引用它的任務將改為跟隨目前預設。</span><button data-api-action="confirm-delete">確認刪除</button><button data-api-action="cancel-delete">取消</button></div>' : ''}
+    host.innerHTML = `<h3>API 预设</h3><p class="muted">切换目前聊天的预设；★ 为未指定聊天使用的全域预设。各项任务可另外指定主要与备援连线。修改内容按下方「保存预设」保存，不会关闭视窗；页尾「储存设定」也会一并保存。</p>
+      ${legacyStrict.length ? `<p class="notice">旧版设定中「${legacyStrict.map((kind) => taskNames[kind]).join('」「')}」在任务设定开启了严格 JSON。此选项已改到这里：请在这些任务使用的 API 预设勾选「严格 JSON 回应」。储存设定后不再提示。</p>` : ''}
+      <div class="api-actions"><label class="field api-picker">目前 API 预设<select data-api-select>${original === null ? '<option value="" selected>新增预设（尚未保存）</option>' : ''}${controller.config.apis.map((api) => `<option value="${escape(api.name)}" ${api.name === original ? 'selected' : ''}>${api.name === controller.config.defaultApi ? '★ ' : ''}${escape(api.name)}</option>`).join('')}</select></label><button data-api-action="default" ${original === null ? 'disabled' : ''} title="设为全域预设">${original === controller.config.defaultApi ? '★ 全域预设' : '☆ 设为全域预设'}</button><button data-api-action="new">＋ 新增</button><button data-api-action="delete" ${original === null || controller.config.apis.length === 1 ? 'disabled' : ''}>删除</button></div>
+      ${pending ? `<div class="api-actions confirm-row"><span>「${escape(savedDraft.name)}」有未储存的修改。</span><button class="primary" data-api-action="switch-save">储存后${pending.name === null ? '新增' : '切换'}</button><button class="danger" data-api-action="switch-discard">放弃修改</button><button data-api-action="switch-cancel">取消</button></div>` : ''}
+      ${deletePending ? '<div class="api-actions"><span>删除此预设？引用它的任务将改为跟随目前预设。</span><button data-api-action="confirm-delete">确认删除</button><button data-api-action="cancel-delete">取消</button></div>' : ''}
       <div class="form-grid api-editor">
-      ${field('name', '預設名稱')}${field('url', '端點（基礎 URL）', 'url', 'placeholder="https://example.com/v1"')}
-      ${field('apiKey', 'API 金鑰', 'password', 'autocomplete="off"')}${field('proxy', '酒館代理預設名稱（選填）')}
-      ${field('model', '模型名稱（可手動輸入）')}<label class="field">模型列表<select data-api-model ${models.length ? '' : 'disabled'}><option value="">${models.length ? '選擇模型，或保留手動名稱' : '請先載入模型'}</option>${models.map((name) => `<option value="${escape(name)}" ${name === draft.model ? 'selected' : ''}>${escape(name)}</option>`).join('')}</select></label>
-      <div class="wide api-actions"><button data-api-action="models" ${busy ? 'disabled' : ''}>${busy ? '載入中…' : '載入模型'}</button><small>使用上方 URL 與金鑰取得清單；未列出的模型可手動輸入。</small></div>
-      ${field('maxTokens', '最大回覆長度（Token）', 'number', 'min="1" step="1"')}${field('temperature', 'Temperature', 'number', 'min="0" max="2" step="0.05"')}
-      <label class="check wide"><input type="checkbox" data-api-strict ${deep.strict ? 'checked' : ''}>嚴格 JSON 回應<small>要求模型只回傳 JSON：加入 response_format: json_object、strict 後處理，並排除 top_p 與 reasoning_effort。關閉只移除 response_format。需指定 URL；供應商不支援時請關閉。所有使用此預設的任務都套用。</small></label>
-      <div class="wide api-actions"><button data-api-action="deepseek">${deepSeekBefore ? '還原 DeepSeek 套用前設定' : '一鍵 DeepSeek 結構化輸出'}</button><label class="check"><input type="checkbox" data-api-deep="cot" ${deep.cot ? 'checked' : ''}>DeepSeek 開啟 COT</label><small>一鍵套用會開啟嚴格 JSON、關閉 thinking；COT 控制 thinking 與 include_reasoning。</small></div>
-      <label class="field">Prompt 後處理<select data-api-field="customPromptPostProcessing"><option value="none" ${draft.customPromptPostProcessing === 'none' ? 'selected' : ''}>none</option><option value="strict" ${draft.customPromptPostProcessing === 'strict' ? 'selected' : ''}>strict（DeepSeek 建議）</option></select></label>
-      <label class="field">推理強度<select data-api-field="reasoningEffort">${['auto', 'min', 'low', 'medium', 'high', 'max'].map((value) => `<option ${draft.reasoningEffort === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
+      ${field('name', '预设名称')}${field('url', '端点（基础 URL）', 'url', 'placeholder="https://example.com/v1"')}
+      ${field('apiKey', 'API 金钥', 'password', 'autocomplete="off"')}${field('proxy', '酒馆代理预设名称（选填）')}
+      ${field('model', '模型名称（可手动输入）')}<label class="field">模型列表<select data-api-model ${models.length ? '' : 'disabled'}><option value="">${models.length ? '选择模型，或保留手动名称' : '请先载入模型'}</option>${models.map((name) => `<option value="${escape(name)}" ${name === draft.model ? 'selected' : ''}>${escape(name)}</option>`).join('')}</select></label>
+      <div class="wide api-actions"><button data-api-action="models" ${busy ? 'disabled' : ''}>${busy ? '载入中…' : '载入模型'}</button><small>使用上方 URL 与金钥取得清单；未列出的模型可手动输入。</small></div>
+      ${field('maxTokens', '最大回复长度（Token）', 'number', 'min="1" step="1"')}${field('temperature', 'Temperature', 'number', 'min="0" max="2" step="0.05"')}
+      <label class="check wide"><input type="checkbox" data-api-strict ${deep.strict ? 'checked' : ''}>严格 JSON 回应<small>要求模型只回传 JSON：加入 response_format: json_object、strict 后处理，并排除 top_p 与 reasoning_effort。关闭只移除 response_format。需指定 URL；供应商不支援时请关闭。所有使用此预设的任务都套用。</small></label>
+      <div class="wide api-actions"><button data-api-action="deepseek">${deepSeekBefore ? '还原 DeepSeek 套用前设定' : '一键 DeepSeek 结构化输出'}</button><label class="check"><input type="checkbox" data-api-deep="cot" ${deep.cot ? 'checked' : ''}>DeepSeek 开启 COT</label><small>一键套用会开启严格 JSON、关闭 thinking；COT 控制 thinking 与 include_reasoning。</small></div>
+      <label class="field">Prompt 后处理<select data-api-field="customPromptPostProcessing"><option value="none" ${draft.customPromptPostProcessing === 'none' ? 'selected' : ''}>none</option><option value="strict" ${draft.customPromptPostProcessing === 'strict' ? 'selected' : ''}>strict（DeepSeek 建议）</option></select></label>
+      <label class="field">推理强度<select data-api-field="reasoningEffort">${['auto', 'min', 'low', 'medium', 'high', 'max'].map((value) => `<option ${draft.reasoningEffort === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
       <label class="check wide"><input data-api-field="includeReasoning" type="checkbox" ${draft.includeReasoning ? 'checked' : ''}>包含推理（include_reasoning）</label>
-      <label class="check wide"><input data-api-field="stream" type="checkbox" ${draft.stream ? 'checked' : ''}>流式傳輸（stream）<small>邊收邊組合，完成後仍整份驗證。用於有 Cloudflare 約 100 秒限制（錯誤碼 524）或支援假流式的反向代理；一般直連不需要開啟。</small></label>
-      ${textarea('bodyParams', '附加主體參數', 'YAML object，合併到模型請求體。', 'response_format:\n  type: json_object\nthinking:\n  type: disabled')}
-      ${textarea('excludeBodyParams', '排除主體參數', '逗號、換行或 YAML 列表，從請求體移除指定欄位。', 'top_p, reasoning_effort')}
-      ${textarea('requestHeaders', '附加請求標頭', '每行 Header: Value（YAML）；會加入自訂 API 請求。', 'X-Custom-Header: value')}
-      </div><p class="muted">URL、模型與代理皆空白時沿用酒館目前連線。進階參數需指定 URL 與模型。預設輸出 60,000 Token、Temperature 0.85。</p><p class="muted">${secretNotice()}</p>
-      <div class="api-actions api-save"><button data-api-action="discard">放棄修改</button><button class="primary" data-api-action="save">${original === null ? '保存並選用新預設' : '保存預設'}</button><p class="api-status" role="status">${escape(status)}</p></div>`;
+      <label class="check wide"><input data-api-field="stream" type="checkbox" ${draft.stream ? 'checked' : ''}>流式传输（stream）<small>边收边组合，完成后仍整份验证。用于有 Cloudflare 约 100 秒限制（错误码 524）或支援假流式的反向代理；一般直连不需要开启。</small></label>
+      ${textarea('bodyParams', '附加主体参数', 'YAML object，合并到模型请求体。', 'response_format:\n  type: json_object\nthinking:\n  type: disabled')}
+      ${textarea('excludeBodyParams', '排除主体参数', '逗号、换行或 YAML 列表，从请求体移除指定栏位。', 'top_p, reasoning_effort')}
+      ${textarea('requestHeaders', '附加请求标头', '每行 Header: Value（YAML）；会加入自订 API 请求。', 'X-Custom-Header: value')}
+      </div><p class="muted">URL、模型与代理皆空白时沿用酒馆目前连线。进阶参数需指定 URL 与模型。预设输出 60,000 Token、Temperature 0.85。</p><p class="muted">${secretNotice()}</p>
+      <div class="api-actions api-save"><button data-api-action="discard">放弃修改</button><button class="primary" data-api-action="save">${original === null ? '保存并选用新预设' : '保存预设'}</button><p class="api-status" role="status">${escape(status)}</p></div>`;
   }
   const click = (event: Event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-api-action]');
@@ -171,7 +171,7 @@ export function mountApiPanel(
         switch (button.dataset.apiAction) {
           case 'save': {
             const name = draft.name.trim();
-            status = commit() ? `已保存「${name}」。` : '沒有需要保存的修改。';
+            status = commit() ? `已保存「${name}」。` : '没有需要保存的修改。';
             break;
           }
           case 'discard':
@@ -181,7 +181,7 @@ export function mountApiPanel(
             requestVersion++;
             busy = false;
             models = [];
-            status = original === null ? '已取消新增。' : '已放棄尚未保存的修改。';
+            status = original === null ? '已取消新增。' : '已放弃尚未保存的修改。';
             if (original === null) {
               load(currentApiName(controller.config, chatId));
             }
@@ -214,7 +214,7 @@ export function mountApiPanel(
           case 'default': {
             const name = original!;
             save((config) => ({ ...structuredClone(config), defaultApi: name }));
-            status = `已將「${name}」設為全域預設。`;
+            status = `已将「${name}」设为全域预设。`;
             break;
           }
           case 'delete':
@@ -227,7 +227,7 @@ export function mountApiPanel(
             const name = original!;
             save((config) => deleteApiPreset(config, name));
             load(currentApiName(controller.config, chatId));
-            status = 'API 預設已刪除。';
+            status = 'API 预设已删除。';
             break;
           }
           case 'deepseek':
@@ -253,7 +253,7 @@ export function mountApiPanel(
             const version = ++requestVersion;
             const request = structuredClone(draft);
             busy = true;
-            status = '正在載入模型…';
+            status = '正在载入模型…';
             render();
             try {
               const list = await controller.platform.models(request);
@@ -263,12 +263,12 @@ export function mountApiPanel(
               read();
               if (draft.url !== request.url || draft.apiKey !== request.apiKey) {
                 models = [];
-                status = '連線資料已改變，請重新載入模型。';
+                status = '连线资料已改变，请重新载入模型。';
               } else {
                 models = list;
                 status = list.length
-                  ? `已載入 ${list.length} 個模型。`
-                  : '未取得模型清單；請確認端點與憑證，或手動輸入模型。';
+                  ? `已载入 ${list.length} 个模型。`
+                  : '未取得模型清单；请确认端点与凭证，或手动输入模型。';
                 if (!draft.model && list.length) {
                   draft.model = list[0];
                 }
@@ -279,7 +279,7 @@ export function mountApiPanel(
               }
               read();
               models = [];
-              status = `載入模型失敗：${redactApiError(error, [request, draft])}`;
+              status = `载入模型失败：${redactApiError(error, [request, draft])}`;
             }
             busy = false;
             break;

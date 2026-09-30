@@ -1,4 +1,4 @@
-<body>
+<body lang="zh-Hans">
   <style>
     :root {
       --paper: #f1e8d2;
@@ -521,7 +521,7 @@
       white-space: nowrap;
     }
     details.fold:not([open]) > summary .car::after {
-      content: '展開 ▾';
+      content: '展开 ▾';
     }
     details.fold[open] > summary .car::after {
       content: '收起 ▴';
@@ -1056,7 +1056,7 @@
             } else {
               fields.push({ key: board, name: board, text: text(content) });
             }
-            var style = /留言|悬赏|懸賞/.test(board) ? 'ads' : /茶|社交|逸闻|逸聞/.test(board) ? 'tea' : 'k';
+            var style = /留言|悬赏|悬赏/.test(board) ? 'ads' : /茶|社交|逸闻|逸闻/.test(board) ? 'tea' : 'k';
             boards.push({ name: board, style: index === 0 ? 'k' : style, fields: fields });
           });
         }
@@ -1111,12 +1111,12 @@
         var stripHeadline = lead
           ? headlineOf(lead)
           : secrets[0]
-            ? headlineOf(secrets[0]) + '（內部密報）'
+            ? headlineOf(secrets[0]) + '（内部密报）'
             : freshNews[0]
               ? freshNews[0].board.name + '・' + freshNews[0].name + '：' + first(freshNews[0].text)
               : progressed[0]
-                ? headlineOf(progressed[0]) + '：' + (progressed[0].current || '有新進展')
-                : '本樓沒有新消息・進行中事件 ' + serials.length + ' 件';
+                ? headlineOf(progressed[0]) + '：' + (progressed[0].current || '有新进展')
+                : '本楼没有新消息・进行中事件 ' + serials.length + ' 件';
         // An extra edition for public news of an important focus or of world importance.
         var extra = headlines.some(function (event) {
           return (
@@ -1174,15 +1174,15 @@
           return list;
         };
         var glyph = { done: '✓', active: '▶', pending: '○', planned: '◷' };
-        var resultName = { achieved: '已達成', abandoned: '已終止', failed: '已失敗' };
+        var resultName = { achieved: '已达成', abandoned: '已终止', failed: '已失败' };
 
         var html = [];
         html.push(
           '<div class="strip" id="strip">' +
-            (extra ? '<span class="extra">號外</span>' : '') +
-            '<span class="mast">阿斯塔利亞快訊</span>' +
+            (extra ? '<span class="extra">号外</span>' : '') +
+            '<span class="mast">阿斯塔利亚快讯</span>' +
             (bar.time ? '<span class="date">' + esc(bar.time) + '</span>' : '') +
-            (total ? '<span class="cnt">本期 ' + total + ' 則</span>' : '') +
+            (total ? '<span class="cnt">本期 ' + total + ' 则</span>' : '') +
             '<span class="hl">' +
             esc(stripHeadline) +
             '</span>' +
@@ -1207,7 +1207,7 @@
         };
         if (headlines.length) {
           index.push(
-            '<div class="grp"><h6>頭版</h6>' +
+            '<div class="grp"><h6>头版</h6>' +
               headlines
                 .map(function (event, i) {
                   return item('h' + i, headlineOf(event), flags(event), '', true);
@@ -1218,13 +1218,13 @@
         }
         if (secrets.length) {
           index.push(
-            '<div class="grp"><h6>內部密報</h6>' +
+            '<div class="grp"><h6>内部密报</h6>' +
               secrets
                 .map(function (event, i) {
                   return item(
                     's' + i,
                     event.title,
-                    '未公開・' + inside(event).map(nameOf).join('、'),
+                    '未公开・' + inside(event).map(nameOf).join('、'),
                     'secret',
                     true,
                   );
@@ -1235,7 +1235,7 @@
         }
         if (serials.length) {
           index.push(
-            '<div class="grp"><h6>連載追蹤</h6>' +
+            '<div class="grp"><h6>连载追踪</h6>' +
               serials
                 .map(function (event, i) {
                   var list = event.steps || [];
@@ -1246,10 +1246,10 @@
                     'e' + i,
                     event.title + (list.length ? ' ' + done + '/' + list.length : ''),
                     event.touchedAt === floor
-                      ? '本樓有進展'
+                      ? '本楼有进展'
                       : event.status === 'ongoing'
-                        ? '進行中'
-                        : '本樓結束',
+                        ? '进行中'
+                        : '本楼结束',
                     '',
                     event.touchedAt === floor,
                   );
@@ -1260,13 +1260,13 @@
         }
         if (boards.length) {
           index.push(
-            '<div class="grp"><h6>本報各版・本樓更新</h6>' +
+            '<div class="grp"><h6>本报各版・本楼更新</h6>' +
               freshNews
                 .map(function (field) {
                   return item('n-' + field.key, field.name, field.board.name, '', true);
                 })
                 .join('') +
-              item('oldhead', '舊聞 ' + oldCount + ' 欄', '全部版面', '', false) +
+              item('oldhead', '旧闻 ' + oldCount + ' 栏', '全部版面', '', false) +
               '</div>',
           );
         }
@@ -1275,13 +1275,13 @@
             esc(bar.time || '') +
             '</div></div><div class="groups">' +
             index.join('') +
-            '</div><div class="foot"><button class="btn" data-emit="events">事件紀錄</button><button class="btn" data-emit="panel">開啟國策面板</button></div></nav><main class="paper" id="paper">',
+            '</div><div class="foot"><button class="btn" data-emit="events">事件纪录</button><button class="btn" data-emit="panel">开启国策面板</button></div></nav><main class="paper" id="paper">',
         );
         html.push(
           '<div class="top"><span>' +
-            (total ? '本期 ' + total + ' 則' : '本期無新消息') +
-            (secrets.length ? '・內部密報 ' + secrets.length + ' 則' : '') +
-            '</span><span>國策與世界</span></div><div class="masthead">阿斯塔利亞快訊</div><div class="sub"><span>' +
+            (total ? '本期 ' + total + ' 则' : '本期无新消息') +
+            (secrets.length ? '・内部密报 ' + secrets.length + ' 则' : '') +
+            '</span><span>国策与世界</span></div><div class="masthead">阿斯塔利亚快讯</div><div class="sub"><span>' +
             esc(bar.time || '') +
             '</span><span>' +
             esc(
@@ -1302,9 +1302,9 @@
             front +=
               '<article class="lead" id="h0"><div class="kicker">' +
               esc(
-                (lead.importance === 'world' ? '世界新聞' : '各國新聞') +
+                (lead.importance === 'world' ? '世界新闻' : '各国新闻') +
                   (lead.source && lead.source.kind === 'focus' && lead.importance !== 'minor'
-                    ? '・重要國策'
+                    ? '・重要国策'
                     : '') +
                   '・' +
                   flags(lead),
@@ -1324,7 +1324,7 @@
               (lead.current ? '<p>' + esc(lead.current) + '</p>' : '') +
               '</div>' +
               (focus
-                ? '<div class="by">國策：' +
+                ? '<div class="by">国策：' +
                   esc(focus.country.name) +
                   '「' +
                   esc(focus.node.name) +
@@ -1356,7 +1356,7 @@
                   return (
                     '<div class="slip" id="s' +
                     i +
-                    '"><div class="kicker">內部密報・' +
+                    '"><div class="kicker">内部密报・' +
                     esc(inside(event).map(nameOf).join('、')) +
                     '</div><h3>' +
                     esc(headlineOf(event)) +
@@ -1367,7 +1367,7 @@
                       })
                       .join('') +
                     (event.current ? '<p>' + esc(event.current) + '</p>' : '') +
-                    '<span class="stamp">未公開</span></div>'
+                    '<span class="stamp">未公开</span></div>'
                   );
                 })
                 .join('') +
@@ -1380,11 +1380,11 @@
           html.push(
             '<details class="fold" id="f-serials"' +
               (settings.serials ? ' open' : '') +
-              '><summary><span class="t">連載追蹤</span><span class="n">進行中 ' +
+              '><summary><span class="t">连载追踪</span><span class="n">进行中 ' +
               serials.filter(function (event) {
                 return event.status === 'ongoing';
               }).length +
-              ' 件・本樓進展 <b>' +
+              ' 件・本楼进展 <b>' +
               progressed.length +
               '</b></span><span class="car"></span></summary><section class="serials">' +
               serials
@@ -1419,9 +1419,9 @@
                     (event.public ? ' plain' : '') +
                     '">' +
                     esc(
-                      (link ? '國策執行' : '事件') +
+                      (link ? '国策执行' : '事件') +
                         '・' +
-                        (event.public ? '公開' : '未公開') +
+                        (event.public ? '公开' : '未公开') +
                         '・' +
                         flags(event),
                     ) +
@@ -1431,13 +1431,13 @@
                     (planned.length
                       ? '第 ' + done + '／' + planned.length + ' 步'
                       : event.status === 'ongoing'
-                        ? '進行中'
-                        : esc(resultName[event.result] || '已結束')) +
+                        ? '进行中'
+                        : esc(resultName[event.result] || '已结束')) +
                     '</em></h2>' +
                     meter +
                     '<p class="sum"><b>起因</b>' +
                     esc(first(event.description)) +
-                    '<br><b>現況</b>' +
+                    '<br><b>现况</b>' +
                     esc(event.current || (latest ? latest.text : '')) +
                     '</p><ul class="steps">' +
                     list
@@ -1452,7 +1452,7 @@
                           esc(step.text) +
                           '</span>' +
                           (step.when || isNew
-                            ? '<span class="w">' + esc(step.when || '本樓') + '</span>'
+                            ? '<span class="w">' + esc(step.when || '本楼') + '</span>'
                             : '') +
                           '</li>'
                         );
@@ -1460,7 +1460,7 @@
                       .join('') +
                     '</ul>' +
                     (next.length
-                      ? '<div class="ways"><b>可能走向（後續國策）</b>' +
+                      ? '<div class="ways"><b>可能走向（后续国策）</b>' +
                         next
                           .map(function (node) {
                             return (
@@ -1496,9 +1496,9 @@
               '<h4>' +
               esc(item.name) +
               '<span class="tag">' +
-              (isFresh ? '本樓更新' : '舊聞') +
+              (isFresh ? '本楼更新' : '旧闻') +
               '</span></h4>' +
-              (time ? '<time>更新於 ' + esc(time) + '</time>' : '') +
+              (time ? '<time>更新于 ' + esc(time) + '</time>' : '') +
               '<p>' +
               esc(item.text) +
               '</p>' +
@@ -1509,11 +1509,11 @@
           html.push(
             '<details class="fold" id="f-pages"' +
               (settings.pages ? ' open' : '') +
-              '><summary><span class="t">本報各版</span><span class="n">本樓更新 <b>' +
+              '><summary><span class="t">本报各版</span><span class="n">本楼更新 <b>' +
               freshNews.length +
-              '</b>・舊聞 ' +
+              '</b>・旧闻 ' +
               oldCount +
-              '</span><span class="car"></span></summary><div class="bd fresh-head"><b>本期更新</b><i>與上一個 AI 樓層不同的欄位</i></div>' +
+              '</span><span class="car"></span></summary><div class="bd fresh-head"><b>本期更新</b><i>与上一个 AI 楼层不同的栏位</i></div>' +
               (freshNews.length
                 ? '<div class="fresh">' +
                   freshNews
@@ -1522,12 +1522,12 @@
                     })
                     .join('') +
                   '</div>'
-                : '<p class="none">本樓沒有更新的新聞。</p>') +
-              '<div class="oldhead" id="oldhead"><span class="t">舊聞</span><span>' +
+                : '<p class="none">本楼没有更新的新闻。</p>') +
+              '<div class="oldhead" id="oldhead"><span class="t">旧闻</span><span>' +
               oldCount +
-              ' 欄，依角色卡原本的順序</span><span class="sw' +
+              ' 栏，依角色卡原本的顺序</span><span class="sw' +
               (settings.old ? ' on' : '') +
-              '" id="oldsw"><i></i>顯示舊聞</span></div><div class="oldbody' +
+              '" id="oldsw"><i></i>显示旧闻</span></div><div class="oldbody' +
               (settings.old ? '' : ' off') +
               '" id="oldbody">' +
               boards
@@ -1538,9 +1538,9 @@
                   return old.length
                     ? '<div class="bd"><b>' +
                         esc(board.name) +
-                        '</b><i>舊聞 ' +
+                        '</b><i>旧闻 ' +
                         old.length +
-                        ' 欄</i></div><div class="news">' +
+                        ' 栏</i></div><div class="news">' +
                         old
                           .map(function (item) {
                             return field(item, false);
@@ -1554,7 +1554,7 @@
           );
         }
         html.push(
-          '<div class="colophon"><span>本報各版取自角色卡的新聞變量，只讀不改；時間為最後更新的故事時間</span></div></main></div>',
+          '<div class="colophon"><span>本报各版取自角色卡的新闻变量，只读不改；时间为最后更新的故事时间</span></div></main></div>',
         );
         root.innerHTML = html.join('');
         root.hidden = false;
@@ -1570,12 +1570,12 @@
           root.classList.toggle('dark', settings.dark);
           root.style.setProperty('--fz', String(settings.fz));
           document.getElementById('fzv').textContent = Math.round(settings.fz * 100) + '%';
-          document.getElementById('mode').textContent = settings.dark ? '☀ 淺色' : '☾ 深色';
+          document.getElementById('mode').textContent = settings.dark ? '☀ 浅色' : '☾ 深色';
           document.getElementById('toggle').textContent = root.classList.contains('open')
             ? '收起 ▴'
             : quiet
-              ? '翻閱 ▾'
-              : '展開 ▾';
+              ? '翻阅 ▾'
+              : '展开 ▾';
         };
         apply();
         document.getElementById('strip').addEventListener('click', function (event) {
@@ -1744,7 +1744,7 @@
           warned = false;
         } catch (error) {
           if (!warned) {
-            console.warn('[國策報紙] 讀取本樓變量失敗，等待下次更新通知：', error);
+            console.warn('[国策报纸] 读取本楼变量失败，等待下次更新通知：', error);
           }
           warned = true;
         }

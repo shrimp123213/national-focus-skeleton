@@ -16,7 +16,7 @@ function solver(nodes: Node[], capabilitySources = new Map<string, string[][]>()
     while (search.tasks.length) {
       work++;
       if (work > 500000) {
-        throw new Error('路線相容性過於複雜，請簡化交叉互斥與擇一前置後重試');
+        throw new Error('路线相容性过于复杂，请简化交叉互斥与择一前置后重试');
       }
       const task = search.tasks.pop()!;
       if (task.kind === 'choice') {
@@ -92,7 +92,7 @@ export function assertReachable(nodes: Node[], capabilitySources = new Map<strin
   const reach = solver(nodes, capabilitySources);
   for (const node of nodes) {
     if (!reach(node.id)) {
-      throw new Error(`國策無相容的前置或能力來源：${node.id}`);
+      throw new Error(`国策无相容的前置或能力来源：${node.id}`);
     }
   }
 }
@@ -179,7 +179,7 @@ export function assertMutexChoices(nodes: Node[]): void {
   for (const [group, routes] of mutexRoutes(nodes)) {
     if (routes.size < 2) {
       throw new Error(
-        `互斥組 ${group} 只有一條路線（${[...routes.keys()].join('')}），沒有可互斥的對象；請補上其他路線，或移除這些國策的 mutex`,
+        `互斥组 ${group} 只有一条路线（${[...routes.keys()].join('')}），没有可互斥的对象；请补上其他路线，或移除这些国策的 mutex`,
       );
     }
   }

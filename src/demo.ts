@@ -8,12 +8,12 @@ import { makeSampleState, advancePeriodSample, type Scenario } from './demo-peri
 
 export function demoState(): State {
   let state = installCountry(createState(100), demoTree(), 100);
-  state = installCountry(state, demoTree('north', '北境聯邦'), 100);
-  state = installCountry(state, demoTree('coast', '蒼海同盟'), 100);
+  state = installCountry(state, demoTree('north', '北境联邦'), 100);
+  state = installCountry(state, demoTree('coast', '苍海同盟'), 100);
   state.countries.north.control = 'ai';
   state.countries.coast.control = 'ai';
   state = startFocus(state, 'augustium', 'focus_1_1');
-  state = applyProposal(state, { id: 'demo_initial', until: 114, reason: '示範進度', steps: [] });
+  state = applyProposal(state, { id: 'demo_initial', until: 114, reason: '示范进度', steps: [] });
   return state;
 }
 export class DemoPlatform implements Platform {
@@ -22,7 +22,7 @@ export class DemoPlatform implements Platform {
     return 'demo';
   }
   async models(): Promise<string[]> {
-    throw new Error('離線測試頁不連接 API；請在酒館中載入模型。');
+    throw new Error('离线测试页不连接 API；请在酒馆中载入模型。');
   }
   private state = demoState();
   private revision = 0;
@@ -54,7 +54,7 @@ export class DemoPlatform implements Platform {
             {
               message_id: 8,
               role: 'assistant',
-              message: '<think>離線示範思考</think><content>七省聯運計畫的勘查隊抵達帝國邊境。</content>',
+              message: '<think>离线示范思考</think><content>七省联运计划的勘查队抵达帝国边境。</content>',
             },
           ],
           entries: await this.sources(),
@@ -69,7 +69,7 @@ export class DemoPlatform implements Platform {
       turn: 8,
       day: this.state.day,
       state: structuredClone(this.state),
-      context: sources?.context ?? { note: '離線 UI 示範，無 API 連線' },
+      context: sources?.context ?? { note: '离线 UI 示范，无 API 连线' },
       prompts: sources?.prompts,
       sourceReport: sources?.report,
     };
@@ -85,12 +85,12 @@ export class DemoPlatform implements Platform {
   }
   async news(): Promise<void> {
     const at = this.state.day;
-    const base = { at, evidence: '離線示範', changes: [], public: true };
+    const base = { at, evidence: '离线示范', changes: [], public: true };
     this.state = this.publish(
       applyProposal(this.state, {
         id: `demo_news_${this.revision}`,
         until: at,
-        reason: '測試新聞',
+        reason: '测试新闻',
         steps: [
           {
             at,
@@ -101,31 +101,31 @@ export class DemoPlatform implements Platform {
                 ...base,
                 id: `demo_border_${this.revision}`,
                 countries: ['augustium', 'north'],
-                title: '北境關隘的對峙',
-                headline: '北境聯邦封閉雪松關，帝國邊防軍連夜北調',
+                title: '北境关隘的对峙',
+                headline: '北境联邦封闭雪松关，帝国边防军连夜北调',
                 description:
-                  '北境聯邦以越冬物資短缺為由封閉雪松關，禁止帝國商隊通行。帝國邊防軍兩個大隊已向關外集結，雙方都聲稱只是例行防務。',
+                  '北境联邦以越冬物资短缺为由封闭雪松关，禁止帝国商队通行。帝国边防军两个大队已向关外集结，双方都声称只是例行防务。',
                 origin: 'background',
                 scope: 'front',
                 importance: 'major',
                 status: 'ongoing',
-                settle: '任一方撤軍，或雙方簽訂通行協議',
-                option: { label: '讓外交官先去談', text: '示範選項：暫無直接效果。' },
+                settle: '任一方撤军，或双方签订通行协议',
+                option: { label: '让外交官先去谈', text: '示范选项：暂无直接效果。' },
                 changes: [{ country: 'north', effects: [{ id: 'tension', kind: 'warSupport', value: 5 }] }],
               },
               {
                 ...base,
                 id: `demo_tide_${this.revision}`,
                 countries: ['coast'],
-                title: '潮汐異象',
-                headline: '蒼海同盟外海出現異常潮汐，三座港口暫停夜航',
+                title: '潮汐异象',
+                headline: '苍海同盟外海出现异常潮汐，三座港口暂停夜航',
                 description:
-                  '連續三夜的異常潮汐沖毀了燈塔的基座。同盟議會已派船匠前往修繕，商會則開始囤積航運保險。',
+                  '连续三夜的异常潮汐冲毁了灯塔的基座。同盟议会已派船匠前往修缮，商会则开始囤积航运保险。',
                 origin: 'background',
                 scope: 'back',
                 importance: 'world',
                 status: 'resolved',
-                option: { label: '願海神平息怒火', text: '' },
+                option: { label: '愿海神平息怒火', text: '' },
               },
             ],
           },
@@ -138,7 +138,7 @@ export class DemoPlatform implements Platform {
     }
   }
   async generate(..._args: Parameters<Platform['generate']>): Promise<GenerateResult> {
-    throw new Error('此頁為離線 UI 測試。真實國家辨識與 AI 生成請匯入酒館腳本後使用。');
+    throw new Error('此页为离线 UI 测试。真实国家辨识与 AI 生成请汇入酒馆脚本后使用。');
   }
   secretLocation(): string {
     return 'memory';
@@ -146,17 +146,17 @@ export class DemoPlatform implements Platform {
   async sources() {
     return [
       {
-        book: '示範世界書',
+        book: '示范世界书',
         uid: 1,
-        name: '七省與帝國（僅供 UI）',
+        name: '七省与帝国（仅供 UI）',
         enabled: true,
-        content: '示範內容',
+        content: '示范内容',
         strategy: { type: 'constant', keys: [] },
       },
     ];
   }
   async worldbooks() {
-    return { character: ['示範世界書'], all: ['示範世界書'] };
+    return { character: ['示范世界书'], all: ['示范世界书'] };
   }
   loadConfig(): Config {
     return this.config;
@@ -179,7 +179,7 @@ export class DemoPlatform implements Platform {
       applyProposal(this.state, {
         id: `demo_${this.revision}`,
         until: this.state.day + days,
-        reason: '測試頁時間推進',
+        reason: '测试页时间推进',
         steps: [],
       }),
     );
@@ -192,7 +192,7 @@ export class DemoPlatform implements Platform {
     this.state = applyProposal(this.state, {
       id: `demo_event_${this.revision}`,
       until: this.state.day,
-      reason: '測試勘查成果',
+      reason: '测试勘查成果',
       steps: [
         {
           at: this.state.day,
@@ -201,7 +201,7 @@ export class DemoPlatform implements Platform {
               country: 'augustium',
               id: 'survey',
               value: true,
-              evidence: 'UI 測試操作完成勘查',
+              evidence: 'UI 测试操作完成勘查',
               origin: 'story',
             },
           ],

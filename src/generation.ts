@@ -103,7 +103,7 @@ export function assertTurningPoints(
   for (const node of nodes) {
     requireThat(
       node.impact !== 'pivotal' || node.news,
-      `重要國策 ${node.id} 缺少 news（headline、body、option）`,
+      `重要国策 ${node.id} 缺少 news（headline、body、option）`,
     );
   }
 }
@@ -184,7 +184,7 @@ export function normalizeGenerated<
           id: effect.key,
           name: effect.name,
           active: true,
-          reason: `既成國策「${node.name}」的成果`,
+          reason: `既成国策「${node.name}」的成果`,
         });
       }
     }
@@ -231,23 +231,23 @@ export function validateTree(
   const [min, max] = sizeLimits[size];
   {
     const raw = normalizeGenerated(normalizeBranchReferences(reply));
-    requireThat(raw.id === candidate.id, '生成的國家 ID 與選取國家不一致');
+    requireThat(raw.id === candidate.id, '生成的国家 ID 与选取国家不一致');
     requireThat(
       raw.nodes.length >= 1 && raw.nodes.length <= max,
       raw.nodes.length < min
-        ? `生成規模須為 ${min}–${max} 節點，本次只有 ${raw.nodes.length} 項。請依建議分支數與每支項數補足，並精簡每個節點的文字，讓整棵樹能在一次回應內輸出完畢`
-        : `生成規模須為 ${min}–${max} 節點，本次有 ${raw.nodes.length} 項，請合併或刪減`,
+        ? `生成规模须为 ${min}–${max} 节点，本次只有 ${raw.nodes.length} 项。请依建议分支数与每支项数补足，并精简每个节点的文字，让整棵树能在一次回应内输出完毕`
+        : `生成规模须为 ${min}–${max} 节点，本次有 ${raw.nodes.length} 项，请合并或删减`,
     );
     for (const key of ['id', 'name'] as const) {
       requireThat(
         new Set(raw.branches.map((b) => b[key])).size === raw.branches.length,
-        '分支 ID 與名稱不可重複',
+        '分支 ID 与名称不可重复',
       );
     }
     for (const branch of raw.branches) {
       requireThat(
         raw.nodes.some((node) => node.branch === branch.name),
-        `分支「${branch.name}」沒有任何國策`,
+        `分支「${branch.name}」没有任何国策`,
       );
     }
     assertTurningPoints(
@@ -262,11 +262,11 @@ export function validateTree(
           !tree.nodes.some((n) => n.id === relation.from) || !tree.nodes.some((n) => n.id === relation.to),
       )
     ) {
-      throw new Error('關係引用不存在的國策');
+      throw new Error('关系引用不存在的国策');
     }
     requireThat(
       new Set(tree.nodes.map((n) => n.description.trim())).size === tree.nodes.length,
-      '國策描述完全重複',
+      '国策描述完全重复',
     );
     assertCapabilityOrder(
       tree.nodes,
@@ -291,7 +291,7 @@ export async function generateCountry(
   const raw: GeneratedTree = !isSegmented(snapshot.state.settings.size)
     ? await (async () => {
         const plan = generationPlan(snapshot, candidate);
-        return ask('generate', plan.data, plan.schema, plan.validate, '單次生成完整國策樹');
+        return ask('generate', plan.data, plan.schema, plan.validate, '单次生成完整国策树');
       })()
     : await generateBySkeleton(snapshot, candidate, ask, progress, segmentMax, retries);
   const normalized = normalizeGenerated(normalizeBranchReferences(raw));
@@ -385,7 +385,7 @@ export function workingState(state: State, fullDefinitions = false): object {
             timeline: event.timeline.slice(-3),
             ...(state.day - updated >= staleEventDays
               ? {
-                  review: `已 ${Math.floor(state.day - updated)} 天沒有進展：依實際情況推進、結束或說明為何仍停滯`,
+                  review: `已 ${Math.floor(state.day - updated)} 天没有进展：依实际情况推进、结束或说明为何仍停滞`,
                 }
               : {}),
           };
@@ -405,6 +405,6 @@ export function workingState(state: State, fullDefinitions = false): object {
         })),
     },
     instructions:
-      '未列 progress 的節點均 idle。保留所有節點的可執行條件以支援長跳時；未列國家均停用，禁止更新。',
+      '未列 progress 的节点均 idle。保留所有节点的可执行条件以支援长跳时；未列国家均停用，禁止更新。',
   };
 }

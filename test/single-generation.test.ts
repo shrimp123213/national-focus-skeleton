@@ -43,10 +43,10 @@ class SingleCountryPlatform implements Platform {
   /** Leave out turning points to test the feedback. */
   plain = false;
   context = {
-    history: [{ role: 'assistant', content: '本樓正文' }],
-    worldbook: [{ content: '國家設定' }],
-    variables: { 世界: { 時間: 100 } },
-    requirements: '玩家補充要求',
+    history: [{ role: 'assistant', content: '本楼正文' }],
+    worldbook: [{ content: '国家设定' }],
+    variables: { 世界: { 时间: 100 } },
+    requirements: '玩家补充要求',
   };
   constructor() {
     this.state.settings.size = 'standard';
@@ -85,8 +85,8 @@ class SingleCountryPlatform implements Platform {
       name: `分支${i}`,
       purpose: '制度改革',
       supporters: '城市',
-      opposition: '領主',
-      tradeoff: '效率與自治',
+      opposition: '领主',
+      tradeoff: '效率与自治',
       destination: '共同制度',
     }));
     const nodes = branches.flatMap((branch, b) =>
@@ -94,13 +94,13 @@ class SingleCountryPlatform implements Platform {
         const id = `${branch.id}_${i}`;
         return {
           id,
-          name: `國策${id}`,
+          name: `国策${id}`,
           branch: branch.name,
-          description: `${id} 的實施方式及取捨`,
-          reason: '根據設定',
+          description: `${id} 的实施方式及取舍`,
+          reason: '根据设定',
           icon: 'crown',
           days: 35,
-          durationReason: '協商與實施',
+          durationReason: '协商与实施',
           prerequisites:
             i === 0
               ? b === 0
@@ -113,11 +113,11 @@ class SingleCountryPlatform implements Platform {
                   : [[`${branch.id}_${i - 1}`]],
           mutex:
             i === 1 || i === 2
-              ? { group: `choice_${branch.id}`, route: `route${i}`, lock: 'complete', reason: '不同制度選擇' }
+              ? { group: `choice_${branch.id}`, route: `route${i}`, lock: 'complete', reason: '不同制度选择' }
               : null,
           requirements:
             this.invalid === 'capability' && id === 'b0_0'
-              ? [{ kind: 'capability', id: 'cap_b0_1', label: '只有後續國策才提供' }]
+              ? [{ kind: 'capability', id: 'cap_b0_1', label: '只有后续国策才提供' }]
               : [],
           sustain: [],
           outcomes: [],
@@ -126,8 +126,8 @@ class SingleCountryPlatform implements Platform {
           news:
             i === this.nodeCount - 1
               ? {
-                  headline: `${id} 震動鄰國`,
-                  body: '各國重新評估局勢',
+                  headline: `${id} 震动邻国`,
+                  body: '各国重新评估局势',
                   option: { label: '知道了', text: '' },
                 }
               : null,
@@ -143,24 +143,24 @@ class SingleCountryPlatform implements Platform {
     }
     const header = {
       id: p.candidate?.id ?? 'unexpected',
-      name: '試驗國',
+      name: '试验国',
       description: '改革十字路口',
-      evidence: '設定',
-      analysis: '地方自治與集權矛盾',
+      evidence: '设定',
+      analysis: '地方自治与集权矛盾',
       stability: 60,
       warSupport: 30,
       capabilities: [],
     };
     return JSON.stringify({
       id: p.candidate?.id ?? 'unexpected',
-      name: '試驗國',
+      name: '试验国',
       description: '改革十字路口',
-      evidence: '設定',
-      analysis: '地方自治與集權矛盾',
+      evidence: '设定',
+      analysis: '地方自治与集权矛盾',
       stability: 60,
       warSupport: 30,
       capabilities: [],
-      historical: this.historical ? [{ node: 'b0_0', evidence: '已建好，但當年能力已毀' }] : [],
+      historical: this.historical ? [{ node: 'b0_0', evidence: '已建好，但当年能力已毁' }] : [],
       branches,
       nodes,
     });
@@ -182,9 +182,9 @@ class SingleCountryPlatform implements Platform {
   }
   inject() {}
 }
-const candidate = { id: 'testland', name: '試驗國', description: '候選', evidence: '設定' };
+const candidate = { id: 'testland', name: '试验国', description: '候选', evidence: '设定' };
 
-test('每國僅一次 API 取得完整樹，完整來源同時送入並於本機排版後提交', async () => {
+test('每国仅一次 API 取得完整树，完整来源同时送入并于本机排版后提交', async () => {
   const platform = new SingleCountryPlatform();
   const controller = new FocusController(platform);
   await controller.run('generate', candidate);
@@ -203,7 +203,7 @@ test('每國僅一次 API 取得完整樹，完整來源同時送入並於本機
   assert.deepEqual(loaded.countries.testland.progress, country.progress);
 });
 
-test('生成回覆使用分支 ID 或混合名稱時，本機轉換後一次請求即可保存完整樹', async () => {
+test('生成回复使用分支 ID 或混合名称时，本机转换后一次请求即可保存完整树', async () => {
   for (const mixed of [false, true]) {
     const platform = new SingleCountryPlatform();
     const generate = platform.generate.bind(platform);
@@ -240,11 +240,11 @@ test('生成回覆使用分支 ID 或混合名稱時，本機轉換後一次請�
   }
 });
 
-test('不存在、空白或歧義分支仍拒絕保存，錯誤指出具體分支', async () => {
+test('不存在、空白或歧义分支仍拒绝保存，错误指出具体分支', async () => {
   const cases = [
     { kind: 'missing', expected: /b0_0.*不存在.*missing_branch/ },
-    { kind: 'empty', expected: /分支「空分支」沒有任何國策/ },
-    { kind: 'ambiguous', expected: /b0_0.*b0.*多個分支/ },
+    { kind: 'empty', expected: /分支「空分支」没有任何国策/ },
+    { kind: 'ambiguous', expected: /b0_0.*b0.*多个分支/ },
   ];
   for (const item of cases) {
     const platform = new SingleCountryPlatform();
@@ -275,7 +275,7 @@ test('不存在、空白或歧義分支仍拒絕保存，錯誤指出具體分�
   }
 });
 
-test('歷史國策不重新要求當年的能力，也不重發歷史效果', async () => {
+test('历史国策不重新要求当年的能力，也不重发历史效果', async () => {
   const platform = new SingleCountryPlatform();
   platform.historical = true;
   platform.invalid = 'capability';
@@ -287,7 +287,7 @@ test('歷史國策不重新要求當年的能力，也不重發歷史效果', as
   assert.equal(platform.calls.length, 1);
 });
 
-test('取消與結構錯誤均不提交，連線限額 1 時取消後不執行排隊國家', async () => {
+test('取消与结构错误均不提交，连线限额 1 时取消后不执行排队国家', async () => {
   for (const defect of ['route', 'capability', 'reference']) {
     const platform = new SingleCountryPlatform();
     platform.invalid = defect;
@@ -318,7 +318,7 @@ test('取消與結構錯誤均不提交，連線限額 1 時取消後不執行�
   }
 });
 
-test('只有失敗才依既有重試設定再次請求，不追加分支或審查請求', async () => {
+test('只有失败才依既有重试设定再次请求，不追加分支或审查请求', async () => {
   const platform = new SingleCountryPlatform();
   platform.config.jobs.generate.retries = 1;
   platform.failedResponses = 1;
@@ -333,7 +333,7 @@ test('只有失敗才依既有重試設定再次請求，不追加分支或審�
   );
 });
 
-test('每期規模是上限與篇幅目標，不強制重要節點或最低數量', async () => {
+test('每期规模是上限与篇幅目标，不强制重要节点或最低数量', async () => {
   for (const size of ['standard', 'large'] as const) {
     const platform = new SingleCountryPlatform();
     platform.state.settings.size = size;
@@ -348,7 +348,7 @@ test('每期規模是上限與篇幅目標，不強制重要節點或最低數�
   }
 });
 
-test('大型每期單次生成且最多 24 項；超額結果不提交', async () => {
+test('大型每期单次生成且最多 24 项；超额结果不提交', async () => {
   for (const count of [8, 9]) {
     const platform = new SingleCountryPlatform();
     platform.state.settings.size = 'large';

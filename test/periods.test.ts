@@ -13,36 +13,36 @@ const node = (id: string, prerequisites: string[][] = []) =>
   NodeSchema.parse({
     id,
     name: id,
-    branch: '國家議程',
-    description: `${id} 的行動`,
-    reason: '設定',
+    branch: '国家议程',
+    description: `${id} 的行动`,
+    reason: '设定',
     icon: 'crown',
     x: 0,
     y: id === 'old_done' ? 0 : 1,
     days: 30,
-    durationReason: '協商',
+    durationReason: '协商',
     prerequisites,
     requirements: [],
     sustain: [],
     outcomes: [],
-    investments: ['行政人員'],
+    investments: ['行政人员'],
     mutex: null,
     effects: [{ id: 'stability', kind: 'stability', value: 5 }],
   });
 const branch = {
   id: 'agenda',
-  name: '國家議程',
+  name: '国家议程',
   purpose: '改革',
   supporters: '城市',
-  opposition: '領主',
-  tradeoff: '權力',
+  opposition: '领主',
+  tradeoff: '权力',
   destination: '新秩序',
 };
 const tree = TreeSchema.parse({
   id: 'land',
-  name: '試驗國',
-  description: '試驗',
-  evidence: '設定',
+  name: '试验国',
+  description: '试验',
+  evidence: '设定',
   analysis: '本期改革',
   stability: 50,
   warSupport: 30,
@@ -54,22 +54,22 @@ const tree = TreeSchema.parse({
 function fixture(): State {
   let state = installCountry(createState(100), tree, 100);
   state = startFocus(state, 'land', 'old_active');
-  state = applyProposal(state, { id: 'advance', until: 110, reason: '時間推進', steps: [] });
+  state = applyProposal(state, { id: 'advance', until: 110, reason: '时间推进', steps: [] });
   state.countries.land.capabilities.keep = { id: 'keep', name: '既有制度', active: true, reason: '既成' };
   state.countries.land.commitments.promise = '保持互通';
-  state.countries.land.facts.accepted = { value: true, evidence: '已簽約' };
+  state.countries.land.facts.accepted = { value: true, evidence: '已签约' };
   state.events.project = EventSchema.parse({
     id: 'project',
     at: 100,
     countries: ['land'],
     title: '施工',
-    description: '已開工',
-    evidence: '工程紀錄',
+    description: '已开工',
+    evidence: '工程纪录',
     origin: 'background',
     public: true,
     changes: [],
     status: 'ongoing',
-    current: '橋墩施工',
+    current: '桥墩施工',
     source: { kind: 'focus', country: 'land', node: 'old_active' },
   });
   return state;
@@ -77,24 +77,24 @@ function fixture(): State {
 const transition = {
   country: 'land',
   cause: 'completed' as const,
-  reason: '主要制度已確立，轉向落實',
+  reason: '主要制度已确立，转向落实',
   invalidateActive: false,
 };
 function reply(prefix = 'p2_', parent = 'old_active') {
   const { x, y, ...newNode } = node(`${prefix}new`, parent ? [[parent]] : []);
   return PeriodReplySchema.parse({
-    summary: '本期改革確立新制度，施工仍持續。',
+    summary: '本期改革确立新制度，施工仍持续。',
     tree: {
       ...tree,
-      periodTitle: '落實新秩序',
-      agenda: '鞏固已取得的制度',
+      periodTitle: '落实新秩序',
+      agenda: '巩固已取得的制度',
       historical: [],
       nodes: [newNode],
     },
   });
 }
 
-test('換期承接 active 的 ID、投入、工期與效果帳本；往期只存時間摘要', () => {
+test('换期承接 active 的 ID、投入、工期与效果帐本；往期只存时间摘要', () => {
   const before = fixture();
   const after = transitionPeriod(before, transition, reply());
   const country = after.countries.land;
@@ -114,25 +114,25 @@ test('換期承接 active 的 ID、投入、工期與效果帳本；往期只存
   assert.equal(complete.countries.land.stability, 55);
   assert.equal(complete.countries.land.progress.old_active.status, 'completed');
   assert.deepEqual(
-    applyProposal(complete, { id: 'finish', until: 130, reason: '重試', steps: [] }),
+    applyProposal(complete, { id: 'finish', until: 130, reason: '重试', steps: [] }),
     complete,
   );
   assert.equal(before.countries.land.period.number, 1);
 });
 
-test('換期回覆接受分支 ID，保存名稱並保留原承接國策，不改寫輸入', () => {
+test('换期回复接受分支 ID，保存名称并保留原承接国策，不改写输入', () => {
   const state = fixture();
   const next = reply();
   next.tree.nodes[0].branch = 'agenda';
   const original = structuredClone(next);
   const after = transitionPeriod(state, transition, next);
-  assert.equal(after.countries.land.nodes.p2_new.branch, '國家議程');
-  assert.equal(after.countries.land.nodes.old_active.branch, '國家議程');
+  assert.equal(after.countries.land.nodes.p2_new.branch, '国家议程');
+  assert.equal(after.countries.land.nodes.old_active.branch, '国家议程');
   assert.equal(after.countries.land.branches.length, 1);
   assert.deepEqual(next, original);
 });
 
-test('paused、waiting 與失效 active 改承接最新完成；無完成節點則新建起點', () => {
+test('paused、waiting 与失效 active 改承接最新完成；无完成节点则新建起点', () => {
   for (const status of ['paused', 'waiting'] as const) {
     const state = fixture();
     state.countries.land.progress.old_active.status = status;
@@ -151,7 +151,7 @@ test('paused、waiting 與失效 active 改承接最新完成；無完成節點�
   assert.equal(transitionPeriod(state, incompatible, reply('p2_', '')).countries.land.period.anchor, '');
 });
 
-test('跨期事件可繼續結算，事件成果與舊國策不會重發', () => {
+test('跨期事件可继续结算，事件成果与旧国策不会重发', () => {
   let state = transitionPeriod(
     fixture(),
     { ...transition, cause: 'incompatible', invalidateActive: true },
@@ -170,7 +170,7 @@ test('跨期事件可繼續結算，事件成果與舊國策不會重發', () =>
         eventUpdates: [
           {
             id: 'project',
-            text: '橋樑已通車',
+            text: '桥梁已通车',
             result: 'achieved',
             changes: [{ country: 'land', effects: [{ id: 'bridge', kind: 'stability', value: 3 }] }],
           },
@@ -190,7 +190,7 @@ test('跨期事件可繼續結算，事件成果與舊國策不會重發', () =>
   );
 });
 
-test('舊規模轉換；AI 樹預設開啟，匯入缺值關閉，作者明示的設定隨檔案攜帶', () => {
+test('旧规模转换；AI 树预设开启，汇入缺值关闭，作者明示的设定随档案携带', () => {
   for (const [from, to] of [
     ['small', 'standard'],
     ['epic', 'large'],
@@ -213,7 +213,7 @@ test('舊規模轉換；AI 樹預設開啟，匯入缺值關閉，作者明示�
   }
 });
 
-test('非法跨期 ID、循環、缺失前置、重複國策與關閉開關拒絕套用', () => {
+test('非法跨期 ID、循环、缺失前置、重复国策与关闭开关拒绝套用', () => {
   for (const corrupt of [
     (r: ReturnType<typeof reply>) => {
       r.tree.nodes[0].id = 'old_done';
@@ -234,7 +234,7 @@ test('非法跨期 ID、循環、缺失前置、重複國策與關閉開關拒�
   }
   assert.throws(
     () => transitionPeriod(changeCountry(fixture(), 'land', { autoPeriod: false }), transition, reply()),
-    /自動換期/,
+    /自动换期/,
   );
 });
 
@@ -272,7 +272,7 @@ function controllerFor(platform: PeriodPlatform) {
   return controller;
 }
 
-test('局勢更新後直接呼叫一次生成；摘要與新樹原子提交，無批准階段', async () => {
+test('局势更新后直接呼叫一次生成；摘要与新树原子提交，无批准阶段', async () => {
   const platform = new PeriodPlatform();
   platform.outputs.push(
     async () => JSON.stringify(update),
@@ -296,7 +296,7 @@ test('局勢更新後直接呼叫一次生成；摘要與新樹原子提交，�
   assert.deepEqual(platform.data.countries.land, before.countries.land);
 });
 
-test('新期失敗保留原樹與已提交事件，重試只生成該期', async () => {
+test('新期失败保留原树与已提交事件，重试只生成该期', async () => {
   const platform = new PeriodPlatform();
   platform.outputs.push(
     async () => JSON.stringify(update),
@@ -305,7 +305,7 @@ test('新期失敗保留原樹與已提交事件，重試只生成該期', async
   const controller = controllerFor(platform);
   await controller.run('update');
   assert.equal(platform.data.countries.land.period.number, 1);
-  assert.equal(platform.data.events.project.current, '橋墩施工');
+  assert.equal(platform.data.events.project.current, '桥墩施工');
   const failed = controller.jobs[0];
   assert.equal(failed.state, 'failed');
   platform.outputs.push(async () => JSON.stringify(reply()));
@@ -314,14 +314,14 @@ test('新期失敗保留原樹與已提交事件，重試只生成該期', async
   assert.equal(platform.calls, 3);
 });
 
-test('生成中事件與世界資料更新不阻擋換期，關閉換期仍遵守功能開關', async () => {
+test('生成中事件与世界资料更新不阻挡换期，关闭换期仍遵守功能开关', async () => {
   for (const change of ['event', 'story', 'switch']) {
     const platform = new PeriodPlatform();
     platform.outputs.push(
       async () => JSON.stringify(update),
       async () => {
         if (change === 'event') {
-          platform.data.events.project.current = '橋墩完工';
+          platform.data.events.project.current = '桥墩完工';
         }
         if (change === 'story') {
           platform.story = 'new story';
@@ -342,12 +342,12 @@ test('生成中事件與世界資料更新不阻擋換期，關閉換期仍遵�
       controller.jobs[0].message,
     );
     if (change === 'event') {
-      assert.equal(platform.data.events.project.current, '橋墩完工');
+      assert.equal(platform.data.events.project.current, '桥墩完工');
     }
   }
 });
 
-test('關閉換期忽略 AI 的替樹要求，仍接受局勢與事件更新', async () => {
+test('关闭换期忽略 AI 的替树要求，仍接受局势与事件更新', async () => {
   const platform = new PeriodPlatform();
   platform.data.countries.land.autoPeriod = false;
   platform.outputs.push(async () =>
@@ -359,7 +359,7 @@ test('關閉換期忽略 AI 的替樹要求，仍接受局勢與事件更新', a
           facts: [],
           events: [],
           selections: [],
-          eventUpdates: [{ id: 'project', text: '照常施工', current: '已完成橋墩' }],
+          eventUpdates: [{ id: 'project', text: '照常施工', current: '已完成桥墩' }],
         },
       ],
     }),
@@ -368,10 +368,10 @@ test('關閉換期忽略 AI 的替樹要求，仍接受局勢與事件更新', a
   await controller.run('update');
   assert.equal(platform.calls, 1);
   assert.equal(platform.data.countries.land.period.number, 1);
-  assert.equal(platform.data.events.project.current, '已完成橋墩');
+  assert.equal(platform.data.events.project.current, '已完成桥墩');
 });
 
-test('背景只帶最近三期摘要，不帶完整歷史樹', () => {
+test('背景只带最近三期摘要，不带完整历史树', () => {
   const state = fixture();
   state.countries.land.period.history = Array.from({ length: 12 }, (_, i) => ({
     start: i,
@@ -383,7 +383,7 @@ test('背景只帶最近三期摘要，不帶完整歷史樹', () => {
   assert.ok(!prompt.includes('summary-8'));
 });
 
-test('正式離線示範使用相同換期引擎，支援兩種承接及關閉換期', async () => {
+test('正式离线示范使用相同换期引擎，支援两种承接及关闭换期', async () => {
   for (const completed of [false, true]) {
     const demo = new DemoPlatform();
     await demo.periodSample(completed);
@@ -413,7 +413,7 @@ test('正式離線示範使用相同換期引擎，支援兩種承接及關閉�
   }
 });
 
-test('取消換期只丟棄新生成結果，保留已提交的局勢和原樹', async () => {
+test('取消换期只丢弃新生成结果，保留已提交的局势和原树', async () => {
   const platform = new PeriodPlatform();
   platform.outputs.push(
     async () => JSON.stringify(update),
@@ -449,19 +449,19 @@ async function waitForRequests(check: () => boolean): Promise<void> {
     }
     await new Promise((resolve) => setTimeout(resolve, 2));
   }
-  assert.fail('請求未在期限內進入預期狀態');
+  assert.fail('请求未在期限内进入预期状态');
 }
 
 for (const cap of [1, 2, 0]) {
-  test(`多國初次生成依連線上限 ${cap} 並行並保留所有結果`, async () => {
+  test(`多国初次生成依连线上限 ${cap} 并行并保留所有结果`, async () => {
     const platform = new PeriodPlatform();
     const controller = controllerFor(platform);
     controller.config.jobs.generate.primaryMaxConcurrency = cap;
     const candidates = [0, 1, 2].map((i) => ({
       id: `new_${i}`,
-      name: `新國 ${i}`,
-      description: '新國',
-      evidence: '世界書',
+      name: `新国 ${i}`,
+      description: '新国',
+      evidence: '世界书',
     }));
     const releases: (() => void)[] = [];
     let active = 0;
@@ -480,8 +480,8 @@ for (const cap of [1, 2, 0]) {
       const expected = cap || candidates.length;
       await waitForRequests(() => platform.calls === expected);
       await new Promise((resolve) => setTimeout(resolve, 10));
-      assert.equal(platform.calls, expected, '額度滿時其餘國家不得呼叫 API');
-      assert.equal(peak, expected, '依生成任務的連線額度啟動');
+      assert.equal(platform.calls, expected, '额度满时其余国家不得呼叫 API');
+      assert.equal(peak, expected, '依生成任务的连线额度启动');
       releases[0]();
       for (let i = 1; i < candidates.length; i++) {
         await waitForRequests(() => releases.length > i);
@@ -496,7 +496,7 @@ for (const cap of [1, 2, 0]) {
       for (const candidate of candidates) {
         assert.equal(platform.data.countries[candidate.id].name, candidate.name);
       }
-      assert.ok(platform.data.countries.land, '保留原有國家');
+      assert.ok(platform.data.countries.land, '保留原有国家');
     } finally {
       controller.dispose();
       releases.forEach((release) => release());
@@ -505,11 +505,11 @@ for (const cap of [1, 2, 0]) {
   });
 }
 
-test('並行批次單國失敗不阻止其他國家保存；重複國家只送一次', async () => {
+test('并行批次单国失败不阻止其他国家保存；重复国家只送一次', async () => {
   const platform = new PeriodPlatform();
   const controller = controllerFor(platform);
   controller.config.jobs.generate.primaryMaxConcurrency = 2;
-  const candidates = ['bad', 'good'].map((id) => ({ id, name: id, description: id, evidence: '世界書' }));
+  const candidates = ['bad', 'good'].map((id) => ({ id, name: id, description: id, evidence: '世界书' }));
   platform.outputs.push(
     async () => '{invalid',
     async () => JSON.stringify(generatedCountry('good')),
@@ -526,7 +526,7 @@ test('並行批次單國失敗不阻止其他國家保存；重複國家只送�
   }
 });
 
-test('取消並行生成會取消連線排隊，延遲回應不保存', async () => {
+test('取消并行生成会取消连线排队，延迟回应不保存', async () => {
   const platform = new PeriodPlatform();
   const controller = controllerFor(platform);
   controller.config.jobs.generate.primaryMaxConcurrency = 1;
@@ -537,7 +537,7 @@ test('取消並行生成會取消連線排隊，延遲回應不保存', async ()
         release = resolve;
       }),
   );
-  const candidates = ['first', 'second'].map((id) => ({ id, name: id, description: id, evidence: '世界書' }));
+  const candidates = ['first', 'second'].map((id) => ({ id, name: id, description: id, evidence: '世界书' }));
   const work = controller.enable(candidates);
   try {
     await waitForRequests(
@@ -553,7 +553,7 @@ test('取消並行生成會取消連線排隊，延遲回應不保存', async ()
     assert.equal(platform.data.countries.second, undefined);
     platform.outputs.push(async () => JSON.stringify(generatedCountry('first')));
     await controller.enable([candidates[0]]);
-    assert.equal(platform.calls, 2, '取消後連線額度可重用');
+    assert.equal(platform.calls, 2, '取消后连线额度可重用');
     assert.ok(platform.data.countries.first);
   } finally {
     controller.dispose();
@@ -562,12 +562,12 @@ test('取消並行生成會取消連線排隊，延遲回應不保存', async ()
   }
 });
 
-test('多國換期共用生成連線額度並保存各國新期', async () => {
+test('多国换期共用生成连线额度并保存各国新期', async () => {
   const platform = new PeriodPlatform();
   platform.data.countries.peer = {
     ...structuredClone(platform.data.countries.land),
     id: 'peer',
-    name: '鄰國',
+    name: '邻国',
   };
   const controller = controllerFor(platform);
   controller.config.jobs.generate.primaryMaxConcurrency = 2;
@@ -586,7 +586,7 @@ test('多國換期共用生成連線額度並保存各國新期', async () => {
   const work = controller.run('update');
   try {
     await waitForRequests(() => releases.length === 2);
-    assert.equal(platform.calls, 3, '更新一次後同時生成兩國下一期');
+    assert.equal(platform.calls, 3, '更新一次后同时生成两国下一期');
     releases[1]();
     releases[0]();
     await work;

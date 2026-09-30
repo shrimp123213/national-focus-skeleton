@@ -7,10 +7,10 @@ export function normalizeBranchReferences<
       (branch) => branch.name === node.branch || branch.id === node.branch,
     );
     if (!matches.length) {
-      throw new Error(`國策「${node.id}」引用不存在的分支「${node.branch}」，請使用 branches 中的名稱或 ID`);
+      throw new Error(`国策「${node.id}」引用不存在的分支「${node.branch}」，请使用 branches 中的名称或 ID`);
     }
     if (matches.length > 1) {
-      throw new Error(`國策「${node.id}」的分支「${node.branch}」對應多個分支，請使用唯一名稱或 ID`);
+      throw new Error(`国策「${node.id}」的分支「${node.branch}」对应多个分支，请使用唯一名称或 ID`);
     }
     return { ...node, branch: matches[0].name };
   });

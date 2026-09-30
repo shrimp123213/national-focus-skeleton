@@ -34,7 +34,7 @@ try {
     .catch((error) => controller.report(error));
 } catch (error) {
   const message = doc.createElement('div');
-  message.textContent = `國策腳本初始化失敗：${error instanceof Error ? error.message : String(error)}`;
+  message.textContent = `国策脚本初始化失败：${error instanceof Error ? error.message : String(error)}`;
   Object.assign(message.style, {
     position: 'fixed',
     bottom: '20px',

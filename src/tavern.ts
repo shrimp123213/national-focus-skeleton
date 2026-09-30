@@ -126,12 +126,12 @@ export function explainOpaqueError(detail: string): string {
     const code = /Error code (\d{3})/i.exec(detail)?.[1] ?? /\b(52[0-9])\b/.exec(detail)?.[1];
     const title = /<title>([^<]*)<\/title>/i.exec(detail)?.[1]?.trim();
     return code === '524'
-      ? `反向代理逾時（Cloudflare 524：約 100 秒內沒有開始回應）。請在 API 預設開啟「流式傳輸」（代理若有假流式也可開啟），或調低推理強度、每批填寫國策數，或改用沒有此限制的連線${title ? `。代理頁面：${title}` : ''}`
-      : `反向代理回傳錯誤頁（${code ? `錯誤碼 ${code}` : '無錯誤碼'}${title ? `：${title}` : ''}）。這通常是代理或上游服務的問題，請稍後重試或改用其他連線`;
+      ? `反向代理逾时（Cloudflare 524：约 100 秒内没有开始回应）。请在 API 预设开启「流式传输」（代理若有假流式也可开启），或调低推理强度、每批填写国策数，或改用没有此限制的连线${title ? `。代理页面：${title}` : ''}`
+      : `反向代理回传错误页（${code ? `错误码 ${code}` : '无错误码'}${title ? `：${title}` : ''}）。这通常是代理或上游服务的问题，请稍后重试或改用其他连线`;
   }
   const bare = detail.replace(/^(Error:\s*)+/i, '').trim();
   if (!bare || /^(<none>|none|null|undefined|true|Response not OK|Unknown error)$/i.test(bare)) {
-    return `${detail}（API 或反向代理沒有提供原因。常見原因：回應被供應商的安全過濾擋下、思考用完輸出上限而沒有正文、代理逾時或上游斷線。請開啟執行紀錄查看請求，或改用其他連線／降低輸出上限後重試）`;
+    return `${detail}（API 或反向代理没有提供原因。常见原因：回应被供应商的安全过滤挡下、思考用完输出上限而没有正文、代理逾时或上游断线。请开启执行纪录查看请求，或改用其他连线／降低输出上限后重试）`;
   }
   return detail;
 }
@@ -143,10 +143,10 @@ export class TavernPlatform implements Platform {
   }
   async models(api: Config['apis'][number]): Promise<string[]> {
     if (!api.url.trim()) {
-      throw new Error('請先填寫端點（基礎 URL），也可以直接手動輸入模型名稱');
+      throw new Error('请先填写端点（基础 URL），也可以直接手动输入模型名称');
     }
     if (!this.api.getModelList) {
-      throw new Error('目前酒館助手未提供模型載入功能，請更新助手或手動輸入模型名稱');
+      throw new Error('目前酒馆助手未提供模型载入功能，请更新助手或手动输入模型名称');
     }
     try {
       const models = await this.api.getModelList({ apiurl: api.url.trim(), key: api.apiKey || undefined });
@@ -218,7 +218,7 @@ export class TavernPlatform implements Platform {
           }
           await this.annotate(messageId);
         })
-        .catch((error) => console.warn('[國策檔案] 無法更新本樓快訊資料：', error));
+        .catch((error) => console.warn('[国策档案] 无法更新本楼快讯资料：', error));
     });
     for (const name of ['CHAT_CHANGED', 'MESSAGE_SWIPED', 'MESSAGE_DELETED']) {
       listen(api.tavern_events[name], () => {
@@ -320,7 +320,7 @@ export class TavernPlatform implements Platform {
         this.readyIdentity = pending.identity;
         // Publish the newspaper before background tasks collect their input.
         this.annotating = this.annotate()
-          .catch((error) => console.warn('[國策檔案] 無法更新快訊條資料：', error))
+          .catch((error) => console.warn('[国策档案] 无法更新快讯条资料：', error))
           .finally(() => {
             this.annotating = null;
             if (this.disposed || signal.aborted) {
@@ -382,7 +382,7 @@ export class TavernPlatform implements Platform {
           const context = (await template?.prepareContext?.({}, messageId)) ?? {};
           output = await evaluate.call(template, output, context);
         } catch (error) {
-          console.warn('[國策檔案] EJS 模板處理失敗，保留原文：', error);
+          console.warn('[国策档案] EJS 模板处理失败，保留原文：', error);
         }
       }
       return macros(output, source);
@@ -462,22 +462,22 @@ export class TavernPlatform implements Platform {
     signal.throwIfAborted();
     const mvu = this.api.Mvu;
     if (!mvu) {
-      throw new Error('尚未偵測到 MVU，請先啟用 MVU 變數框架');
+      throw new Error('尚未侦测到 MVU，请先启用 MVU 变数框架');
     }
     if (this.generating || this.mvuBusy || mvu.isDuringExtraAnalysis()) {
-      throw new Error('正文或一般 MVU 更新尚未完成，請稍後重試');
+      throw new Error('正文或一般 MVU 更新尚未完成，请稍后重试');
     }
     if (this.pending && !this.readyIdentity) {
-      throw new Error('等待本樓正文完成及 MVU 寫入事件；若已等待過久，請檢查 MVU 工作狀態後重新載入腳本');
+      throw new Error('等待本楼正文完成及 MVU 写入事件；若已等待过久，请检查 MVU 工作状态后重新载入脚本');
     }
     const message = this.current();
     if (!message || message.role !== 'assistant') {
-      throw new Error('請在一則已完成且具有 MVU 變數的 AI 回覆後使用');
+      throw new Error('请在一则已完成且具有 MVU 变数的 AI 回复后使用');
     }
     const identity = this.identity();
     const data = mvu.getMvuData({ type: 'message', message_id: message.message_id });
     if (!data.stat_data) {
-      throw new Error('本樓尚無 MVU stat_data，不能建立另一份聊天存檔替代');
+      throw new Error('本楼尚无 MVU stat_data，不能建立另一份聊天存档替代');
     }
     const rawTime = valueAt(data.stat_data, config.sources.timePath);
     let day: number;
@@ -486,9 +486,9 @@ export class TavernPlatform implements Platform {
     } catch (error) {
       // Name the path and what was there: the usual cause is a card with another time variable.
       const found =
-        rawTime === undefined ? '沒有這個變量' : `讀到「${String(JSON.stringify(rawTime)).slice(0, 60)}」`;
+        rawTime === undefined ? '没有这个变量' : `读到「${String(JSON.stringify(rawTime)).slice(0, 60)}」`;
       throw new Error(
-        `讀不到故事時間（stat_data.${config.sources.timePath}：${found}）。國策進度以故事日計算，所有國策任務暫停；請到「設定 › 世界書與上下文 › 故事時間路徑」修正。${error instanceof Error ? error.message : ''}`,
+        `读不到故事时间（stat_data.${config.sources.timePath}：${found}）。国策进度以故事日计算，所有国策任务暂停；请到「设定 › 世界书与上下文 › 故事时间路径」修正。${error instanceof Error ? error.message : ''}`,
       );
     }
     const saved = data.国策 !== undefined ? data.国策 : data.stat_data.国策;
@@ -547,16 +547,16 @@ export class TavernPlatform implements Platform {
   }
   async commit(snapshot: Snapshot, state: State): Promise<void> {
     if (this.disposed) {
-      throw new Error('腳本已卸載');
+      throw new Error('脚本已卸载');
     }
     snapshot.signal?.throwIfAborted();
     const mvu = this.api.Mvu;
     if (!mvu) {
-      throw new Error('尚未偵測到 MVU');
+      throw new Error('尚未侦测到 MVU');
     }
     const message = this.api.getChatMessages(snapshot.messageId)[0];
     if (!message || message.role !== 'assistant') {
-      throw new Error('目標 AI 樓層不存在');
+      throw new Error('目标 AI 楼层不存在');
     }
     const latest = mvu.getMvuData({ type: 'message', message_id: snapshot.messageId });
     const saved = StateSchema.parse(state);
@@ -673,7 +673,7 @@ export class TavernPlatform implements Platform {
         refresh: 'affected',
       });
     } catch (error) {
-      console.warn('[國策檔案] 無法在正文加入新聞標籤：', error);
+      console.warn('[国策档案] 无法在正文加入新闻标签：', error);
     }
   }
   async generate(
@@ -698,7 +698,7 @@ export class TavernPlatform implements Platform {
           const result = (api.stream ? await readStream(response) : null) ?? extractApiResult(response);
           signal.throwIfAborted();
           if (!result.content) {
-            throw new Error('API 回應沒有文字內容');
+            throw new Error('API 回应没有文字内容');
           }
           return result;
         } catch (error) {
@@ -708,14 +708,14 @@ export class TavernPlatform implements Platform {
           const detail = explainOpaqueError(redactApiError(error, [{ ...api, apiKey: secret }]));
           if (hasAdvancedApi(api)) {
             // Workflow Assistant: structured parameters need the Chat Completion path; never drop them silently.
-            throw new Error(`ChatCompletionService 失敗，進階參數不能回退 generateRaw：${detail}`);
+            throw new Error(`ChatCompletionService 失败，进阶参数不能回退 generateRaw：${detail}`);
           }
-          console.warn('[國策檔案] ChatCompletionService 失敗，回退 generateRaw：', detail);
+          console.warn('[国策档案] ChatCompletionService 失败，回退 generateRaw：', detail);
         }
       }
     }
     if (hasAdvancedApi(api)) {
-      throw new Error('進階 API 參數需要酒館 ChatCompletionService 及明確 URL；未送出省略設定的請求');
+      throw new Error('进阶 API 参数需要酒馆 ChatCompletionService 及明确 URL；未送出省略设定的请求');
     }
     const id = requestId('national_focus');
     const stop = () => this.api.stopGenerationById(id);
@@ -754,7 +754,7 @@ export class TavernPlatform implements Platform {
       });
       signal.throwIfAborted();
       if (typeof result !== 'string') {
-        throw new Error('API 回應不是文字 JSON');
+        throw new Error('API 回应不是文字 JSON');
       }
       return { content: result };
     } catch (error) {
@@ -799,7 +799,7 @@ export class TavernPlatform implements Platform {
     // Older releases used this literal for the implicit default connection.
     if (raw && raw.apiBindings === undefined) {
       for (const job of Object.values(config.jobs)) {
-        if (job.api === '目前連線') {
+        if (job.api === '目前连线' || job.api === '目前連線') {
           job.api = '';
         }
       }
@@ -906,7 +906,7 @@ export class TavernPlatform implements Platform {
         const wanted = view ? bookEntries(view, this.config?.countryEntries !== 'keyword') : [];
         const name = api.getCharWorldbookNames('current').primary?.trim() || null;
         if (!name && wanted.length) {
-          throw new Error('當前角色尚未設定主世界書。請在酒館的角色設定中綁定主世界書；不會自動建立新書。');
+          throw new Error('当前角色尚未设定主世界书。请在酒馆的角色设定中绑定主世界书；不会自动建立新书。');
         }
         const previous = this.writtenBook?.chat === source.chat ? this.writtenBook.name : null;
         if (previous && previous !== name) {
@@ -932,7 +932,7 @@ export class TavernPlatform implements Platform {
         }
         if (reconcileBook(current, wanted) !== null) {
           await api.updateWorldbookWith(name, (entries) => reconcileBook(entries, wanted) ?? entries);
-          console.info('[國策檔案] 已更新角色主世界書條目', name);
+          console.info('[国策档案] 已更新角色主世界书条目', name);
           if (!this.bookCurrent(source)) {
             return;
           }
@@ -951,8 +951,8 @@ export class TavernPlatform implements Platform {
         if (wanted.length && !activeBooks.includes(name)) {
           if (!this.bookWarned) {
             api.toastr?.warning(
-              `條目已寫入「${name}」，但此書未在本聊天啟用。國策資料暫用直接注入；請在酒館中綁定或啟用該書。`,
-              '國策檔案',
+              `条目已写入「${name}」，但此书未在本聊天启用。国策资料暂用直接注入；请在酒馆中绑定或启用该书。`,
+              '国策档案',
             );
           }
           this.bookWarned = true;
@@ -961,12 +961,12 @@ export class TavernPlatform implements Platform {
         this.bookWarned = false;
       })
       .catch((error) => {
-        console.warn('[國策檔案] 角色主世界書條目更新失敗', error);
+        console.warn('[国策档案] 角色主世界书条目更新失败', error);
         if (this.bookCurrent(source) && !this.bookWarned) {
           this.bookWarned = true;
           api.toastr?.warning(
-            `世界書條目更新失敗，國策資料暫用直接注入。${error instanceof Error ? error.message : '詳情見瀏覽器主控台。'}`,
-            '國策檔案',
+            `世界书条目更新失败，国策资料暂用直接注入。${error instanceof Error ? error.message : '详情见浏览器主控台。'}`,
+            '国策档案',
           );
         }
       });

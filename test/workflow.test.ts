@@ -41,10 +41,10 @@ async function finished(controller: FocusController) {
     }
     await tick();
   }
-  assert.fail('工作未於測試期限內完成');
+  assert.fail('工作未于测试期限内完成');
 }
 
-test('不把玩家現在的暫停操作倒填至尚未結算的故事時間', async () => {
+test('不把玩家现在的暂停操作倒填至尚未结算的故事时间', async () => {
   const platform = new ControlledPlatform();
   const controller = new FocusController(platform);
   await controller.initialize();
@@ -57,7 +57,7 @@ test('不把玩家現在的暫停操作倒填至尚未結算的故事時間', as
   controller.dispose();
 });
 
-test('手動任務不為排程讀取存檔，自動任務仍依樓層檢查', async () => {
+test('手动任务不为排程读取存档，自动任务仍依楼层检查', async () => {
   const platform = new ControlledPlatform();
   let reads = 0;
   const read = platform.read.bind(platform);
@@ -89,7 +89,7 @@ test('手動任務不為排程讀取存檔，自動任務仍依樓層檢查', as
   }
 });
 
-test('舊背景任務尚在執行時，新樓完成通知會保留並重新判定排程', async () => {
+test('旧背景任务尚在执行时，新楼完成通知会保留并重新判定排程', async () => {
   const platform = new ControlledPlatform();
   let release!: (value: string) => void;
   platform.outputs.push(
@@ -99,7 +99,7 @@ test('舊背景任務尚在執行時，新樓完成通知會保留並重新判�
       }),
   );
   platform.outputs.push(async () =>
-    JSON.stringify({ id: 'second', until: 121, reason: '下一樓', steps: [] }),
+    JSON.stringify({ id: 'second', until: 121, reason: '下一楼', steps: [] }),
   );
   const controller = new FocusController(platform);
   controller.config.jobs.update.retries = 0;
@@ -109,7 +109,7 @@ test('舊背景任務尚在執行時，新樓完成通知會保留並重新判�
   platform.day = 121;
   platform.turn = 9;
   platform.ready();
-  release(JSON.stringify({ id: 'first', until: 114, reason: '舊樓', steps: [] }));
+  release(JSON.stringify({ id: 'first', until: 114, reason: '旧楼', steps: [] }));
   await finished(controller);
   assert.equal(platform.requests, 2);
   assert.equal((await platform.read()).state.day, 121);
@@ -118,11 +118,11 @@ test('舊背景任務尚在執行時，新樓完成通知會保留並重新判�
   controller.dispose();
 });
 
-test('格式失敗重試後才提交，取消逾時請求也不寫入提案', async () => {
+test('格式失败重试后才提交，取消逾时请求也不写入提案', async () => {
   const platform = new ControlledPlatform();
   platform.outputs.push(async () => 'not json');
   platform.outputs.push(async () =>
-    JSON.stringify({ id: 'valid', until: 114, reason: '有效回應', steps: [] }),
+    JSON.stringify({ id: 'valid', until: 114, reason: '有效回应', steps: [] }),
   );
   const controller = new FocusController(platform);
   await controller.initialize();
@@ -140,25 +140,25 @@ test('格式失敗重試後才提交，取消逾時請求也不寫入提案', as
   controller.dispose();
 });
 
-test('主連線失敗使用備援，不同任務可並行且可個別取消', async () => {
+test('主连线失败使用备援，不同任务可并行且可个别取消', async () => {
   const platform = new ControlledPlatform();
   platform.outputs.push(async () => {
     throw new Error('API unavailable');
   });
   platform.outputs.push(async () =>
-    JSON.stringify({ id: 'fallback', until: 114, reason: '備援', steps: [] }),
+    JSON.stringify({ id: 'fallback', until: 114, reason: '备援', steps: [] }),
   );
   const controller = new FocusController(platform);
   controller.config.apis.push({
     ...controller.config.apis[0],
-    name: '備援',
+    name: '备援',
     url: '',
     model: '',
     proxy: '',
     maxTokens: 16384,
     temperature: 0.7,
   });
-  controller.config.jobs.update.fallback = ['備援'];
+  controller.config.jobs.update.fallback = ['备援'];
   controller.config.jobs.update.retries = 0;
   controller.config.sources.maxInputCharacters = 200000;
   try {
@@ -175,7 +175,7 @@ test('主連線失敗使用備援，不同任務可並行且可個別取消', as
     const parallel = controller.run('reshape');
     await tick();
     assert.equal(controller.jobs[0].state, 'running');
-    assert.equal(platform.requests, 4, '更新及改樹請求可同時執行');
+    assert.equal(platform.requests, 4, '更新及改树请求可同时执行');
     controller.cancel(controller.jobs[0].id);
     await parallel;
     assert.equal(controller.jobs[0].state, 'cancelled');
@@ -186,11 +186,11 @@ test('主連線失敗使用備援，不同任務可並行且可個別取消', as
   }
 });
 
-test('卸載後清除尚未處理的新樓通知，不讓舊腳本再次呼叫 API', async () => {
+test('卸载后清除尚未处理的新楼通知，不让旧脚本再次呼叫 API', async () => {
   const platform = new ControlledPlatform();
   platform.outputs.push(() => new Promise(() => {}));
   platform.outputs.push(async () =>
-    JSON.stringify({ id: 'late', until: 114, reason: '不應執行', steps: [] }),
+    JSON.stringify({ id: 'late', until: 114, reason: '不应执行', steps: [] }),
   );
   const controller = new FocusController(platform);
   await controller.initialize();
@@ -202,16 +202,16 @@ test('卸載後清除尚未處理的新樓通知，不讓舊腳本再次呼叫 A
   assert.equal(platform.requests, 1);
 });
 
-test('完整請求超限時零 API 呼叫，不重試或切備援，也不提交狀態', async () => {
+test('完整请求超限时零 API 呼叫，不重试或切备援，也不提交状态', async () => {
   class OversizedPlatform extends ControlledPlatform {
     override async read() {
-      return { ...(await super.read()), context: { worldbook: '大型來源'.repeat(175000) } };
+      return { ...(await super.read()), context: { worldbook: '大型来源'.repeat(175000) } };
     }
   }
   const platform = new OversizedPlatform();
   const controller = new FocusController(platform);
-  controller.config.apis.push({ ...controller.config.apis[0], name: '備援' });
-  controller.config.jobs.update.fallback = ['備援'];
+  controller.config.apis.push({ ...controller.config.apis[0], name: '备援' });
+  controller.config.jobs.update.fallback = ['备援'];
   controller.config.jobs.update.retries = 2;
   try {
     await controller.initialize();
@@ -219,7 +219,7 @@ test('完整請求超限時零 API 呼叫，不重試或切備援，也不提交
     await controller.run('update');
     assert.equal(platform.requests, 0);
     assert.equal(controller.jobs[0].state, 'failed');
-    assert.match(controller.jobs[0].message, /輸入過大/);
+    assert.match(controller.jobs[0].message, /输入过大/);
     assert.ok(controller.jobs[0].inputCharacters! > 700000);
     assert.deepEqual((await platform.read()).state, before);
   } finally {
@@ -227,7 +227,7 @@ test('完整請求超限時零 API 呼叫，不重試或切備援，也不提交
   }
 });
 
-test('同一任務重複點擊不額外排隊或呼叫 API，完成後仍能手動重跑', async () => {
+test('同一任务重复点击不额外排队或呼叫 API，完成后仍能手动重跑', async () => {
   const platform = new ControlledPlatform();
   let release!: (value: string) => void;
   platform.outputs.push(
@@ -243,7 +243,7 @@ test('同一任務重複點擊不額外排隊或呼叫 API，完成後仍能手�
     await controller.run('update');
     assert.equal(platform.requests, 1);
     assert.equal(controller.jobs.length, 1);
-    release(JSON.stringify({ id: 'once', until: 114, reason: '手動更新', steps: [] }));
+    release(JSON.stringify({ id: 'once', until: 114, reason: '手动更新', steps: [] }));
     await first;
     platform.outputs.push(async () => JSON.stringify({ id: 'again', until: 114, reason: '重跑', steps: [] }));
     await controller.run('update');
@@ -254,7 +254,7 @@ test('同一任務重複點擊不額外排隊或呼叫 API，完成後仍能手�
   }
 });
 
-test('正文生命週期取消正在生成的工作，供應商遲到回應也不提交', async () => {
+test('正文生命周期取消正在生成的工作，供应商迟到回应也不提交', async () => {
   const platform = new ControlledPlatform();
   let release!: (value: string) => void;
   platform.outputs.push(
@@ -270,7 +270,7 @@ test('正文生命週期取消正在生成的工作，供應商遲到回應也�
     await tick();
     platform.sourceRun.abort();
     await pending;
-    release(JSON.stringify({ id: 'late', until: 114, reason: '遲到回應', steps: [] }));
+    release(JSON.stringify({ id: 'late', until: 114, reason: '迟到回应', steps: [] }));
     await tick();
     assert.equal(controller.jobs[0].state, 'cancelled');
     assert.deepEqual((await platform.read()).state, before);
@@ -279,7 +279,7 @@ test('正文生命週期取消正在生成的工作，供應商遲到回應也�
   }
 });
 
-test('背景生成期間的玩家操作保留，回應套用到最新國策而不比對來源', async () => {
+test('背景生成期间的玩家操作保留，回应套用到最新国策而不比对来源', async () => {
   const platform = new ControlledPlatform();
   let release!: (value: string) => void;
   platform.outputs.push(
@@ -293,7 +293,7 @@ test('背景生成期間的玩家操作保留，回應套用到最新國策而�
     const pending = controller.run('update');
     await tick();
     await controller.mutate((state) => pauseFocus(state, 'augustium'));
-    release(JSON.stringify({ id: 'latest', until: 114, reason: '更新局勢', steps: [] }));
+    release(JSON.stringify({ id: 'latest', until: 114, reason: '更新局势', steps: [] }));
     await pending;
     assert.equal(controller.jobs[0].state, 'success');
     assert.equal((await platform.read()).state.countries.augustium.progress.focus_1_1.status, 'paused');
@@ -303,7 +303,7 @@ test('背景生成期間的玩家操作保留，回應套用到最新國策而�
   }
 });
 
-test('舊總並行上限被忽略，不同任務並行後依序保存且保留所有結果', async () => {
+test('旧总并行上限被忽略，不同任务并行后依序保存且保留所有结果', async () => {
   const platform = new ControlledPlatform();
   const releases: ((value: string) => void)[] = [];
   platform.outputs.push(
@@ -334,7 +334,7 @@ test('舊總並行上限被忽略，不同任務並行後依序保存且保留�
     }
     assert.equal(releases.length, 2, JSON.stringify(controller.jobs));
     releases[0](JSON.stringify({ id: 'parallel_a', until: 114, reason: '更新', steps: [] }));
-    releases[1](JSON.stringify({ id: 'parallel_b', until: 114, reason: '改樹', steps: [] }));
+    releases[1](JSON.stringify({ id: 'parallel_b', until: 114, reason: '改树', steps: [] }));
     await Promise.all([first, second]);
     assert.ok(
       controller.jobs.every((job) => job.state === 'success'),

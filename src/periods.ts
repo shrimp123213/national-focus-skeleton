@@ -33,10 +33,10 @@ export function periodAnchor(country: Country, invalidateActive = false): string
 export function checkTransition(state: State, transition: Transition): void {
   const country = state.countries[transition.country];
   if (!country?.enabled || !country.autoPeriod || country.calibration) {
-    throw new Error('此國未啟用自動換期，或尚待校準');
+    throw new Error('此国未启用自动换期，或尚待校准');
   }
   if (transition.invalidateActive && transition.cause !== 'incompatible') {
-    throw new Error('只有局勢不適配可停止承接進行中國策');
+    throw new Error('只有局势不适配可停止承接进行中国策');
   }
 }
 
@@ -49,24 +49,24 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   const prefix = `p${number}_`;
   const generated = normalizeBranchReferences(reply.tree);
   if (generated.id !== old.id) {
-    throw new Error('下一期國家 ID 不一致');
+    throw new Error('下一期国家 ID 不一致');
   }
   if (generated.historical.length) {
-    throw new Error('新一期不得生成已完成國策；承接節點由程式保留');
+    throw new Error('新一期不得生成已完成国策；承接节点由程式保留');
   }
   if (generated.nodes.length + Number(Boolean(anchor)) > sizeLimits[input.settings.size][1]) {
-    throw new Error('新一期超過所選規模上限（包含承接節點）');
+    throw new Error('新一期超过所选规模上限（包含承接节点）');
   }
   const oldGroups = new Set(Object.values(old.nodes).flatMap((n) => (n.mutex ? [n.mutex.group] : [])));
   const nodes = generated.nodes.map((node) => {
     if (!node.id.startsWith(prefix) || old.nodes[node.id]) {
-      throw new Error(`新國策 ID 必須使用 ${prefix} 前綴，且不可重用舊 ID`);
+      throw new Error(`新国策 ID 必须使用 ${prefix} 前缀，且不可重用旧 ID`);
     }
     if (node.mutex && (!node.mutex.group.startsWith(prefix) || oldGroups.has(node.mutex.group))) {
-      throw new Error(`新互斥組必須使用 ${prefix} 前綴`);
+      throw new Error(`新互斥组必须使用 ${prefix} 前缀`);
     }
     if (node.impact === 'pivotal' && !node.news) {
-      throw new Error(`重要國策 ${node.id} 缺少新聞`);
+      throw new Error(`重要国策 ${node.id} 缺少新闻`);
     }
     return node;
   });
@@ -75,7 +75,7 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
     new Set(generated.branches.map((b) => b.name)).size !== generated.branches.length ||
     nodes.some((n) => !generated.branches.some((b) => b.name === n.branch))
   ) {
-    throw new Error('新期分支不可重複，節點必須屬於已定義分支');
+    throw new Error('新期分支不可重复，节点必须属于已定义分支');
   }
   if (anchor) {
     // The old routes are no longer choices. Preserve work/effects, not obsolete graph edges.
@@ -89,7 +89,7 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
     }
   }
   if (new Set(branches.map((b) => b.id)).size !== branches.length) {
-    throw new Error('新分支 ID 與承接分支衝突');
+    throw new Error('新分支 ID 与承接分支冲突');
   }
   validateTopology(nodes, input.settings.size);
   const tree = TreeSchema.parse({
@@ -107,7 +107,7 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   );
   const ids = new Set(tree.nodes.map((n) => n.id));
   if (tree.relations?.some((r) => !ids.has(r.from) || !ids.has(r.to))) {
-    throw new Error('新期關係引用不存在的節點');
+    throw new Error('新期关系引用不存在的节点');
   }
   const base = structuredClone(input);
   delete base.countries[old.id];

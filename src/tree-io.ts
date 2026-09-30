@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { installCountry, removeCountry } from './engine';
+import { HISTORY_PREFIX, isHistoricalEvidence, installCountry, removeCountry } from './engine';
 import { layoutTree } from './layout';
 import { CountrySchema, StateSchema, TreeSchema, type Country, type FocusNode, type State } from './model';
 import { assertCapabilityOrder, assertMutexChoices, assertReachable } from './reachability';
@@ -28,8 +28,6 @@ const StatusSchema = CountrySchema.pick({
   facts: true,
 }).partial();
 export type TreeImport = { tree: Tree; status?: z.output<typeof StatusSchema>; eventCount: number };
-
-const HISTORY = '歷史承接：';
 
 /** Definition of a country as a tree file entry; x/y are omitted because import lays out again. */
 export function countryTree(country: Country): Record<string, unknown> {
@@ -68,13 +66,13 @@ export function countryTree(country: Country): Record<string, unknown> {
       .filter(
         ([id, progress]) =>
           progress.status === 'completed' &&
-          (progress.evidence.startsWith(HISTORY) || id === completedAnchor),
+          (isHistoricalEvidence(progress.evidence) || id === completedAnchor),
       )
       .map(([node, progress]) => ({
         node,
-        evidence: progress.evidence.startsWith(HISTORY)
-          ? progress.evidence.slice(HISTORY.length)
-          : progress.evidence || '前期已完成的承接國策',
+        evidence: isHistoricalEvidence(progress.evidence)
+          ? progress.evidence.slice(HISTORY_PREFIX.length)
+          : progress.evidence || '前期已完成的承接国策',
       })),
     nodes: Object.values(country.nodes).map(({ x: _x, y: _y, ...node }) => node),
   };
@@ -83,7 +81,7 @@ export function countryTree(country: Country): Record<string, unknown> {
 export function exportTrees(state: State, ids?: string[]): string {
   const countries = Object.values(state.countries).filter((country) => !ids || ids.includes(country.id));
   if (!countries.length) {
-    throw new Error('沒有可匯出的國策樹');
+    throw new Error('没有可汇出的国策树');
   }
   return JSON.stringify(
     {
@@ -128,7 +126,7 @@ function issuesText(error: z.ZodError, nodes: unknown[] = []): string {
         head === 'nodes' && typeof index === 'number' ? (nodes[index] as { id?: unknown }) : undefined;
       const where =
         node && typeof node.id === 'string'
-          ? `國策 ${node.id}（nodes.${String(index)}）${rest.length ? `的 ${rest.map(String).join('.')}` : ''}`
+          ? `国策 ${node.id}（nodes.${String(index)}）${rest.length ? `的 ${rest.map(String).join('.')}` : ''}`
           : issue.path.map(String).join('.') || '（根）';
       return `${where}：${issue.message}`;
     })
@@ -138,7 +136,7 @@ function issuesText(error: z.ZodError, nodes: unknown[] = []): string {
 /** Fill the fields a hand-written tree may leave out; required story text stays required. */
 function withDefaults(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new Error('國策樹必須是 JSON 物件');
+    throw new Error('国策树必须是 JSON 物件');
   }
   const repaired = repairReply(raw) as Record<string, unknown>;
   const nodes = Array.isArray(repaired.nodes) ? repaired.nodes : [];
@@ -146,7 +144,7 @@ function withDefaults(raw: unknown): Record<string, unknown> {
     description: repaired.name,
     stability: 50,
     warSupport: 50,
-    evidence: '匯入的國策樹',
+    evidence: '汇入的国策树',
     analysis: '',
     branches: [],
     capabilities: [],
@@ -158,8 +156,8 @@ function withDefaults(raw: unknown): Record<string, unknown> {
       delete node.y;
       return {
         icon: 'crown',
-        reason: '匯入的國策',
-        durationReason: '依匯入設定',
+        reason: '汇入的国策',
+        durationReason: '依汇入设定',
         ...node,
       };
     }),
@@ -175,14 +173,14 @@ export function parseTree(raw: unknown): Tree {
       return layoutTree(nodes as unknown as FocusNode[]);
     } catch (error) {
       throw new Error(
-        `國策樹「${String(input.name ?? input.id ?? '')}」：${error instanceof Error ? error.message : error}`,
+        `国策树「${String(input.name ?? input.id ?? '')}」：${error instanceof Error ? error.message : error}`,
       );
     }
   })();
   const result = TreeSchema.safeParse({ ...input, nodes: laid });
   if (!result.success) {
     throw new Error(
-      `國策樹「${String(input.name ?? input.id ?? '')}」格式有誤：\n${issuesText(result.error, nodes)}`,
+      `国策树「${String(input.name ?? input.id ?? '')}」格式有误：\n${issuesText(result.error, nodes)}`,
     );
   }
   const tree = result.data;
@@ -190,22 +188,22 @@ export function parseTree(raw: unknown): Tree {
     const ids = new Set(tree.nodes.map((node) => node.id));
     for (const item of tree.historical) {
       if (!ids.has(item.node)) {
-        throw new Error(`historical 引用不存在的國策：${item.node}`);
+        throw new Error(`historical 引用不存在的国策：${item.node}`);
       }
     }
     for (const branch of tree.branches) {
       if (!tree.nodes.some((node) => node.branch === branch.name)) {
-        throw new Error(`分支「${branch.name}」沒有任何國策`);
+        throw new Error(`分支「${branch.name}」没有任何国策`);
       }
     }
     for (const relation of tree.relations ?? []) {
       if (!ids.has(relation.from) || !ids.has(relation.to)) {
-        throw new Error(`關係 ${relation.from} → ${relation.to} 引用不存在的國策`);
+        throw new Error(`关系 ${relation.from} → ${relation.to} 引用不存在的国策`);
       }
     }
     for (const node of tree.nodes) {
       if (node.impact === 'pivotal' && !node.news) {
-        throw new Error(`重要國策 ${node.id} 缺少 news（headline、body、option）`);
+        throw new Error(`重要国策 ${node.id} 缺少 news（headline、body、option）`);
       }
     }
     assertMutexChoices(tree.nodes);
@@ -216,7 +214,7 @@ export function parseTree(raw: unknown): Tree {
       tree.historical.map((item) => item.node),
     );
   } catch (error) {
-    throw new Error(`國策樹「${tree.name}」無法遊玩：${error instanceof Error ? error.message : error}`);
+    throw new Error(`国策树「${tree.name}」无法游玩：${error instanceof Error ? error.message : error}`);
   }
   return tree;
 }
@@ -224,10 +222,10 @@ export function parseTree(raw: unknown): Tree {
 /** Accept a tree file, an export entry, a bare tree or a list of trees. */
 export function parseTreeFile(raw: unknown): TreeImport[] {
   if (Array.isArray((raw as { tasks?: unknown })?.tasks)) {
-    throw new Error('這是工作流助手的預設檔，不是國策樹檔案。');
+    throw new Error('这是工作流助手的预设档，不是国策树档案。');
   }
   if ((raw as { kind?: unknown })?.kind === 'national-focus-task-presets') {
-    throw new Error('這是任務預設檔，請到「設定 → 任務 → 任務預設」匯入。');
+    throw new Error('这是任务预设档，请到「设定 → 任务 → 任务预设」汇入。');
   }
   const list: unknown[] =
     (raw as { kind?: unknown })?.kind === TREE_FILE_KIND
@@ -236,7 +234,7 @@ export function parseTreeFile(raw: unknown): TreeImport[] {
         ? raw
         : [raw];
   if (!list.length) {
-    throw new Error('檔案中沒有國策樹');
+    throw new Error('档案中没有国策树');
   }
   const entries = list.map((item) => {
     const entry = item as { tree?: unknown; status?: unknown; events?: unknown };
@@ -245,7 +243,7 @@ export function parseTreeFile(raw: unknown): TreeImport[] {
     if (entry && typeof entry === 'object' && entry.status !== undefined) {
       const parsed = StatusSchema.safeParse(entry.status);
       if (!parsed.success) {
-        throw new Error(`國策樹「${tree.name}」的進度資料有誤：\n${issuesText(parsed.error)}`);
+        throw new Error(`国策树「${tree.name}」的进度资料有误：\n${issuesText(parsed.error)}`);
       }
       status = parsed.data;
     }
@@ -254,7 +252,7 @@ export function parseTreeFile(raw: unknown): TreeImport[] {
   const ids = entries.map((entry) => entry.tree.id);
   const duplicate = ids.find((id, index) => ids.indexOf(id) !== index);
   if (duplicate) {
-    throw new Error(`檔案中有兩棵 id 相同的國策樹：${duplicate}`);
+    throw new Error(`档案中有两棵 id 相同的国策树：${duplicate}`);
   }
   return entries;
 }
@@ -273,7 +271,7 @@ export function importTrees(
     const id = entry.tree.id;
     if (state.countries[id]) {
       if (!options.replace) {
-        throw new Error(`國家 ${id}（${state.countries[id].name}）已存在；勾選「取代同 id 的國家」才能匯入`);
+        throw new Error(`国家 ${id}（${state.countries[id].name}）已存在；勾选「取代同 id 的国家」才能汇入`);
       }
       state = removeCountry(state, id);
     }
@@ -309,8 +307,8 @@ export function treeTemplate(): string {
     id,
     name,
     branch,
-    description: `${name}：寫出具體行動、受益者與受損者。`,
-    reason: '設定依據或設計理由',
+    description: `${name}：写出具体行动、受益者与受损者。`,
+    reason: '设定依据或设计理由',
     icon: 'crown',
     days: 35,
     durationReason: '工期理由',
@@ -318,7 +316,7 @@ export function treeTemplate(): string {
     requirements: [],
     sustain: [],
     outcomes: [],
-    investments: ['投入的人力或物資'],
+    investments: ['投入的人力或物资'],
     effects: [],
     mutex: null,
     ...extra,
@@ -327,7 +325,7 @@ export function treeTemplate(): string {
     group: 'reform_path',
     route: id,
     lock: 'complete',
-    reason: '兩種改革方向只能擇一',
+    reason: '两种改革方向只能择一',
   });
   return JSON.stringify(
     {
@@ -337,50 +335,50 @@ export function treeTemplate(): string {
         {
           tree: {
             id: 'example_realm',
-            name: '範例王國',
-            description: '示範國策樹的所有欄位；複製後改寫即可。',
+            name: '范例王国',
+            description: '示范国策树的所有栏位；复制后改写即可。',
             stability: 55,
             warSupport: 40,
-            evidence: '玩家自訂',
-            analysis: '核心矛盾：王權與地方貴族。',
+            evidence: '玩家自订',
+            analysis: '核心矛盾：王权与地方贵族。',
             branches: [
               {
                 id: 'crown',
-                name: '王權與貴族',
-                purpose: '決定權力歸屬',
-                supporters: '王室與城市',
-                opposition: '地方貴族',
-                tradeoff: '效率與穩定',
-                destination: '新的權力平衡',
+                name: '王权与贵族',
+                purpose: '决定权力归属',
+                supporters: '王室与城市',
+                opposition: '地方贵族',
+                tradeoff: '效率与稳定',
+                destination: '新的权力平衡',
               },
             ],
-            capabilities: [{ id: 'royal_guard', name: '王室近衛', active: true, reason: '開局即有' }],
+            capabilities: [{ id: 'royal_guard', name: '王室近卫', active: true, reason: '开局即有' }],
             historical: [],
             nodes: [
-              node('census', '全國戶籍普查', '王權與貴族', [], {
+              node('census', '全国户籍普查', '王权与贵族', [], {
                 effects: [
-                  { id: 'gain', kind: 'capability', key: 'census_data', name: '戶籍資料', active: true },
+                  { id: 'gain', kind: 'capability', key: 'census_data', name: '户籍资料', active: true },
                 ],
               }),
-              node('royal_tax', '王室直轄稅', '王權與貴族', [['census']], {
+              node('royal_tax', '王室直辖税', '王权与贵族', [['census']], {
                 mutex: route('centralize'),
-                requirements: [{ kind: 'capability', id: 'census_data', label: '需要戶籍資料' }],
+                requirements: [{ kind: 'capability', id: 'census_data', label: '需要户籍资料' }],
                 effects: [{ id: 'stab', kind: 'stability', value: -5 }],
               }),
-              node('noble_charter', '貴族特許狀', '王權與貴族', [['census']], {
+              node('noble_charter', '贵族特许状', '王权与贵族', [['census']], {
                 mutex: route('charter'),
                 effects: [{ id: 'stab', kind: 'stability', value: 5 }],
               }),
-              node('new_order', '新秩序', '王權與貴族', [['royal_tax', 'noble_charter']], {
+              node('new_order', '新秩序', '王权与贵族', [['royal_tax', 'noble_charter']], {
                 icon: 'diplomacy',
                 days: 60,
-                outcomes: [{ kind: 'fact', id: 'estates_agree', label: '三級會議同意' }],
+                outcomes: [{ kind: 'fact', id: 'estates_agree', label: '三级会议同意' }],
                 // A turning point: completing it publishes this news (a single option).
                 impact: 'pivotal',
                 news: {
-                  headline: '範例王國召開三級會議，宣布新秩序',
-                  body: '鄰國使節連夜回報：王國的權力格局已經改寫。',
-                  option: { label: '新的時代開始了', text: '' },
+                  headline: '范例王国召开三级会议，宣布新秩序',
+                  body: '邻国使节连夜回报：王国的权力格局已经改写。',
+                  option: { label: '新的时代开始了', text: '' },
                 },
               }),
             ],

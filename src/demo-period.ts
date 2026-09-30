@@ -27,7 +27,7 @@ const icons: Record<string, FocusNode['icon']> = {
 
 function branchFor(id: string): string {
   if (['A03', 'A04', 'A08', 'A09', 'B07', 'B10', 'C03', 'C07', 'C10'].includes(id)) {
-    return '糧運與民生';
+    return '粮运与民生';
   }
   if (
     [
@@ -48,9 +48,9 @@ function branchFor(id: string): string {
       'C09',
     ].includes(id)
   ) {
-    return '對外安排';
+    return '对外安排';
   }
-  return '國家議程';
+  return '国家议程';
 }
 
 function makeNodes(rows: FixtureNode[]): FocusNode[] {
@@ -63,21 +63,21 @@ function makeNodes(rows: FixtureNode[]): FocusNode[] {
         name: raw.title,
         branch: branchFor(raw.id),
         description: raw.description,
-        reason: '分期 UI 樣品的虛構劇情，非世界書既有事實。',
+        reason: '分期 UI 样品的虚构剧情，非世界书既有事实。',
         icon: icons[raw.icon],
         x: 0,
         y: 0,
         days: raw.id === 'A04' ? 30 : 21,
-        durationReason: '樣品用協商與行政工期；正式生成仍依世界情境決定。',
+        durationReason: '样品用协商与行政工期；正式生成仍依世界情境决定。',
         prerequisites: raw.requires,
         requirements: [],
         sustain: [],
         outcomes: raw.condition ? [{ kind: 'fact', id: `outcome_${raw.id}`, label: raw.condition }] : [],
-        investments: ['協商、行政與執行人力'],
+        investments: ['协商、行政与执行人力'],
         effects: [
           { id: 'policy', kind: 'capability', key: `policy_${raw.id}`, name: raw.effect, active: true },
         ],
-        mutex: other ? { group, route: raw.id, lock: 'start', reason: '採取不同的國家政策安排' } : null,
+        mutex: other ? { group, route: raw.id, lock: 'start', reason: '采取不同的国家政策安排' } : null,
         impact: 'normal',
         execution: 'once',
         news: null,
@@ -90,12 +90,12 @@ function treeDefinition(rows: FixtureNode[], name: string) {
   const nodes = makeNodes(rows);
   return {
     id: countryId,
-    name: '奧古斯提姆帝國',
+    name: '奥古斯提姆帝国',
     description: name,
     stability: 68,
     warSupport: 42,
-    evidence: '分期 UI 樣品',
-    analysis: '以最新議程承接國家發展。',
+    evidence: '分期 UI 样品',
+    analysis: '以最新议程承接国家发展。',
     relations: [],
     capabilities: [],
     historical: [],
@@ -104,35 +104,35 @@ function treeDefinition(rows: FixtureNode[], name: string) {
       id: `agenda_${index}`,
       name: branch,
       purpose: `本期的${branch}安排`,
-      supporters: '相關行政部門與利益群體',
-      opposition: '資源分配及權責爭議',
-      tradeoff: '政策收益伴隨新的責任與成本',
-      destination: '建立當期可執行的安排',
+      supporters: '相关行政部门与利益群体',
+      opposition: '资源分配及权责争议',
+      tradeoff: '政策收益伴随新的责任与成本',
+      destination: '建立当期可执行的安排',
     })),
   };
 }
 
 export function makeSampleState(scenario: Scenario): State {
   const sample = fixtures[scenario];
-  const definition = treeDefinition(sample.first, '北境的帳，帝國的糧');
+  const definition = treeDefinition(sample.first, '北境的帐，帝国的粮');
   const completed = sample.first.filter((n) => n.status === 'done');
   let state = installCountry(
     createState(100),
     {
       ...definition,
-      historical: completed.map((n) => ({ node: n.id, evidence: '樣品已發生的政策成果' })),
+      historical: completed.map((n) => ({ node: n.id, evidence: '样品已发生的政策成果' })),
       capabilities: completed.map((n) => ({
         id: `policy_${n.id}`,
         name: n.effect,
         active: true,
-        reason: '樣品既有成果',
+        reason: '样品既有成果',
       })),
     },
     100,
   );
   const country = state.countries[countryId];
-  country.periodTitle = '北境的帳，帝國的糧';
-  country.agenda = '處理北境信用爭議，同時保障民生糧運。';
+  country.periodTitle = '北境的帐，帝国的粮';
+  country.agenda = '处理北境信用争议，同时保障民生粮运。';
   country.period.started = 70;
   completed.forEach((row, index) => {
     country.progress[row.id].completed = 80 + index;
@@ -145,8 +145,8 @@ export function makeSampleState(scenario: Scenario): State {
         status: 'active',
         days: 18,
         started: 82,
-        investments: ['已投入港務協調人力'],
-        evidence: '港口與糧倉名冊已核定，內陸配額協調中。',
+        investments: ['已投入港务协调人力'],
+        evidence: '港口与粮仓名册已核定，内陆配额协调中。',
       };
     }
   }
@@ -158,14 +158,14 @@ export function makeSampleState(scenario: Scenario): State {
     title: event.title,
     description: event.description,
     current: event.description,
-    evidence: '樣品事件紀錄',
+    evidence: '样品事件纪录',
     origin: 'story',
     public: true,
     changes: [],
     scope: 'front',
     importance: 'major',
     status: 'ongoing',
-    settle: '依實際局勢確認運作成果',
+    settle: '依实际局势确认运作成果',
     steps: event.steps.map((text, i) => ({ text, state: i === 0 ? 'done' : i === 1 ? 'active' : 'pending' })),
     timeline: [{ at: 100, text: event.description }],
     source: { kind: 'update', country: countryId, node: scenario === 'crisis' ? 'A04' : 'A05' },
@@ -179,7 +179,7 @@ export function advancePeriodSample(input: State, scenario: Scenario): State {
   const state = structuredClone(input);
   const country = state.countries[countryId];
   if (!country) {
-    throw new Error('請先載入分期示範');
+    throw new Error('请先载入分期示范');
   }
   const sample = fixtures[scenario];
   const event = state.events[sample.events[0].id];
@@ -193,7 +193,7 @@ export function advancePeriodSample(input: State, scenario: Scenario): State {
   const anchor = periodAnchor(country);
   const expected = scenario === 'crisis' ? 'A04' : 'A12';
   if (anchor !== expected) {
-    throw new Error('已改變示範路線，請重新載入分期示範');
+    throw new Error('已改变示范路线，请重新载入分期示范');
   }
   const definition = treeDefinition(sample.second, '下一期');
   const prefix = `p${country.period.number + 1}_`;
@@ -210,7 +210,7 @@ export function advancePeriodSample(input: State, scenario: Scenario): State {
     {
       country: countryId,
       cause: scenario === 'crisis' ? 'incompatible' : 'completed',
-      reason: '離線示範：局勢或主要議程已改變',
+      reason: '离线示范：局势或主要议程已改变',
       invalidateActive: false,
     },
     PeriodReplySchema.parse({
@@ -218,8 +218,8 @@ export function advancePeriodSample(input: State, scenario: Scenario): State {
       tree: {
         ...definition,
         nodes,
-        periodTitle: scenario === 'crisis' ? '災厄越過國境' : '秩序之後的遠見',
-        agenda: scenario === 'crisis' ? '跨國協作應對災害' : '鞏固新秩序與對外關係',
+        periodTitle: scenario === 'crisis' ? '灾厄越过国境' : '秩序之后的远见',
+        agenda: scenario === 'crisis' ? '跨国协作应对灾害' : '巩固新秩序与对外关系',
       },
     }),
   );

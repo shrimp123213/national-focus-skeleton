@@ -24,34 +24,34 @@ const escape = (value: unknown): string =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 export const taskNames: Record<JobKind, string> = {
-  identify: '辨識國家',
-  generate: '生成國策樹',
-  update: '局勢更新',
-  reshape: '重大改樹',
+  identify: '辨识国家',
+  generate: '生成国策树',
+  update: '局势更新',
+  reshape: '重大改树',
 };
 const taskHints: Record<JobKind, string> = {
-  identify: '從世界書與正文列出候選國家。手動執行。',
-  generate: '為勾選的國家生成國策樹，全部通過驗證才保存。',
-  update: '正文完成後依排程推進各國局勢、選策與事件。',
-  reshape: '劇情大幅改變時修改尚未開始的國策。',
+  identify: '从世界书与正文列出候选国家。手动执行。',
+  generate: '为勾选的国家生成国策树，全部通过验证才保存。',
+  update: '正文完成后依排程推进各国局势、选策与事件。',
+  reshape: '剧情大幅改变时修改尚未开始的国策。',
 };
 const kindLabels: Record<PromptItem['kind'], string> = {
-  guide: '內建',
-  task: '內建',
-  data: '資料',
-  custom: '自訂',
+  guide: '内建',
+  task: '内建',
+  data: '资料',
+  custom: '自订',
 };
 const selectedAttr = (value: boolean) => (value ? 'selected' : '');
-/** The settings window links the task editor to the 世界書與上下文 tab through these. */
+/** The settings window links the task editor to the 世界书与上下文 tab through these. */
 export type TaskSourceHooks = {
   /** Switch a task between the default sources and its own copy. */
   setMode(kind: JobKind, key: 'worldbook' | 'context', custom: boolean): void;
-  /** Open the 世界書與上下文 tab on this task's own settings. */
+  /** Open the 世界书与上下文 tab on this task's own settings. */
   edit(kind: JobKind): void;
 };
 
 /**
- * The 任務 settings tab, after Workflow Assistant: task presets at the top, one editor per
+ * The 任务 settings tab, after Workflow Assistant: task presets at the top, one editor per
  * task with API routing, run settings and an ordered, editable prompt chain.
  */
 export function mountTaskPanel(
@@ -87,12 +87,12 @@ export function mountTaskPanel(
     );
     const saved = controller.state?.schedules[kind];
     const text = running
-      ? '執行中'
+      ? '执行中'
       : job
-        ? `上次：${job.state === 'success' ? '成功' : job.state === 'failed' ? '失敗' : '已取消'} · ${job.time}`
+        ? `上次：${job.state === 'success' ? '成功' : job.state === 'failed' ? '失败' : '已取消'} · ${job.time}`
         : saved
-          ? `上次成功：第 ${saved.turn} 則正文 · 故事日 ${Math.floor(saved.day)}`
-          : '尚未執行';
+          ? `上次成功：第 ${saved.turn} 则正文 · 故事日 ${Math.floor(saved.day)}`
+          : '尚未执行';
     return `<small class="last-run">${escape(text)}</small>`;
   }
   const promptCount = (items: PromptItem[]) =>
@@ -103,25 +103,25 @@ export function mountTaskPanel(
     const text = promptText(item, kind);
     const modified = isModified(item);
     const badge =
-      item.kind === 'custom' ? '自訂' : modified ? `${kindLabels[item.kind]}·已修改` : kindLabels[item.kind];
+      item.kind === 'custom' ? '自订' : modified ? `${kindLabels[item.kind]}·已修改` : kindLabels[item.kind];
     return `<div class="prompt-card ${item.enabled || item.kind === 'data' ? '' : 'off'} ${open ? 'open' : ''}" data-prompt-row data-id="${escape(item.id)}" data-kind="${item.kind}">
       <div class="prompt-head"><button class="prompt-toggle" data-task-action="toggle" aria-expanded="${open}"><span class="chev">▸</span><span class="pname">${escape(item.name || '未命名段')}</span><span class="role-tag">${item.role}</span><span class="kind-tag ${item.kind} ${modified ? 'modified' : ''}">${badge}</span><span class="pchars">${text.length.toLocaleString()} 字</span></button>
-      <label class="switch" title="${item.kind === 'data' ? '任務資料必須送出' : '啟用本段'}"><input type="checkbox" data-p="enabled" ${item.enabled || item.kind === 'data' ? 'checked' : ''} ${item.kind === 'data' ? 'disabled' : ''}><span>啟用</span></label>
+      <label class="switch" title="${item.kind === 'data' ? '任务资料必须送出' : '启用本段'}"><input type="checkbox" data-p="enabled" ${item.enabled || item.kind === 'data' ? 'checked' : ''} ${item.kind === 'data' ? 'disabled' : ''}><span>启用</span></label>
       <button class="icon" data-task-action="up" ${index === 0 ? 'disabled' : ''} aria-label="上移" title="上移">↑</button><button class="icon" data-task-action="down" ${index === count - 1 ? 'disabled' : ''} aria-label="下移" title="下移">↓</button></div>
-      <div class="prompt-body" ${open ? '' : 'hidden'}><div class="prompt-fields"><input data-p="name" value="${escape(item.name)}" placeholder="段落名稱" aria-label="段落名稱"><select data-p="role" aria-label="角色">${options(
+      <div class="prompt-body" ${open ? '' : 'hidden'}><div class="prompt-fields"><input data-p="name" value="${escape(item.name)}" placeholder="段落名称" aria-label="段落名称"><select data-p="role" aria-label="角色">${options(
         [
           ['system', 'system'],
           ['user', 'user'],
           ['assistant', 'assistant'],
         ],
         item.role,
-      )}</select>${modified ? '<button data-task-action="restore">還原預設內容</button>' : ''}${item.kind === 'custom' ? '<button class="danger" data-task-action="delete">刪除</button>' : ''}</div>
-      <textarea data-p="content" rows="${Math.min(18, Math.max(4, text.split('\n').length + 1))}" aria-label="段落內容">${escape(text)}</textarea>
+      )}</select>${modified ? '<button data-task-action="restore">还原预设内容</button>' : ''}${item.kind === 'custom' ? '<button class="danger" data-task-action="delete">删除</button>' : ''}</div>
+      <textarea data-p="content" rows="${Math.min(18, Math.max(4, text.split('\n').length + 1))}" aria-label="段落内容">${escape(text)}</textarea>
       </div></div>`;
   }
 
   function generationNote(): string {
-    return '<p class="muted wide">分期版每國一次生成當期內容，換期時同次產生新樹與舊期摘要。每期規模在「一般」設定；本任務的 API、重試與逾時也用於換期。</p>';
+    return '<p class="muted wide">分期版每国一次生成当期内容，换期时同次产生新树与旧期摘要。每期规模在「一般」设定；本任务的 API、重试与逾时也用于换期。</p>';
   }
   /** Compare the recommended model with the primary connection's model. */
   function modelNote(kind: JobKind, config: Config): string {
@@ -132,7 +132,7 @@ export function mountTaskPanel(
     const name = job.api || currentApiName(config, controller.platform.chatId());
     const model = config.apis.find((api) => api.name === name)?.model ?? '';
     const same = Boolean(model) && model.toLowerCase().includes(job.recommendedModel.toLowerCase());
-    return `<small class="block-note ${same ? '' : 'model-hint'}">建議模型：${escape(job.recommendedModel)}；${model ? `主要連線「${escape(name)}」目前是 ${escape(model)}。` : `主要連線「${escape(name)}」沿用酒館目前的模型，請自行確認。`}</small>`;
+    return `<small class="block-note ${same ? '' : 'model-hint'}">建议模型：${escape(job.recommendedModel)}；${model ? `主要连线「${escape(name)}」目前是 ${escape(model)}。` : `主要连线「${escape(name)}」沿用酒馆目前的模型，请自行确认。`}</small>`;
   }
   function sourcesBlock(kind: JobKind, config: Config): string {
     if (!hooks) {
@@ -142,71 +142,71 @@ export function mountTaskPanel(
     const mode = (key: 'worldbook' | 'context') =>
       `<select data-source-mode="${key}">${options(
         [
-          ['inherit', '沿用預設'],
-          ['custom', '此任務自訂'],
+          ['inherit', '沿用预设'],
+          ['custom', '此任务自订'],
         ],
         override?.[key] ? 'custom' : 'inherit',
       )}</select>`;
     const custom = Boolean(override?.worldbook || override?.context);
-    return `<details class="task-block" open><summary>世界書與上下文</summary><div class="source-modes"><label class="field">劇情世界書與條目${mode('worldbook')}</label><label class="field">上下文與提取規則${mode('context')}</label><button data-task-action="edit-sources">${custom ? '編輯此任務的設定' : '檢視預設設定'}</button></div><small class="block-note">改成「此任務自訂」時，會先複製目前的預設，再到「世界書與上下文」分頁修改；改回「沿用預設」會刪除此任務的自訂設定。</small></details>`;
+    return `<details class="task-block" open><summary>世界书与上下文</summary><div class="source-modes"><label class="field">剧情世界书与条目${mode('worldbook')}</label><label class="field">上下文与提取规则${mode('context')}</label><button data-task-action="edit-sources">${custom ? '编辑此任务的设定' : '检视预设设定'}</button></div><small class="block-note">改成「此任务自订」时，会先复制目前的预设，再到「世界书与上下文」分页修改；改回「沿用预设」会删除此任务的自订设定。</small></details>`;
   }
 
   function editor(kind: JobKind, config: Config): string {
     const job = config.jobs[kind];
     const apis: [string, string][] = [
-      ['', '跟隨目前聊天預設'],
+      ['', '跟随目前聊天预设'],
       ...config.apis.map((a) => [a.name, a.name] as [string, string]),
     ];
     const fallbackRows = job.fallback
       .map(
         (name, index) =>
-          `<div class="route-row" data-fb-row><label class="field">備援 ${index + 1}<select data-fb-name>${options(
+          `<div class="route-row" data-fb-row><label class="field">备援 ${index + 1}<select data-fb-name>${options(
             config.apis.map((a) => [a.name, a.name] as [string, string]),
             name,
-          )}</select></label><label class="field cap">此連線同時請求數<input type="number" min="0" max="16" data-fb-cap value="${job.fallbackMaxConcurrencies[index] ?? 0}"></label><button class="danger" data-task-action="fb-del" data-index="${index}">刪除</button></div>`,
+          )}</select></label><label class="field cap">此连线同时请求数<input type="number" min="0" max="16" data-fb-cap value="${job.fallbackMaxConcurrencies[index] ?? 0}"></label><button class="danger" data-task-action="fb-del" data-index="${index}">删除</button></div>`,
       )
       .join('');
     return `<section class="task-editor" data-task-editor="${kind}" ${kind === selected ? '' : 'hidden'}>
-      <div class="task-head"><h3>${taskNames[kind]}</h3><small>${taskHints[kind]}</small><span class="spacer"></span>${lastRun(kind)}${kind === 'generate' ? '' : `<button data-task-action="run-now" title="用目前儲存的設定立即執行一次">立即執行</button>`}</div>
+      <div class="task-head"><h3>${taskNames[kind]}</h3><small>${taskHints[kind]}</small><span class="spacer"></span>${lastRun(kind)}${kind === 'generate' ? '' : `<button data-task-action="run-now" title="用目前储存的设定立即执行一次">立即执行</button>`}</div>
       <details class="task-block" open><summary>API 路由</summary>
-        <div class="route-row"><label class="field">主要連線<select data-t="api">${options(apis, job.api)}</select></label><label class="field cap">此連線同時請求數<input type="number" min="0" max="16" data-t="primaryMaxConcurrency" value="${job.primaryMaxConcurrency}"></label></div>
+        <div class="route-row"><label class="field">主要连线<select data-t="api">${options(apis, job.api)}</select></label><label class="field cap">此连线同时请求数<input type="number" min="0" max="16" data-t="primaryMaxConcurrency" value="${job.primaryMaxConcurrency}"></label></div>
         <div data-fallbacks>${fallbackRows}</div>
-        <button data-task-action="fb-add" ${config.apis.length ? '' : 'disabled'}>＋ 新增備援</button>
-        <small class="block-note">失敗時依序改用備援。「此連線同時請求數」只限制這項任務在該連線上同時送出的請求，0 為不限；主要連線滿載時直接改用有空位的備援。各任務只受自己的路由額度限制，沒有所有任務合計的並行上限。</small>
+        <button data-task-action="fb-add" ${config.apis.length ? '' : 'disabled'}>＋ 新增备援</button>
+        <small class="block-note">失败时依序改用备援。「此连线同时请求数」只限制这项任务在该连线上同时送出的请求，0 为不限；主要连线满载时直接改用有空位的备援。各任务只受自己的路由额度限制，没有所有任务合计的并行上限。</small>
         <div data-model-note>${modelNote(kind, config)}</div>
       </details>
-      <details class="task-block" open><summary>執行設定</summary><div class="form-grid">
+      <details class="task-block" open><summary>执行设定</summary><div class="form-grid">
         ${
           kind === 'generate'
-            ? '<div class="field"><span>觸發方式</span><p class="static">在「管理國家」勾選國家並按「生成並啟用」時執行。</p></div>'
-            : `<label class="field">觸發方式<select data-t="schedule">${options(
+            ? '<div class="field"><span>触发方式</span><p class="static">在「管理国家」勾选国家并按「生成并启用」时执行。</p></div>'
+            : `<label class="field">触发方式<select data-t="schedule">${options(
                 [
-                  ['reply', '每則正文完成後'],
-                  ['rounds', '每 N 則正文'],
+                  ['reply', '每则正文完成后'],
+                  ['rounds', '每 N 则正文'],
                   ['days', '每 N 故事日'],
-                  ['manual', '只手動執行'],
+                  ['manual', '只手动执行'],
                 ],
                 job.schedule,
               )}</select></label>`
         }
-        <label class="field" data-interval ${kind !== 'generate' && ['rounds', 'days'].includes(job.schedule) ? '' : 'hidden'}>${job.schedule === 'days' ? '間隔（故事日）' : '間隔（則正文）'}<input type="number" min="1" max="1000" data-t="interval" value="${job.interval}"></label>
-        <small class="wide" data-days-note ${kind !== 'generate' && job.schedule === 'days' ? '' : 'hidden'}>故事日取自「世界書與上下文 › 故事時間路徑」。讀不到時間時，國策進度無法計算，所有任務（包括此項）都不執行，面板顯示原因與路徑；時間恢復後，下一則正文照常判斷間隔。</small>
+        <label class="field" data-interval ${kind !== 'generate' && ['rounds', 'days'].includes(job.schedule) ? '' : 'hidden'}>${job.schedule === 'days' ? '间隔（故事日）' : '间隔（则正文）'}<input type="number" min="1" max="1000" data-t="interval" value="${job.interval}"></label>
+        <small class="wide" data-days-note ${kind !== 'generate' && job.schedule === 'days' ? '' : 'hidden'}>故事日取自「世界书与上下文 › 故事时间路径」。读不到时间时，国策进度无法计算，所有任务（包括此项）都不执行，面板显示原因与路径；时间恢复后，下一则正文照常判断间隔。</small>
         ${kind === 'generate' ? generationNote() : ''}
-        <label class="field">每條連線重試次數<input type="number" min="0" max="10" data-t="retries" value="${job.retries}"><small>失敗原因會回饋給模型再試（0–10）。</small></label>
-        <label class="field">逾時秒數<input type="number" min="10" max="600" data-t="timeout" value="${job.timeout}"></label>
-        <label class="field wide">建議模型<input data-t="recommendedModel" maxlength="200" value="${escape(job.recommendedModel)}" placeholder="例如 deepseek-chat；只是備註，不影響連線"><small>隨任務預設保存，分享預設時讓對方知道這組提示詞適合哪個模型。</small></label>
+        <label class="field">每条连线重试次数<input type="number" min="0" max="10" data-t="retries" value="${job.retries}"><small>失败原因会回馈给模型再试（0–10）。</small></label>
+        <label class="field">逾时秒数<input type="number" min="10" max="600" data-t="timeout" value="${job.timeout}"></label>
+        <label class="field wide">建议模型<input data-t="recommendedModel" maxlength="200" value="${escape(job.recommendedModel)}" placeholder="例如 deepseek-chat；只是备注，不影响连线"><small>随任务预设保存，分享预设时让对方知道这组提示词适合哪个模型。</small></label>
       </div></details>
       ${sourcesBlock(kind, config)}
-      <section class="task-block prompts-block"><div class="prompt-toolbar"><h4>提示詞串</h4><small>${promptCount(job.prompts)}</small><span class="spacer"></span><button data-task-action="expand-all">全部展開</button><button data-task-action="collapse-all">全部收合</button><button data-task-action="preview">預覽完整提示詞串</button></div>
-        <p class="muted">依順序送出。內建段改動後不再跟隨新版預設，按「還原預設內容」或清空即可恢復；「任務資料」的 {{data}} 會換成本次任務的 JSON，不能停用。自訂段可以使用下方的佔位符與酒館巨集。</p>
-        <details class="legend"><summary>佔位符說明</summary><ul>${Object.entries(placeholders)
+      <section class="task-block prompts-block"><div class="prompt-toolbar"><h4>提示词串</h4><small>${promptCount(job.prompts)}</small><span class="spacer"></span><button data-task-action="expand-all">全部展开</button><button data-task-action="collapse-all">全部收合</button><button data-task-action="preview">预览完整提示词串</button></div>
+        <p class="muted">依顺序送出。内建段改动后不再跟随新版预设，按「还原预设内容」或清空即可恢复；「任务资料」的 {{data}} 会换成本次任务的 JSON，不能停用。自订段可以使用下方的占位符与酒馆巨集。</p>
+        <details class="legend"><summary>占位符说明</summary><ul>${Object.entries(placeholders)
           .map(([code, label]) => `<li><code>${code}</code> ${label}</li>`)
           .join(
             '',
-          )}</ul><p class="muted">$1 以 &lt;worldbook_context&gt; 包裹、$2 以 &lt;worldbook_extra&gt; 包裹；$7 為提取後 AI 正文。先替換佔位符，再執行酒館巨集、正則與 EJS。$2／$5／$U／$C 在「世界書與上下文」未開啟時，只在提示詞段使用時讀取。</p></details>
+          )}</ul><p class="muted">$1 以 &lt;worldbook_context&gt; 包裹、$2 以 &lt;worldbook_extra&gt; 包裹；$7 为提取后 AI 正文。先替换占位符，再执行酒馆巨集、正则与 EJS。$2／$5／$U／$C 在「世界书与上下文」未开启时，只在提示词段使用时读取。</p></details>
         <div class="prompt-list" data-prompts="${kind}">${job.prompts.map((item, index) => promptCard(kind, item, index, job.prompts.length)).join('')}</div>
-        <button data-task-action="add-prompt">＋ 提示詞段</button>
-        ${previews.has(kind) ? `<label class="field prompt-preview">完整提示詞串預覽（未呼叫 API）<textarea readonly rows="16">${escape(previews.get(kind))}</textarea></label>` : ''}
+        <button data-task-action="add-prompt">＋ 提示词段</button>
+        ${previews.has(kind) ? `<label class="field prompt-preview">完整提示词串预览（未呼叫 API）<textarea readonly rows="16">${escape(previews.get(kind))}</textarea></label>` : ''}
       </section>
     </section>`;
   }
@@ -214,26 +214,26 @@ export function mountTaskPanel(
   function render(): void {
     const config = getDraft();
     const presets = config.taskPresets;
-    host.innerHTML = `<section class="preset-bar"><div class="preset-title"><h3>任務預設</h3><small>保存四項任務的提示詞串、排程、重試、每批國策數與建議模型，以及世界書與上下文；不含 API 連線與金鑰。預設操作會一併保存目前的任務設定。</small></div>
-      <div class="preset-row"><select data-preset-select aria-label="任務預設"><option value="">${presets.length ? '選擇預設以套用…' : '尚無任務預設'}</option>${presets
+    host.innerHTML = `<section class="preset-bar"><div class="preset-title"><h3>任务预设</h3><small>保存四项任务的提示词串、排程、重试、每批国策数与建议模型，以及世界书与上下文；不含 API 连线与金钥。预设操作会一并保存目前的任务设定。</small></div>
+      <div class="preset-row"><select data-preset-select aria-label="任务预设"><option value="">${presets.length ? '选择预设以套用…' : '尚无任务预设'}</option>${presets
         .map(
           (preset) =>
             `<option value="${escape(preset.name)}" ${selectedAttr(preset.name === config.activeTaskPreset)}>${escape(preset.name)}</option>`,
         )
         .join(
           '',
-        )}</select><input data-preset-name placeholder="預設名稱" value="${escape(config.activeTaskPreset)}" aria-label="預設名稱"><button class="primary" data-preset="save">保存</button><button data-preset="saveas">另存新預設</button><button data-preset="import">匯入</button><button data-preset="export">匯出</button>${
+        )}</select><input data-preset-name placeholder="预设名称" value="${escape(config.activeTaskPreset)}" aria-label="预设名称"><button class="primary" data-preset="save">保存</button><button data-preset="saveas">另存新预设</button><button data-preset="import">汇入</button><button data-preset="export">汇出</button>${
         confirmDelete
-          ? `<button class="danger" data-preset="confirm-delete">確認刪除「${escape(config.activeTaskPreset)}」</button><button data-preset="cancel-delete">取消</button>`
-          : `<button class="danger" data-preset="delete" ${config.activeTaskPreset ? '' : 'disabled'}>刪除</button>`
+          ? `<button class="danger" data-preset="confirm-delete">确认删除「${escape(config.activeTaskPreset)}」</button><button data-preset="cancel-delete">取消</button>`
+          : `<button class="danger" data-preset="delete" ${config.activeTaskPreset ? '' : 'disabled'}>删除</button>`
       }<input type="file" accept=".json,application/json" data-preset-file hidden></div>
       <p class="api-status" role="status">${escape(status)}</p></section>
-      <nav class="task-tabs" aria-label="任務">${jobKinds
+      <nav class="task-tabs" aria-label="任务">${jobKinds
         .map((kind) => {
           const job = config.jobs[kind];
           const custom = job.prompts.filter((item) => item.kind === 'custom').length;
           const modified = job.prompts.some(isModified);
-          return `<button class="task-tab ${kind === selected ? 'active' : ''}" data-task-tab="${kind}" aria-pressed="${kind === selected}"><strong>${taskNames[kind]}</strong><small>${kind === 'generate' ? '勾選國家時' : { reply: '每則正文', rounds: `每 ${job.interval} 則`, days: `每 ${job.interval} 日`, manual: '手動' }[job.schedule]}${custom ? ` · ${custom} 自訂段` : ''}${modified ? ' · 已改內建' : ''}</small></button>`;
+          return `<button class="task-tab ${kind === selected ? 'active' : ''}" data-task-tab="${kind}" aria-pressed="${kind === selected}"><strong>${taskNames[kind]}</strong><small>${kind === 'generate' ? '勾选国家时' : { reply: '每则正文', rounds: `每 ${job.interval} 则`, days: `每 ${job.interval} 日`, manual: '手动' }[job.schedule]}${custom ? ` · ${custom} 自订段` : ''}${modified ? ' · 已改内建' : ''}</small></button>`;
         })
         .join('')}</nav>
       ${jobKinds.map((kind) => editor(kind, config)).join('')}`;
@@ -342,14 +342,14 @@ export function mountTaskPanel(
           switch (preset) {
             case 'save': {
               const name = nameInput || config.activeTaskPreset;
-              commit(saveTaskPreset(config, name), `已保存任務預設「${name}」。`);
+              commit(saveTaskPreset(config, name), `已保存任务预设「${name}」。`);
               break;
             }
             case 'saveas':
               if (config.taskPresets.some((item) => item.name === nameInput)) {
-                throw new Error(`任務預設「${nameInput}」已存在，請換一個名稱，或按「保存」覆蓋。`);
+                throw new Error(`任务预设「${nameInput}」已存在，请换一个名称，或按「保存」覆盖。`);
               }
-              commit(saveTaskPreset(config, nameInput), `已另存任務預設「${nameInput}」。`);
+              commit(saveTaskPreset(config, nameInput), `已另存任务预设「${nameInput}」。`);
               break;
             case 'delete':
               confirmDelete = true;
@@ -361,7 +361,7 @@ export function mountTaskPanel(
               break;
             case 'confirm-delete': {
               const name = config.activeTaskPreset;
-              commit(deleteTaskPreset(config, name), `已刪除任務預設「${name}」；目前任務設定不變。`);
+              commit(deleteTaskPreset(config, name), `已删除任务预设「${name}」；目前任务设定不变。`);
               break;
             }
             case 'import':
@@ -369,12 +369,12 @@ export function mountTaskPanel(
               break;
             case 'export':
               download(
-                `國策任務預設-${(config.activeTaskPreset || '全部').replace(/[\\/:*?"<>|]/g, '_')}.json`,
+                `国策任务预设-${(config.activeTaskPreset || '全部').replace(/[\\/:*?"<>|]/g, '_')}.json`,
                 exportTaskPresets(config, config.activeTaskPreset || undefined),
               );
               status = config.activeTaskPreset
-                ? `已匯出「${config.activeTaskPreset}」。`
-                : '已匯出全部任務預設。';
+                ? `已汇出「${config.activeTaskPreset}」。`
+                : '已汇出全部任务预设。';
               render();
               break;
           }
@@ -414,7 +414,7 @@ export function mountTaskPanel(
         hooks?.edit(kind);
         return;
       case 'run-now':
-        status = `已開始執行「${taskNames[kind]}」；進度見面板底部的狀態列與「任務」。未儲存的修改不會用在這次執行。`;
+        status = `已开始执行「${taskNames[kind]}」；进度见面板底部的状态列与「任务」。未储存的修改不会用在这次执行。`;
         void controller.run(kind);
         render();
         return;
@@ -433,7 +433,7 @@ export function mountTaskPanel(
         const item = PromptItemSchema.parse({
           id: newPromptId(),
           kind: 'custom',
-          name: `自訂段 ${job.prompts.filter((p) => p.kind === 'custom').length + 1}`,
+          name: `自订段 ${job.prompts.filter((p) => p.kind === 'custom').length + 1}`,
           role: 'system',
         });
         job.prompts.push(item);
@@ -471,7 +471,7 @@ export function mountTaskPanel(
         return;
       }
       case 'preview': {
-        previews.set(kind, '正在組裝提示詞串…');
+        previews.set(kind, '正在组装提示词串…');
         render();
         void (async () => {
           try {
@@ -480,15 +480,15 @@ export function mountTaskPanel(
             previews.set(
               kind,
               [
-                `共 ${messages.length} 則訊息，${total.toLocaleString()} 字元（字元不是 Token）。${kind === 'generate' ? '候選國家以示例代入。' : ''}`,
+                `共 ${messages.length} 则讯息，${total.toLocaleString()} 字元（字元不是 Token）。${kind === 'generate' ? '候选国家以示例代入。' : ''}`,
                 ...messages.map(
                   (message, i) =>
-                    `\n━━ #${i + 1} ${message.role}${message.name ? ` · ${message.name}` : ''} · ${message.content.length.toLocaleString()} 字元 ━━\n${message.content.length > 30000 ? `${message.content.slice(0, 30000)}\n【畫面只顯示前 30,000 字元，實際未截斷】` : message.content}`,
+                    `\n━━ #${i + 1} ${message.role}${message.name ? ` · ${message.name}` : ''} · ${message.content.length.toLocaleString()} 字元 ━━\n${message.content.length > 30000 ? `${message.content.slice(0, 30000)}\n【画面只显示前 30,000 字元，实际未截断】` : message.content}`,
                 ),
               ].join('\n'),
             );
           } catch (error) {
-            previews.set(kind, `無法預覽：${error instanceof Error ? error.message : String(error)}`);
+            previews.set(kind, `无法预览：${error instanceof Error ? error.message : String(error)}`);
           }
           if (!disposed) {
             render();
@@ -507,7 +507,7 @@ export function mountTaskPanel(
       }
       try {
         read();
-        commit(applyTaskPreset(getDraft(), input.value), `已套用任務預設「${input.value}」並保存。`, true);
+        commit(applyTaskPreset(getDraft(), input.value), `已套用任务预设「${input.value}」并保存。`, true);
       } catch (error) {
         status = error instanceof Error ? error.message : String(error);
         render();
@@ -527,11 +527,11 @@ export function mountTaskPanel(
           const result = importTaskPresets(getDraft(), JSON.parse(text));
           commit(
             result.config,
-            `已匯入 ${result.names.map((name) => `「${name}」`).join('、')}；選擇後即可套用。`,
+            `已汇入 ${result.names.map((name) => `「${name}」`).join('、')}；选择后即可套用。`,
           );
         })
         .catch((error) => {
-          status = `匯入失敗：${error instanceof Error ? error.message : String(error)}`;
+          status = `汇入失败：${error instanceof Error ? error.message : String(error)}`;
           render();
         });
       return;
@@ -540,7 +540,7 @@ export function mountTaskPanel(
       const section = input.closest<HTMLElement>('[data-task-editor]')!;
       const interval = section.querySelector<HTMLElement>('[data-interval]')!;
       interval.hidden = !['rounds', 'days'].includes(input.value);
-      interval.firstChild!.textContent = input.value === 'days' ? '間隔（故事日）' : '間隔（則正文）';
+      interval.firstChild!.textContent = input.value === 'days' ? '间隔（故事日）' : '间隔（则正文）';
       section.querySelector<HTMLElement>('[data-days-note]')!.hidden = input.value !== 'days';
       return;
     }

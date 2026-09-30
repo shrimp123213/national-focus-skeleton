@@ -12,8 +12,8 @@ export const PatchOpSchema = z
     path: z
       .string()
       .min(1)
-      .describe('以 id 定位：/nodes/{國策id}/{欄位}、/nodes/-、/relations/-、/capabilityCatalog/-'),
-    value: z.unknown().optional().describe('insert 與 replace 必填：新的值'),
+      .describe('以 id 定位：/nodes/{国策id}/{栏位}、/nodes/-、/relations/-、/capabilityCatalog/-'),
+    value: z.unknown().optional().describe('insert 与 replace 必填：新的值'),
   })
   .strict();
 export type PatchOp = z.output<typeof PatchOpSchema>;
@@ -56,7 +56,7 @@ export function applyPatch(
     const parts = segments(op.path);
     const last = parts.pop();
     if (!last) {
-      errors.push(`${op.op} ${op.path}：路徑不可為空`);
+      errors.push(`${op.op} ${op.path}：路径不可为空`);
       continue;
     }
     if (op.op !== 'remove' && op.value === undefined) {
@@ -82,12 +82,12 @@ export function applyPatch(
         }
         container = record[part];
       } else {
-        broken = `「${part}」不是物件或陣列`;
+        broken = `「${part}」不是物件或阵列`;
         break;
       }
     }
     if (broken || container === undefined || container === null || typeof container !== 'object') {
-      errors.push(`${op.op} ${op.path}：${broken || '上層路徑不存在'}`);
+      errors.push(`${op.op} ${op.path}：${broken || '上层路径不存在'}`);
       continue;
     }
     if (Array.isArray(container)) {
@@ -97,7 +97,7 @@ export function applyPatch(
         } else if (/^\d+$/.test(last) && Number(last) <= container.length) {
           container.splice(Number(last), 0, op.value);
         } else {
-          errors.push(`insert ${op.path}：陣列只能用 - 或序號新增`);
+          errors.push(`insert ${op.path}：阵列只能用 - 或序号新增`);
           continue;
         }
       } else {
@@ -116,7 +116,7 @@ export function applyPatch(
       const record = container as Record<string, unknown>;
       if (op.op === 'remove') {
         if (!(last in record)) {
-          errors.push(`remove ${op.path}：欄位「${last}」不存在`);
+          errors.push(`remove ${op.path}：栏位「${last}」不存在`);
           continue;
         }
         delete record[last];

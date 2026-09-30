@@ -13,7 +13,7 @@ async function demoState() {
   return state;
 }
 
-test('國策樹匯出後可原樣匯入；連同進度時保留進度並從目前故事日校準', async () => {
+test('国策树汇出后可原样汇入；连同进度时保留进度并从目前故事日校准', async () => {
   const state = await demoState();
   const [id] = Object.keys(state.countries);
   const country = state.countries[id];
@@ -30,7 +30,7 @@ test('國策樹匯出後可原樣匯入；連同進度時保留進度並從目�
   assert.equal(fresh.countries[id].current, '');
   assert.ok(
     Object.values(fresh.countries[id].progress).every(
-      (p) => p.status === 'idle' || p.evidence.startsWith('歷史承接'),
+      (p) => p.status === 'idle' || p.evidence.startsWith('历史承接'),
     ),
   );
 
@@ -44,29 +44,29 @@ test('國策樹匯出後可原樣匯入；連同進度時保留進度並從目�
   assert.equal(Object.keys(other.countries[id].nodes).length, Object.keys(country.nodes).length);
 });
 
-test('手寫國策樹：省略座標與選填欄位、前置寫成物件也能匯入；範本本身可匯入', () => {
+test('手写国策树：省略座标与选填栏位、前置写成物件也能汇入；范本本身可汇入', () => {
   const tree = {
     id: 'handmade',
-    name: '手寫國',
+    name: '手写国',
     nodes: [
-      { id: 'a', name: '起點', branch: '主線', description: '開始', days: 30, prerequisites: [] },
+      { id: 'a', name: '起点', branch: '主线', description: '开始', days: 30, prerequisites: [] },
       {
         id: 'b',
         name: '甲路',
-        branch: '主線',
+        branch: '主线',
         description: '甲',
         days: 30,
         prerequisites: [[{ id: 'a' }]],
-        mutex: { group: 'g', route: 'x', lock: 'complete', reason: '擇一' },
+        mutex: { group: 'g', route: 'x', lock: 'complete', reason: '择一' },
       },
       {
         id: 'c',
         name: '乙路',
-        branch: '主線',
+        branch: '主线',
         description: '乙',
         days: 30,
         prerequisites: ['a'],
-        mutex: { group: 'g', route: 'y', lock: 'complete', reason: '擇一' },
+        mutex: { group: 'g', route: 'y', lock: 'complete', reason: '择一' },
       },
     ],
   };
@@ -82,25 +82,25 @@ test('手寫國策樹：省略座標與選填欄位、前置寫成物件也能�
   importTrees(createState(0), template, { withProgress: false, replace: false });
 });
 
-test('匯入錯誤會指出國策與欄位；其他格式的檔案給出明確說明', () => {
-  const base = { id: 'bad', name: '壞國' };
+test('汇入错误会指出国策与栏位；其他格式的档案给出明确说明', () => {
+  const base = { id: 'bad', name: '坏国' };
   assert.throws(
     () =>
       parseTreeFile({
         ...base,
         nodes: [
-          { id: 'a', name: 'A', branch: '主線', description: 'x', days: 30, prerequisites: [['missing']] },
+          { id: 'a', name: 'A', branch: '主线', description: 'x', days: 30, prerequisites: [['missing']] },
         ],
       }),
-    /不存在的前置國策：missing/,
+    /不存在的前置国策：missing/,
   );
   assert.throws(
     () =>
       parseTreeFile({
         ...base,
-        nodes: [{ id: 'a', name: 'A', branch: '主線', description: 'x', prerequisites: [] }],
+        nodes: [{ id: 'a', name: 'A', branch: '主线', description: 'x', prerequisites: [] }],
       }),
-    /國策 a（nodes\.0）的 days/,
+    /国策 a（nodes\.0）的 days/,
   );
   assert.throws(
     () =>
@@ -110,7 +110,7 @@ test('匯入錯誤會指出國策與欄位；其他格式的檔案給出明確�
           {
             id: 'a',
             name: 'A',
-            branch: '主線',
+            branch: '主线',
             description: 'x',
             days: 5,
             prerequisites: [],
@@ -118,25 +118,25 @@ test('匯入錯誤會指出國策與欄位；其他格式的檔案給出明確�
           },
         ],
       }),
-    /只有一條路線/,
+    /只有一条路线/,
   );
-  assert.throws(() => parseTreeFile({ name: '世界后台引擎', tasks: [] }), /工作流助手的預設檔/);
-  assert.throws(() => parseTreeFile({ kind: 'national-focus-task-presets' }), /任務預設檔/);
+  assert.throws(() => parseTreeFile({ name: '世界后台引擎', tasks: [] }), /工作流助手的预设档/);
+  assert.throws(() => parseTreeFile({ kind: 'national-focus-task-presets' }), /任务预设档/);
 });
 
-test('重要國策缺少新聞時不能匯入；範本含一個重要國策', () => {
+test('重要国策缺少新闻时不能汇入；范本含一个重要国策', () => {
   const [template] = parseTreeFile(JSON.parse(treeTemplate()));
   assert.equal(template.tree.nodes.find((node) => node.id === 'new_order')?.impact, 'pivotal');
   assert.throws(
     () =>
       parseTreeFile({
         id: 'bad',
-        name: '壞國',
+        name: '坏国',
         nodes: [
           {
             id: 'a',
             name: 'A',
-            branch: '主線',
+            branch: '主线',
             description: 'x',
             days: 5,
             prerequisites: [],
@@ -144,6 +144,6 @@ test('重要國策缺少新聞時不能匯入；範本含一個重要國策', ()
           },
         ],
       }),
-    /重要國策 a 缺少 news/,
+    /重要国策 a 缺少 news/,
   );
 });
