@@ -1658,7 +1658,7 @@
           return;
         }
         try {
-          // Read only this floor's saved variables. Generic variable writes emit no save event.
+          // Read only this floor after loading or an update notification, never on expansion.
           var vars = getVariables({ type: 'message', message_id: floor }) || {};
           var state = vars['国策'] || {};
           var bar = state['快讯'] || {};
@@ -1729,24 +1729,46 @@
           }
           // Recompute freshness and dates only when the saved news inputs actually change.
           if (news !== lastNews && state.countries && state.events) {
-            eventEmit('national-focus:refresh-news', floor);
             lastNews = news;
+            eventEmit('national-focus:refresh-news', floor);
           }
           warned = false;
         } catch (error) {
           if (!warned) {
-            console.warn('[國策報紙] 讀取本樓變量失敗，稍後重試：', error);
+            console.warn('[國策報紙] 讀取本樓變量失敗，等待下次更新通知：', error);
           }
           warned = true;
         }
       };
+      var pending = [];
+      var clearPending = function () {
+        pending.forEach(clearTimeout);
+        pending = [];
+      };
+      var listeners = [
+        eventOn('national-focus:news-saved', function (messageId) {
+          if (messageId === floor) {
+            refresh();
+          }
+        }),
+        // MVU emits this before awaiting listeners and saving. It provides no message id.
+        // Coalesce repeated notifications and stop after this short window, even if unchanged.
+        eventOn('mag_before_message_update', function () {
+          clearPending();
+          pending = [0, 250, 1000].map(function (delay) {
+            return setTimeout(refresh, delay);
+          });
+        }),
+      ];
       refresh();
-      var timer = setInterval(refresh, 1000);
       window.addEventListener(
         'pagehide',
         function () {
           stopped = true;
-          clearInterval(timer);
+          clearPending();
+          listeners.forEach(function (listener) {
+            listener.stop();
+          });
           root.onclick = null;
         },
         { once: true },

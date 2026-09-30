@@ -76,6 +76,7 @@ export type TavernApi = {
   generateRaw(config: Record<string, unknown>): Promise<string>;
   stopGenerationById(id: string): boolean;
   eventOn(event: string, listener: (...args: any[]) => void): { stop(): void };
+  eventEmit?(event: string, ...args: unknown[]): Promise<void> | void;
   tavern_events: Record<string, string>;
   getGlobalWorldbookNames(): string[];
   getWorldbookNames?(): string[];
@@ -579,6 +580,7 @@ export class TavernPlatform implements Platform {
     }
     snapshot.signal?.throwIfAborted();
     await this.appendNewsTag(message.message_id);
+    await this.api.eventEmit?.('national-focus:news-saved', message.message_id);
   }
   /**
    * Save the newspaper data of the finished AI floor (`国策.快讯`) and add the news tag, so every
@@ -639,6 +641,7 @@ export class TavernPlatform implements Platform {
     }
     if (!signal.aborted) {
       await this.appendNewsTag(id);
+      await this.api.eventEmit?.('national-focus:news-saved', id);
     }
   }
   async readNews(messageId: number) {

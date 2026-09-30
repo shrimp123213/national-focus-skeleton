@@ -1928,3 +1928,13 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - `card.html` 將渲染與刷新分開：無變更不重繪，保留閱讀狀態；每次重繪替換 root 點擊處理，避免累積監聽。pagehide 清除計時器。新的角色卡新聞／時間／所在地與國家資格會透過 `national-focus:refresh-news` 請主腳本更新該樓快訊資料。
 - 主腳本的快訊更新依序執行，可指定樓層，沿用 `buildNewsBar` 規則，保留其他國策及 MVU 欄位，不通知 onReady、不觸發 API。查上一則 AI 樓層改為向前逐樓尋找，避免複製整段聊天。快訊另保存 timePath／locationPath 供卡片監看自訂來源欄位。
 - 更新需要同時匯入腳本與報紙卡片正則，再重新載入聊天；其他正則和任務預設不變。驗證與人工驗收見 VALIDATION.md。
+
+## 54. v0.14.4：報紙取消常駐輪詢，展開不讀取（2026-09-30）
+
+本節取代第 53 節的每秒讀取方式。使用者明確要求展開報紙不重新讀取，以免閃爍；保留國策保存通知與 MVU 通知後的短暫補查。
+
+- 主腳本 `commit` 與 `annotate` 完成保存／快訊標籤處理後，發出 `national-focus:news-saved(messageId)`，只有相同樓層卡片讀取。卡片仍以 `national-focus:refresh-news` 請主腳本重算變動新聞的快訊標記，先記錄輸入再通知，避免重入重複請求。
+- 卡片初次載入讀取一次。监听 MVU 的 `mag_before_message_update` 後，在 0、250、1,000 毫秒各補查一次，沒有常駐輪詢；新的 MVU 通知取代尚未執行的補查。此事件沒有樓號，因此已顯示的卡片各讀自己所在樓層，不掃描完整聊天。pagehide 清除計時器與監聽。
+- 使用者附件是 MVU 載入腳本，指向 MagicalAstrogy/MagVarUpdate 的 artifact/bundle.js。核對上游 commit `b13b43bac24d585f2b523c12e423bb803fa9dd7c`：`BEFORE_MESSAGE_UPDATE` 在保存前發出；「重新處理變量」經 handleVariablesInMessage 保存後以 refresh: affected 刷新樓層；「重新读取初始变量」保存後呼叫 setChatMessage。附件採浮動網址，使用者快取中的實際版本未驗證。
+- 不新增展開讀取、通用變量攔截或第三方工作流通知。沒有通知且沒有刷新樓層的外部寫入不保證同步；MVU 的手動重新處理可重建樓層卡片。不新增 AI 請求，維持既有閱讀狀態保留機制。
+- 更新腳本與卡片正則，重新載入聊天；其他正則、資料格式與任務預設不變。驗證及待人工驗收項目見 VALIDATION.md。

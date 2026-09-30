@@ -14,6 +14,7 @@ function newspaper() {
     textContent = '';
     onclick: unknown = null;
     dataset = {};
+    handlers = new Map<string, (event: any) => void>();
     classes = new Set<string>();
     style = { setProperty() {} };
     classList = {
@@ -51,7 +52,9 @@ function newspaper() {
       }
       return [];
     }
-    addEventListener() {}
+    addEventListener(event: string, callback: (event: any) => void) {
+      this.handlers.set(event, callback);
+    }
   }
   const root = new Element('nb');
   nodes.set('nb', root);
@@ -59,7 +62,28 @@ function newspaper() {
     stat_data: { 世界: { 时间: 100 }, 新闻: { 快讯: { 经济: '原來的新聞' } } },
     国策: { countries: {}, events: {}, 快讯: { newsPath: '新闻', changed: ['快讯/经济'], updated: {} } },
   };
-  let poll: (() => void) | undefined;
+  let now = 0;
+  let timerId = 0;
+  const timers = new Map<number, { at: number; callback: () => void }>();
+  const listeners = new Map<string, Set<(...args: any[]) => void>>();
+  const emit = (event: string, ...args: unknown[]) => {
+    for (const callback of listeners.get(event) ?? []) {
+      callback(...args);
+    }
+  };
+  const advance = (delay: number) => {
+    const until = now + delay;
+    while (true) {
+      const next = [...timers].sort((a, b) => a[1].at - b[1].at)[0];
+      if (!next || next[1].at > until) {
+        break;
+      }
+      now = next[1].at;
+      timers.delete(next[0]);
+      next[1].callback();
+    }
+    now = until;
+  };
   let unload: (() => void) | undefined;
   const messages: unknown[][] = [];
   const reads: number[] = [];
@@ -85,14 +109,20 @@ function newspaper() {
     eventEmit: (...args: unknown[]) => {
       messages.push(args);
     },
-    localStorage: { getItem: () => null },
-    setInterval: (callback: () => void, delay: number) => {
-      assert.equal(delay, 1000);
-      poll = callback;
-      return 1;
+    eventOn: (event: string, callback: (...args: any[]) => void) => {
+      const group = listeners.get(event) ?? new Set();
+      group.add(callback);
+      listeners.set(event, group);
+      return { stop: () => group.delete(callback) };
     },
-    clearInterval: () => {
-      poll = undefined;
+    localStorage: { getItem: () => null },
+    setTimeout: (callback: () => void, delay: number) => {
+      const id = ++timerId;
+      timers.set(id, { at: now + delay, callback });
+      return id;
+    },
+    clearTimeout: (id: number) => {
+      timers.delete(id);
     },
     console: {
       warn: (...args: unknown[]) => {
@@ -105,7 +135,10 @@ function newspaper() {
     nodes,
     messages,
     reads,
-    tick: () => poll?.(),
+    tick: () => emit('national-focus:news-saved', 3),
+    emit,
+    advance,
+    pending: () => timers.size,
     close: () => unload?.(),
     draws: () => draws,
     data: () => saved,
@@ -167,4 +200,42 @@ test('報紙無國策資料時仍等待本樓寫入，資料移除後清除舊�
   assert.equal(card.root.hidden, false);
   assert.match(card.root.html, /稍後寫入/);
   card.close();
+});
+
+test('報紙閒置及展開收合不讀取，其他樓層保存不觸發更新', () => {
+  const card = newspaper();
+  const reads = card.reads.length;
+  card.advance(60_000);
+  card.emit('national-focus:news-saved', 99);
+  const strip = card.nodes.get('strip')!;
+  const click = strip.handlers.get('click')!;
+  click({ target: { closest: () => null } });
+  assert.equal(card.root.classList.contains('open'), true);
+  click({ target: { closest: () => null } });
+  assert.equal(card.root.classList.contains('open'), false);
+  assert.equal(card.reads.length, reads);
+  assert.equal(card.pending(), 0);
+  card.close();
+});
+
+test('MVU 保存前通知只安排有限補查，合併重複通知，卸載取消補查', () => {
+  const card = newspaper();
+  card.emit('mag_before_message_update', {});
+  card.emit('mag_before_message_update', {});
+  assert.equal(card.pending(), 3);
+  card.advance(0);
+  assert.equal(card.draws(), 1, 'MVU 尚未保存時不重繪');
+  card.data().stat_data.新闻.快讯.经济 = 'MVU 稍後保存';
+  card.advance(250);
+  assert.match(card.root.html, /MVU 稍後保存/);
+  card.advance(60_000);
+  assert.equal(card.reads.length, 4, '初次讀取加三次補查');
+  assert.equal(card.pending(), 0);
+  card.emit('mag_before_message_update', {});
+  card.close();
+  card.advance(60_000);
+  card.tick();
+  card.emit('mag_before_message_update', {});
+  assert.equal(card.reads.length, 4);
+  assert.equal(card.pending(), 0);
 });

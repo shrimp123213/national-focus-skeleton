@@ -32127,6 +32127,7 @@ ${details.join("\n\n")}
       }
       snapshot.signal?.throwIfAborted();
       await this.appendNewsTag(message.message_id);
+      await this.api.eventEmit?.("national-focus:news-saved", message.message_id);
     }
     /**
      * Save the newspaper data of the finished AI floor (`国策.快讯`) and add the news tag, so every
@@ -32186,6 +32187,7 @@ ${details.join("\n\n")}
       }
       if (!signal.aborted) {
         await this.appendNewsTag(id);
+        await this.api.eventEmit?.("national-focus:news-saved", id);
       }
     }
     async readNews(messageId) {

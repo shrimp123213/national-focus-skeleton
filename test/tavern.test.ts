@@ -351,6 +351,38 @@ function environment() {
     },
   };
 }
+test('國策保存完成才通知報紙，保存失敗不通知', async () => {
+  const env = environment();
+  const notifications: unknown[][] = [];
+  env.api.eventEmit = (event, ...args) => {
+    notifications.push([event, ...args]);
+  };
+  try {
+    const snapshot = await env.platform.read(defaultConfig());
+    const replace = env.api.Mvu!.replaceMvuData;
+    let finish!: () => void;
+    const saved = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    env.api.Mvu!.replaceMvuData = async (data, options) => {
+      await saved;
+      await replace(data, options);
+    };
+    const committing = env.platform.commit(snapshot, snapshot.state);
+    assert.equal(notifications.length, 0);
+    finish();
+    await committing;
+    assert.deepEqual(notifications, [['national-focus:news-saved', 3]]);
+    env.api.Mvu!.replaceMvuData = async () => {
+      throw new Error('存檔失敗');
+    };
+    await assert.rejects(env.platform.commit(snapshot, snapshot.state), /存檔失敗/);
+    assert.equal(notifications.length, 1);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
 test('國策寫入樓層最外層，保留完整 stat_data、初始化資料與既有 schema', async () => {
   const env = environment();
   try {
@@ -972,6 +1004,11 @@ test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新�
     });
     floors[3].stat_data.新闻.快讯.经济 = '本樓稍後更新';
     floors[3].stat_data.世界.时间 = '491年6月20日 12:00';
+    const notifications: unknown[][] = [];
+    env.api.eventEmit = (event, ...args) => {
+      notifications.push([event, ...args]);
+      assert.equal(floors[3].国策.快讯.time, '491年6月20日 12:00');
+    };
     env.emit('national-focus:refresh-news', 3);
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.deepEqual(floors[3].国策.快讯.changed, ['快讯/军事', '快讯/经济']);
@@ -980,6 +1017,7 @@ test('每個完成的 AI 樓層在背景任務之前寫入快訊條資料：新�
     assert.deepEqual(floors[3].国策.countries, policy);
     assert.deepEqual(floors[1], previousFloor);
     assert.equal(extraReady, 0, '刷新報紙不得重新啟動國策工作');
+    assert.deepEqual(notifications, [['national-focus:news-saved', 3]]);
   } finally {
     env.platform.dispose();
   }
