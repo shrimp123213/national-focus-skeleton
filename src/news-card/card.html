@@ -948,7 +948,9 @@
       var root = document.getElementById('nb');
       var esc = function (value) {
         return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+          // Tavern decodes HTML entities in code blocks before creating the iframe.
+          // Assemble them at runtime so quotes and escaping survive that conversion.
+          return '&' + { '&': 'amp;', '<': 'lt;', '>': 'gt;', '"': 'quot;', "'": '#39;' }[c];
         });
       };
       var floor = getCurrentMessageId();

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
 // A small DOM sink for the actual card script; this tests data refresh, not visual layout.
-function newspaper() {
+function newspaper(transformHtml: (html: string) => string = (html) => html) {
   const nodes = new Map<string, Element>();
   let draws = 0;
   class Element {
@@ -87,7 +87,7 @@ function newspaper() {
   let unload: (() => void) | undefined;
   const messages: unknown[][] = [];
   const reads: number[] = [];
-  const html = readFileSync(new URL('../src/news-card/card.html', import.meta.url), 'utf8');
+  const html = transformHtml(readFileSync(new URL('../src/news-card/card.html', import.meta.url), 'utf8'));
   const script = html.match(/<script>([\s\S]*?)<\/script>/)![1];
   runInNewContext(script, {
     document: { getElementById: (id: string) => nodes.get(id) },
@@ -147,6 +147,27 @@ function newspaper() {
     },
   };
 }
+
+test('報紙經酒館額外 HTML 實體解碼後仍能啟動並安全顯示新聞', () => {
+  // messageFormatting decodes &amp; inside Markdown code blocks before the helper reads
+  // their text into an iframe. Reproduce the resulting extra entity decode on the card.
+  const entities: Record<string, string> = {
+    amp: '&',
+    lt: '<',
+    gt: '>',
+    quot: '"',
+    '#39': "'",
+  };
+  const card = newspaper((html) =>
+    html.replace(/&(amp|lt|gt|quot|#39);/g, (_, entity: string) => entities[entity]),
+  );
+  assert.equal(card.root.hidden, false, '空 events 也須顯示報紙');
+  card.data().stat_data.新闻.快讯.经济 = `<img src=x onerror="alert('x')"> & 新聞`;
+  card.tick();
+  assert.ok(card.root.html.includes('&lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; 新聞'));
+  assert.ok(!card.root.html.includes('<img src=x'));
+  card.close();
+});
 
 test('報紙刷新自己樓層已保存的新聞與國策事件，無變動及其他變量不重繪', () => {
   const card = newspaper();
