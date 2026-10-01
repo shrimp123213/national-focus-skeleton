@@ -910,8 +910,8 @@ TAIL = {
 # ST-Prompt-Template like the engine's own worldbook entry. Empty, and so not sent, when nothing is there.
 WORLD_STATE = r'''<%_
 // 世界后台引擎（addon-mvu 与工作流助手）存在本楼变量的世界局势；没有降临的世界时整段不送出。
-// 正史从最新的演变纪往回完整列出，累计到这个字数为止；更早的只留一行标题。
-const nfHistoryBudget = 3000;
+// 正史预设全部完整列出。改成数字（例如 3000）时，从最新的演变纪往回完整列出到这个字数为止，更早的只留一行标题。
+const nfHistoryBudget = Infinity;
 const nfAddon = getvar('addon_data') || {};
 const nfWorldMap = nfAddon && typeof nfAddon === 'object' && nfAddon.世界 && typeof nfAddon.世界 === 'object' ? nfAddon.世界 : {};
 const nfNames = Object.keys(nfWorldMap).filter((name) => nfWorldMap[name] && nfWorldMap[name].降临 === true);

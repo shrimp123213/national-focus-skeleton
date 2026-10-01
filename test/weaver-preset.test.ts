@@ -212,9 +212,12 @@ test('weaver preset world state reads the engine variables and sends nothing wit
 
 test('weaver preset world state keeps recent history in full, needs a landed world and flags singularities', () => {
   const template = segment('update', 'nf-world').content;
-  const render = (variables: Record<string, unknown>) =>
-    renderEjs(template, { getvar: (key: string) => variables[key], YAML });
-  // 30 eras of ~200 characters: the newest ones fit the 3,000 budget in full, the rest become titles.
+  // History is read in full by default; a number turns on the budget.
+  assert.match(template, /const nfHistoryBudget = Infinity;/);
+  const budgeted = template.replace('const nfHistoryBudget = Infinity;', 'const nfHistoryBudget = 3000;');
+  const render = (variables: Record<string, unknown>, source = budgeted) =>
+    renderEjs(source, { getvar: (key: string) => variables[key], YAML });
+  // 30 eras of ~200 characters: with a 3,000 budget the newest ones stay in full, the rest become titles.
   const records: Record<string, Record<string, string>> = {};
   for (let i = 1; i <= 30; i++) {
     records[`第${i}纪`] = {
@@ -259,6 +262,13 @@ test('weaver preset world state keeps recent history in full, needs a landed wor
   assert.match(text, /早期正史:\n {2}- 第1纪（时代1 → 时代2，约30百年前）/);
   assert.match(text, new RegExp(`- 第${30 - full.length}纪（`));
   assert.ok(!text.includes(`第${30 - full.length}纪:`));
+  // The default reads every era in full, oldest first.
+  const all = render(world(), template);
+  assert.deepEqual(
+    [...all.matchAll(/^ {2}第(\d+)纪:$/gm)].map((m) => Number(m[1])),
+    Array.from({ length: 30 }, (_, i) => i + 1),
+  );
+  assert.ok(!all.includes('早期正史'));
   // Singularities that are not on are not read at all.
   for (const dropped of ['关键转折', '不送出的转折', '特异点', '镜像王朝', '镜中分裂', '旧梦', '分歧源头']) {
     assert.ok(!text.includes(dropped), dropped);
