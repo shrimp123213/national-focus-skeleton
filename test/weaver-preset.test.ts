@@ -15,7 +15,7 @@ import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 import YAML from 'yaml';
 
 /** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5.3-格式強化版.json', import.meta.url);
+const file = new URL('../presets/織界國策-任務預設-v5.4-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -208,6 +208,72 @@ test('weaver preset world state reads the engine variables and sends nothing wit
     assert.ok(!text.includes(dropped), dropped);
   }
   assert.equal(text.match(/<世界局势>/g)?.length, 1);
+});
+
+test('weaver preset world state keeps recent history in full, needs a landed world and flags singularities', () => {
+  const template = segment('update', 'nf-world').content;
+  const render = (variables: Record<string, unknown>) =>
+    renderEjs(template, { getvar: (key: string) => variables[key], YAML });
+  // 30 eras of ~200 characters: the newest ones fit the 3,000 budget in full, the rest become titles.
+  const records: Record<string, Record<string, string>> = {};
+  for (let i = 1; i <= 30; i++) {
+    records[`第${i}纪`] = {
+      前时代称谓: `时代${i}`,
+      后时代称谓: `时代${i + 1}`,
+      演变起止: `约${31 - i}百年前`,
+      描述: '变'.repeat(150),
+      历史影响: '响'.repeat(40),
+      关键转折: '不送出的转折',
+    };
+  }
+  const point = (on: boolean, source: string, story: string) => ({
+    降临: on,
+    分歧源头: source,
+    事件记录: { [`${story}纪段`]: { 纪段起止: '近年', 描述: story, 历史影响: '支线影响' } },
+  });
+  const world = (active = '') => ({
+    addon_data: {
+      世界: {
+        甲界: {
+          降临: true,
+          时代快讯: {
+            岁月史书: {
+              正史: records,
+              特异点: {
+                镜像王朝: point(active === '镜像王朝', '第20纪', '镜中分裂'),
+                旧梦: point(active === '旧梦', '第3纪', '旧梦复辟'),
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  const text = render(world());
+  const full = [...text.matchAll(/^ {2}第(\d+)纪:$/gm)].map((m) => Number(m[1]));
+  assert.ok(full.length >= 10 && full.length < 30, `full ${full.length}`);
+  assert.deepEqual(
+    full,
+    Array.from({ length: full.length }, (_, i) => 31 - full.length + i),
+  );
+  assert.match(text, /早期正史:\n {2}- 第1纪（时代1 → 时代2，约30百年前）/);
+  assert.match(text, new RegExp(`- 第${30 - full.length}纪（`));
+  assert.ok(!text.includes(`第${30 - full.length}纪:`));
+  // Singularities that are not on are not read at all.
+  for (const dropped of ['关键转折', '不送出的转折', '特异点', '镜像王朝', '镜中分裂', '旧梦', '分歧源头']) {
+    assert.ok(!text.includes(dropped), dropped);
+  }
+  // The landed singularity is read in full and flagged; the others stay out.
+  const singular = render(world('镜像王朝'));
+  assert.match(singular, /注意：目前正处于特异点「甲界·镜像王朝」/);
+  for (const kept of ['当前特异点:', '镜像王朝:', '分歧源头: 第20纪', '镜中分裂', '支线影响']) {
+    assert.ok(singular.includes(kept), kept);
+  }
+  assert.ok(!singular.includes('旧梦'));
+  // No landed world: nothing is sent, not even summaries of other worlds.
+  const idle = world();
+  idle.addon_data.世界.甲界.降临 = false;
+  assert.equal(render({ ...idle, post_process_tags: { 世界状态摘要_world: { 甲界: '摘要' } } }).trim(), '');
 });
 
 test('weaver preset and built-in rules require simplified Chinese output', () => {

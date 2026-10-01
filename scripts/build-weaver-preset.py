@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.3-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.4-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.3 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.4 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -909,15 +909,22 @@ TAIL = {
 # World state written by the 世界后台引擎 (addon-mvu / Workflow Assistant) on this floor, read with
 # ST-Prompt-Template like the engine's own worldbook entry. Empty, and so not sent, when nothing is there.
 WORLD_STATE = r'''<%_
-// 世界后台引擎（addon-mvu 与工作流助手）存在本楼变量的世界局势；读不到时整段不送出。
+// 世界后台引擎（addon-mvu 与工作流助手）存在本楼变量的世界局势；没有降临的世界时整段不送出。
+// 正史从最新的演变纪往回完整列出，累计到这个字数为止；更早的只留一行标题。
+const nfHistoryBudget = 3000;
 const nfAddon = getvar('addon_data') || {};
 const nfWorldMap = nfAddon && typeof nfAddon === 'object' && nfAddon.世界 && typeof nfAddon.世界 === 'object' ? nfAddon.世界 : {};
-const nfLanded = Object.keys(nfWorldMap).filter((name) => nfWorldMap[name] && nfWorldMap[name].降临 === true);
-const nfNames = nfLanded.length ? nfLanded : Object.keys(nfWorldMap);
+const nfNames = Object.keys(nfWorldMap).filter((name) => nfWorldMap[name] && nfWorldMap[name].降临 === true);
+// 正在降临的特异点（分歧时间线）：离开时世界后台引擎会还原世界资料。
+const nfSingular = [];
+for (const name of Object.keys(nfWorldMap)) {
+  const points = (((nfWorldMap[name] || {}).时代快讯 || {}).岁月史书 || {}).特异点 || {};
+  for (const point of Object.keys(points)) if (points[point] && points[point].降临 === true) nfSingular.push(`${name}·${point}`);
+}
 const nfTags = getvar('post_process_tags') || {};
 const nfSummaryMap = nfTags && typeof nfTags['世界状态摘要_world'] === 'object' && nfTags['世界状态摘要_world'] ? nfTags['世界状态摘要_world'] : {};
 const nfSummaries = Object.keys(nfSummaryMap)
-  .filter((name) => !nfNames.length || nfNames.includes(name))
+  .filter((name) => nfNames.includes(name))
   .map((name) => ({ name, body: String(nfSummaryMap[name] ?? '').replace(/<\/?世界状态摘要[^>]*>/g, '').trim() }))
   .filter((item) => item.body);
 const nfHidden = new Set(['叙事指导', '平行演化', '位面交汇', '降临']);
@@ -930,7 +937,34 @@ const nfStrip = (value) => {
   }
   return next;
 };
-// 只取与国家议程相关的部分：时代阶段、时局演进、时局与团体动态、经济气候与贸易；略过岁月史书、史诗传奇与市场行情。
+// 正史（不含特异点）：新的完整、旧的一行，按写入顺序（由旧到新）排列。
+const nfHistory = (era) => {
+  const records = ((era.岁月史书 || {}).正史) || {};
+  const names = Object.keys(records);
+  const full = {};
+  const brief = [];
+  let used = 0;
+  let index = names.length - 1;
+  for (; index >= 0; index--) {
+    const record = records[names[index]] || {};
+    const kept = {};
+    for (const key of ['前时代称谓', '后时代称谓', '演变起止', '描述', '历史影响']) if (record[key]) kept[key] = record[key];
+    const size = names[index].length + Object.values(kept).join('').length;
+    if (Object.keys(full).length && used + size > nfHistoryBudget) break;
+    used += size;
+    full[names[index]] = kept;
+  }
+  for (let i = 0; i <= index; i++) {
+    const record = records[names[i]] || {};
+    const shift = record.前时代称谓 || record.后时代称谓 ? `${record.前时代称谓 || '？'} → ${record.后时代称谓 || '？'}` : '';
+    const parts = [shift, record.演变起止].filter(Boolean).join('，');
+    brief.push(parts ? `${names[i]}（${parts}）` : names[i]);
+  }
+  const ordered = {};
+  for (const name of Object.keys(full).reverse()) ordered[name] = full[name];
+  return { brief, full: ordered };
+};
+// 只取与国家议程相关的部分：时代阶段、时局演进、正史、开启中的特异点、时局与团体动态、经济气候与贸易；略过未开启的特异点、史诗传奇、市场行情与社交圈。
 const nfPick = (world) => {
   const era = (world && world.时代快讯) || {};
   const plot = (world && world.世界剧情态势) || {};
@@ -939,6 +973,14 @@ const nfPick = (world) => {
   if (world && world.刊报日期) out.刊报日期 = world.刊报日期;
   if (era.世界时代阶段) out.世界时代阶段 = era.世界时代阶段;
   if (era.世界时局演进动态) out.世界时局演进动态 = era.世界时局演进动态;
+  const history = nfHistory(era);
+  if (history.brief.length) out.早期正史 = history.brief;
+  if (Object.keys(history.full).length) out.正史 = history.full;
+  // 特异点只在开启（降临）时读：分歧源头与分歧纪段；没开的不读。
+  const points = ((era.岁月史书 || {}).特异点) || {};
+  const active = {};
+  for (const point of Object.keys(points)) if (points[point] && points[point].降临 === true) active[point] = points[point];
+  if (Object.keys(active).length) out.当前特异点 = active;
   if (plot.时局动态) out.时局动态 = plot.时局动态;
   if (plot.团体动态) out.团体动态 = plot.团体动态;
   const trade = {};
@@ -953,7 +995,10 @@ const nfDetails = nfNames
   .map((item) => ({ name: item.name, text: nfDump(item.data).trim() }));
 _%>
 <%_ if (nfSummaries.length || nfDetails.length) { _%>
-VOID: 以下是世界后台引擎在本楼记录的即时世界局势（截至各世界的刊报日期）。用它理解各国所处的时代、正在发生的事件与团体动向，作为国策取舍与背景事件的依据；引用时在 evidence 注明「世界局势」。与<前文剧情>明确写出的事实冲突时，以前文剧情为准；这里的事件不能直接当成国策的 outcomes 已经取得。
+VOID: 以下是世界后台引擎在本楼记录的即时世界局势（截至各世界的刊报日期）。用它理解各国所处的时代、正在发生的事件与团体动向，作为国策取舍与背景事件的依据；引用时在 evidence 注明「世界局势」。与<前文剧情>明确写出的事实冲突时，以前文剧情为准；这里的事件不能直接当成国策的 outcomes 已经取得。正史是开局以来已经定论的时代变迁（早期正史只列标题）。
+<%_ if (nfSingular.length) { _%>
+注意：目前正处于特异点「<%= nfSingular.join('、') %>」（分歧经过见「当前特异点」），以下局势属于这条分歧时间线，回到正史时世界后台引擎会还原世界资料。只把它当作当下的背景，不要据此写入长期事实、不可逆的国家变化或国策 outcomes。
+<%_ } _%>
 
 <世界局势>
 <%_ for (const item of nfSummaries) { _%>
