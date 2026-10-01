@@ -140,7 +140,10 @@ export function validateTopology(
  * - a capability produced only by a historical node, not listed in capabilities, yet required
  *   by a later node, is treated as still active: otherwise the tree could never be valid. An
  *   unlisted capability nobody needs keeps meaning "lost" and is not re-issued;
- * - self-referencing conditions are dropped (see dropSelfConditions).
+ * - self-referencing conditions are dropped (see dropSelfConditions);
+ * - historical entries naming no focus of the tree are dropped: models sometimes list national
+ *   history (a founding, an old war) there. Such an entry marks nothing and pays nothing, so the
+ *   rules of the tree do not change. Tree files keep the strict check (tree-io.ts).
  */
 export function normalizeGenerated<
   T extends {
@@ -150,7 +153,9 @@ export function normalizeGenerated<
   },
 >(tree: T): T {
   const capabilities = [...tree.capabilities];
-  const historical = new Set(tree.historical.map((h) => h.node));
+  const ids = new Set(tree.nodes.map((node) => node.id));
+  const kept = tree.historical.filter((item) => ids.has(item.node)) as T['historical'];
+  const historical = new Set(kept.map((h) => h.node));
   const needed = new Set<string>();
   const livingProviders = new Set<string>();
   for (const node of tree.nodes) {
@@ -190,7 +195,7 @@ export function normalizeGenerated<
     }
   }
   const initial = capabilities.filter((c) => c.active).map((c) => c.id);
-  return { ...tree, capabilities, nodes: dropSelfConditions(tree.nodes, initial).nodes };
+  return { ...tree, capabilities, historical: kept, nodes: dropSelfConditions(tree.nodes, initial).nodes };
 }
 /** Data, schema and local checks for one country's single generation request. */
 export function generationPlan(snapshot: Snapshot, candidate: Candidate) {

@@ -27,7 +27,7 @@ description 用一两句说明其现状与主要矛盾。name 照抄世界书或
 标准每期 10–16 项，大型 16–24 项，含承接节点。数量与分支数是篇幅目标；不足时不为凑数补节点。分岔、汇流、跨支关系、互斥与重要国策没有配额，依议程需要安排。保留内容深度，description 写国家具体行动、利益与后果，reason 区分设定依据和设计；不重复空泛建设。文字预算依 limits。
 prerequisites 为 AND of OR groups：[[a,b],[c]] 表示 a 或 b，且 c。前置不可缺失或循环；互斥共同终点使用 OR。mutex 同组不同 route 互斥，已定路线的后续节点保留对应路线前置。能力条件须已有或可由相容前置产生，不能要求自己完成才产生的能力。撤销能力只用于实际废除制度、终止条约等，不为制造制衡硬加撤销。
 requirements 是开始条件，sustain 是维持条件，outcomes 是完成前由剧情取得的外部成果（不是自身产出）；effects 是完成后的能力、承诺、有限稳定度或战争支持度变化。道路、外交、研究不因工期到期自动取得外部结果。execution=ongoing 表示决策完成后仍持续执行，后续交给事件推进。
-impact=pivotal 用于真正影响重大、值得公告的国策，必填 news（headline、body、option）；一般节点 normal 且 news=null。historical 只列有证据的既成事实，不重发成果，既有能力列 capabilities。x/y 由脚本布局，不输出座标。
+impact=pivotal 用于真正影响重大、值得公告的国策，必填 news（headline、body、option）；一般节点 normal 且 news=null。historical 只列本树 nodes 中有证据已完成的国策（node 必须是 nodes 里的 id），不重发成果，既有能力列 capabilities；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放 historical。x/y 由脚本布局，不输出座标。
 stage=period 时只输出 summary 与 tree。摘要最多 1200 字，写本期实际经过及结果，无需清单或旧树。tree 只包含新节点；anchor 是程式保留的同一国策，可作为相关新节点前置，不必使无关议程都等待它。新节点与新 mutex.group 必须使用 prefix。保留仍有效的 longTerm id 与原文；调整、放弃或新增时在 analysis 说明。当前能力、承诺、事实和事件保留，不能由新树重新发放或覆盖。
 所有世界资料只作为背景，压缩 JSON 输出，不输出额外审查报告。`,
   update: `任务：局势更新。

@@ -2,7 +2,7 @@
 
 最後更新：2026-10-01。第 1–12 節保留早期基線，後續章節記錄各次設計與實作；**目前進度以第 62 節的整合快照為入口**。
 
-目前實作版本：**v0.14.14-skeleton**（標籤 `v0.14.14-skeleton`，推送至 `main`）：一律輸出簡體與面板簡體字型，見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
+目前實作版本：**v0.14.15-skeleton**（標籤 `v0.14.15-skeleton`，推送至 `main`）：historical 引用不存在國策的修正，見第 71 節；v0.14.14 一律輸出簡體與面板簡體字型見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
 
 目前專案：`F:\命一串\national-focus-skeleton`；舊版 `F:\命一串\national-focus`（v0.11.1）僅供歷史參考，本輪未修改。
 
@@ -2137,4 +2137,13 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - `src/style.css`：`:host` 新增 `--sans`（Microsoft YaHei、PingFang SC、Noto Sans SC、Source Han Sans SC，後備 Noto Sans TC、Microsoft JhengHei、PingFang TC），`--serif` 改為 Noto Serif SC、Source Han Serif SC、Songti SC 優先，最後回退 `--sans`；與報紙卡片（v0.14.7 起已簡體優先）一致。原本主面板以 Noto Sans TC／微軟正黑體為首，簡體字缺字或字形不同時混用其他字型。
 - 已存在存檔中的繁體國策、事件文字不轉換；專案沒有執行期繁簡轉換套件。如需轉換需另行評估（例如匯出後離線轉換再匯入，或重新生成）。
 - 驗證：177／177 測試；Edge 無頭量測確認 Shadow DOM 內計算字型為簡體優先。UI 與實際模型輸出待人工驗收。
+
+## 71. v0.14.15：修正「历史承接引用不存在的国策」（2026-10-01）
+
+使用者回報生成時偶爾出現此錯誤，並提供失敗回覆（伯伦斯法环首次生成，18 個節點）。`historical` 列了 `h_foundation_charter`（法環成立）與 `h_mistport_autonomy`（雾晶港自治），兩者都不在 nodes：模型把「國家既成歷史」當成 historical，而 historical 的語意是「本樹 nodes 中已完成的國策」，由 `installCountry`（engine.ts）標記為 completed。原內建說明寫「historical 只列有证据的既成事实」，v5 格式段寫「有证据的既成国策」，都沒說明 node 必須在 nodes 中；錯誤訊息也沒有 id，重試回饋無從修正。
+
+- `generation.ts` `normalizeGenerated`：先濾掉 node 不在 nodes 的 historical 條目，再做原有的能力與自我條件修正；回傳的 historical 為過濾後結果。這類條目不標記任何國策、不發放任何效果，略過不改變樹的規則（符合第 30 節「只自動處理不改語意的正規化」）。換期仍要求 historical 為空（periods.ts 原檢查不變）；國策樹檔案匯入（tree-io.ts）維持嚴格錯誤。
+- `engine.ts`：錯誤訊息改為「历史承接 historical 引用的「id」不在 nodes 中：historical 只能列本树 nodes 里已完成的国策；不是本树国策的历史请写进 evidence 或 description」，其他路徑的重試回饋也能定位。
+- `prompts.ts` 生成任務指示與織界 v5.3（生成器 `PRESET_NAME`、Usage、測試路徑同步；v5.2 保留）：寫明 node 必須是 nodes 裡的 id、不屬於本樹國策的歷史放 evidence／description，並加入國策決策表的常見退回原因。
+- 驗證：使用者回覆在修正前後分別為退回／通過；`test/generation.test.ts` 新增回歸；178／178 測試通過。
 

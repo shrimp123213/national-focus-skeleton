@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { applyProposal, blockers, createState, installCountry, startFocus } from '../src/engine';
 import { layoutTree } from '../src/layout';
 
-import { workingState } from '../src/generation';
+import { normalizeGenerated, workingState } from '../src/generation';
 import { demoTree } from '../src/demo-tree';
 
 test('136 节点示范的三条宪制路线均能到达共同终点与危机终点', () => {
@@ -147,4 +147,31 @@ test('生成指示使用分期与内容深度，不要求结构配额', async ()
   assert.match(DEFAULT_TASK.generate, /没有配额/);
   assert.match(DEFAULT_TASK.generate, /stage=period/);
   assert.match(DEFAULT_TASK.update, /transitions/);
+});
+
+test('生成时略过 historical 中不在 nodes 的国策（模型把建国往事写成历史承接），保留有效的承接', () => {
+  const node = (id: string) => ({ id, name: id, effects: [], requirements: [], sustain: [], outcomes: [] });
+  const tree = normalizeGenerated({
+    capabilities: [],
+    historical: [
+      { node: 'h_foundation_charter', evidence: '世界书：建国' },
+      { node: 'old_roads', evidence: '设定：道路已存在' },
+    ],
+    nodes: [node('old_roads'), node('new_port')],
+  });
+  assert.deepEqual(
+    tree.historical.map((item) => item.node),
+    ['old_roads'],
+  );
+  // Installing a tree that still names a missing focus reports which one and how to fix it.
+  const raw = demoTree();
+  assert.throws(
+    () =>
+      installCountry(
+        createState(100),
+        { ...raw, historical: [{ node: 'h_missing', evidence: '建国' }] },
+        100,
+      ),
+    /historical 引用的「h_missing」不在 nodes 中/,
+  );
 });

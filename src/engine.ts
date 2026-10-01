@@ -98,7 +98,10 @@ export function installCountry(input: State, raw: unknown, day: number): State {
     };
   }
   for (const item of historical) {
-    requireThat(nodes[item.node], '历史承接引用不存在的国策');
+    requireThat(
+      nodes[item.node],
+      `历史承接 historical 引用的「${item.node}」不在 nodes 中：historical 只能列本树 nodes 里已完成的国策；不是本树国策的历史请写进 evidence 或 description`,
+    );
     const node = nodes[item.node];
     country.progress[item.node] = {
       status: 'completed',

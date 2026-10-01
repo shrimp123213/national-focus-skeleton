@@ -1,5 +1,11 @@
 # 驗證紀錄與人工驗收
 
+## v0.14.15 historical 引用不存在的國策（2026-10-01）
+
+- TypeScript、178／178 項自動化測試、格式、建置及差異檢查通過。
+- 以使用者提供的實際失敗回覆（伯倫斯法環首次生成，historical 列了不在 nodes 的 `h_foundation_charter`、`h_mistport_autonomy`）跑 `validateTree`：修正前退回，修正後通過。新增單元測試：normalizeGenerated 只保留指向 nodes 的 historical；installCountry 仍拒絕並在訊息中指出缺少的 id。
+- 待人工驗收：更新主腳本後重新生成先前失敗的國家，確認不再出現此錯誤；匯入 v5.3 並套用。未使用 computer use。
+
 ## v0.14.14 簡體輸出與面板字型（2026-10-01）
 
 - TypeScript、177／177 項自動化測試、格式、建置及差異檢查通過。新增測試：織界 v5.2 四項任務的織界核心、思維要求與國策輸出格式都要求簡體中文，且不再有「跟隨<前文劇情>」字形規則；內建系統規則包含簡體要求。

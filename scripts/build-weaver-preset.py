@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.2-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.3-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.2 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.3 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -720,7 +720,7 @@ NODE_TABLE = '''## 决策表
 | 一般国策 | "impact":"normal","news":null |
 | 重要国策 | "impact":"pivotal","news":{"headline":"…","body":"…","option":{"label":"…","text":""}} |
 
-✗ 常见退回原因：prerequisites 写成 ["a","b"]、"a"、[[]] 或 [{"any":["a","b"]}]；mutex 写成 {} 或 ""；normal 国策的 news 写成物件；效果写 "value":"+5"；条件写 "minimum":"40"；效果缺 id；条件用 key 或效果用 id 指向能力'''
+✗ 常见退回原因：historical 列了不在 nodes 中的 id（例如把建国往事写成 h_foundation）；prerequisites 写成 ["a","b"]、"a"、[[]] 或 [{"any":["a","b"]}]；mutex 写成 {} 或 ""；normal 国策的 news 写成物件；效果写 "value":"+5"；条件写 "minimum":"40"；效果缺 id；条件用 key 或效果用 id 指向能力'''
 
 STEP_RULES = '''## 时间步骤（根物件 steps 的每一项，依 at 由小到大排列）
 {"at":数字,"facts":[…],"events":[…],"selections":[…],"publications":[…],"eventUpdates":[…]}
@@ -837,7 +837,7 @@ FORMAT = {
 - branches：[分支]，1–16 个；每个分支至少有一个国策
 - relations：[关系]，没有写 []
 - capabilities：[{"id":能力ID,"name":文字,"active":布尔,"reason":文字}]，既有能力；没有写 []
-- historical：[{"node":国策ID,"evidence":文字}]，有证据的既成国策；没有写 []
+- historical：[{"node":国策ID,"evidence":文字}]，本树 nodes 中有证据已完成的国策，node 必须是 nodes 里的 id；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放这里；没有写 []
 - nodes：[国策]
 - 可选 keywords：[文字]，最多 8 个，每个 ≤24 字
 - 不输出 x、y、autoPeriod（座标由脚本布局）
