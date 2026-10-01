@@ -2093,3 +2093,8 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - `style.css`：`.field` 加 `align-content: start`，欄位內容靠上、控制項維持自身高度；`input, select` 統一 `line-height: 1.3`，並排的下拉框與輸入框同高（原差 1px）。textarea 行距不變。
 - 規則是全域的，其他設定頁的 `.field` 也受益；未改 HTML 結構與欄位順序。
 - 以 Edge 無頭量測頁確認數值（見 VALIDATION.md），實際介面待人工驗收。
+
+## 66. 織界 v5：局勢更新決策表（2026-10-01，僅預設）
+
+使用者確認局勢更新的格式段應與生成國策樹同等完整。v5 生成器新增 `UPDATE_TABLE`，接在局勢更新「国策输出格式」的效果形狀之後：15 列決策表（`steps:[]`、新事件與步驟 at、eventUpdates 的 current／steps／changes／report／result、focus、facts、selections、publications、calibrations、transitions 的 completed／incompatible／invalidateActive）及 11 條常見退回原因，皆對照 `engine.ts` 的 `applyProposal` 與 `periods.ts` 的 `checkTransition` 規則（例如 calibrations 只能列 calibration=true 的國家、填 result 不可同時 status:"ongoing"）。Step 8 格式自檢增加「對照決策表」。改樹任務未加此表。未改程式與 dist，不升版本；`test/weaver-preset.test.ts` 與全部 174 項測試通過。
+

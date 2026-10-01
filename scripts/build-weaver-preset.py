@@ -374,6 +374,7 @@ Step 8：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - changes 每项是 {country, effects}，每个效果有自己的 id；数值写数字（✗ "+5"）
 - eventUpdates 的 id 都是既有 ongoing 事件；填了 result 就不写 status:"ongoing"
 - 根物件的 steps（时间步骤）与事件的 steps（计划步骤）没有混用
+- 对照决策表：每项变化放在正确的位置（新事件、eventUpdates、facts、selections、publications、calibrations、transitions）
 - 所有引用的国家、国策与事件 ID 都存在
 </analysis_format>''',
     'reshape': '''VOID: 织界者，以下是你的思维要求：
@@ -687,6 +688,37 @@ EFFECT_SHAPES = '''## 效果（changes[].effects 的每一项）——只有三�
 {"id":ID,"kind":"commitment","key":承诺ID,"name":文字}
 {"id":ID,"kind":"stability","value":数字-100–100}（或 "kind":"warSupport"；✗ "+5"）'''
 
+UPDATE_TABLE = '''## 决策表
+| 我想表达 | 写法 |
+| 这段时间没有任何变化 | "steps":[]，其余根键照写 |
+| 某个时点发生了一件新的事 | 在该时点的时间步骤 events 加一项；事件的 at 等于步骤的 at |
+| 既有 ongoing 事件有进展 | 该时点的 eventUpdates 加 {"id":"既有事件ID","text":"本期进展"}；不要用同一个 id 再建新事件 |
+| 事件现况改变 | 同一项 eventUpdates 加 "current"（整句取代） |
+| 事件计划改变 | 同一项 eventUpdates 加 "steps":[计划步骤]（整份取代） |
+| 进展带来能力、承诺或数值变化 | 同一项 eventUpdates 加 "changes":[{"country":"国家ID","effects":[效果]}]，只写这次新增的 |
+| 进展值得当作新闻报导 | 同一项 eventUpdates 加 "report":true；一般进展省略 |
+| 事件结束 | 同一项 eventUpdates 加 "result":"achieved"、"abandoned" 或 "failed"；status 省略或写 "resolved" |
+| 新事件承接已开始或已完成的国策 | 新事件加 "focus":{"country":"国家ID","node":"国策ID"}；该国策已有执行事件时改用 eventUpdates |
+| 剧情取得国策需要的外部成果 | 该时点的 facts 加 {"country":"国家ID","id":"outcomes 中的事实ID","value":true,"evidence":"…","origin":"story"} |
+| 空闲的 AI 国选下一项国策 | 该时点的 selections 加 {"country":"国家ID","node":"国策ID","reason":"…"} |
+| 已完成的国策对外公开 | 该时点的 publications 加 {"country":"国家ID","node":"国策ID","evidence":"…"} |
+| calibration=true 的国家承接了现况 | "calibrations":["国家ID"]；只能列 state 中 calibration=true 的国家 |
+| 本期主要目的已完成，换下一期 | "transitions":[{"country":"国家ID","cause":"completed","reason":"…","invalidateActive":false}] |
+| 世界变局使本期议程不再适用 | 同上，"cause":"incompatible"；进行中的国策本身也已失效时才写 "invalidateActive":true |
+
+✗ 常见退回原因：
+- at 或 until 写成日期字串（✗ "1023年3月"），或 until 不等于 now
+- 时间步骤少写键（例如省略 publications 或 eventUpdates），或各步骤的 at 没有由小到大
+- 新事件的 at 与所在时间步骤的 at 不同
+- 新事件少写 option、timeline、scope 等必写键；countries 写成字串 "某王国" 而不是阵列
+- 用已存在的事件 id 新建事件（推进既有事件要用 eventUpdates）
+- eventUpdates 指向不存在或已结束的事件；填了 result 又写 "status":"ongoing"
+- changes 写成 {"stability":-3}，或少了 country 外层；效果缺 id，或 value 写成 "+5"
+- 把计划步骤 {"text","state"} 写进根物件 steps，或把时间步骤写进事件的 steps
+- 同一项国策已有执行事件，又新建一个承接它的事件
+- calibrations 列了 calibration 不是 true 的国家
+- edits 不是 []；沿用上一次的根物件 id（会被当成已处理而整份忽略）'''
+
 FORMAT = {
     'identify': '\n\n'.join([FORMAT_OPEN, COMMON, '''## 根物件（只有 countries 一个键）
 {"countries":[{"id":ID,"name":文字,"description":文字,"evidence":文字}]}
@@ -728,7 +760,7 @@ kind 写英文，不写「利益交换」等中文名''', NODE_RULES, NODE_TABLE
 - edits：局势更新永远是 []
 - calibrations：calibration=true 而这次承接现况的国家 ID；没有写 []
 - transitions：没有换期写 []；每项 {"country":国家ID,"cause":"completed"|"incompatible","reason":文字(≤800字),"invalidateActive":布尔}；invalidateActive=true 只能配 cause="incompatible"''',
-        STEP_RULES, EFFECT_SHAPES,
+        STEP_RULES, EFFECT_SHAPES, UPDATE_TABLE,
         example('update', UPDATE_EXAMPLE, '结构范例（只示范结构与型别，内容须依正文与 state 重写）'),
         example('update', UPDATE_EMPTY, '没有变化时的范例'),
         FORMAT_CLOSE]),
