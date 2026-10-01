@@ -68,17 +68,20 @@ test('v5 chains reset macros first and read only variables they set', () => {
     assert.equal(last.id, 'nf-cot-lock');
     assert.equal(last.role, 'user');
     assert.equal(last.content, '{{getvar::国策_卡COT}}');
-    // Model switches as in 世界后台引擎: Gemini on, DeepSeek off; both set the thinking text and the 卡COT.
-    for (const [id, enabled] of [
-      ['nf-model-gemini', true],
-      ['nf-model-deepseek', false],
-    ] as const) {
-      const model = segment(job, id);
-      assert.equal(model.enabled, enabled);
+    // Model switches as in 世界后台引擎: Gemini on, DeepSeek off. Only Gemini fills the 卡COT; DeepSeek
+    // ends the 开始编织 message with its thinking cue instead.
+    const gemini = segment(job, 'nf-model-gemini');
+    const deepseek = segment(job, 'nf-model-deepseek');
+    assert.ok(gemini.enabled);
+    assert.ok(!deepseek.enabled);
+    for (const model of [gemini, deepseek]) {
       assert.match(model.content, /\{\{setvar::国策_思考位置::/);
-      assert.match(model.content, /\{\{setvar::国策_卡COT::/);
-      assert.ok(order.indexOf(id) < order.indexOf('nf-cot'));
+      assert.ok(order.indexOf(model.id) < order.indexOf('nf-cot'));
     }
+    assert.match(gemini.content, /\{\{setvar::国策_卡COT::[^}]*START THINKING/);
+    assert.doesNotMatch(deepseek.content, /国策_卡COT/);
+    assert.match(deepseek.content, /\{\{setvar::国策_尾部::[^}]*begin▁of▁thinking/);
+    assert.match(segment(job, 'nf-tail').content, /\{\{getvar::国策_尾部\}\}$/);
   }
 });
 

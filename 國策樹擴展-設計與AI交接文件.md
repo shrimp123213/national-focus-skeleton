@@ -2116,3 +2116,5 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - 新增 `nf-cot-lock`「卡COT（随模型切换，勿关）」為每項任務最後一段，user 角色，內容只有 `{{getvar::国策_卡COT}}`。setvar 值內不含 `::`、`{{`、`}}`（生成時檢查）；`parseJsonReply` 會移除 think／thinking 區塊並容忍 JSON 前的 `Weaver:` 等文字。
 - `test/weaver-preset.test.ts` 改為斷言最後一段是 user 的卡COT、模型開關預設值及其 setvar。175／175 測試通過。未改程式與 dist。是否確實關閉 Gemini 3.7f／3.8f 的原生思考需以真實模型與請求紀錄驗收。
 
+補充（同日）：使用者指出工作流助手的卡COT 只屬於 Gemini。核對 v6.3：只有「角色筛选与交互」有模型開關，`gemini尾部`（卡COT）只在 Gemini 分支輸出；DeepSeek 分支沒有卡COT，只在「🚫尾部」user 訊息末尾放 `<｜begin▁of▁thinking｜>`。前台／後台角色沒有開關、固定送卡COT。v5 因此改為：Gemini 開關 setvar `国策_卡COT`；DeepSeek 開關改 setvar `国策_尾部`，由「开始编织」末尾的 `{{getvar::国策_尾部}}` 讀取，卡COT 保持空白不送出。宏重置同時清空兩者。段名改為「卡COT（Gemini 用，勿关）」；測試同步斷言。
+

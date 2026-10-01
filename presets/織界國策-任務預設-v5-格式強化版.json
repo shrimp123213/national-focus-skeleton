@@ -4,7 +4,7 @@
   "presets": [
     {
       "name": "织界国策 v5 格式强化版（基调＋焦点风格包）",
-      "savedAt": 1790823086430,
+      "savedAt": 1790823285225,
       "jobs": {
         "identify": {
           "retries": 2,
@@ -17,7 +17,7 @@
               "kind": "custom",
               "name": "宏重置（勿关，须在最前）",
               "role": "system",
-              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
+              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_尾部::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -25,7 +25,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·Gemini",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；Gemini 送卡COT。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -33,7 +33,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·DeepSeek",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_卡COT::VOID:\n首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；DeepSeek 不送卡COT，改在「开始编织」末尾引导原生思考。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_尾部::首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
               "enabled": false
             },
             {
@@ -145,13 +145,13 @@
               "kind": "custom",
               "name": "开始编织",
               "role": "user",
-              "content": "VOID:\n世界在{{user}}视线之外照常运转，诸国各据一方。\n开始辨识本局的国家与政权。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的 JSON 物件。",
+              "content": "VOID:\n世界在{{user}}视线之外照常运转，诸国各据一方。\n开始辨识本局的国家与政权。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的 JSON 物件。\n{{getvar::国策_尾部}}",
               "enabled": true
             },
             {
               "id": "nf-cot-lock",
               "kind": "custom",
-              "name": "卡COT（随模型切换，勿关）",
+              "name": "卡COT（Gemini 用，勿关）",
               "role": "user",
               "content": "{{getvar::国策_卡COT}}",
               "enabled": true
@@ -169,7 +169,7 @@
               "kind": "custom",
               "name": "宏重置（勿关，须在最前）",
               "role": "system",
-              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
+              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_尾部::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -177,7 +177,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·Gemini",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；Gemini 送卡COT。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -185,7 +185,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·DeepSeek",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_卡COT::VOID:\n首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；DeepSeek 不送卡COT，改在「开始编织」末尾引导原生思考。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_尾部::首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
               "enabled": false
             },
             {
@@ -385,13 +385,13 @@
               "kind": "custom",
               "name": "开始编织",
               "role": "user",
-              "content": "VOID:\n世界在{{user}}视线之外照常运转，诸国依自己的意志与恐惧选择道路。\n开始编织 candidate 这一国的国策之线（依任务资料的 stage：generate 输出整棵树，period 输出 summary 与 tree）。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件。",
+              "content": "VOID:\n世界在{{user}}视线之外照常运转，诸国依自己的意志与恐惧选择道路。\n开始编织 candidate 这一国的国策之线（依任务资料的 stage：generate 输出整棵树，period 输出 summary 与 tree）。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件。\n{{getvar::国策_尾部}}",
               "enabled": true
             },
             {
               "id": "nf-cot-lock",
               "kind": "custom",
-              "name": "卡COT（随模型切换，勿关）",
+              "name": "卡COT（Gemini 用，勿关）",
               "role": "user",
               "content": "{{getvar::国策_卡COT}}",
               "enabled": true
@@ -409,7 +409,7 @@
               "kind": "custom",
               "name": "宏重置（勿关，须在最前）",
               "role": "system",
-              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
+              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_尾部::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -417,7 +417,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·Gemini",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；Gemini 送卡COT。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -425,7 +425,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·DeepSeek",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_卡COT::VOID:\n首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；DeepSeek 不送卡COT，改在「开始编织」末尾引导原生思考。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_尾部::首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
               "enabled": false
             },
             {
@@ -633,13 +633,13 @@
               "kind": "custom",
               "name": "开始编织",
               "role": "user",
-              "content": "VOID:\n世界在{{user}}视线之外照常运转，各国沿著自己的国策前行，历史的车轮自行转动。\n开始把各国从 cursor 推进到 now。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件。",
+              "content": "VOID:\n世界在{{user}}视线之外照常运转，各国沿著自己的国策前行，历史的车轮自行转动。\n开始把各国从 cursor 推进到 now。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件。\n{{getvar::国策_尾部}}",
               "enabled": true
             },
             {
               "id": "nf-cot-lock",
               "kind": "custom",
-              "name": "卡COT（随模型切换，勿关）",
+              "name": "卡COT（Gemini 用，勿关）",
               "role": "user",
               "content": "{{getvar::国策_卡COT}}",
               "enabled": true
@@ -657,7 +657,7 @@
               "kind": "custom",
               "name": "宏重置（勿关，须在最前）",
               "role": "system",
-              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
+              "content": "{{setvar::国策_VOID指令::}}\n{{setvar::国策_卡COT::}}\n{{setvar::国策_尾部::}}\n{{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。\n- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -665,7 +665,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·Gemini",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；Gemini 送卡COT。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。\n- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}\n{{setvar::国策_卡COT::<thinking>\n世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始\n</thinking>\n\nWeaver:\n[START THINKING]}}\n{{trim}}",
               "enabled": true
             },
             {
@@ -673,7 +673,7 @@
               "kind": "custom",
               "name": "模型（二选一，全关＝自动）·DeepSeek",
               "role": "system",
-              "content": "{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_卡COT::VOID:\n首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
+              "content": "{{//模型二选一（与世界后台引擎相同）；DeepSeek 不送卡COT，改在「开始编织」末尾引导原生思考。两段都关闭时按模型自动判断}}\n{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}\n{{setvar::国策_尾部::首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。\n<｜begin▁of▁thinking｜>}}\n{{trim}}",
               "enabled": false
             },
             {
@@ -873,13 +873,13 @@
               "kind": "custom",
               "name": "开始编织",
               "role": "user",
-              "content": "VOID:\n剧变已经发生，旧的蓝图不再成立。\n开始重织受影响的国策之线。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件。",
+              "content": "VOID:\n剧变已经发生，旧的蓝图不再成立。\n开始重织受影响的国策之线。先依<analysis_format>完成思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件。\n{{getvar::国策_尾部}}",
               "enabled": true
             },
             {
               "id": "nf-cot-lock",
               "kind": "custom",
-              "name": "卡COT（随模型切换，勿关）",
+              "name": "卡COT（Gemini 用，勿关）",
               "role": "user",
               "content": "{{getvar::国策_卡COT}}",
               "enabled": true

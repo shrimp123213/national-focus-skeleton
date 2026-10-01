@@ -253,14 +253,16 @@ VOID_INPUT = '''VOID: 以下是 VOID 在本轮的额外指令，作为最高指�
 # the generic thinking text and sends no 卡COT.
 RESET = '''{{setvar::国策_VOID指令::}}
 {{setvar::国策_卡COT::}}
+{{setvar::国策_尾部::}}
 {{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。
 - 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}
 {{trim}}'''
 
-# Model switches, as in 世界后台引擎 (gemini开／Deepseek开). Gemini 3.7f/3.8f take no assistant prefill:
-# the 卡COT is the last user message, written as the start of the reply, so the model skips native
-# reasoning and writes the analysis_format steps in <think>. DeepSeek thinks natively along the steps.
-MODEL_GEMINI = '''{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}
+# Model switches, as in 世界后台引擎 (gemini开／Deepseek开). Only Gemini gets a 卡COT: Gemini 3.7f/3.8f
+# take no assistant prefill, so the 卡COT is the last user message, written as the start of the reply;
+# the model skips native reasoning and writes the analysis_format steps in <think>. DeepSeek has no
+# 卡COT; like the world engine's DeepSeek tail, the 开始编织 message ends with <｜begin▁of▁thinking｜>.
+MODEL_GEMINI = '''{{//模型二选一（与世界后台引擎相同）；Gemini 送卡COT。两段都关闭时按模型自动判断}}
 {{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。
 - </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}
 {{setvar::国策_卡COT::<thinking>
@@ -271,14 +273,15 @@ Weaver:
 [START THINKING]}}
 {{trim}}'''
 
-MODEL_DEEPSEEK = '''{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}
+MODEL_DEEPSEEK = '''{{//模型二选一（与世界后台引擎相同）；DeepSeek 不送卡COT，改在「开始编织」末尾引导原生思考。两段都关闭时按模型自动判断}}
 {{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}
-{{setvar::国策_卡COT::VOID:
-首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。
+{{setvar::国策_尾部::首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。
 <｜begin▁of▁thinking｜>}}
 {{trim}}'''
 
 COT_LOCK = '{{getvar::国策_卡COT}}'
+# DeepSeek only; empty otherwise (the segment is trimmed before sending).
+TAIL_MODEL = '\n{{getvar::国策_尾部}}'
 
 THINK_WHERE = '''思维语言：中文
 思考位置：
@@ -995,8 +998,8 @@ def chain(job):
     items.append(builtin('data'))
     items.append(item('nf-format', '国策输出格式', 'user', FORMAT[job]))
     items.append(item('nf-format-ack', '输出格式确认', 'assistant', FORMAT_ACK[job]))
-    items.append(item('nf-tail', '开始编织', 'user', TAIL[job]))
-    items.append(item('nf-cot-lock', '卡COT（随模型切换，勿关）', 'user', COT_LOCK))
+    items.append(item('nf-tail', '开始编织', 'user', TAIL[job] + TAIL_MODEL))
+    items.append(item('nf-cot-lock', '卡COT（Gemini 用，勿关）', 'user', COT_LOCK))
     return items
 
 

@@ -5,7 +5,7 @@
 ## 織界 v5 預設補充：模型開關與卡COT（2026-10-01）
 
 - 「思考方式」兩段改為與世界后台引擎相同的「模型（二选一）」：**Gemini**（預設開）與 **DeepSeek**（預設關），兩段都關時按模型自動判斷。
-- 每項任務最後新增 user 角色的「卡COT」段（勿關），內容隨模型切換：Gemini 時是寫成回覆開頭的 `<thinking>…</thinking>` 與 `Weaver: [START THINKING]`，讓 Gemini 3.7f／3.8f 不走原生思考、改在 `<think>` 內照思維要求逐步思考後輸出 JSON（不用預填，適合不支援預填的模型）；DeepSeek 時以 `<｜begin▁of▁thinking｜>` 引導原生思考照步驟進行。做法對照世界后台引擎 v6.3 的卡COT。
+- 每項任務最後新增 user 角色的「卡COT」段（勿關），只在 Gemini 時有內容：寫成回覆開頭的 `<thinking>…</thinking>` 與 `Weaver: [START THINKING]`，讓 Gemini 3.7f／3.8f 不走原生思考、改在 `<think>` 內照思維要求逐步思考後輸出 JSON（不用預填，適合不支援預填的模型）。DeepSeek 不送卡COT，改在「开始编织」末尾加上 `<｜begin▁of▁thinking｜>` 引導原生思考照步驟進行。做法對照世界后台引擎 v6.3 的角色筛选（gemini尾部只屬於 Gemini 分支）與前台／後台卡COT。
 - 重新匯入並套用 v5 即可，主腳本不變。
 
 ## 織界 v5 預設補充：換期格式規範（2026-10-01）
