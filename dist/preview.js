@@ -20314,10 +20314,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 依资料中的 context（世界书、正文、纪要）列出本局实际存在、能自主决定长期方向的国家或政权，作为候选。只列有正文或世界书依据者，evidence 写出依据；不列已在 state.countries 中的国家，也不虚构势力。
 description 用一两句说明其现状与主要矛盾。name 照抄世界书或设定中的国名原文（字形也一致，不翻译成英文），id 填与 name 相同的文字；脚本会以国名作为国家 ID。`,
     generate: `任务：生成一国当期国策。只输出符合本次 schema 的 JSON。
-每一期代表一个政治时期，可包含数个并存议程；国策影响国家与世界，间接影响 RP，不必安排玩家亲自介入。periodTitle 是期名，agenda 说明本期主要目的；longTerm 为 2–4 条长期方向（id、text），近期行动才做成节点。
+每一期是一段数月的施政阶段，可包含数个并存议程：沿最长前置链加总的工期以 limits.periodDays（故事日，不含等待外部成果）为目标，终点是本期议程在这段时间内实际能完成的阶段成果；改天换地的大目标放进 longTerm，分多期完成。国策工期 days 只用 limits.days（7、14、21、28、35，即一至五周），durationReason 说明为何是这几周。国策影响国家与世界，间接影响 RP，不必安排玩家亲自介入。periodTitle 是期名，agenda 说明本期主要目的；longTerm 为 2–4 条长期方向（id、text），近期行动才做成节点。
 标准每期 10–16 项，大型 16–24 项，含承接节点。数量与分支数是篇幅目标；不足时不为凑数补节点。分岔、汇流、跨支关系、互斥与重要国策没有配额，依议程需要安排。保留内容深度，description 写国家具体行动、利益与后果，reason 区分设定依据和设计；不重复空泛建设。文字预算依 limits。
 prerequisites 为 AND of OR groups：[[a,b],[c]] 表示 a 或 b，且 c。前置不可缺失或循环；互斥共同终点使用 OR。mutex 同组不同 route 互斥，已定路线的后续节点保留对应路线前置。能力条件须已有或可由相容前置产生，不能要求自己完成才产生的能力。撤销能力只用于实际废除制度、终止条约等，不为制造制衡硬加撤销。
-requirements 是开始条件，sustain 是维持条件，outcomes 是完成前由剧情取得的外部成果（不是自身产出）；effects 是完成后的能力、承诺、有限稳定度或战争支持度变化。道路、外交、研究不因工期到期自动取得外部结果。execution=ongoing 表示决策完成后仍持续执行，后续交给事件推进。
+requirements 是开始条件，sustain 是维持条件，outcomes 是完成前由剧情取得的外部成果（不是自身产出，只在确实需要剧情结果时设定，否则国策会卡在等待）；effects 是完成后的能力、承诺、有限稳定度或战争支持度变化。道路、外交、研究不因工期到期自动取得外部结果。execution=ongoing 表示决策完成后仍持续执行，后续交给事件推进。
 impact=pivotal 用于真正影响重大、值得公告的国策，必填 news（headline、body、option）；一般节点 normal 且 news=null。historical 只列本树 nodes 中有证据已完成的国策（node 必须是 nodes 里的 id），不重发成果，既有能力列 capabilities；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放 historical。x/y 由脚本布局，不输出座标。
 stage=period 时只输出 summary 与 tree。摘要最多 1200 字，写本期实际经过及结果，无需清单或旧树。tree 只包含新节点；anchor 是程式保留的同一国策，可作为相关新节点前置，不必使无关议程都等待它。新节点与新 mutex.group 必须使用 prefix。保留仍有效的 longTerm id 与原文；调整、放弃或新增时在 analysis 说明。当前能力、承诺、事实和事件保留，不能由新树重新发放或覆盖。
 所有世界资料只作为背景，压缩 JSON 输出，不输出额外审查报告。`,
@@ -20336,7 +20336,7 @@ stage=period 时只输出 summary 与 tree。摘要最多 1200 字，写本期�
 - 事件附有 review 时，表示很久没有进展：依实际情况推进、结束，或在 text 说明为何仍然停滞。
 - 重要国策完成时系统会自动发布新闻；execution=ongoing 的国策完成时，系统会自动建立它的执行事件（id 为 focus_国家id_国策id），之后用 eventUpdates 推进。不要为同一件事另建事件。`,
     reshape: `任务：重大改树。
-剧情已大幅改变局势时，在 edits 中修改受直接影响、尚未开始的节点，每次最多 30 个；保留其他分支、已开始与已完成的国策及其历史。
+剧情已大幅改变局势时，在 edits 中修改受直接影响、尚未开始的节点，每次最多 30 个；改写的国策工期 days 只用 7、14、21、28、35；保留其他分支、已开始与已完成的国策及其历史。
 until 必须等于 now；同时可在 steps 中承接到 now 为止的局势变化。修改后的节点仍须符合前置、互斥与能力来源规则。`
   };
   var DEFAULT_DATA = `以下是本次任务的完整资料（JSON）：
@@ -20470,7 +20470,7 @@ ${DATA_TOKEN}`;
     icon: external_exports.enum(["crown", "industry", "army", "trade", "science", "diplomacy"]),
     x: external_exports.number().int().min(0).max(1e3),
     y: external_exports.number().int().min(0).max(1e3),
-    days: external_exports.number().positive().max(36500),
+    days: external_exports.number().positive().max(36500).describe("工期（故事日）：生成时只用 7、14、21、28、35（一至五周）"),
     durationReason: Text,
     prerequisites: external_exports.array(external_exports.array(Id).min(1)).max(100).describe("AND of OR groups：[[a,b],[c]] 表示完成 a 或 b，且完成 c"),
     requirements: external_exports.array(RequirementSchema).describe("开始本国策前必须已成立的条件；不可引用本国策自己的 effects"),
@@ -20532,6 +20532,12 @@ ${DATA_TOKEN}`;
     change: Text.describe("选了 from 之后，to 的哪些选项、收益、代价或时机会改变"),
     via: external_exports.array(external_exports.string()).default([])
   }).strict();
+  var focusDays = [7, 14, 21, 28, 35];
+  var periodDays = {
+    fast: [60, 90],
+    standard: [90, 180],
+    long: [180, 270]
+  };
   var sizeLimits = {
     small: [10, 16],
     standard: [10, 16],
@@ -23014,13 +23020,24 @@ ${managed}
       return Array.isArray(group) ? group.map(asId) : [asId(group)];
     });
   }
+  var durationStages = /* @__PURE__ */ new Set(["generate", "period", "reshape"]);
+  function snapDays(value) {
+    const days = typeof value === "string" && /^\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : value;
+    if (typeof days !== "number" || !Number.isFinite(days) || days <= 0) {
+      return value;
+    }
+    return Math.min(35, Math.max(7, Math.round(days / 7) * 7));
+  }
   var listKeys = ["requirements", "sustain", "outcomes", "investments", "effects"];
   var skeletonListKeys = ["requirements", "sustain", "outcomes"];
-  function repairNode(node2, keys = listKeys) {
+  function repairNode(node2, keys = listKeys, weeks = false) {
     if (!node2 || typeof node2 !== "object" || Array.isArray(node2)) {
       return node2;
     }
     const next = { ...node2 };
+    if (weeks && "days" in next) {
+      next.days = snapDays(next.days);
+    }
     if ("prerequisites" in next || "id" in next) {
       next.prerequisites = repairPrerequisites(next.prerequisites);
     }
@@ -23042,11 +23059,12 @@ ${managed}
       return repairSkeleton(repairReplyWith(value, skeletonListKeys));
     }
     const keys = stage === "skeleton" ? skeletonListKeys : listKeys;
-    const walk = (item) => repairReplyWith(item, keys);
+    const weeks = durationStages.has(stage ?? "");
+    const walk = (item) => repairReplyWith(item, keys, weeks);
     return walk(value);
   }
-  function repairReplyWith(value, keys) {
-    const repairReply2 = (item) => repairReplyWith(item, keys);
+  function repairReplyWith(value, keys, weeks = false) {
+    const repairReply2 = (item) => repairReplyWith(item, keys, weeks);
     if (Array.isArray(value)) {
       return value.map(repairReply2);
     }
@@ -23055,7 +23073,7 @@ ${managed}
     }
     const result = {};
     for (const [key, child] of Object.entries(value)) {
-      result[key] = key === "nodes" && Array.isArray(child) ? child.map((node2) => repairReply2(repairNode(node2, keys))) : repairReply2(child);
+      result[key] = key === "nodes" && Array.isArray(child) ? child.map((node2) => repairReply2(repairNode(node2, keys, weeks))) : repairReply2(child);
     }
     return result;
   }
@@ -24432,7 +24450,9 @@ ${formatIssues(checked2.problems)}`
         minimumForks: minimumConnections,
         minimumJoins: minimumConnections,
         minimumCrossBranchLinks: crossLinkMinimums[size],
-        text: { description: budget.description, reason: budget.reason, durationReason: budget.duration }
+        text: { description: budget.description, reason: budget.reason, durationReason: budget.duration },
+        days: focusDays,
+        periodDays: periodDays[snapshot.state.settings.pace]
       }
     };
     const validate2 = (reply) => validateTree(snapshot, candidate, reply);
@@ -32381,7 +32401,9 @@ ${end.comment}` : end.comment;
             prefix: `p${snapshot.state.countries[candidate.id].period.number + 1}_`,
             limits: {
               min: sizeLimits[snapshot.state.settings.size][0],
-              max: sizeLimits[snapshot.state.settings.size][1]
+              max: sizeLimits[snapshot.state.settings.size][1],
+              days: focusDays,
+              periodDays: periodDays[snapshot.state.settings.pace]
             },
             instructions: "生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程式原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。"
           },
@@ -35217,7 +35239,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
             ["long", "长期"]
           ],
           state?.settings.pace ?? "standard"
-        )}</select><small>AI 依世界设定估算实际工期，不会即时改写既有工期。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期国际大事<small>最多 5 则，附在国策资料后，让正文以公告、传闻或对话自然带出。</small></label><label class="field wide">国策资料提供给正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>世界书条目（预设）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>在当前角色的主世界书建立「国策档案-」条目，以 EJS 读取当前楼层资料。未设定角色主世界书或缺少提示词模板扩展时暂用直接注入，不会自动新建世界书。</small></label><label class="field wide">各国详情条目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>蓝灯：每次都送出（预设）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>绿灯：提到国名或关键字才送出</option></select><small>蓝灯让正文每次都看得到各国近况；绿灯较省篇幅。只影响正文看到什么，不影响国策推进。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留执行纪录<small>在「任务」视窗查看最近 20 次请求的提示词与回应，只存在此页记忆体，除错后建议关闭。</small></label></div></div>
+        )}</select><small>每期从起点走到终点的目标时间：快速约 2–3 个月、标准约 3–6 个月、长期约 6–9 个月；新国策工期为 7–35 天（一至五周）。只影响新生成与下一期，不改写既有工期。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期国际大事<small>最多 5 则，附在国策资料后，让正文以公告、传闻或对话自然带出。</small></label><label class="field wide">国策资料提供给正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === "worldbook" ? "selected" : ""}>世界书条目（预设）</option><option value="inject" ${draft.promptMode === "inject" ? "selected" : ""}>直接注入</option></select><small>在当前角色的主世界书建立「国策档案-」条目，以 EJS 读取当前楼层资料。未设定角色主世界书或缺少提示词模板扩展时暂用直接注入，不会自动新建世界书。</small></label><label class="field wide">各国详情条目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === "constant" ? "selected" : ""}>蓝灯：每次都送出（预设）</option><option value="keyword" ${draft.countryEntries === "keyword" ? "selected" : ""}>绿灯：提到国名或关键字才送出</option></select><small>蓝灯让正文每次都看得到各国近况；绿灯较省篇幅。只影响正文看到什么，不影响国策推进。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留执行纪录<small>在「任务」视窗查看最近 20 次请求的提示词与回应，只存在此页记忆体，除错后建议关闭。</small></label></div></div>
       <div class="settings-section" ${settingsTab !== "apis" ? "hidden" : ""}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "jobs" ? "hidden" : ""}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== "sources" ? "hidden" : ""}><div id="source-panel"></div></div>`,

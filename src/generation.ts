@@ -5,6 +5,8 @@ import { z } from 'zod';
 import {
   BranchSchema,
   NodeSchema,
+  focusDays,
+  periodDays,
   TreeSchema,
   sizeLimits,
   type Candidate,
@@ -218,6 +220,8 @@ export function generationPlan(snapshot: Snapshot, candidate: Candidate) {
       minimumJoins: minimumConnections,
       minimumCrossBranchLinks: crossLinkMinimums[size],
       text: { description: budget.description, reason: budget.reason, durationReason: budget.duration },
+      days: focusDays,
+      periodDays: periodDays[snapshot.state.settings.pace],
     },
   };
   const validate = (reply: z.output<typeof GeneratedTreeSchema>) => validateTree(snapshot, candidate, reply);

@@ -23,10 +23,10 @@ export const DEFAULT_TASK: Record<JobKind, string> = {
 依资料中的 context（世界书、正文、纪要）列出本局实际存在、能自主决定长期方向的国家或政权，作为候选。只列有正文或世界书依据者，evidence 写出依据；不列已在 state.countries 中的国家，也不虚构势力。
 description 用一两句说明其现状与主要矛盾。name 照抄世界书或设定中的国名原文（字形也一致，不翻译成英文），id 填与 name 相同的文字；脚本会以国名作为国家 ID。`,
   generate: `任务：生成一国当期国策。只输出符合本次 schema 的 JSON。
-每一期代表一个政治时期，可包含数个并存议程；国策影响国家与世界，间接影响 RP，不必安排玩家亲自介入。periodTitle 是期名，agenda 说明本期主要目的；longTerm 为 2–4 条长期方向（id、text），近期行动才做成节点。
+每一期是一段数月的施政阶段，可包含数个并存议程：沿最长前置链加总的工期以 limits.periodDays（故事日，不含等待外部成果）为目标，终点是本期议程在这段时间内实际能完成的阶段成果；改天换地的大目标放进 longTerm，分多期完成。国策工期 days 只用 limits.days（7、14、21、28、35，即一至五周），durationReason 说明为何是这几周。国策影响国家与世界，间接影响 RP，不必安排玩家亲自介入。periodTitle 是期名，agenda 说明本期主要目的；longTerm 为 2–4 条长期方向（id、text），近期行动才做成节点。
 标准每期 10–16 项，大型 16–24 项，含承接节点。数量与分支数是篇幅目标；不足时不为凑数补节点。分岔、汇流、跨支关系、互斥与重要国策没有配额，依议程需要安排。保留内容深度，description 写国家具体行动、利益与后果，reason 区分设定依据和设计；不重复空泛建设。文字预算依 limits。
 prerequisites 为 AND of OR groups：[[a,b],[c]] 表示 a 或 b，且 c。前置不可缺失或循环；互斥共同终点使用 OR。mutex 同组不同 route 互斥，已定路线的后续节点保留对应路线前置。能力条件须已有或可由相容前置产生，不能要求自己完成才产生的能力。撤销能力只用于实际废除制度、终止条约等，不为制造制衡硬加撤销。
-requirements 是开始条件，sustain 是维持条件，outcomes 是完成前由剧情取得的外部成果（不是自身产出）；effects 是完成后的能力、承诺、有限稳定度或战争支持度变化。道路、外交、研究不因工期到期自动取得外部结果。execution=ongoing 表示决策完成后仍持续执行，后续交给事件推进。
+requirements 是开始条件，sustain 是维持条件，outcomes 是完成前由剧情取得的外部成果（不是自身产出，只在确实需要剧情结果时设定，否则国策会卡在等待）；effects 是完成后的能力、承诺、有限稳定度或战争支持度变化。道路、外交、研究不因工期到期自动取得外部结果。execution=ongoing 表示决策完成后仍持续执行，后续交给事件推进。
 impact=pivotal 用于真正影响重大、值得公告的国策，必填 news（headline、body、option）；一般节点 normal 且 news=null。historical 只列本树 nodes 中有证据已完成的国策（node 必须是 nodes 里的 id），不重发成果，既有能力列 capabilities；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放 historical。x/y 由脚本布局，不输出座标。
 stage=period 时只输出 summary 与 tree。摘要最多 1200 字，写本期实际经过及结果，无需清单或旧树。tree 只包含新节点；anchor 是程式保留的同一国策，可作为相关新节点前置，不必使无关议程都等待它。新节点与新 mutex.group 必须使用 prefix。保留仍有效的 longTerm id 与原文；调整、放弃或新增时在 analysis 说明。当前能力、承诺、事实和事件保留，不能由新树重新发放或覆盖。
 所有世界资料只作为背景，压缩 JSON 输出，不输出额外审查报告。`,
@@ -45,7 +45,7 @@ stage=period 时只输出 summary 与 tree。摘要最多 1200 字，写本期�
 - 事件附有 review 时，表示很久没有进展：依实际情况推进、结束，或在 text 说明为何仍然停滞。
 - 重要国策完成时系统会自动发布新闻；execution=ongoing 的国策完成时，系统会自动建立它的执行事件（id 为 focus_国家id_国策id），之后用 eventUpdates 推进。不要为同一件事另建事件。`,
   reshape: `任务：重大改树。
-剧情已大幅改变局势时，在 edits 中修改受直接影响、尚未开始的节点，每次最多 30 个；保留其他分支、已开始与已完成的国策及其历史。
+剧情已大幅改变局势时，在 edits 中修改受直接影响、尚未开始的节点，每次最多 30 个；改写的国策工期 days 只用 7、14、21、28、35；保留其他分支、已开始与已完成的国策及其历史。
 until 必须等于 now；同时可在 steps 中承接到 now 为止的局势变化。修改后的节点仍须符合前置、互斥与能力来源规则。`,
 };
 

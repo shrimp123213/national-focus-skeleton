@@ -15,7 +15,7 @@ import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 import YAML from 'yaml';
 
 /** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5.4-格式強化版.json', import.meta.url);
+const file = new URL('../presets/織界國策-任務預設-v5.5-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -284,6 +284,25 @@ test('weaver preset world state keeps recent history in full, needs a landed wor
   const idle = world();
   idle.addon_data.世界.甲界.降临 = false;
   assert.equal(render({ ...idle, post_process_tags: { 世界状态摘要_world: { 甲界: '摘要' } } }).trim(), '');
+});
+
+test('weaver preset examples use whole-week durations', () => {
+  const days: number[] = [];
+  const collect = (value: unknown): void => {
+    if (Array.isArray(value)) value.forEach(collect);
+    else if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) {
+        if (key === 'days' && typeof child === 'number') days.push(child);
+        else collect(child);
+      }
+    }
+  };
+  for (const job of ['generate', 'reshape']) examples(job).forEach((item) => collect(item.value));
+  assert.ok(days.length >= 9);
+  assert.ok(
+    days.every((value) => [7, 14, 21, 28, 35].includes(value)),
+    String(days),
+  );
 });
 
 test('weaver preset and built-in rules require simplified Chinese output', () => {

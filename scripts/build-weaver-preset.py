@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.4-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.5-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.4 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.5 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -96,6 +96,7 @@ PRUNE = '''
 虚海会剪除失去多元可能性的历史。一棵国策树若只剩一条必然的路、一个必然的结局，就是即将被剪定的废线。
 - 每棵树至少保留两种能走到不同结局的方向（互斥路线），而且每一方都有可信的支持者。
 - 终点国策描述「新的处境」，而不是「永恒的胜利」：胜利也会留下新的矛盾。
+- 每一期只是数月的施政阶段：终点是本期在这段时间内实际能达成的阶段成果，不是改天换地的终局；统一、改朝换代、登神这类大目标放进 longTerm，分多期完成。
 </事象剪定>
 '''
 
@@ -336,15 +337,19 @@ Step 2：国情
 Step 3：议程
 - 本期议程及长期方向；保留有效长期方向的 id 与原文，修订或放弃要说明
 - 标准 10–16、大型 16–24（含承接），是篇幅目标，禁止为凑数补国策；分岔、汇流、互斥、核心分支与重要国策没有配额
+- 时间尺度：每项国策 days 只用 7／14／21／28／35（一至五周）；沿最长前置链加总的工期以 limits.periodDays 为目标（不含等待外部成果），终点是这段时间内能完成的阶段成果
+- outcomes 只在确实需要剧情结果时设定，否则国策会卡在等待
 Step 4：路线与代价
 - 写具体国家行动、利益及代价；持续执行交给事件（execution=ongoing）
 - 能力、事实、条件与产出分清：outcomes 是外部成果，不写本国策自己的产出；不要求自身成果
 Step 5：节点清单
-- 用代号列出每个国策：id｜branch｜前置（写成两层阵列）｜mutex group/route 或 null｜impact
+- 用代号列出每个国策：id｜branch｜days｜前置（写成两层阵列）｜mutex group/route 或 null｜impact
+- 算出最长前置链的工期总和，确认落在 limits.periodDays 内；太长就合并国策或缩短工期
 - 前置不循环；每个 mutex.group 至少两个 route；互斥路线的共同后续用 OR 组
 Step 6：格式自检（对照<国策输出格式>逐条确认；只写发现的问题与修正，没有问题写「通过」）
 - 根物件：stage=generate 是整棵树；stage=period 只有 summary 与 tree
 - 数字与布尔：stability、warSupport、days、minimum、value 是数字；active、negate 是布尔；都不加引号
+- 每个 days 都是 7、14、21、28 或 35
 - 每个国策 17 键齐全；没有内容的列表写 []；mutex 是 null 或四键物件；normal 国策的 news 是 null，pivotal 国策的 news 三键齐全
 - prerequisites 每一组都是阵列（两层）；引用的国策 ID 都存在
 - 条件只有 kind、id、label（可加 negate）或 kind、minimum、label；效果都有自己的 id，能力与承诺用 key
@@ -416,6 +421,7 @@ Step 3：影响范围
 Step 4：新路线
 - 如何改写？新方向如何承接剧变，并融入<weaving_style>中的偏好？
 - 依<事象剪定>保留互斥路线与多元结局
+- 改写的国策 days 只用 7／14／21／28／35
 Step 5：条件修复
 - 改写后前置、互斥与能力来源仍成立；被移除的节点不再被任何国策引用
 Step 6：承接局势
@@ -513,22 +519,22 @@ GENERATE_EXAMPLE = {
     'capabilities': [],
     'historical': [],
     'nodes': [
-        node('n_council', COURT, 'crown', 30, [], investments=['御前书记官'],
+        node('n_council', COURT, 'crown', 14, [], investments=['御前书记官'],
              effects=[{'id': 'e_council', 'kind': 'capability', 'key': 'royal_council', 'name': '御前会议', 'active': True}]),
-        node('n_army', COURT, 'army', 90, [['n_council']],
+        node('n_army', COURT, 'army', 35, [['n_council']],
              requirements=[{'kind': 'capability', 'id': 'royal_council', 'label': '已设御前会议'}],
              sustain=[{'kind': 'warSupport', 'minimum': 20, 'label': '战争支持度至少 20'}],
              investments=['王室卫队', '军费'],
              effects=[{'id': 'e_army_ws', 'kind': 'warSupport', 'value': 5}],
              mutex={'group': 'court_choice', 'route': 'army', 'lock': 'start', 'reason': '国库只够支持一条路线'}),
-        node('n_port', TRADE, 'trade', 60, [['n_council']],
+        node('n_port', TRADE, 'trade', 28, [['n_council']],
              requirements=[{'kind': 'fact', 'id': 'port_blockaded', 'label': '港口未遭封锁', 'negate': True}],
              outcomes=[{'kind': 'fact', 'id': 'port_survey_done', 'label': '港口勘查完成'}],
              investments=['商会资金'],
              effects=[{'id': 'e_port_charter', 'kind': 'commitment', 'key': 'merchant_charter', 'name': '商会特许状'},
                       {'id': 'e_port_stab', 'kind': 'stability', 'value': -3}],
              mutex={'group': 'court_choice', 'route': 'trade', 'lock': 'start', 'reason': '国库只够支持一条路线'}),
-        node('n_cabinet', COURT, 'crown', 45, [['n_army', 'n_port']],
+        node('n_cabinet', COURT, 'crown', 21, [['n_army', 'n_port']],
              requirements=[{'kind': 'stability', 'minimum': 40, 'label': '稳定度至少 40'}],
              investments=['宫廷法官'],
              effects=[{'id': 'e_cabinet_off', 'kind': 'capability', 'key': 'royal_council', 'name': '御前会议', 'active': False},
@@ -564,17 +570,17 @@ PERIOD_EXAMPLE = {
         'capabilities': [],
         'historical': [],
         'nodes': [
-            node('p2_charter', CABINET, 'crown', 60, [['n_cabinet']],
+            node('p2_charter', CABINET, 'crown', 28, [['n_cabinet']],
                  requirements=[{'kind': 'capability', 'id': 'cabinet', 'label': '内阁已设立'}],
                  investments=['内阁书记处'],
                  effects=[{'id': 'p2_e_charter', 'kind': 'capability', 'key': 'charter_court', 'name': '宪章法院', 'active': True}]),
-            node('p2_fort', BORDER, 'army', 90, [], investments=['边防军', '石料'],
+            node('p2_fort', BORDER, 'army', 35, [], investments=['边防军', '石料'],
                  effects=[{'id': 'p2_e_fort_ws', 'kind': 'warSupport', 'value': 3}],
                  mutex={'group': 'p2_border', 'route': 'fort', 'lock': 'start', 'reason': '边防预算只够一条路线'}),
-            node('p2_treaty', BORDER, 'diplomacy', 45, [], investments=['使节团'],
+            node('p2_treaty', BORDER, 'diplomacy', 21, [], investments=['使节团'],
                  effects=[{'id': 'p2_e_treaty', 'kind': 'commitment', 'key': 'p2_border_treaty', 'name': '边境互不侵犯条约'}],
                  mutex={'group': 'p2_border', 'route': 'treaty', 'lock': 'start', 'reason': '边防预算只够一条路线'}),
-            node('p2_settle', CABINET, 'crown', 30, [['p2_fort', 'p2_treaty'], ['p2_charter']],
+            node('p2_settle', CABINET, 'crown', 14, [['p2_fort', 'p2_treaty'], ['p2_charter']],
                  requirements=[{'kind': 'capability', 'id': 'charter_court', 'label': '宪章法院已设立'}],
                  investments=['宫廷法官'],
                  effects=[{'id': 'p2_e_settle', 'kind': 'stability', 'value': 5}],
@@ -642,7 +648,7 @@ RESHAPE_EXAMPLE = {
     'edits': [{
         'country': '某王国',
         'remove': ['n_port'],
-        'nodes': [node('n_port_rebuild', TRADE, 'trade', 120, [['n_council']], investments=['商会资金', '流民劳力'],
+        'nodes': [node('n_port_rebuild', TRADE, 'trade', 35, [['n_council']], investments=['商会资金', '流民劳力'],
                        effects=[{'id': 'e_rebuild_cap', 'kind': 'capability', 'key': 'deep_harbor', 'name': '深水港', 'active': True}],
                        mutex={'group': 'court_choice', 'route': 'trade', 'lock': 'start', 'reason': '国库只够支持一条路线'},
                        position=(400, 200))],
@@ -679,7 +685,7 @@ NODE_RULES = '''## 国策（nodes 的每一项）
 必写 17 键：id name branch description reason icon days durationReason prerequisites requirements sustain outcomes investments effects mutex impact news；execution 可省略
 - branch：填 branches[].name 原文，逐字一致
 - icon："crown"｜"industry"｜"army"｜"trade"｜"science"｜"diplomacy" 六选一
-- days：数字（故事日，大于 0）；durationReason：文字
+- days：7｜14｜21｜28｜35 五选一（一至五周的故事日；其它数字会被本机改成最接近的整周，超过 35 一律改成 35）；durationReason：说明为何是这几周
 - prerequisites：两层阵列，见决策表
 - requirements／sustain／outcomes：[条件]
 - investments：[文字]，简短名词，例如 ["户部书吏","三万金币"]
@@ -757,6 +763,7 @@ EFFECT_SHAPES = '''## 效果（changes[].effects 的每一项）——只有三�
 
 PERIOD_RULES = '''## 换期（stage=period）
 根物件只有两个键：{"summary":文字(≤1200字),"tree":{整棵树}}，tree 的键同上，另有以下规定：
+- 新一期同样是数月的施政阶段：days 只用 7／14／21／28／35，沿最长前置链的工期以 limits.periodDays 为目标
 - periodTitle、agenda 必填且不为空
 - historical 写 []；capabilities 写 []（现有能力、承诺与事实由程式沿用，不重新发放）
 - nodes 只放本期新国策，不放 anchor 国策（程式会自动保留它）；新国策数加上 anchor 不超过 limits.max
@@ -887,7 +894,7 @@ FORMAT_ACK = {
     'identify': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出：根物件只有 countries，每项恰好 id、name、description、evidence 四键，id 以英文字母开头。我会先完成思考，再只输出一个合法的 JSON 物件。',
     'generate': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：数字与布尔不加引号；没有内容的列表写 []；prerequisites 一律两层阵列；mutex 只写 null 或四键齐全的物件；normal 国策的 news 写 null；条件用 id、效果用 key 且每个效果有自己的 id；不写格式以外的键；换期时根物件只有 summary 与 tree，新国策与新互斥组用 prefix，前置只引用 anchor 或新国策，historical 与 capabilities 写 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
     'update': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：until 与 at 写故事日数字；每个时间步骤六键齐全；新事件 16 键齐全且 countries 是阵列；changes 每项都包 country 与 effects，每个效果有自己的 id；根物件的 steps 与事件的 steps 不混用；edits 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
-    'reshape': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：edits 每项恰好 country、remove、nodes、reason 四键；改写的国策 19 键齐全，x、y 是整数；prerequisites 一律两层阵列；mutex 只写 null 或四键物件；transitions 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
+    'reshape': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：edits 每项恰好 country、remove、nodes、reason 四键；改写的国策 19 键齐全，x、y 是整数，days 只用 7／14／21／28／35；prerequisites 一律两层阵列；mutex 只写 null 或四键物件；transitions 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
 }
 
 TAIL = {

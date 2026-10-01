@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { applyProposal, blockers, createState, installCountry, startFocus } from '../src/engine';
 import { layoutTree } from '../src/layout';
 
-import { normalizeGenerated, workingState } from '../src/generation';
+import { generationPlan, normalizeGenerated, workingState } from '../src/generation';
+import { repairReply, snapDays } from '../src/repair';
+import { focusDays, periodDays } from '../src/model';
 import { demoTree } from '../src/demo-tree';
 
 test('136 节点示范的三条宪制路线均能到达共同终点与危机终点', () => {
@@ -174,4 +176,56 @@ test('生成时略过 historical 中不在 nodes 的国策（模型把建国往�
       ),
     /historical 引用的「h_missing」不在 nodes 中/,
   );
+});
+
+test('生成、换期与改树的国策工期修正为一至五周；国策树档案保留原工期', () => {
+  assert.deepEqual(
+    [3, 7, 10, 11, 18, 30, 45, 90, 365, '60'].map(snapDays),
+    [7, 7, 7, 14, 21, 28, 35, 35, 35, 35],
+  );
+  assert.equal(snapDays(0), 0);
+  assert.equal(snapDays('三周'), '三周');
+  const reply = {
+    nodes: [
+      { id: 'a', days: 90 },
+      { id: 'b', days: 10 },
+    ],
+  };
+  for (const stage of ['generate', 'period', 'reshape']) {
+    const repaired = repairReply(stage === 'period' ? { tree: reply } : reply, stage) as Record<
+      string,
+      unknown
+    >;
+    const nodes = ((repaired.tree ?? repaired) as { nodes: { days: number }[] }).nodes;
+    assert.deepEqual(
+      nodes.map((node) => node.days),
+      [35, 7],
+      stage,
+    );
+  }
+  const edits = repairReply({ edits: [{ nodes: [{ id: 'c', days: 50 }] }] }, 'reshape') as {
+    edits: { nodes: { days: number }[] }[];
+  };
+  assert.equal(edits.edits[0].nodes[0].days, 35);
+  // Tree files are repaired without a stage and keep their durations.
+  assert.deepEqual(
+    (repairReply(reply) as typeof reply).nodes.map((node) => node.days),
+    [90, 10],
+  );
+});
+
+test('生成资料带出工期选项与依故事节奏的每期目标天数', () => {
+  for (const pace of ['fast', 'standard', 'long'] as const) {
+    const state = createState(100);
+    state.settings.pace = pace;
+    const plan = generationPlan({ state, day: 100, context: {} } as never, {
+      id: 'x',
+      name: 'x',
+      description: 'x',
+      evidence: 'x',
+    });
+    assert.deepEqual(plan.data.limits.days, focusDays);
+    assert.deepEqual(plan.data.limits.periodDays, periodDays[pace]);
+  }
+  assert.deepEqual(periodDays, { fast: [60, 90], standard: [90, 180], long: [180, 270] });
 });

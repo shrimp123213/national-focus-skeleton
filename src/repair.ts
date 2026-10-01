@@ -34,15 +34,28 @@ export function repairPrerequisites(value: unknown): unknown {
   });
 }
 
+/** Model replies that write focuses (not tree files): durations snap to whole weeks, one to five. */
+const durationStages = new Set(['generate', 'period', 'reshape']);
+export function snapDays(value: unknown): unknown {
+  const days = typeof value === 'string' && /^\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : value;
+  if (typeof days !== 'number' || !Number.isFinite(days) || days <= 0) {
+    return value;
+  }
+  return Math.min(35, Math.max(7, Math.round(days / 7) * 7));
+}
+
 const listKeys = ['requirements', 'sustain', 'outcomes', 'investments', 'effects'] as const;
 /** Skeleton focuses have conditions but no investments or effects (skeleton.ts). */
 const skeletonListKeys = ['requirements', 'sustain', 'outcomes'] as const;
 
-function repairNode(node: unknown, keys: readonly string[] = listKeys): unknown {
+function repairNode(node: unknown, keys: readonly string[] = listKeys, weeks = false): unknown {
   if (!node || typeof node !== 'object' || Array.isArray(node)) {
     return node;
   }
   const next = { ...(node as Record<string, unknown>) };
+  if (weeks && 'days' in next) {
+    next.days = snapDays(next.days);
+  }
   if ('prerequisites' in next || 'id' in next) {
     next.prerequisites = repairPrerequisites(next.prerequisites);
   }
@@ -74,11 +87,12 @@ export function repairReply(value: unknown, stage?: string): unknown {
     return repairSkeleton(repairReplyWith(value, skeletonListKeys));
   }
   const keys = stage === 'skeleton' ? skeletonListKeys : listKeys;
-  const walk = (item: unknown): unknown => repairReplyWith(item, keys);
+  const weeks = durationStages.has(stage ?? '');
+  const walk = (item: unknown): unknown => repairReplyWith(item, keys, weeks);
   return walk(value);
 }
-function repairReplyWith(value: unknown, keys: readonly string[]): unknown {
-  const repairReply = (item: unknown) => repairReplyWith(item, keys);
+function repairReplyWith(value: unknown, keys: readonly string[], weeks = false): unknown {
+  const repairReply = (item: unknown) => repairReplyWith(item, keys, weeks);
   if (Array.isArray(value)) {
     return value.map(repairReply);
   }
@@ -89,7 +103,7 @@ function repairReplyWith(value: unknown, keys: readonly string[]): unknown {
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
     result[key] =
       key === 'nodes' && Array.isArray(child)
-        ? child.map((node) => repairReply(repairNode(node, keys)))
+        ? child.map((node) => repairReply(repairNode(node, keys, weeks)))
         : repairReply(child);
   }
   return result;

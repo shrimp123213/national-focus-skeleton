@@ -61,7 +61,11 @@ export const NodeSchema = z
     icon: z.enum(['crown', 'industry', 'army', 'trade', 'science', 'diplomacy']),
     x: z.number().int().min(0).max(1000),
     y: z.number().int().min(0).max(1000),
-    days: z.number().positive().max(36500),
+    days: z
+      .number()
+      .positive()
+      .max(36500)
+      .describe('工期（故事日）：生成时只用 7、14、21、28、35（一至五周）'),
     durationReason: Text,
     prerequisites: z
       .array(z.array(Id).min(1))
@@ -156,6 +160,17 @@ export const RelationSchema = z
   })
   .strict();
 export type Relation = z.infer<typeof RelationSchema>;
+/**
+ * Generated focuses last whole weeks, one to five (v0.14.16), so a period fits the days, weeks and
+ * occasional months a role-play advances by. Imported trees keep their own durations.
+ */
+export const focusDays = [7, 14, 21, 28, 35] as const;
+/** Target story days from a period's start to its end along the longest prerequisite chain. */
+export const periodDays = {
+  fast: [60, 90],
+  standard: [90, 180],
+  long: [180, 270],
+} as const;
 /** Whole-tree focus counts, alternative routes included (v0.10.0: fewer, deeper branches). */
 export const sizeLimits = {
   small: [10, 16],
