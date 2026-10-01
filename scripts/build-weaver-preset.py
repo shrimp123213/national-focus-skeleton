@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.1-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.2-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.1 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.2 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -120,7 +120,8 @@ VOID: 织界者，以下是你的编织技法：
 - 后台世界脱离{{user}}照常运转
 
 语言：
-- 所有输出文字的语言与字形跟随<前文剧情>与<背景设定>：设定是简体就用简体，是繁体就用繁体
+- 所有输出文字（包括思考）一律使用简体中文；<背景设定>或<前文剧情>夹杂繁体字时，也改用简体书写
+- 只有国家 ID 照抄 candidate 或 state 中的写法
 </guidance>
 '''
 
@@ -130,7 +131,7 @@ VOID: 织界者，以下是你的编织技法：
 <guidance>
 - 只承认设定或正文中真实存在的国家与政权，不虚构势力
 - 组织、家族、冒险团与商会不算国家，除非设定明示它们拥有国家级的自主权
-- 所有输出文字的语言与字形跟随<前文剧情>与<背景设定>
+- 所有输出文字（包括思考）一律使用简体中文；设定或正文夹杂繁体字时，也改用简体书写；国名照抄世界书原文
 </guidance>
 '''
 
@@ -283,7 +284,7 @@ COT_LOCK = '{{getvar::国策_卡COT}}'
 # DeepSeek only; empty otherwise (the segment is trimmed before sending).
 TAIL_MODEL = '\n{{getvar::国策_尾部}}'
 
-THINK_WHERE = '''思维语言：中文
+THINK_WHERE = '''思维语言：简体中文
 思考位置：
 {{getvar::国策_思考位置}}
 - 思考要精简：整段控制在 {limit} 字内，用代号、清单与数字，不要预写 JSON 全文，也不要把<国策输出格式>的范例抄进思考。输出上限要留给 JSON。
@@ -671,7 +672,8 @@ J6 只有标明「或 null」的栏位可以写 null
 J7 列举值逐字照抄英文（大小写一致，如 warSupport）；不翻译、不自创
 J8 国家 ID 是国名原文：照抄 candidate 或 state 中的写法，不翻译、不改字形、不加空格或点号
 J9 其他 ID（国策、分支、能力、事实、承诺、效果、事件等）：英文字母开头，只用英文字母、数字、_ 与 -，最长 80 字元；不用中文、空格或点号
-J10 文字栏位不可为空字串（标明「可空」者除外）；文字中要引用时用「」，不用英文双引号；需要换行写 \\n'''
+J10 文字栏位不可为空字串（标明「可空」者除外）；文字中要引用时用「」，不用英文双引号；需要换行写 \\n
+J11 所有文字栏位一律使用简体中文，来源夹杂繁体时也改用简体；只有国家 ID 照抄原文'''
 
 NODE_RULES = '''## 国策（nodes 的每一项）
 必写 17 键：id name branch description reason icon days durationReason prerequisites requirements sustain outcomes investments effects mutex impact news；execution 可省略

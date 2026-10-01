@@ -9,12 +9,13 @@ import { CandidatesSchema, ProposalSchema, TreeSchema, defaultConfig, type Focus
 import { PeriodReplySchema, periodAnchor, transitionPeriod } from '../src/periods';
 import { assertCapabilityOrder } from '../src/reachability';
 import { repairReply } from '../src/repair';
+import { DEFAULT_GUIDE } from '../src/prompts';
 import { replacePlaceholders } from '../src/sources';
 import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 import YAML from 'yaml';
 
 /** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5.1-格式強化版.json', import.meta.url);
+const file = new URL('../presets/織界國策-任務預設-v5.2-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -207,4 +208,15 @@ test('weaver preset world state reads the engine variables and sends nothing wit
     assert.ok(!text.includes(dropped), dropped);
   }
   assert.equal(text.match(/<世界局势>/g)?.length, 1);
+});
+
+test('weaver preset and built-in rules require simplified Chinese output', () => {
+  for (const job of ['identify', 'generate', 'update', 'reshape']) {
+    for (const id of ['nf-core', 'nf-cot', 'nf-format']) {
+      const text = segment(job, id).content;
+      assert.match(text, /简体中文/, `${job}/${id}`);
+      assert.doesNotMatch(text, /跟随<前文剧情>/, `${job}/${id}`);
+    }
+  }
+  assert.match(DEFAULT_GUIDE, /一律使用简体中文/);
 });

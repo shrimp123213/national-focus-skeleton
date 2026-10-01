@@ -21,8 +21,14 @@
   --cross: #7fa6cf;
   --radius: 10px;
   --drawer: 392px;
-  --serif: 'Noto Serif TC', 'Source Han Serif TC', 'PMingLiU', Georgia, serif;
-  font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  /* Simplified Chinese faces first (zh-Hans text), traditional faces only as fallbacks; same as the news card. */
+  --sans:
+    'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans TC',
+    'Microsoft JhengHei', 'PingFang TC', system-ui, sans-serif;
+  --serif:
+    'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'Noto Serif TC', 'Source Han Serif TC', Georgia,
+    var(--sans);
+  font-family: var(--sans);
   color: var(--text);
   font-size: 14px;
   line-height: 1.6;
