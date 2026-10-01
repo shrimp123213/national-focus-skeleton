@@ -2098,3 +2098,12 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 
 使用者確認局勢更新的格式段應與生成國策樹同等完整。v5 生成器新增 `UPDATE_TABLE`，接在局勢更新「国策输出格式」的效果形狀之後：15 列決策表（`steps:[]`、新事件與步驟 at、eventUpdates 的 current／steps／changes／report／result、focus、facts、selections、publications、calibrations、transitions 的 completed／incompatible／invalidateActive）及 11 條常見退回原因，皆對照 `engine.ts` 的 `applyProposal` 與 `periods.ts` 的 `checkTransition` 規則（例如 calibrations 只能列 calibration=true 的國家、填 result 不可同時 status:"ongoing"）。Step 8 格式自檢增加「對照決策表」。改樹任務未加此表。未改程式與 dist，不升版本；`test/weaver-preset.test.ts` 與全部 174 項測試通過。
 
+## 67. 織界 v5：換期格式規範（2026-10-01，僅預設）
+
+使用者要求換期也比照補齊。原本生成任務的格式段只用一行文字說明 stage=period，沒有範例（第 63 節已知限制）。v5 生成器新增：
+
+- `PERIOD_RULES`：換期專節，依 `periods.ts` `transitionPeriod` 的實際檢查撰寫——根物件 summary（≤1200）＋tree；periodTitle／agenda 非空；historical 必須 []、capabilities 寫 []（程式沿用舊能力）；nodes 不含 anchor，新國策數加 anchor ≤ limits.max；新國策 id 與新 mutex.group 用 prefix 且不重用舊 id；前置只能引用 anchor 或新國策（舊期其他節點已移除，`layoutTree` 會報缺少引用）；能力條件只能要求現有 active 能力或新國策鏈上產生者；anchor 舊分支會被帶入，新分支不可用其 id。另附換期決策表與 8 條常見退回原因。
+- `PERIOD_EXAMPLE`：假設 anchor 為生成範例最後的 `n_cabinet`、prefix 為 `p2_` 的完整換期範例（4 個新國策，含接 anchor 的前置、新起點、prefix 互斥組、要求既有能力與 pivotal 新聞）。
+- 生成思維要求 Step 6 與「输出格式确认」加入換期檢查項目。
+- `test/weaver-preset.test.ts` 新增：安裝生成範例、把 `n_cabinet` 標為完成並給予 `cabinet` 能力後，以真實 `transitionPeriod` 套用換期範例，確認進入第 2 期且保留 anchor。175／175 測試通過。未改程式與 dist，不升版本。
+

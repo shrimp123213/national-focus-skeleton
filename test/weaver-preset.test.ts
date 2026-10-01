@@ -2,8 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizeBranchReferences } from '../src/branch-references';
+import { createState, installCountry } from '../src/engine';
 import { GeneratedTreeSchema, validateTopology } from '../src/generation';
-import { CandidatesSchema, ProposalSchema, defaultConfig, type FocusNode } from '../src/model';
+import { layoutTree } from '../src/layout';
+import { CandidatesSchema, ProposalSchema, TreeSchema, defaultConfig, type FocusNode } from '../src/model';
+import { PeriodReplySchema, periodAnchor, transitionPeriod } from '../src/periods';
 import { assertCapabilityOrder } from '../src/reachability';
 import { repairReply } from '../src/repair';
 import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
@@ -28,8 +31,7 @@ test('v5 preset imports and applies as a task preset', () => {
 });
 
 test('v5 generate example passes the tree schema, topology and capability order', () => {
-  const [example] = examples('generate');
-  assert.equal(example.stage, 'generate');
+  const [example] = examples('generate').filter((item) => item.stage === 'generate');
   const tree = normalizeBranchReferences(GeneratedTreeSchema.parse(repairReply(example.value, 'generate')));
   validateTopology(tree.nodes, 'standard');
   assertCapabilityOrder(tree.nodes as FocusNode[], [], []);
@@ -63,4 +65,39 @@ test('v5 chains reset macros first and read only variables they set', () => {
     assert.ok(order.indexOf('data') < order.indexOf('nf-format'));
     assert.equal(order.at(-1), 'nf-tail');
   }
+});
+
+test('v5 period example passes the real period transition after the generate example', () => {
+  const generated = examples('generate');
+  const tree = normalizeBranchReferences(
+    GeneratedTreeSchema.parse(
+      repairReply(generated.find((item) => item.stage === 'generate')!.value, 'generate'),
+    ),
+  );
+  const state = installCountry(
+    createState(100),
+    TreeSchema.parse({ ...tree, nodes: layoutTree(tree.nodes) }),
+    100,
+  );
+  // The example assumes the last focus of the generate example is done and carried as the anchor.
+  const country = state.countries[tree.id];
+  country.progress.n_cabinet = {
+    ...country.progress.n_cabinet,
+    status: 'completed',
+    started: 40,
+    completed: 90,
+  };
+  country.capabilities.cabinet = { id: 'cabinet', name: '内阁', active: true, reason: '国策完成' };
+  assert.equal(periodAnchor(country), 'n_cabinet');
+  const reply = PeriodReplySchema.parse(
+    repairReply(generated.find((item) => item.stage === 'period')!.value, 'period'),
+  );
+  const next = transitionPeriod(
+    state,
+    { country: tree.id, cause: 'completed', reason: '本期目的已完成', invalidateActive: false },
+    reply,
+  );
+  const nodes = Object.keys(next.countries[tree.id].nodes);
+  assert.deepEqual(nodes.sort(), ['n_cabinet', ...reply.tree.nodes.map((node) => node.id)].sort());
+  assert.equal(next.countries[tree.id].period.number, 2);
 });

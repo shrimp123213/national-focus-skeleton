@@ -329,6 +329,7 @@ Step 6：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - prerequisites 每一组都是阵列（两层）；引用的国策 ID 都存在
 - 条件只有 kind、id、label（可加 negate）或 kind、minimum、label；效果都有自己的 id，能力与承诺用 key
 - branch 填分支 name 原文；每个分支至少一个国策；没有 x、y 或其它格式以外的键
+- stage=period 时另查：periodTitle、agenda 不为空；historical、capabilities 是 []；nodes 不含 anchor；新国策 id 与新 mutex.group 都有 prefix；前置只引用 anchor 或新国策；新国策数加 anchor 不超过 limits.max；summary 不超过 1200 字
 </analysis_format>''',
     'update': '''VOID: 织界者，以下是你的思维要求：
 
@@ -518,6 +519,51 @@ GENERATE_EXAMPLE = {
     ],
 }
 
+CABINET, BORDER = '内阁议程', '边防议程'
+# Assumes the task data gives anchor "n_cabinet" (the last focus of GENERATE_EXAMPLE) and prefix "p2_".
+PERIOD_EXAMPLE = {
+    'summary': '旧期实际经过与结果：已完成哪些国策、旧期为何结束（只写已发生的事实，≤1200 字）',
+    'tree': {
+        'id': '某王国',
+        'name': '某王国',
+        'description': '一两句写国家现状与主要矛盾',
+        'stability': 50,
+        'warSupport': 35,
+        'evidence': '引用设定或正文的依据',
+        'analysis': '新一期的议程与设计取舍；长期方向的保留、修订或放弃理由',
+        'periodTitle': '内阁新政与边防抉择',
+        'agenda': '本期主要目的',
+        'longTerm': [{'id': 'lt_crown', 'text': '长期方向一句话'}],
+        'branches': [
+            {'id': 'cabinet_agenda', 'name': CABINET, 'purpose': '分支目的', 'supporters': '内阁大臣',
+             'opposition': '旧御前近臣', 'tradeoff': '取舍', 'destination': '分支终点的新处境'},
+            {'id': 'border_agenda', 'name': BORDER, 'purpose': '分支目的', 'supporters': '边境领主',
+             'opposition': '商会', 'tradeoff': '取舍', 'destination': '分支终点的新处境'},
+        ],
+        'relations': [],
+        'capabilities': [],
+        'historical': [],
+        'nodes': [
+            node('p2_charter', CABINET, 'crown', 60, [['n_cabinet']],
+                 requirements=[{'kind': 'capability', 'id': 'cabinet', 'label': '内阁已设立'}],
+                 investments=['内阁书记处'],
+                 effects=[{'id': 'p2_e_charter', 'kind': 'capability', 'key': 'charter_court', 'name': '宪章法院', 'active': True}]),
+            node('p2_fort', BORDER, 'army', 90, [], investments=['边防军', '石料'],
+                 effects=[{'id': 'p2_e_fort_ws', 'kind': 'warSupport', 'value': 3}],
+                 mutex={'group': 'p2_border', 'route': 'fort', 'lock': 'start', 'reason': '边防预算只够一条路线'}),
+            node('p2_treaty', BORDER, 'diplomacy', 45, [], investments=['使节团'],
+                 effects=[{'id': 'p2_e_treaty', 'kind': 'commitment', 'key': 'p2_border_treaty', 'name': '边境互不侵犯条约'}],
+                 mutex={'group': 'p2_border', 'route': 'treaty', 'lock': 'start', 'reason': '边防预算只够一条路线'}),
+            node('p2_settle', CABINET, 'crown', 30, [['p2_fort', 'p2_treaty'], ['p2_charter']],
+                 requirements=[{'kind': 'capability', 'id': 'charter_court', 'label': '宪章法院已设立'}],
+                 investments=['宫廷法官'],
+                 effects=[{'id': 'p2_e_settle', 'kind': 'stability', 'value': 5}],
+                 pivotal={'headline': '像报纸头条的一句话', 'body': '世界如何看待此事',
+                          'option': {'label': '拭目以待', 'text': ''}}),
+        ],
+    },
+}
+
 UPDATE_EXAMPLE = {
     'id': 'upd_120_k7qa',
     'until': 120,
@@ -688,6 +734,38 @@ EFFECT_SHAPES = '''## 效果（changes[].effects 的每一项）——只有三�
 {"id":ID,"kind":"commitment","key":承诺ID,"name":文字}
 {"id":ID,"kind":"stability","value":数字-100–100}（或 "kind":"warSupport"；✗ "+5"）'''
 
+PERIOD_RULES = '''## 换期（stage=period）
+根物件只有两个键：{"summary":文字(≤1200字),"tree":{整棵树}}，tree 的键同上，另有以下规定：
+- periodTitle、agenda 必填且不为空
+- historical 写 []；capabilities 写 []（现有能力、承诺与事实由程式沿用，不重新发放）
+- nodes 只放本期新国策，不放 anchor 国策（程式会自动保留它）；新国策数加上 anchor 不超过 limits.max
+- 新国策 id 与新 mutex.group 都以任务资料的 prefix 开头，不重用旧期任何 id
+- prerequisites 只能引用 anchor 或本期新国策；旧期其他国策已不存在
+- 能力条件只能要求 state 中 active 的能力，或由本期新国策在前置链上产生的能力
+- anchor 所属的旧分支不在新 branches 时会被程式带入，新分支不可使用它的 id
+
+## 换期决策表
+| 我想表达 | 写法 |
+| 旧期的经过 | "summary"：只写已发生的事实与旧期结束原因，不写新计划 |
+| 本期新国策 | "id":"p2_reform"（prefix 以任务资料为准） |
+| 新互斥组 | "mutex":{"group":"p2_border",…} |
+| 新国策接在承接国策之后 | "prerequisites":[["anchor 的 id"]] |
+| 与承接国策无关的新议程 | "prerequisites":[]，作为新的起点 |
+| anchor 是空字串 | 本期没有承接国策，所有起点写 [] |
+| 需要已有的制度或能力 | "requirements":[{"kind":"capability","id":"state 中 active 的能力 id","label":"…"}] |
+| 长期方向仍有效 | longTerm 保留原 id 与原文 |
+| 修订或放弃长期方向 | 改写或删除该条，并在 analysis 说明理由 |
+
+✗ 常见退回原因：
+- 根物件直接写成整棵树，没有 summary 与 tree 两层
+- tree 缺 periodTitle 或 agenda，或为空字串
+- 新国策 id 或新 mutex.group 没有 prefix，或重用旧期的 id 与互斥组
+- 把 anchor 国策也放进 nodes
+- prerequisites 引用 anchor 以外的旧期国策
+- historical 不是 []
+- tree.id 不等于 candidate.id
+- 新国策数加上 anchor 超过 limits.max；summary 超过 1200 字'''
+
 UPDATE_TABLE = '''## 决策表
 | 我想表达 | 写法 |
 | 这段时间没有任何变化 | "steps":[]，其余根键照写 |
@@ -728,7 +806,7 @@ FORMAT = {
         FORMAT_CLOSE]),
     'generate': '\n\n'.join([FORMAT_OPEN, COMMON, '''## 根物件
 - stage=generate：根物件就是整棵树（键见下）
-- stage=period：根物件只有两个键 {"summary":文字(≤1200字),"tree":{整棵树}}；tree 的 periodTitle、agenda 必填且不为空，historical 写 []，capabilities 写 []（现有能力由程式沿用），所有新国策 id 与新 mutex.group 以任务资料的 prefix 开头，可用 anchor 的 id 当前置
+- stage=period：根物件只有 summary 与 tree 两个键，规定见文末「换期」
 
 ## 树
 - id：照抄 candidate.id（国名原文）；name、description、evidence、analysis：文字
@@ -752,6 +830,9 @@ FORMAT = {
 kind 写英文，不写「利益交换」等中文名''', NODE_RULES, NODE_TABLE,
         example('generate', GENERATE_EXAMPLE,
                 '最小结构范例（stage=generate；只示范结构与型别，国策数不代表规模，内容须依本国设定重写）'),
+        PERIOD_RULES,
+        example('period', PERIOD_EXAMPLE,
+                '换期范例（stage=period；假设任务资料的 anchor 为 n_cabinet、prefix 为 p2_；只示范结构与型别）'),
         FORMAT_CLOSE]),
     'update': '\n\n'.join([FORMAT_OPEN, COMMON, '''## 根物件（恰好 7 个键）
 {"id":ID,"until":数字,"reason":文字,"steps":[时间步骤],"edits":[],"calibrations":[国家ID],"transitions":[换期]}
@@ -783,7 +864,7 @@ kind 写英文，不写「利益交换」等中文名''', NODE_RULES, NODE_TABLE
 
 FORMAT_ACK = {
     'identify': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出：根物件只有 countries，每项恰好 id、name、description、evidence 四键，id 以英文字母开头。我会先完成思考，再只输出一个合法的 JSON 物件。',
-    'generate': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：数字与布尔不加引号；没有内容的列表写 []；prerequisites 一律两层阵列；mutex 只写 null 或四键齐全的物件；normal 国策的 news 写 null；条件用 id、效果用 key 且每个效果有自己的 id；不写格式以外的键。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
+    'generate': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：数字与布尔不加引号；没有内容的列表写 []；prerequisites 一律两层阵列；mutex 只写 null 或四键齐全的物件；normal 国策的 news 写 null；条件用 id、效果用 key 且每个效果有自己的 id；不写格式以外的键；换期时根物件只有 summary 与 tree，新国策与新互斥组用 prefix，前置只引用 anchor 或新国策，historical 与 capabilities 写 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
     'update': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：until 与 at 写故事日数字；每个时间步骤六键齐全；新事件 16 键齐全且 countries 是阵列；changes 每项都包 country 与 effects，每个效果有自己的 id；根物件的 steps 与事件的 steps 不混用；edits 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
     'reshape': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：edits 每项恰好 country、remove、nodes、reason 四键；改写的国策 19 键齐全，x、y 是整数；prerequisites 一律两层阵列；mutex 只写 null 或四键物件；transitions 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
 }
