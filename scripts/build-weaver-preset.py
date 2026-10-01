@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.1-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.1 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -904,11 +904,68 @@ TAIL = {
 }
 
 
-WORLD_STATE = '''VOID: 以下是工作流助手记录的世界局势，可作为事实、成果与事件的依据（若内容是空白或仍是 {{…}} 原文，表示此巨集在国策任务中不可用，请关闭本段）：
+# World state written by the 世界后台引擎 (addon-mvu / Workflow Assistant) on this floor, read with
+# ST-Prompt-Template like the engine's own worldbook entry. Empty, and so not sent, when nothing is there.
+WORLD_STATE = r'''<%_
+// 世界后台引擎（addon-mvu 与工作流助手）存在本楼变量的世界局势；读不到时整段不送出。
+const nfAddon = getvar('addon_data') || {};
+const nfWorldMap = nfAddon && typeof nfAddon === 'object' && nfAddon.世界 && typeof nfAddon.世界 === 'object' ? nfAddon.世界 : {};
+const nfLanded = Object.keys(nfWorldMap).filter((name) => nfWorldMap[name] && nfWorldMap[name].降临 === true);
+const nfNames = nfLanded.length ? nfLanded : Object.keys(nfWorldMap);
+const nfTags = getvar('post_process_tags') || {};
+const nfSummaryMap = nfTags && typeof nfTags['世界状态摘要_world'] === 'object' && nfTags['世界状态摘要_world'] ? nfTags['世界状态摘要_world'] : {};
+const nfSummaries = Object.keys(nfSummaryMap)
+  .filter((name) => !nfNames.length || nfNames.includes(name))
+  .map((name) => ({ name, body: String(nfSummaryMap[name] ?? '').replace(/<\/?世界状态摘要[^>]*>/g, '').trim() }))
+  .filter((item) => item.body);
+const nfHidden = new Set(['叙事指导', '平行演化', '位面交汇', '降临']);
+const nfStrip = (value) => {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(nfStrip);
+  const next = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (!nfHidden.has(key) && !key.startsWith('_')) next[key] = nfStrip(child);
+  }
+  return next;
+};
+// 只取与国家议程相关的部分：时代阶段、时局演进、时局与团体动态、经济气候与贸易；略过岁月史书、史诗传奇与市场行情。
+const nfPick = (world) => {
+  const era = (world && world.时代快讯) || {};
+  const plot = (world && world.世界剧情态势) || {};
+  const economy = (world && world.世界经济简报) || {};
+  const out = {};
+  if (world && world.刊报日期) out.刊报日期 = world.刊报日期;
+  if (era.世界时代阶段) out.世界时代阶段 = era.世界时代阶段;
+  if (era.世界时局演进动态) out.世界时局演进动态 = era.世界时局演进动态;
+  if (plot.时局动态) out.时局动态 = plot.时局动态;
+  if (plot.团体动态) out.团体动态 = plot.团体动态;
+  const trade = {};
+  for (const key of ['世界经济气候', '贸易格局', '经济事件']) if (economy[key]) trade[key] = economy[key];
+  if (Object.keys(trade).length) out.世界经济简报 = trade;
+  return nfStrip(out);
+};
+const nfDump = (value) => (typeof YAML !== 'undefined' && YAML && YAML.stringify ? YAML.stringify(value) : JSON.stringify(value, null, 1));
+const nfDetails = nfNames
+  .map((name) => ({ name, data: nfPick(nfWorldMap[name]) }))
+  .filter((item) => Object.keys(item.data).length)
+  .map((item) => ({ name: item.name, text: nfDump(item.data).trim() }));
+_%>
+<%_ if (nfSummaries.length || nfDetails.length) { _%>
+VOID: 以下是世界后台引擎在本楼记录的即时世界局势（截至各世界的刊报日期）。用它理解各国所处的时代、正在发生的事件与团体动向，作为国策取舍与背景事件的依据；引用时在 evidence 注明「世界局势」。与<前文剧情>明确写出的事实冲突时，以前文剧情为准；这里的事件不能直接当成国策的 outcomes 已经取得。
 
 <世界局势>
-{{世界状态摘要@world}}
-</世界局势>'''
+<%_ for (const item of nfSummaries) { _%>
+<世界状态摘要 world="<%= item.name %>">
+<%- item.body %>
+</世界状态摘要>
+<%_ } _%>
+<%_ for (const item of nfDetails) { _%>
+<世界状态 world="<%= item.name %>">
+<%- item.text %>
+</世界状态>
+<%_ } _%>
+</世界局势>
+<%_ } _%>'''
 
 BACKGROUND = '''VOID:
 
@@ -952,7 +1009,7 @@ $7
 ═══════ 故事信息结束 ═══════
 </故事信息>
 
-# 下一则讯息是国策档案的任务资料（JSON）：state 为各国目前的国策状态，schema 为输出格式的完整定义；再下一则<国策输出格式>逐条说明其中最容易写错的地方。'''
+# 之后的讯息依序是：世界后台引擎的即时世界局势（有记录时才有）、国策档案的任务资料（JSON：state 为各国目前的国策状态，schema 为输出格式的完整定义），以及逐条说明最容易写错之处的<国策输出格式>。'''
 
 def item(id_, name, role, content, enabled=True):
     return {'id': id_, 'kind': 'custom', 'name': name, 'role': role, 'content': content, 'enabled': enabled}
@@ -990,11 +1047,11 @@ def chain(job):
     items.append(item('nf-law-ack', '国策律确认', 'assistant', LAW_ACK[job]))
     if job != 'identify':
         items.append(item('nf-input', 'VOID 指令（手动更新用）', 'user', VOID_INPUT, False))
-    if job == 'update':
-        items.append(item('nf-world', '世界局势（工作流助手，需验证）', 'user', WORLD_STATE, False))
     items.append(item('nf-cot', '思维要求', 'user', COT[job]))
     items.append(item('nf-cot-ack', '思维要求确认', 'assistant', COT_ACK))
     items.append(item('nf-background', '背景信息', 'user', BACKGROUND))
+    if job != 'identify':
+        items.append(item('nf-world', '世界局势（世界后台引擎，读不到时自动略过）', 'user', WORLD_STATE))
     items.append(builtin('data'))
     items.append(item('nf-format', '国策输出格式', 'user', FORMAT[job]))
     items.append(item('nf-format-ack', '输出格式确认', 'assistant', FORMAT_ACK[job]))

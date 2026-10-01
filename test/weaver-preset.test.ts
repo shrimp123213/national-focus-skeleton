@@ -9,10 +9,12 @@ import { CandidatesSchema, ProposalSchema, TreeSchema, defaultConfig, type Focus
 import { PeriodReplySchema, periodAnchor, transitionPeriod } from '../src/periods';
 import { assertCapabilityOrder } from '../src/reachability';
 import { repairReply } from '../src/repair';
+import { replacePlaceholders } from '../src/sources';
 import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
+import YAML from 'yaml';
 
-/** The v5 preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5-格式強化版.json', import.meta.url);
+/** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
+const file = new URL('../presets/織界國策-任務預設-v5.1-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -23,21 +25,21 @@ const examples = (job: string) =>
     ([, stage, text]) => ({ stage, value: JSON.parse(text) as unknown }),
   );
 
-test('v5 preset imports and applies as a task preset', () => {
+test('weaver preset imports and applies as a task preset', () => {
   const { config, names } = importTaskPresets(defaultConfig(), raw);
   assert.deepEqual(names, [preset.name]);
   const applied = applyTaskPreset(config, preset.name);
   assert.equal(applied.jobs.generate.prompts.length, prompts('generate').length);
 });
 
-test('v5 generate example passes the tree schema, topology and capability order', () => {
+test('weaver preset generate example passes the tree schema, topology and capability order', () => {
   const [example] = examples('generate').filter((item) => item.stage === 'generate');
   const tree = normalizeBranchReferences(GeneratedTreeSchema.parse(repairReply(example.value, 'generate')));
   validateTopology(tree.nodes, 'standard');
   assertCapabilityOrder(tree.nodes as FocusNode[], [], []);
 });
 
-test('v5 update, reshape and identify examples pass their schemas', () => {
+test('weaver preset update, reshape and identify examples pass their schemas', () => {
   const update = examples('update');
   assert.equal(update.length, 2);
   for (const { value } of update) {
@@ -48,7 +50,7 @@ test('v5 update, reshape and identify examples pass their schemas', () => {
   CandidatesSchema.parse(examples('identify')[0].value);
 });
 
-test('v5 chains reset macros first and read only variables they set', () => {
+test('weaver preset chains reset macros first and read only variables they set', () => {
   for (const job of ['identify', 'generate', 'update', 'reshape']) {
     const chain = prompts(job);
     assert.equal(chain[0].id, 'nf-reset');
@@ -85,7 +87,7 @@ test('v5 chains reset macros first and read only variables they set', () => {
   }
 });
 
-test('v5 period example passes the real period transition after the generate example', () => {
+test('weaver preset period example passes the real period transition after the generate example', () => {
   const generated = examples('generate');
   const tree = normalizeBranchReferences(
     GeneratedTreeSchema.parse(
@@ -118,4 +120,91 @@ test('v5 period example passes the real period transition after the generate exa
   const nodes = Object.keys(next.countries[tree.id].nodes);
   assert.deepEqual(nodes.sort(), ['n_cabinet', ...reply.tree.nodes.map((node) => node.id)].sort());
   assert.equal(next.countries[tree.id].period.number, 2);
+});
+
+/**
+ * A small EJS subset (`<%_ _%>`, `<%- %>`, `<%= %>`) with EJS whitespace slurping, enough to run the
+ * world state segment the way ST-Prompt-Template does.
+ */
+function renderEjs(template: string, scope: Record<string, unknown>): string {
+  const source = template.replace(/[ \t]*<%_/g, '<%_').replace(/_%>[ \t]*\r?\n?/g, '_%>');
+  const escape = (value: unknown) => String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  let code = 'let out = "";\n';
+  let last = 0;
+  for (const match of source.matchAll(/<%([_=-]?)([\s\S]*?)_?%>/g)) {
+    code += `out += ${JSON.stringify(source.slice(last, match.index))};\n`;
+    const [, kind, body] = match;
+    code +=
+      kind === '=' ? `out += escape(${body});\n` : kind === '-' ? `out += String(${body});\n` : `${body}\n`;
+    last = match.index! + match[0].length;
+  }
+  code += `out += ${JSON.stringify(source.slice(last))};\nreturn out;`;
+  return new Function(...Object.keys(scope), 'escape', code)(...Object.values(scope), escape);
+}
+
+test('weaver preset world state reads the engine variables and sends nothing without them', () => {
+  const ids = ['generate', 'update', 'reshape'].map((job) => {
+    const world = segment(job, 'nf-world');
+    assert.ok(world.enabled);
+    const order = prompts(job).map((item) => item.id);
+    assert.ok(order.indexOf('nf-background') < order.indexOf('nf-world'));
+    assert.ok(order.indexOf('nf-world') < order.indexOf('data'));
+    return world.content;
+  });
+  assert.equal(new Set(ids).size, 1);
+  assert.ok(!prompts('identify').some((item) => item.id === 'nf-world'));
+  const template = ids[0];
+  // Placeholders are replaced before EJS runs; the script must survive that unchanged.
+  assert.equal(replacePlaceholders(template, { $1: 'x', $7: 'y', $U: 'z', $C: 'w' }), template);
+  assert.doesNotMatch(template, /\{\{/);
+
+  const empty = renderEjs(template, { getvar: () => undefined, YAML });
+  assert.equal(empty.trim(), '');
+
+  const variables: Record<string, unknown> = {
+    addon_data: {
+      世界: {
+        甲界: {
+          降临: true,
+          刊报日期: '圣历-1023年-03月-01日',
+          时代快讯: {
+            世界时代阶段: { 时代阶段: '王权末期' },
+            岁月史书: { 正史: { 古纪: { 描述: '旧史' } } },
+          },
+          世界剧情态势: {
+            时局动态: {
+              世界背景事件: { 北境战事: { 叙事指导: { 宏观层: '䷿·未济' }, 事件脉络: { d1: '开战' } } },
+            },
+            团体动态: { 世界背景团体: { 银盾商会: { 当前动态: '扩张', _内部: '只读' } } },
+          },
+          世界经济简报: { 世界经济气候: { 整体周期相位: '衰退' }, 投机市场: { 市场整体情绪: '恐慌' } },
+        },
+        乙界: { 降临: false, 刊报日期: '异界日', 世界剧情态势: { 时局动态: { 传闻: { 怪谈: {} } } } },
+      },
+    },
+    post_process_tags: {
+      世界状态摘要_world: {
+        甲界: '<世界状态摘要 world="甲界">\n<宏观格局>王权衰落</宏观格局>\n</世界状态摘要>',
+        乙界: '乙界摘要',
+      },
+    },
+  };
+  const text = renderEjs(template, { getvar: (key: string) => variables[key], YAML });
+  assert.match(text, /^VOID: 以下是世界后台引擎/);
+  assert.match(text, /<世界状态摘要 world="甲界">\n<宏观格局>王权衰落<\/宏观格局>\n<\/世界状态摘要>/);
+  for (const kept of [
+    '<世界状态 world="甲界">',
+    '圣历-1023年-03月-01日',
+    '王权末期',
+    '北境战事',
+    '开战',
+    '银盾商会',
+    '衰退',
+  ]) {
+    assert.ok(text.includes(kept), kept);
+  }
+  for (const dropped of ['乙界', '叙事指导', '未济', '岁月史书', '投机市场', '降临', '_内部']) {
+    assert.ok(!text.includes(dropped), dropped);
+  }
+  assert.equal(text.match(/<世界局势>/g)?.length, 1);
 });
