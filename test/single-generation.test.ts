@@ -360,3 +360,26 @@ test('大型每期单次生成且最多 24 项；超额结果不提交', async (
     assert.equal(platform.calls.length, 1);
   }
 });
+
+test('每次生成由脚本抽结构签送入请求，保存在国家资料；同批两国的结构签不撞形', async () => {
+  const platform = new SingleCountryPlatform();
+  const controller = new FocusController(platform);
+  const other = { id: 'otherland', name: '另一国', description: '候选', evidence: '设定' };
+  await controller.enable([candidate, other]);
+  assert.deepEqual(
+    controller.jobs.map((job) => job.state),
+    ['success', 'success'],
+  );
+  const { signature } = await import('../src/structure');
+  const shapes = [platform.state.countries.testland.shape!, platform.state.countries.otherland.shape!];
+  for (const [index, shape] of shapes.entries()) {
+    const sent = platform.calls.find((call) => call.candidate.id === [candidate, other][index].id)!.structure;
+    assert.equal(sent.type.name, shape.type.name);
+    assert.equal(sent.naming.name, shape.naming.name);
+    assert.deepEqual(
+      sent.lots.map((lot: { name: string }) => lot.name),
+      shape.lots.map((lot) => lot.name),
+    );
+  }
+  assert.notEqual(signature(shapes[0]), signature(shapes[1]));
+});

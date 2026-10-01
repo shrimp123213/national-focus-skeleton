@@ -18,6 +18,7 @@ import {
 import { coreBranch, layoutTree } from './layout';
 import type { Snapshot } from './platform';
 import { generateBySkeleton, type SkeletonProgress } from './skeleton';
+import { structureData, typeShape, type Structure, type TreeType } from './structure';
 
 export const GeneratedTreeSchema = TreeSchema.extend({
   analysis: z.string().min(1),
@@ -222,16 +223,27 @@ export function normalizeCore<
   };
 }
 /** Structure targets sent with generation and period requests (not checked). */
-export function shapeLimits(settings: State['settings']) {
-  const shape = treeShape[settings.size === 'large' ? 'large' : 'standard'];
-  return {
+export function shapeLimits(settings: State['settings'], type?: TreeType) {
+  const large = settings.size === 'large';
+  const shape = treeShape[large ? 'large' : 'standard'];
+  const limits = {
     branches: span(shape.branches),
     core: { nodes: span(shape.core), routes: span(shape.routes), pathDays: corePathDays[settings.pace] },
     wings: { count: span(shape.wings), nodes: span(shape.wingNodes) },
   };
+  // Tree types other than the development tree change the branch, route and wing targets.
+  const typed = typeShape(type, large);
+  return typed
+    ? {
+        ...limits,
+        branches: typed.branches,
+        core: { ...limits.core, routes: typed.routes },
+        wings: typed.wings,
+      }
+    : limits;
 }
 /** Data, schema and local checks for one country's single generation request. */
-export function generationPlan(snapshot: Snapshot, candidate: Candidate) {
+export function generationPlan(snapshot: Snapshot, candidate: Candidate, structure?: Structure) {
   const size = snapshot.state.settings.size;
   const [min, max] = sizeLimits[size];
   const minimumConnections = topologyMinimums[size];
@@ -245,7 +257,7 @@ export function generationPlan(snapshot: Snapshot, candidate: Candidate) {
     limits: {
       min,
       max,
-      ...shapeLimits(snapshot.state.settings),
+      ...shapeLimits(snapshot.state.settings, structure?.type.key as TreeType | undefined),
       minimumForks: minimumConnections,
       minimumJoins: minimumConnections,
       minimumCrossBranchLinks: crossLinkMinimums[size],
@@ -253,6 +265,7 @@ export function generationPlan(snapshot: Snapshot, candidate: Candidate) {
       days: focusDays,
       periodDays: periodDays[snapshot.state.settings.pace],
     },
+    ...(structure ? { structure: structureData(structure) } : {}),
   };
   const validate = (reply: z.output<typeof GeneratedTreeSchema>) => validateTree(snapshot, candidate, reply);
   return { data, schema: GeneratedTreeSchema, validate };
@@ -326,10 +339,11 @@ export async function generateCountry(
   progress: SkeletonProgress = { filled: {} },
   segmentMax = defaultSegmentMax,
   retries = 0,
+  structure?: Structure,
 ) {
   const raw: GeneratedTree = !isSegmented(snapshot.state.settings.size)
     ? await (async () => {
-        const plan = generationPlan(snapshot, candidate);
+        const plan = generationPlan(snapshot, candidate, structure);
         return ask('generate', plan.data, plan.schema, plan.validate, '单次生成完整国策树');
       })()
     : await generateBySkeleton(snapshot, candidate, ask, progress, segmentMax, retries);

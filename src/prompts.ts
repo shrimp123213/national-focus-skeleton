@@ -24,7 +24,7 @@ export const DEFAULT_TASK: Record<JobKind, string> = {
 description 用一两句说明其现状与主要矛盾。name 照抄世界书或设定中的国名原文（字形也一致，不翻译成英文），id 填与 name 相同的文字；脚本会以国名作为国家 ID。`,
   generate: `任务：生成一国当期国策。只输出符合本次 schema 的 JSON。
 每一期是一段数月的施政阶段：整期以 limits.periodDays（故事日，不含等待外部成果）为目标，终点是本期主要目的在这段时间内实际能完成的阶段成果；改天换地的大目标放进 longTerm，分多期完成。国策工期 days 只用 limits.days（7、14、21、28、35，即一至五周），durationReason 说明为何是这几周。国策影响国家与世界，间接影响 RP，不必安排玩家亲自介入。periodTitle 是期名，agenda 说明本期主要目的；longTerm 为 2–4 条长期方向（id、text），近期行动才做成节点。国策 name 是 4–12 字的短语（像国策名称，不写成句子），具体做法写进 description。
-国策树采「主干加侧翼」：branches 共 limits.branches 条，其中恰好一条 core=true 的核心分支承载本期主要目的——开头 1–2 项共同国策，分岔成 limits.core.routes 条互斥路线，各路线以 OR 前置汇流到本期终点；核心共 limits.core.nodes 项，实际走过的一条路线（开局＋一条路线＋终点）工期合计约 limits.core.pathDays。其余为 limits.wings.count 条侧翼，每条 limits.wings.nodes 项，可有自己的起点，处理并行的次要事务，宜短，因为每国一次只推进一项国策。标准每期 10–16 项，大型 16–24 项，含承接节点；数量是篇幅目标，不为凑数补节点。保留内容深度，description 写国家具体行动、利益与后果，reason 区分设定依据和设计；不重复空泛建设。文字预算依 limits。
+国策树的形状依 structure（结构签）：type 是树型，naming 是命名风格，lots 是开局、分岔、路线数、终局、侧翼与细节的倾向；签是倾向而非硬性规则，依国情诠释，并在 analysis 逐支写出如何落实，确实不合国情时说明理由并调整。branches、core.routes、wings 的数量以 limits 为准。没有 structure 时采「主干加侧翼」：开头 1–2 项共同国策，分岔成互斥路线，以 OR 前置汇流到本期终点，其余为短侧翼。无论哪种树型都恰好一条 core=true 的核心分支承载本期主要目的，核心共 limits.core.nodes 项，实际走过的一条路线（开局＋一条路线＋终点）工期合计约 limits.core.pathDays；路线走向不同结局时，走到任一结局即完成本期主要目的。侧翼宜短，因为每国一次只推进一项国策。标准每期 10–16 项，大型 16–24 项，含承接节点；数量是篇幅目标，不为凑数补节点。保留内容深度，description 写国家具体行动、利益与后果，reason 区分设定依据和设计；不重复空泛建设。文字预算依 limits。
 prerequisites 为 AND of OR groups：[[a,b],[c]] 表示 a 或 b，且 c。前置不可缺失或循环；互斥共同终点使用 OR。mutex 同组不同 route 互斥，已定路线的后续节点保留对应路线前置。能力条件须已有或可由相容前置产生，不能要求自己完成才产生的能力。撤销能力只用于实际废除制度、终止条约等，不为制造制衡硬加撤销。
 requirements 是开始条件，sustain 是维持条件，outcomes 是完成前由剧情取得的外部成果（不是自身产出，只在确实需要剧情结果时设定，否则国策会卡在等待）；effects 是完成后的能力、承诺、有限稳定度或战争支持度变化。道路、外交、研究不因工期到期自动取得外部结果。execution=ongoing 表示决策完成后仍持续执行，后续交给事件推进。
 impact=pivotal 用于真正影响重大、值得公告的国策，必填 news（headline、body、option）；一般节点 normal 且 news=null。historical 只列本树 nodes 中有证据已完成的国策（node 必须是 nodes 里的 id），不重发成果，既有能力列 capabilities；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放 historical。x/y 由脚本布局，不输出座标。
@@ -33,7 +33,7 @@ stage=period 时只输出 summary 与 tree。摘要最多 1200 字，写本期�
   update: `任务：局势更新。
 依 context 的最新正文与 state，把已启用国家从各自 cursor 推进到 now。until 必须等于 now；事件与事实不得晚于 now。
 只根据正文与既有状态推演；镜头外发展标记 origin=background 并说明依据。AI 国在空闲时依当时条件选策；玩家国只在 skipDelegate=true 且跳时时代选。edits 必须为空阵列。
-分期：读取每国 period（number、title、agenda、auto、history）及 longTerm。只有本期主要议程已完成（cause=completed），或世界变局使主要议程已不适配（cause=incompatible），才在 transitions 填 country、cause、reason、invalidateActive，系统会直接生成下一期，无须玩家批准；其余填 []。不可依固定天数、节点数、完成比例或单纯等待条件换期。走到最深节点只有确实完成主要目的时才算。reason 必须指明本期目的及正文／事件／完成状态的证据。auto=false 或 calibration=true 时不可换期。进行中国策仍适用时保留；其本身已失效才 invalidateActive=true。只承接 active，暂停与等待不算，否则程式取最新完成节点。不要为预备换期停止事件推进。
+分期：读取每国 period（number、title、agenda、auto、history）及 longTerm。只有本期主要议程已完成（cause=completed），或世界变局使主要议程已不适配（cause=incompatible），才在 transitions 填 country、cause、reason、invalidateActive，系统会直接生成下一期，无须玩家批准；其余填 []。不可依固定天数、节点数、完成比例或单纯等待条件换期。走到最深节点只有确实完成主要目的时才算；树有多个结局时，走到其中任一结局即算完成主要目的。reason 必须指明本期目的及正文／事件／完成状态的证据。auto=false 或 calibration=true 时不可换期。进行中国策仍适用时保留；其本身已失效才 invalidateActive=true。只承接 active，暂停与等待不算，否则程式取最新完成节点。不要为预备换期停止事件推进。
 事件记录世界与各国实际发生的事，也承接国策的执行、阻力与结果：
 - 每笔新事件填 scope（front＝与目前正文或玩家国直接相关，只承接正文已写出的事，不替玩家决定结果；back＝镜头外的世界动态）、importance（minor／major／world）、headline（像报纸头条）、status（ongoing 之后还会推进；resolved 已结束）、settle（ongoing 的结算条件）与唯一的 option（label 为按钮文字，text 为说明）。选项效果写在 changes，可以没有效果。
 - 事件承接某项已开始或已完成国策的执行时，填 focus（country 与 node）。一项国策最多一个事件；state.events 已有同一 focus 的事件时，用 eventUpdates 推进它。

@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.7-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.8-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.7 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.8 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -337,7 +337,8 @@ Step 2：国情
 Step 3：议程
 - 本期议程及长期方向；保留有效长期方向的 id 与原文，修订或放弃要说明
 - 标准 10–16、大型 16–24（含承接），是篇幅目标，禁止为凑数补国策；分岔、汇流、互斥、核心分支与重要国策没有配额
-- 结构「主干加侧翼」：branches 共 limits.branches 条；恰好一条 core=true 的核心分支承载本期主要目的——开头 1–2 项共同国策，分岔成 limits.core.routes 条互斥路线，各路线以 OR 前置汇流到本期终点，核心共 limits.core.nodes 项；其余是 limits.wings.count 条侧翼，每条 limits.wings.nodes 项，可有自己的起点，处理并行的次要事务，宜短（每国一次只推进一项国策，侧翼会占用核心的时间）
+- 结构签：读任务资料的 structure（树型 type、命名 naming、各支 lots），逐支写出本树如何落实；签是倾向，不合国情时说明理由并调整；branches、core.routes、wings 的数量以 limits 为准
+- 无论哪种树型都恰好一条 core=true 的核心分支承载本期主要目的；没有 structure 时采「主干加侧翼」：共同开局后分岔成互斥路线，以 OR 前置汇流到本期终点，其余为短侧翼（每国一次只推进一项国策，侧翼会占用核心的时间）；路线走向不同结局时，走到任一结局即完成本期主要目的
 - 时间尺度：每项国策 days 只用 7／14／21／28／35（一至五周）；核心实际走过的一条路线（开局＋一条路线＋终点）合计约 limits.core.pathDays，加上会点的侧翼，整期约 limits.periodDays（不含等待外部成果）；终点是这段时间内能完成的阶段成果
 - outcomes 只在确实需要剧情结果时设定，否则国策会卡在等待
 Step 4：路线与代价
@@ -380,7 +381,7 @@ Step 4：逐国推演
 - 空闲的 AI 国：在空闲的时点，依当时的前置、互斥、条件与<weaving_style>选策，并写出理由
 - 玩家国：只有跳时且 skipDelegate=true 时才能代选
 - 稳定度与战争支持度：只有明确原因时才小幅变动
-- 换期：本期主要目的已完成或已不适配吗？依据是什么？没有就 transitions 为 []
+- 换期：本期主要目的已完成或已不适配吗？依据是什么？树有多个结局时，走到任一结局即算完成；没有就 transitions 为 []
 Step 5：事件
 - 先处理 state.events.ongoing：逐件判断本期有没有实际进展；有就用 eventUpdates 写进展，情况改变时整句取代 current、整份取代 steps，实际取得的规则成果写 changes（只写这次新增的），值得报导才 report=true；结束时填 result（achieved／abandoned／failed）并写结局；附 review 的事件要说明推进、结束或为何停滞
 - 国策的执行：已开始或已完成的国策若有持续的工程、阻力或成果，由同一个事件承接（focus 写 country 与 node，一项国策最多一个事件；已有就用 eventUpdates）；outcomes 需要工程结果时，在工程完成的那次更新同时写入事实
@@ -469,7 +470,7 @@ def example(stage, obj, title):
 
 
 # Example focus names are short phrases, like the 4–12 character names the preset asks for.
-NAMES = {'n_council': '召开御前会议', 'n_army': '扩编王室卫队', 'n_port': '开放南港', 'n_cabinet': '设立内阁', 'n_market': '设立市舶司', 'n_toll': '整顿关卡', 'p2_charter': '颁布宪章法院令', 'p2_fort': '修筑边境堡垒', 'p2_treaty': '签订边境和约', 'p2_settle': '新政定制', 'p2_watch': '派驻边境斥候', 'p2_drill': '边军操演', 'n_port_rebuild': '重建南港'}
+NAMES = {'c1': '雪原将融', 'c2': '长夜议事', 'c3': '薪火相传', 'c4': '破冰而行', 'c5': '歃血为盟', 'c6': '化干为玉', 'c7': '铁律新章', 'c8': '市井之声', 'c9': '冬约重订', 'c10': '风雪改元', 'c11': '万山同心', 'c12': '前路未明', 'n_council': '召开御前会议', 'n_army': '扩编王室卫队', 'n_port': '开放南港', 'n_cabinet': '设立内阁', 'n_market': '设立市舶司', 'n_toll': '整顿关卡', 'p2_charter': '颁布宪章法院令', 'p2_fort': '修筑边境堡垒', 'p2_treaty': '签订边境和约', 'p2_settle': '新政定制', 'p2_watch': '派驻边境斥候', 'p2_drill': '边军操演', 'n_port_rebuild': '重建南港'}
 
 
 def node(id_, branch, icon, days, prerequisites, *, requirements=(), sustain=(), outcomes=(), investments,
@@ -557,6 +558,63 @@ GENERATE_EXAMPLE = {
 
 CABINET, BORDER = '内阁议程', '边防议程'
 # Assumes the task data gives anchor "n_cabinet" (the last focus of GENERATE_EXAMPLE) and prefix "p2_".
+ICE = '冰河将裂'
+# Choice type: two-level exclusive choices, the sub-routes merge, the big routes end apart; no wings.
+CHOICE_EXAMPLE = {
+    'id': '某王国',
+    'name': '某王国',
+    'description': '一两句写国家现状与主要矛盾',
+    'stability': 48,
+    'warSupport': 40,
+    'evidence': '引用设定或正文的依据',
+    'analysis': '结构签如何落实：抉择型、四字意象命名、两项开局、第 2 层分岔、路线内再一组小互斥、各自终点、无侧翼',
+    'periodTitle': '冰河将裂',
+    'agenda': '本期主要目的',
+    'longTerm': [{'id': 'lt_crown', 'text': '长期方向一句话'}],
+    'branches': [
+        {'id': 'ice', 'name': ICE, 'purpose': '本期主要目的', 'supporters': '各派长老',
+         'opposition': '彼此', 'tradeoff': '守旧或革新', 'destination': '两种不同的结局',
+         'core': True, 'coreReason': '为何这是本期主要目的'},
+    ],
+    'relations': [],
+    'capabilities': [],
+    'historical': [],
+    'nodes': [
+        node('c1', ICE, 'crown', 14, [], investments=['议会信使'],
+             effects=[{'id': 'e_c1', 'kind': 'stability', 'value': -2}]),
+        node('c2', ICE, 'diplomacy', 7, [['c1']], investments=['长老会'],
+             effects=[{'id': 'e_c2', 'kind': 'commitment', 'key': 'night_council', 'name': '夜议之约'}]),
+        node('c3', ICE, 'crown', 21, [['c2']], investments=['旧氏族'],
+             effects=[{'id': 'e_c3', 'kind': 'stability', 'value': 3}],
+             mutex={'group': 'ice_path', 'route': 'keep', 'lock': 'start', 'reason': '守旧与革新只能择一'}),
+        node('c4', ICE, 'science', 21, [['c2']], investments=['城市行会'],
+             effects=[{'id': 'e_c4', 'kind': 'stability', 'value': -3}],
+             mutex={'group': 'ice_path', 'route': 'break', 'lock': 'start', 'reason': '守旧与革新只能择一'}),
+        node('c5', ICE, 'army', 21, [['c3']], investments=['氏族战士'],
+             effects=[{'id': 'e_c5', 'kind': 'warSupport', 'value': 5}],
+             mutex={'group': 'oath_way', 'route': 'blood', 'lock': 'start', 'reason': '盟誓方式只能择一'}),
+        node('c6', ICE, 'diplomacy', 21, [['c3']], investments=['和谈使节'],
+             effects=[{'id': 'e_c6', 'kind': 'stability', 'value': 3}],
+             mutex={'group': 'oath_way', 'route': 'jade', 'lock': 'start', 'reason': '盟誓方式只能择一'}),
+        node('c7', ICE, 'crown', 21, [['c4']], investments=['新法官'],
+             effects=[{'id': 'e_c7', 'kind': 'capability', 'key': 'new_law', 'name': '新律', 'active': True}],
+             mutex={'group': 'reform_way', 'route': 'law', 'lock': 'start', 'reason': '革新手段只能择一'}),
+        node('c8', ICE, 'trade', 21, [['c4']], investments=['市民代表'],
+             effects=[{'id': 'e_c8', 'kind': 'commitment', 'key': 'town_voice', 'name': '市民议席'}],
+             mutex={'group': 'reform_way', 'route': 'town', 'lock': 'start', 'reason': '革新手段只能择一'}),
+        node('c9', ICE, 'diplomacy', 28, [['c5', 'c6']], investments=['各派长老'],
+             effects=[{'id': 'e_c9', 'kind': 'commitment', 'key': 'winter_pact', 'name': '冬约'}]),
+        node('c10', ICE, 'crown', 28, [['c7', 'c8']], investments=['改元诏书'],
+             effects=[{'id': 'e_c10', 'kind': 'stability', 'value': -2}]),
+        node('c11', ICE, 'crown', 21, [['c9']], investments=['全境集会'],
+             effects=[{'id': 'e_c11', 'kind': 'stability', 'value': 5}],
+             pivotal={'headline': '像报纸头条的一句话', 'body': '世界如何看待此事', 'option': {'label': '拭目以待', 'text': ''}}),
+        node('c12', ICE, 'science', 21, [['c10']], investments=['新议会'],
+             effects=[{'id': 'e_c12', 'kind': 'stability', 'value': 4}],
+             pivotal={'headline': '像报纸头条的一句话', 'body': '世界如何看待此事', 'option': {'label': '拭目以待', 'text': ''}}),
+    ],
+}
+
 PERIOD_EXAMPLE = {
     'summary': '旧期实际经过与结果：已完成哪些国策、旧期为何结束（只写已发生的事实，≤1200 字）',
     'tree': {
@@ -779,7 +837,7 @@ EFFECT_SHAPES = '''## 效果（changes[].effects 的每一项）——只有三�
 
 PERIOD_RULES = '''## 换期（stage=period）
 根物件只有两个键：{"summary":文字(≤1200字),"tree":{整棵树}}，tree 的键同上，另有以下规定：
-- 新一期同样是数月的施政阶段与「主干加侧翼」：恰好一条 core=true 的核心分支，核心一条路线的工期合计约 limits.core.pathDays，days 只用 7／14／21／28／35
+- 新一期同样是数月的施政阶段：依任务资料的 structure（结构签）安排形状与命名，恰好一条 core=true 的核心分支，核心一条路线的工期合计约 limits.core.pathDays，days 只用 7／14／21／28／35
 - periodTitle、agenda 必填且不为空
 - historical 写 []；capabilities 写 []（现有能力、承诺与事实由程式沿用，不重新发放）
 - nodes 只放本期新国策，不放 anchor 国策（程式会自动保留它）；新国策数加上 anchor 不超过 limits.max
@@ -874,7 +932,9 @@ FORMAT = {
 {"from":国策ID,"to":国策ID,"kind":"exchange"|"synergy"|"opportunity"|"context"|"deferred"|"replacement","change":文字}
 kind 写英文，不写「利益交换」等中文名''', NODE_RULES, NODE_TABLE,
         example('generate', GENERATE_EXAMPLE,
-                '最小结构范例（stage=generate；只示范结构与型别，国策数不代表规模，内容须依本国设定重写）'),
+                '发展型范例（stage=generate；只示范结构与型别，形状依任务资料的 structure，国策数不代表规模，内容须依本国设定重写）'),
+        example('generate', CHOICE_EXAMPLE,
+                '抉择型范例（stage=generate；两层互斥、子路线汇合、各自结局、无侧翼；只示范结构与型别）'),
         PERIOD_RULES,
         example('period', PERIOD_EXAMPLE,
                 '换期范例（stage=period；假设任务资料的 anchor 为 n_cabinet、prefix 为 p2_；只示范结构与型别）'),

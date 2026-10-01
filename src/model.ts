@@ -224,6 +224,9 @@ const ProgressSchema = z.object({
   applied: z.array(z.string()),
   public: z.boolean(),
 });
+const LotSchema = z.object({ category: z.string(), key: z.string(), name: z.string(), text: z.string() });
+/** Structure lots of the current period (v0.14.21): a tree type, a naming style and detail lots. */
+export const StructureSchema = z.object({ type: LotSchema, naming: LotSchema, lots: z.array(LotSchema) });
 export const CountrySchema = TreeSchema.omit({ nodes: true, historical: true, capabilities: true }).extend({
   enabled: z.boolean(),
   control: z.enum(['player', 'ai']),
@@ -249,6 +252,7 @@ export const CountrySchema = TreeSchema.omit({ nodes: true, historical: true, ca
   capabilities: z.record(Id, CapabilitySchema),
   commitments: z.record(Id, z.string()),
   facts: z.record(Id, z.object({ value: z.boolean(), evidence: Text })),
+  shape: StructureSchema.optional(),
 });
 export const EventOptionSchema = z
   .object({

@@ -15,7 +15,7 @@ import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 import YAML from 'yaml';
 
 /** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5.7-格式強化版.json', import.meta.url);
+const file = new URL('../presets/織界國策-任務預設-v5.8-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -33,11 +33,22 @@ test('weaver preset imports and applies as a task preset', () => {
   assert.equal(applied.jobs.generate.prompts.length, prompts('generate').length);
 });
 
-test('weaver preset generate example passes the tree schema, topology and capability order', () => {
-  const [example] = examples('generate').filter((item) => item.stage === 'generate');
-  const tree = normalizeBranchReferences(GeneratedTreeSchema.parse(repairReply(example.value, 'generate')));
-  validateTopology(tree.nodes, 'standard');
-  assertCapabilityOrder(tree.nodes as FocusNode[], [], []);
+test('weaver preset generate examples (development and choice) pass the schema, topology and capability order', () => {
+  const generated = examples('generate').filter((item) => item.stage === 'generate');
+  assert.equal(generated.length, 2);
+  for (const example of generated) {
+    const tree = normalizeBranchReferences(GeneratedTreeSchema.parse(repairReply(example.value, 'generate')));
+    validateTopology(tree.nodes, 'standard');
+    assertCapabilityOrder(tree.nodes as FocusNode[], [], []);
+  }
+  // The choice example: one core branch, nested exclusive choices and two separate endings.
+  const choice = GeneratedTreeSchema.parse(repairReply(generated[1].value, 'generate'));
+  assert.equal(choice.branches.length, 1);
+  assert.equal(new Set(choice.nodes.flatMap((node) => (node.mutex ? [node.mutex.group] : []))).size, 3);
+  const ends = choice.nodes.filter(
+    (node) => !choice.nodes.some((other) => other.prerequisites.flat().includes(node.id)),
+  );
+  assert.equal(ends.length, 2);
 });
 
 test('weaver preset update, reshape and identify examples pass their schemas', () => {
@@ -294,7 +305,6 @@ test('weaver preset examples follow the core-and-wings shape', () => {
     };
     const core = tree.branches.filter((branch) => branch.core);
     assert.equal(core.length, 1, item.stage);
-    assert.ok(tree.branches.length >= 2, item.stage);
     const routes = tree.nodes.filter((node) => node.mutex);
     assert.ok(routes.length >= 2, item.stage);
     assert.ok(

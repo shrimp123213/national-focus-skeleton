@@ -24,6 +24,7 @@ import {
 } from './generation';
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
 import { checkTransition, periodAnchor, PeriodReplySchema, transitionPeriod } from './periods';
+import { drawStructure, signature, structureData, type Structure, type TreeType } from './structure';
 import { DATA_TOKEN, promptText } from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
@@ -275,6 +276,18 @@ export class FocusController {
     this.candidates = this.candidates.filter((candidate) => !ids.has(candidate.id));
     this.notify();
   }
+  /** Structures drawn for running generations, so countries generated together differ. */
+  private drawing = new Map<string, Structure>();
+  /** Draw structure lots for a country, avoiding the shapes of other countries and running drafts. */
+  private drawFor(state: State, id: string): Structure {
+    const taken = [
+      ...Object.values(state.countries)
+        .filter((country) => country.id !== id && country.shape)
+        .map((country) => signature(country.shape!)),
+      ...[...this.drawing].filter(([other]) => other !== id).map(([, structure]) => signature(structure)),
+    ];
+    return drawStructure({ large: state.settings.size === 'large', taken });
+  }
   async enable(candidates: Candidate[]): Promise<void> {
     // Route pools limit requests; independent countries keep their own result and failure state.
     await Promise.all(candidates.map((candidate) => this.run('generate', candidate)));
@@ -327,6 +340,12 @@ export class FocusController {
       aborter.signal.throwIfAborted();
       if (periodWork) {
         checkTransition(snapshot.state, periodWork.transition);
+      }
+      // One draw per run: retries in this run keep the same lots.
+      const structure =
+        kind === 'generate' && candidate ? this.drawFor(snapshot.state, candidate.id) : undefined;
+      if (structure) {
+        this.drawing.set(candidate!.id, structure);
       }
       if (kind === 'generate' && !candidate) {
         throw new Error('请先选择要生成的候选国家');
@@ -408,8 +427,9 @@ export class FocusController {
                 max: sizeLimits[snapshot.state.settings.size][1],
                 days: focusDays,
                 periodDays: periodDays[snapshot.state.settings.pace],
-                ...shapeLimits(snapshot.state.settings),
+                ...shapeLimits(snapshot.state.settings, structure?.type.key as TreeType | undefined),
               },
+              ...(structure ? { structure: structureData(structure) } : {}),
               instructions:
                 '生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程式原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。',
             },
@@ -427,6 +447,7 @@ export class FocusController {
               progress,
               segmentMax,
               this.config.jobs.generate.retries,
+              structure,
             )
           : await ask(
               kind,
@@ -442,6 +463,9 @@ export class FocusController {
         const state = periodWork
           ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result))
           : this.proposedState(kind, current, result, candidate);
+        if (structure && state.countries[candidate!.id]) {
+          state.countries[candidate!.id].shape = structure;
+        }
         state.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
         return state;
       }, aborter.signal);
@@ -486,6 +510,10 @@ export class FocusController {
       sourceSignal?.removeEventListener('abort', cancelSource);
       status.finished = Date.now();
       this.aborters.delete(id);
+      // A saved country keeps its shape in the state; a failed draft frees its draw.
+      if (kind === 'generate' && candidate) {
+        this.drawing.delete(candidate.id);
+      }
       this.notify();
     }
     // Each country's next period shares the same generation route pools as initial trees.
@@ -544,7 +572,10 @@ export class FocusController {
       };
       // Larger sizes start with the skeleton request; preview that one.
       const segmented = isSegmented(snapshot.state.settings.size);
-      const plan = segmented ? skeletonPlan(snapshot, candidate) : generationPlan(snapshot, candidate);
+      // The preview shows an example draw; each real run draws its own lots.
+      const plan = segmented
+        ? skeletonPlan(snapshot, candidate)
+        : generationPlan(snapshot, candidate, this.drawFor(snapshot.state, candidate.id));
       return this.messages(
         kind,
         snapshot.prompts,

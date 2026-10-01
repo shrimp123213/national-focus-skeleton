@@ -3508,6 +3508,17 @@ details.detail-section.fold > summary::before {
 .period-anchor-note strong {
   color: var(--blue);
 }
+.period-shape {
+  margin-left: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #e5d3a0;
+  background: rgba(220, 194, 124, 0.08);
+  border: 1px solid rgba(220, 194, 124, 0.28);
+  cursor: help;
+}
 .period-anchor-badge {
   position: absolute;
   top: -18px;

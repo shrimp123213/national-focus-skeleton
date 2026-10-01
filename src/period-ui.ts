@@ -27,7 +27,16 @@ export function periodNote(country: Country, jobs: JobStatus[]): string {
 }
 export function periodBar(country: Country, jobs: JobStatus[]): string {
   const note = periodNote(country, jobs);
-  return `<section class="period-strip" aria-label="当前期别"><div class="period-copy"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}</strong><small role="status" title="${escape(note)}">${escape(note)}</small></div>${periodControl(country)}<button data-action="period-history">往期摘要${country.period.history.length ? ` · ${country.period.history.length}` : ''}</button></section>`;
+  // Structure lots of this period (v0.14.21); trees made before have none.
+  const lots = country.shape
+    ? [country.shape.type, country.shape.naming, ...country.shape.lots].map(
+        (lot) => `${lot.category}：${lot.name}`,
+      )
+    : [];
+  const shape = country.shape
+    ? `<span class="period-shape" title="${escape(lots.join('\n'))}">${escape(country.shape.type.name)} · ${escape(country.shape.naming.name)}</span>`
+    : '';
+  return `<section class="period-strip" aria-label="当前期别"><div class="period-copy"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}${shape}</strong><small role="status" title="${escape(note)}">${escape(note)}</small></div>${periodControl(country)}<button data-action="period-history">往期摘要${country.period.history.length ? ` · ${country.period.history.length}` : ''}</button></section>`;
 }
 export function anchorBadge(country: Country, node: FocusNode): string {
   return country.period.anchor === node.id ? '<span class="period-anchor-badge">前期承接</span>' : '';
