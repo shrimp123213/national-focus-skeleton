@@ -43,7 +43,7 @@ const jobStates: Record<string, string> = {
   cancelled: '已取消',
 };
 const checked = (value: boolean) => (value ? 'checked' : '');
-/** Node card geometry on the tree canvas (grid units come from layoutTree). */
+/** Node card geometry on the tree canvas; layoutTree counts x in half-card steps (GRID_X / 2). */
 const NODE_W = 188;
 const NODE_H = 66;
 const GRID_X = 228;
@@ -553,7 +553,7 @@ export function mountUI(
     positions = new Map(
       layoutTree(nodes, coreBranch(country)).map((n) => [
         n.id,
-        { x: n.x * GRID_X + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y },
+        { x: (n.x * GRID_X) / 2 + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y },
       ]),
     );
     const pos = (node: FocusNode) => positions.get(node.id)!;

@@ -8,6 +8,28 @@
 
   // src/layout.ts
   var coreBranch = (tree) => tree.branches.find((branch) => branch.core)?.name;
+  var STEP = 2;
+  var LANE_GAP = 1;
+  var SWEEPS = 4;
+  function spread(targets) {
+    const blocks = [];
+    targets.forEach((target, index) => {
+      blocks.push({ start: index, size: 1, mean: target - STEP * index });
+      while (blocks.length > 1 && blocks[blocks.length - 2].mean >= blocks[blocks.length - 1].mean) {
+        const last = blocks.pop();
+        const prev = blocks[blocks.length - 1];
+        prev.mean = (prev.mean * prev.size + last.mean * last.size) / (prev.size + last.size);
+        prev.size += last.size;
+      }
+    });
+    const result = [];
+    for (const block of blocks) {
+      for (let i = 0; i < block.size; i++) {
+        result.push(block.mean + STEP * (block.start + i));
+      }
+    }
+    return result;
+  }
   function layoutTree(nodes, core) {
     const byId = new Map(nodes.map((n) => [n.id, n]));
     if (byId.size !== nodes.length) {
@@ -53,38 +75,67 @@
         rows.set(y, [node2]);
       }
     }
-    const positions = /* @__PURE__ */ new Map();
+    const parents = /* @__PURE__ */ new Map();
+    const children = /* @__PURE__ */ new Map();
+    for (const node2 of nodes) {
+      const own2 = node2.prerequisites.flat().filter((id) => byId.get(id).branch === node2.branch);
+      parents.set(node2.id, [...new Set(own2)]);
+      for (const parent of parents.get(node2.id)) {
+        children.set(parent, [...children.get(parent) ?? [], node2.id]);
+      }
+    }
+    const mean = (ids, at) => ids.reduce((sum, id) => sum + at.get(id), 0) / ids.length;
     let order = [...branches2.keys()];
     if (core && branches2.has(core)) {
       const others = order.filter((name) => name !== core);
       const left = Math.floor(others.length / 2);
       order = [...others.slice(0, left), core, ...others.slice(left)];
     }
+    const positions = /* @__PURE__ */ new Map();
     let lane = 0;
-    for (const rows of order.map((name) => branches2.get(name))) {
-      const width = Math.max(...[...rows.values()].map((row) => row.length));
-      for (const [y, row] of [...rows].sort(([a], [b]) => a - b)) {
-        const centers = /* @__PURE__ */ new Map();
-        for (const node2 of row) {
-          let sum = 0;
-          let count = 0;
-          for (const group of node2.prerequisites) {
-            for (const parent of group) {
-              const position = positions.get(parent);
-              if (position) {
-                sum += position.x;
-                count++;
-              }
-            }
-          }
-          centers.set(node2.id, count ? sum / count : lane);
-        }
-        row.sort((a, b) => centers.get(a.id) - centers.get(b.id));
-        row.forEach(
-          (node2, index) => positions.set(node2.id, { x: lane + Math.floor((width - row.length) / 2) + index, y })
-        );
+    for (const name of order) {
+      const rows = [...branches2.get(name)].sort(([a], [b]) => a - b).map(([y, row]) => ({ y, row: [...row] }));
+      const x = /* @__PURE__ */ new Map();
+      for (const { row } of rows) {
+        const targets = row.map((node2, index) => {
+          const own2 = parents.get(node2.id);
+          return own2.length ? mean(own2, x) : STEP * index;
+        });
+        const ranked = row.map((node2, index) => ({ node: node2, target: targets[index], index }));
+        ranked.sort((a, b) => a.target - b.target || a.index - b.index);
+        const placed = spread(ranked.map((item) => item.target));
+        ranked.forEach((item, index) => x.set(item.node.id, placed[index]));
+        row.splice(0, row.length, ...ranked.map((item) => item.node));
       }
-      lane += width + 1;
+      for (let sweep = 0; sweep < SWEEPS; sweep++) {
+        const upward = sweep % 2 === 0;
+        for (const { row } of upward ? [...rows].reverse() : rows) {
+          const targets = row.map((node2) => {
+            const linked = (upward ? children : parents).get(node2.id) ?? [];
+            return linked.length ? mean(linked, x) : x.get(node2.id);
+          });
+          const placed = spread(targets);
+          row.forEach((node2, index) => x.set(node2.id, placed[index]));
+        }
+      }
+      let lowest = Infinity;
+      let highest = -Infinity;
+      for (const { row } of rows) {
+        let previous = -Infinity;
+        for (const node2 of row) {
+          const value = Math.max(Math.round(x.get(node2.id)), previous + STEP);
+          x.set(node2.id, value);
+          previous = value;
+          lowest = Math.min(lowest, value);
+          highest = Math.max(highest, value);
+        }
+      }
+      for (const { y, row } of rows) {
+        for (const node2 of row) {
+          positions.set(node2.id, { x: lane + x.get(node2.id) - lowest, y });
+        }
+      }
+      lane += highest - lowest + STEP + LANE_GAP;
     }
     return nodes.map((node2) => ({ ...node2, ...positions.get(node2.id) }));
   }
@@ -5679,11 +5730,11 @@ ${content.join("\n")}
           result = answer;
       }
     };
-    const shape = (sh, spread) => {
+    const shape = (sh, spread2) => {
       let answer = NONE;
       for (const key of Reflect.ownKeys(sh)) {
         const desc = Object.getOwnPropertyDescriptor(sh, key);
-        if (spread && !desc.enumerable)
+        if (spread2 && !desc.enumerable)
           continue;
         const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve) : NONE;
         if (child > answer)
@@ -34691,7 +34742,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
       positions = new Map(
         layoutTree(nodes, coreBranch(country)).map((n) => [
           n.id,
-          { x: n.x * GRID_X + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y }
+          { x: n.x * GRID_X / 2 + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y }
         ])
       );
       const pos = (node2) => positions.get(node2.id);

@@ -71,7 +71,7 @@ test('300 个节点自动布局不重叠，跨分支前置位于子节点上方�
   );
 });
 
-test('布局依前置位置排序，同中心节点保留原顺序，跨分支不改动输入', () => {
+test('布局：上层置中于下层，依前置位置排序，同中心节点保留原顺序，跨分支不改动输入', () => {
   const nodes = [
     { id: 'left', branch: 'main', prerequisites: [] },
     { id: 'right', branch: 'main', prerequisites: [] },
@@ -84,12 +84,13 @@ test('布局依前置位置排序，同中心节点保留原顺序，跨分支�
   assert.deepEqual(
     layoutTree(nodes).map(({ id, x, y }) => ({ id, x, y })),
     [
-      { id: 'left', x: 0, y: 0 },
-      { id: 'right', x: 1, y: 0 },
-      { id: 'to_right', x: 2, y: 1 },
+      // x counts half-card steps: `left` sits centred over its two children.
+      { id: 'left', x: 1, y: 0 },
+      { id: 'right', x: 4, y: 0 },
+      { id: 'to_right', x: 4, y: 1 },
       { id: 'to_left', x: 0, y: 1 },
-      { id: 'also_left', x: 1, y: 1 },
-      { id: 'cross', x: 4, y: 2 },
+      { id: 'also_left', x: 2, y: 1 },
+      { id: 'cross', x: 7, y: 2 },
     ],
   );
   assert.deepEqual(nodes, before);
@@ -275,5 +276,55 @@ test('布局把核心分支放在中间，侧翼分在左右', () => {
   const lane = (laid: { id: string; x: number }[]) => Object.fromEntries(laid.map((n) => [n.id, n.x]));
   const centred = lane(layoutTree(nodes, '核心'));
   assert.ok(centred.a < centred.c && centred.c < centred.b && centred.b < centred.d, JSON.stringify(centred));
-  assert.deepEqual(lane(layoutTree(nodes)), { a: 0, b: 2, c: 4, d: 6 });
+  assert.deepEqual(lane(layoutTree(nodes)), { a: 0, b: 3, c: 6, d: 9 });
+});
+
+test('布局像国策树一样置中：开局在分岔正上方，汇流终点在路线中间，卡片不重叠', () => {
+  const node = (id: string, branch: string, prerequisites: string[][] = []) => ({
+    id,
+    branch,
+    prerequisites,
+  });
+  const laid = layoutTree(
+    [
+      node('w1', '西境'),
+      node('w2', '西境', [['w1']]),
+      node('A', '核心'),
+      node('B', '核心', [['A']]),
+      node('C', '核心', [['B']]),
+      node('D', '核心', [['B']]),
+      node('E', '核心', [['C']]),
+      node('F', '核心', [['D']]),
+      node('K', '核心', [['E', 'F']]),
+      node('e1', '东洋'),
+      node('e2', '东洋', [['e1']]),
+    ],
+    '核心',
+  );
+  const x = Object.fromEntries(laid.map((n) => [n.id, n.x]));
+  // Trunk above the fork, the two routes side by side, the merge back in the middle.
+  assert.equal(x.A, x.B);
+  assert.equal(x.C + 2, x.D);
+  assert.equal(x.B, (x.C + x.D) / 2);
+  assert.equal(x.K, (x.E + x.F) / 2);
+  // Lanes: wings left and right of the core, half a card more apart than cards in a lane.
+  assert.ok(x.w1 < x.C && x.D < x.e1);
+  assert.equal(x.C - x.w1, 3);
+  assert.equal(x.e1 - x.D, 3);
+  // Three routes: opening and merge at the centre.
+  const three = Object.fromEntries(
+    layoutTree([
+      node('A', '核'),
+      node('R1', '核', [['A']]),
+      node('R2', '核', [['A']]),
+      node('R3', '核', [['A']]),
+      node('K', '核', [['R1', 'R2', 'R3']]),
+    ]).map((n) => [n.id, n.x]),
+  );
+  assert.deepEqual(three, { A: 2, R1: 0, R2: 2, R3: 4, K: 2 });
+  for (const tree of [laid]) {
+    const seen = new Set(tree.map((n) => `${n.x},${n.y}`));
+    assert.equal(seen.size, tree.length);
+    assert.ok(tree.every((n) => Number.isInteger(n.x) && n.x >= 0));
+  }
 });
