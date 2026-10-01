@@ -43,28 +43,35 @@ const jobStates: Record<string, string> = {
   cancelled: '已取消',
 };
 const checked = (value: boolean) => (value ? 'checked' : '');
-/** Node card geometry on the tree canvas; layoutTree counts x in half-card steps (GRID_X / 2). */
-const NODE_W = 168;
-const NODE_H = 94;
-const GRID_X = 200;
-const GRID_Y = 142;
+/**
+ * Medal focus geometry on the tree canvas: a MEDAL-wide icon medal on top, the name plate under it.
+ * layoutTree counts x in half-card steps (GRID_X / 2). Lines leave the plate and enter the medal.
+ */
+const NODE_W = 156;
+const NODE_H = 104;
+const GRID_X = 184;
+const GRID_Y = 136;
+const MEDAL = 58;
 const ORIGIN_X = 28;
 const ORIGIN_Y = 70;
 const selected = (value: boolean) => (value ? 'selected' : '');
-/** Mutex link between two cards that never runs through a card in the same column. */
+/** Mutex link between two medals that never runs through a focus in the same column. */
 function mutexPath(a: { x: number; y: number }, b: { x: number; y: number }): string {
-  const midA = a.y + NODE_H / 2;
-  const midB = b.y + NODE_H / 2;
+  const reach = NODE_W / 2 + MEDAL / 2 + 6;
+  const midA = a.y + MEDAL / 2;
+  const midB = b.y + MEDAL / 2;
   if (b.x >= a.x + NODE_W) {
+    const x1 = a.x + reach;
+    const x2 = b.x + NODE_W - reach;
     if (a.y === b.y) {
-      return `M${a.x + NODE_W} ${midA}H${b.x}`;
+      return `M${x1} ${midA}H${x2}`;
     }
-    const bend = Math.max(24, (b.x - a.x - NODE_W) / 2);
-    return `M${a.x + NODE_W} ${midA}C${a.x + NODE_W + bend} ${midA} ${b.x - bend} ${midB} ${b.x} ${midB}`;
+    const bend = Math.max(24, (x2 - x1) / 2);
+    return `M${x1} ${midA}C${x1 + bend} ${midA} ${x2 - bend} ${midB} ${x2} ${midB}`;
   }
-  // Same column: bracket along the right edge.
-  const side = Math.max(a.x, b.x) + NODE_W + 22;
-  return `M${a.x + NODE_W} ${midA}H${side}V${midB}H${b.x + NODE_W}`;
+  // Same column: bracket along the right of the medals.
+  const side = Math.max(a.x, b.x) + reach + 22;
+  return `M${a.x + reach} ${midA}H${side}V${midB}H${b.x + reach}`;
 }
 
 export function mountUI(
@@ -683,7 +690,10 @@ export function mountUI(
           (query && !`${node.name} ${node.description}`.includes(query)) ||
           (branch && node.branch !== branch);
         const isCurrent = country.current === node.id;
-        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape(node.name)}（${escape(meta(node, stateClass))}）" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-icon">${icon(node.icon)}</span><span class="node-text"><span class="node-name">${escape(node.name)}</span><span class="node-meta">${escape(meta(node, stateClass))}</span></span>${anchorBadge(country, node)}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${p.started !== null && stateClass !== 'completed' ? `<span class="node-progress"><i style="width:${Math.min(100, (p.days / node.days) * 100)}%"></i></span>` : ''}</button>`;
+        // Progress ring for running, waiting and paused focuses.
+        const ring =
+          p.started !== null && stateClass !== 'completed' ? Math.min(100, (p.days / node.days) * 100) : 0;
+        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape(node.name)}（${escape(meta(node, stateClass))}）" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-medal" style="--p:${ring}">${icon(node.icon)}<span class="node-meta">${escape(meta(node, stateClass))}</span>${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}</span><span class="node-plate"><span class="node-name">${escape(node.name)}</span></span>${anchorBadge(country, node)}</button>`;
       })
       .join('')}`;
     const minimap = shell.querySelector<SVGSVGElement>('.minimap-svg');
