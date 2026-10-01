@@ -8,6 +8,7 @@ import {
   StateSchema,
   ProposalSchema,
   EventSchema,
+  countryKeyPattern,
 } from './model';
 
 export const HISTORY_PREFIX = '历史承接：';
@@ -634,7 +635,8 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
       );
       country.progress[publication.node].public = true;
       country.progress[publication.node].evidence += `；公开依据：${publication.evidence}`;
-      const news = state.events[focusEventId(publication.country, publication.node)];
+      // Saves migrated to name keys keep the news under its old derived id; find it by source.
+      const news = focusEvent(state, publication.country, publication.node);
       if (news) {
         news.public = true;
       }
@@ -744,5 +746,55 @@ export function removeCountry(input: State, id: string): State {
   }
   state.settings.observing = state.settings.observing.filter((country) => country !== id);
   state.revision++;
+  return StateSchema.parse(state);
+}
+
+/** The country key for a name: the name as written, without characters a variable path cannot hold. */
+export function countryKey(name: string): string | null {
+  const key = name
+    .normalize('NFC')
+    .trim()
+    .replace(/[^\p{L}\p{N}\p{M}_\-·・]/gu, '')
+    .slice(0, 80);
+  return countryKeyPattern.test(key) && !['constructor', 'prototype', '__proto__'].includes(key) ? key : null;
+}
+/** IDs written before country keys became names (v0.14.11 and earlier). */
+const legacyCountryId = /^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/;
+/**
+ * Re-key countries that still use an English ID to their name, so the floor variable matches the
+ * worldbook. Deterministic, so every older floor read gives the same keys; keys already written as
+ * names, names that cannot be a key and keys another country already uses are left alone. Event
+ * IDs stay as they are; focus events are found by their source.
+ */
+export function migrateCountryKeys(input: State): State {
+  const taken = new Set(Object.keys(input.countries));
+  const renames = new Map<string, string>();
+  for (const country of Object.values(input.countries)) {
+    const key = countryKey(country.name);
+    if (!legacyCountryId.test(country.id) || !key || key === country.id || taken.has(key)) {
+      continue;
+    }
+    taken.add(key);
+    renames.set(country.id, key);
+  }
+  if (!renames.size) {
+    return input;
+  }
+  const rename = (id: string) => renames.get(id) ?? id;
+  const state = structuredClone(input);
+  state.countries = Object.fromEntries(
+    Object.values(state.countries).map((country) => [
+      rename(country.id),
+      { ...country, id: rename(country.id) },
+    ]),
+  );
+  state.settings.observing = state.settings.observing.map(rename);
+  for (const event of Object.values(state.events)) {
+    event.countries = event.countries.map(rename);
+    event.changes = event.changes.map((change) => ({ ...change, country: rename(change.country) }));
+    if (event.source.country) {
+      event.source.country = rename(event.source.country);
+    }
+  }
   return StateSchema.parse(state);
 }

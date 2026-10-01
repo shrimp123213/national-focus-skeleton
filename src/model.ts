@@ -5,6 +5,22 @@ export const Id = z
   .string()
   .regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/)
   .refine((v) => !['constructor', 'prototype', '__proto__'].includes(v));
+/**
+ * Country keys are the country's name as written in the worldbook, so the floor
+ * variable, the chat worldbook entry and the story all use one name. Older English IDs stay valid.
+ * No dots, brackets, quotes or spaces: the key is also a variable path segment.
+ */
+export const countryKeyPattern = /^[\p{L}\p{N}][\p{L}\p{N}\p{M}_\-·・]{0,79}$/u;
+export const CountryId = z
+  .string()
+  .regex(countryKeyPattern)
+  .refine((v) => !['constructor', 'prototype', '__proto__'].includes(v))
+  .describe('国家 ID：照抄 state 或 candidate 中的国家 ID（国名原文），不翻译、不改字形');
+/** Event IDs may embed a country ID (`focus_国家_国策`), so they follow the country key rule. */
+export const EventId = z
+  .string()
+  .regex(countryKeyPattern)
+  .refine((v) => !['constructor', 'prototype', '__proto__'].includes(v));
 const Text = z.string().min(1).max(8000);
 const Day = z.number().finite().nonnegative();
 /** negate=true means the fact or capability must NOT hold (skeleton edition, handoff doc section 32). */
@@ -149,7 +165,7 @@ export const sizeLimits = {
 } as const;
 export const TreeSchema = z
   .object({
-    id: Id,
+    id: CountryId,
     name: Text,
     description: Text,
     stability: z.number().min(0).max(100),
@@ -228,12 +244,12 @@ export const EventStepSchema = z
 export const EventResultSchema = z
   .enum(['achieved', 'abandoned', 'failed'])
   .describe('结束方式：achieved 达成、abandoned 终止、failed 失败');
-const EventChangesSchema = z.array(z.object({ country: Id, effects: z.array(EffectSchema) }).strict());
+const EventChangesSchema = z.array(z.object({ country: CountryId, effects: z.array(EffectSchema) }).strict());
 export const EventSchema = z
   .object({
-    id: Id,
+    id: EventId,
     at: Day,
-    countries: z.array(Id).min(1),
+    countries: z.array(CountryId).min(1),
     title: Text,
     description: Text,
     evidence: Text,
@@ -266,7 +282,7 @@ export const EventSchema = z
     source: z
       .object({
         kind: z.enum(['update', 'focus']),
-        country: Id.optional(),
+        country: CountryId.optional(),
         node: Id.optional(),
         name: z.string().optional(),
       })
@@ -280,7 +296,7 @@ export const EventSchema = z
   .strict();
 export const EventUpdateSchema = z
   .object({
-    id: Id.describe('要推进的既有 ongoing 事件 id'),
+    id: EventId.describe('要推进的既有 ongoing 事件 id'),
     text: Text.describe('本期进展'),
     status: z.enum(['ongoing', 'resolved']).optional(),
     headline: z.string().optional().describe('本期进展的新闻头条'),
@@ -295,7 +311,7 @@ export const EventUpdateSchema = z
 export const SettingsSchema = z.object({
   /** Unused since v0.12.7 (the fog was removed); kept so v0.11.1 can still read these saves. */
   fog: z.boolean(),
-  observing: z.array(Id),
+  observing: z.array(CountryId),
   size: z
     .enum(['small', 'standard', 'large', 'epic'])
     .transform((size) => (size === 'small' ? 'standard' : size === 'epic' ? 'large' : size)),
@@ -306,8 +322,8 @@ export const StateSchema = z.object({
   revision: z.number().int().nonnegative(),
   day: Day,
   settings: SettingsSchema,
-  countries: z.record(Id, CountrySchema),
-  events: z.record(Id, EventSchema),
+  countries: z.record(CountryId, CountrySchema),
+  events: z.record(EventId, EventSchema),
   receipts: z.array(z.string()),
   schedules: z.record(z.string(), z.object({ turn: z.number(), day: Day })),
 });
@@ -324,7 +340,7 @@ export const ProposalSchema = z
             facts: z.array(
               z
                 .object({
-                  country: Id,
+                  country: CountryId,
                   id: Id,
                   value: z.boolean(),
                   evidence: Text,
@@ -335,14 +351,16 @@ export const ProposalSchema = z
             events: z.array(
               EventSchema.omit({ shownAt: true, touchedAt: true, source: true, result: true }).extend({
                 focus: z
-                  .object({ country: Id, node: Id })
+                  .object({ country: CountryId, node: Id })
                   .strict()
                   .optional()
                   .describe('这个事件承接执行的国策；一项国策最多一个事件'),
               }),
             ),
-            selections: z.array(z.object({ country: Id, node: Id, reason: Text }).strict()),
-            publications: z.array(z.object({ country: Id, node: Id, evidence: Text }).strict()).default([]),
+            selections: z.array(z.object({ country: CountryId, node: Id, reason: Text }).strict()),
+            publications: z
+              .array(z.object({ country: CountryId, node: Id, evidence: Text }).strict())
+              .default([]),
             eventUpdates: z.array(EventUpdateSchema).default([]),
           })
           .strict(),
@@ -350,15 +368,17 @@ export const ProposalSchema = z
       .max(500),
     edits: z
       .array(
-        z.object({ country: Id, remove: z.array(Id), nodes: z.array(NodeSchema), reason: Text }).strict(),
+        z
+          .object({ country: CountryId, remove: z.array(Id), nodes: z.array(NodeSchema), reason: Text })
+          .strict(),
       )
       .default([]),
-    calibrations: z.array(Id).default([]),
+    calibrations: z.array(CountryId).default([]),
     transitions: z
       .array(
         z
           .object({
-            country: Id,
+            country: CountryId,
             cause: z.enum(['completed', 'incompatible']),
             reason: z.string().min(1).max(800),
             invalidateActive: z.boolean().default(false),
@@ -371,7 +391,9 @@ export const ProposalSchema = z
   .strict();
 export const CandidatesSchema = z
   .object({
-    countries: z.array(z.object({ id: Id, name: Text, description: Text, evidence: Text }).strict()).max(100),
+    countries: z
+      .array(z.object({ id: CountryId, name: Text, description: Text, evidence: Text }).strict())
+      .max(100),
   })
   .strict();
 export type State = z.infer<typeof StateSchema>;

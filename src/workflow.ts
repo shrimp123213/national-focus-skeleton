@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { applyProposal, installCountry, removeCountry } from './engine';
+import { applyProposal, countryKey, installCountry, removeCountry } from './engine';
 import { importTrees, type TreeImport } from './tree-io';
 import {
   CandidatesSchema,
@@ -453,7 +453,7 @@ export class FocusController {
         }
       }
       if (kind === 'identify') {
-        this.candidates = CandidatesSchema.parse(result).countries.filter((c) => !next.countries[c.id]);
+        this.candidates = candidateKeys(CandidatesSchema.parse(result).countries, next);
       }
       if (kind === 'generate') {
         this.progress.delete(progressKey);
@@ -752,4 +752,21 @@ export class FocusController {
     }
     return next;
   }
+}
+
+/**
+ * Candidates are keyed by their name as written in the worldbook, whatever ID the model chose, so
+ * the floor variable and the worldbook entry use the same name. Known countries and repeats drop.
+ */
+export function candidateKeys(candidates: Candidate[], state: State): Candidate[] {
+  const names = new Set(Object.values(state.countries).map((country) => country.name.trim()));
+  const seen = new Set<string>();
+  return candidates
+    .map((candidate) => ({ ...candidate, id: countryKey(candidate.name) ?? candidate.id }))
+    .filter((candidate) => {
+      const fresh =
+        !state.countries[candidate.id] && !names.has(candidate.name.trim()) && !seen.has(candidate.id);
+      seen.add(candidate.id);
+      return fresh;
+    });
 }

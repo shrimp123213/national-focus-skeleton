@@ -288,6 +288,32 @@ export type WorldbookEntryLike = {
 };
 
 /**
+ * A country re-keyed from an English ID to its name gets a new entry name. Its old entry still
+ * carries the country name in its keys; move that entry instead of replacing it, so the player's
+ * position, order and enabled state survive.
+ */
+function movedCountryEntries(existing: WorldbookEntryLike[], wanted: BookEntry[]): Map<string, string> {
+  const countryPrefix = `${bookPrefix}国家-`;
+  const present = new Set(existing.map((entry) => currentBookName(entry.name)));
+  const wantedNames = new Set(wanted.map((entry) => entry.name));
+  const open = wanted.filter((entry) => entry.name.startsWith(countryPrefix) && !present.has(entry.name));
+  const moved = new Map<string, string>();
+  for (const entry of existing) {
+    const name = currentBookName(entry.name);
+    if (!name?.startsWith(countryPrefix) || wantedNames.has(name)) {
+      continue;
+    }
+    const keys = entry.strategy.keys.map(String);
+    const index = open.findIndex((target) => target.keys[0] !== undefined && keys.includes(target.keys[0]));
+    if (index >= 0) {
+      moved.set(name, open[index].name);
+      open.splice(index, 1);
+    }
+  }
+  return moved;
+}
+
+/**
  * The worldbook after reconciling this script's entries: new entries get the default placement;
  * existing ones keep the player's position, order and enabled state and any extra keys they added.
  * Returns null when nothing changes, so a floor switch does not rewrite the worldbook.
@@ -297,10 +323,12 @@ export function reconcileBook(
   wanted: BookEntry[],
 ): WorldbookEntryLike[] | null {
   const byName = new Map(wanted.map((entry) => [entry.name, entry]));
+  const moved = movedCountryEntries(existing, wanted);
   let changed = false;
   const kept: WorldbookEntryLike[] = [];
   for (const entry of existing) {
-    const name = currentBookName(entry.name);
+    const current = currentBookName(entry.name);
+    const name = current === null ? null : (moved.get(current) ?? current);
     if (name === null) {
       kept.push(entry);
       continue;

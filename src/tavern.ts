@@ -7,7 +7,7 @@ import {
   TavernSecretStore,
   type SecretStore,
 } from './secrets';
-import { createState, floorNews, NEWS_EVENT, NEWS_TAG, stampNews } from './engine';
+import { createState, floorNews, migrateCountryKeys, NEWS_EVENT, NEWS_TAG, stampNews } from './engine';
 import {
   ConfigSchema,
   defaultConfig,
@@ -494,7 +494,8 @@ export class TavernPlatform implements Platform {
     const saved = data.国策 !== undefined ? data.国策 : data.stat_data.国策;
     this.config = config;
     this.promptSaved = Boolean((data.国策 as { prompt?: unknown } | undefined)?.prompt);
-    const state = saved === undefined ? createState(day) : StateSchema.parse(saved);
+    // Older saves keyed countries by English ID; read them under their worldbook names.
+    const state = saved === undefined ? createState(day) : migrateCountryKeys(StateSchema.parse(saved));
     // Reuse this chat read for context and turn counting; do not hash story text.
     const messages = this.api.getChatMessages(`0-${message.message_id}`);
     let sourceData: Awaited<ReturnType<typeof buildSourceContext>> | undefined;

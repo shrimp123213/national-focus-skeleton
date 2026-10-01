@@ -2,7 +2,7 @@
 
 最後更新：2026-10-01。第 1–12 節保留早期基線，後續章節記錄各次設計與實作；**目前進度以第 62 節的整合快照為入口**。
 
-目前實作版本：**v0.14.11-skeleton**；程式提交 `ae0612b63a6a6f580f19a88f66ee9f02bcff9315`，已推送 `main` 及標籤 `v0.14.11-skeleton`。本次僅補交接文件，不增加程式版本或移動既有標籤。
+目前實作版本：**v0.14.12-skeleton**（標籤 `v0.14.12-skeleton`，推送至 `main`）：國家 ID 改用世界書國名、織界 v5 格式強化預設，見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
 
 目前專案：`F:\命一串\national-focus-skeleton`；舊版 `F:\命一串\national-focus`（v0.11.1）僅供歷史參考，本輪未修改。
 
@@ -2058,3 +2058,30 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - 必要驗證依變更範圍執行；專案已有 `npm run check`、`npm test`、`npm run build`。本次純文件補充只檢查文件差異，不把上一版測試冒充本輪重跑。
 - 新程式版本完成後依第 52 節提交、建立標籤並推送；純文件補充可獨立提交推送，不需要為此改套件版本或重建 dist，也不改已發布標籤。
 - 保留未追蹤的 IDE 設定、舊 UI 樣品與其他協作者草稿；本次不整理或刪除它們。接手前先看 `git status`，不要整包加入無關檔案。
+
+## 63. 織界任務預設 v5 格式強化版（2026-10-01，隨 v0.14.12 發布）
+
+使用者回報最常被退回的是參數型別與結構錯誤，要求參考工作流助手「世界后台引擎」的巨集與格式寫法建立 v5。只新增預設與其生成器，未改 `src/`，主腳本與正則不需更新。
+
+- 檔案：`presets/織界國策-任務預設-v5-格式強化版.json`，由 `python scripts/build-weaver-preset.py <輸出路徑>` 產生（生成器已改為 v5；v4 以 git 歷史及原 JSON 保留）。
+- 新增段落（四項任務皆有）：
+  - `宏重置`（第一段，勿關）：`{{setvar::国策_VOID指令::}}`、`{{setvar::国策_思考位置::…}}`，清掉前次執行留下的聊天變量。
+  - `思考方式·原生思考`／`思考方式·thinking 标签`（預設皆關）：覆寫 `国策_思考位置`；全關時沿用自動判斷的通用文字。思維要求以 `{{getvar::国策_思考位置}}` 讀取。
+  - `VOID 指令`（預設關）：開啟時以 setvar 讓思維要求 Step 0 多出「如何满足<VOID_INPUT>？」，關閉時該步不出現（v4 會對不存在的標籤推理）。
+  - `国策输出格式`（任務資料之後）：通用紀律 J1–J10（數字／布林不加引號、列表空值寫 []、嚴格鍵、列舉照抄、國家 ID 照抄國名、其他 ID 規則、引號用「」）、各物件逐鍵形狀、prerequisites／mutex／news／條件／效果決策表與常見退回原因，以及 `<范例 stage="…">` 範例 JSON。
+  - `输出格式确认`（assistant）：取代 v4 的「背景信息结束」，點名該任務最易錯的型別與結構。
+- 思維要求：Step 0 說明如何讀 correction 的 zod `path`（例 `["nodes",3,"prerequisites",0]`）並檢查同類欄位；最後一步改為逐條格式自檢，只寫發現的問題。生成任務改為分步 Step 0–6，思考上限 1200 字。
+- 範例 JSON 由生成器以 Python 物件序列化；`test/weaver-preset.test.ts` 用真實 `GeneratedTreeSchema`、`ProposalSchema`、`CandidatesSchema` 與拓撲／能力順序檢查驗證每個範例，並檢查宏重置在最前、每個 getvar 都有重置、格式段不含會被替換的 `$1`／`$U` 等佔位符。改 schema 時這個測試會提醒同步改預設。
+- 依賴：setvar／getvar／trim／`{{// }}` 是酒館原生巨集，不需 EJS；在不經酒館渲染的離線預覽中會顯示原文。setvar 會寫入目前聊天的區域變量（`国策_` 前綴）。
+- 已知限制：生成任務同時服務 stage=generate 與 stage=period，格式段以文字區分兩種根物件，只提供 generate 的完整範例。v5 是否實際降低退回率需以真實模型與執行紀錄驗收。
+
+## 64. v0.14.12：國家 ID 改用世界書國名（2026-10-01）
+
+使用者要求變量中的國家與世界書一致：世界書寫什麼，變量就是什麼（簡體國名），避免英文 ID 與中文名稱並存造成混淆。
+
+- `model.ts`：新增 `CountryId`（`countryKeyPattern`：Unicode 字母或數字開頭，可含 `_`、`-`、`·`、`・`，不可含空白、點號、括號、引號，最長 80）。國家相關欄位全部改用它：`TreeSchema.id`、`state.countries` 鍵、事件 `countries`／`source.country`／`changes[].country`、提案 facts／selections／publications／focus／edits／calibrations／transitions、`observing`、候選國家 id。事件 id 會內嵌國家 ID（`focus_國家_國策`），改用同規則的 `EventId`。其他 ID（國策、分支、能力等）仍是英文規則。舊英文 ID 仍合法。
+- `workflow.ts` `candidateKeys`：辨識國家後以 `countryKey(name)` 取代模型給的 id，並略過已有國家（依 ID 或國名）與重複者。因此 v3／v4 預設要求英文 id 也不影響結果。
+- `engine.ts` `migrateCountryKeys`：讀取樓層狀態時（`tavern.ts` read），把仍為舊英文 ID 的國家改鍵為國名，同步改事件國家、變更、來源與 observing；確定性且冪等，舊樓層每次讀到的鍵相同。國名無法作 ID 或已被他國占用時保留原 ID。事件 id 不改；公開步驟改用 `focusEvent` 依來源找國策新聞（原本用衍生 id，遷移後會找不到）。報紙卡片讀各樓自身狀態，不遷移。
+- `prompt-view.ts` `reconcileBook`：國家改鍵後條目名稱由 `国策档案-国家-英文` 變成 `国策档案-国家-国名`；以舊條目關鍵字含國名為依據原位改名，保留玩家的位置、順序、啟停與自訂關鍵字，不重建。
+- 內建提示詞：系統規則與辨識任務改為國家 ID＝國名原文、其他 ID 英文；v5 預設同步（J8 國家 ID、J9 其他 ID，範例國家 ID 改中文）。
+- 驗證：`test/country-keys.test.ts`（ID 規則、遷移與冪等、占用時保留、遷移後公開舊新聞、候選鍵、世界書條目原位改名），`test/tavern.test.ts` 改為斷言讀取後已改鍵。174／174 測試、型別、格式與建置通過；真實酒館未驗收，人工步驟見 VALIDATION.md。

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { TavernPlatform, type TavernApi } from '../src/tavern';
 import { ConfigSchema, defaultConfig } from '../src/model';
 import { demoState } from '../src/demo';
+import { countryKey, migrateCountryKeys } from '../src/engine';
 import { storyDay } from '../src/platform';
 import { applyDeepSeek } from '../src/api-config';
 import { parse } from 'yaml';
@@ -424,11 +425,17 @@ test('旧版完整树与进度可读取，成功保存才移到最外层且不�
     env.getData()._post_process_inject_var_baseline = { original: true };
     const before = structuredClone(env.getData());
     const snapshot = await env.platform.read(defaultConfig());
-    assert.deepEqual(snapshot.state, legacy);
+    // Countries saved under English IDs are read under their worldbook names; the floor is untouched.
+    const named = migrateCountryKeys(legacy);
+    assert.deepEqual(
+      Object.keys(named.countries),
+      Object.values(legacy.countries).map((c) => c.name),
+    );
+    assert.deepEqual(snapshot.state, named);
     assert.deepEqual(env.getData(), before);
     await env.platform.commit(snapshot, snapshot.state);
     const { basis, prompt: _prompt, ...saved } = env.getData().国策;
-    assert.deepEqual(saved, legacy);
+    assert.deepEqual(saved, named);
     assert.equal(basis, undefined);
     delete before.stat_data.国策;
     const { 国策, ...remaining } = env.getData();
@@ -445,7 +452,7 @@ test('两位置同时有资料时以最外层为准，无效最外层资料明�
     env.getData().国策 = root;
     env.getData().stat_data.国策 = { ...root, day: 90 };
     const snapshot = await env.platform.read(defaultConfig());
-    assert.deepEqual(snapshot.state, root);
+    assert.deepEqual(snapshot.state, migrateCountryKeys(root));
     await env.platform.commit(snapshot, snapshot.state);
     assert.equal(env.getData().stat_data.国策, undefined);
     env.getData().国策 = null;
@@ -1006,10 +1013,12 @@ test('每个完成的 AI 楼层在背景任务之前写入快讯条资料：新�
     // A later commit keeps the bar and follows the new state for who the player may hear from.
     const snapshot = await env.platform.read(defaultConfig());
     const next = structuredClone(snapshot.state);
-    next.countries.augustium.control = 'player';
+    // The read re-keyed the country to its name; the next save follows the new key.
+    const augustium = countryKey(demoState().countries.augustium.name)!;
+    next.countries[augustium].control = 'player';
     await env.platform.commit(snapshot, next);
     assert.deepEqual(floors[3].国策.快讯.changed, ['快讯/军事']);
-    assert.deepEqual(floors[3].国策.快讯.insiders, ['augustium']);
+    assert.deepEqual(floors[3].国策.快讯.insiders, [augustium]);
     const previousFloor = structuredClone(floors[1]);
     const policy = structuredClone(floors[3].国策.countries);
     let extraReady = 0;
