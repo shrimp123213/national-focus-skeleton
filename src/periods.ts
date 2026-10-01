@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { normalizeBranchReferences } from './branch-references';
 import { installCountry, validateGraph } from './engine';
-import { GeneratedTreeSchema, validateTopology } from './generation';
-import { layoutTree } from './layout';
+import { GeneratedTreeSchema, normalizeCore, validateTopology } from './generation';
+import { coreBranch, layoutTree } from './layout';
 import { sizeLimits, StateSchema, TreeSchema, type Country, type Proposal, type State } from './model';
 import { assertCapabilityOrder } from './reachability';
 
@@ -47,7 +47,7 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   const anchor = periodAnchor(old, transition.invalidateActive);
   const number = old.period.number + 1;
   const prefix = `p${number}_`;
-  const generated = normalizeBranchReferences(reply.tree);
+  const generated = normalizeCore(normalizeBranchReferences(reply.tree));
   if (generated.id !== old.id) {
     throw new Error('下一期国家 ID 不一致');
   }
@@ -95,7 +95,7 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   const tree = TreeSchema.parse({
     ...generated,
     branches,
-    nodes: layoutTree(nodes),
+    nodes: layoutTree(nodes, coreBranch({ branches })),
     capabilities: Object.values(old.capabilities),
   });
   assertCapabilityOrder(

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { applyProposal, blockers, createState, installCountry, startFocus } from '../src/engine';
 import { layoutTree } from '../src/layout';
 
-import { generationPlan, normalizeGenerated, workingState } from '../src/generation';
+import { generationPlan, normalizeCore, normalizeGenerated, workingState } from '../src/generation';
 import { repairReply, snapDays } from '../src/repair';
-import { focusDays, periodDays } from '../src/model';
+import { corePathDays, focusDays, periodDays } from '../src/model';
 import { demoTree } from '../src/demo-tree';
 
 test('136 节点示范的三条宪制路线均能到达共同终点与危机终点', () => {
@@ -143,10 +143,12 @@ test('骨架修正操作以 id 定位，坏操作略过并回报', async () => {
   assert.equal(root.nodes[0].impact, 'pivotal');
 });
 
-test('生成指示使用分期与内容深度，不要求结构配额', async () => {
+test('生成指示使用分期与「主干加侧翼」结构目标，数量不强制凑数', async () => {
   const { DEFAULT_TASK } = await import('../src/prompts');
   assert.match(DEFAULT_TASK.generate, /10–16/);
-  assert.match(DEFAULT_TASK.generate, /没有配额/);
+  assert.match(DEFAULT_TASK.generate, /主干加侧翼/);
+  assert.match(DEFAULT_TASK.generate, /恰好一条 core=true 的核心分支/);
+  assert.match(DEFAULT_TASK.generate, /不为凑数补节点/);
   assert.match(DEFAULT_TASK.generate, /stage=period/);
   assert.match(DEFAULT_TASK.update, /transitions/);
 });
@@ -228,4 +230,50 @@ test('生成资料带出工期选项与依故事节奏的每期目标天数', ()
     assert.deepEqual(plan.data.limits.periodDays, periodDays[pace]);
   }
   assert.deepEqual(periodDays, { fast: [60, 90], standard: [90, 180], long: [180, 270] });
+});
+
+test('核心分支恰好一条：缺少或重复时取国策最多者；生成资料带出主干与侧翼目标', () => {
+  const nodes = [
+    { branch: '朝堂' },
+    { branch: '朝堂' },
+    { branch: '朝堂' },
+    { branch: '商路' },
+    { branch: '边防' },
+    { branch: '边防' },
+  ];
+  const branches = [{ name: '商路' }, { name: '朝堂' }, { name: '边防' }];
+  const core = (tree: { branches: { name: string; core?: boolean }[] }) =>
+    tree.branches.filter((branch) => branch.core).map((branch) => branch.name);
+  assert.deepEqual(core(normalizeCore({ branches, nodes })), ['朝堂']);
+  assert.deepEqual(
+    core(normalizeCore({ branches: branches.map((b) => ({ ...b, core: b.name !== '朝堂' })), nodes })),
+    ['边防'],
+  );
+  const single = { branches: branches.map((b) => ({ ...b, core: b.name === '商路' })), nodes };
+  assert.equal(normalizeCore(single), single);
+  for (const [size, branchSpan, coreSpan] of [
+    ['standard', '2–3', '7–10'],
+    ['large', '3–4', '10–15'],
+  ] as const) {
+    const state = createState(100);
+    state.settings.size = size;
+    const plan = generationPlan({ state, day: 100, context: {} } as never, {
+      id: 'x',
+      name: 'x',
+      description: 'x',
+      evidence: 'x',
+    });
+    assert.equal(plan.data.limits.branches, branchSpan);
+    assert.equal(plan.data.limits.core.nodes, coreSpan);
+    assert.equal(plan.data.limits.core.pathDays, corePathDays.standard);
+  }
+});
+
+test('布局把核心分支放在中间，侧翼分在左右', () => {
+  const node = (id: string, branch: string) => ({ id, branch, prerequisites: [] as string[][] });
+  const nodes = [node('a', '侧一'), node('b', '侧二'), node('c', '核心'), node('d', '侧三')];
+  const lane = (laid: { id: string; x: number }[]) => Object.fromEntries(laid.map((n) => [n.id, n.x]));
+  const centred = lane(layoutTree(nodes, '核心'));
+  assert.ok(centred.a < centred.c && centred.c < centred.b && centred.b < centred.d, JSON.stringify(centred));
+  assert.deepEqual(lane(layoutTree(nodes)), { a: 0, b: 2, c: 4, d: 6 });
 });

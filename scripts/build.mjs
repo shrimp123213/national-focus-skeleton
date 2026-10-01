@@ -35,7 +35,7 @@ await writeFile(join(output, 'THIRD_PARTY_NOTICES.txt'), notices.join('\n\n'), '
 const exported = {
   type: 'script',
   enabled: true,
-  name: '【命定之诗】国策档案 v0.14.16 骨架版',
+  name: '【命定之诗】国策档案 v0.14.17 骨架版',
   id: '3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13',
   content: script,
   info: '正文完成后于背景演化的国策树。需酒馆助手与 MVU。从悬浮球开启；请先设定可靠故事时间栏位与 API。',

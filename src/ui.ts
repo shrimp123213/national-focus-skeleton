@@ -1,7 +1,7 @@
 import { periodBar, periodNote, periodControl, anchorNotice, anchorBadge, historyBody } from './period-ui';
 import { blockers, changeCountry, isHistoricalEvidence, pauseFocus, resultNames, startFocus } from './engine';
 import { icon } from './icons';
-import { layoutTree } from './layout';
+import { coreBranch, layoutTree } from './layout';
 import { mutexRoutes } from './reachability';
 import {
   ConfigSchema,
@@ -551,7 +551,10 @@ export function mountUI(
     const tree = shell.querySelector<HTMLElement>('.tree')!;
     const nodes = Object.values(country.nodes);
     positions = new Map(
-      layoutTree(nodes).map((n) => [n.id, { x: n.x * GRID_X + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y }]),
+      layoutTree(nodes, coreBranch(country)).map((n) => [
+        n.id,
+        { x: n.x * GRID_X + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y },
+      ]),
     );
     const pos = (node: FocusNode) => positions.get(node.id)!;
     const summaries = new Map<string, { x: number; y: number }>();

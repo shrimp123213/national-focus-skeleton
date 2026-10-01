@@ -15,7 +15,7 @@ import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 import YAML from 'yaml';
 
 /** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5.5-格式強化版.json', import.meta.url);
+const file = new URL('../presets/織界國策-任務預設-v5.6-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -284,6 +284,24 @@ test('weaver preset world state keeps recent history in full, needs a landed wor
   const idle = world();
   idle.addon_data.世界.甲界.降临 = false;
   assert.equal(render({ ...idle, post_process_tags: { 世界状态摘要_world: { 甲界: '摘要' } } }).trim(), '');
+});
+
+test('weaver preset examples follow the core-and-wings shape', () => {
+  for (const item of examples('generate')) {
+    const tree = (item.stage === 'period' ? (item.value as { tree: unknown }).tree : item.value) as {
+      branches: { name: string; core?: boolean }[];
+      nodes: { branch: string; mutex: { group: string; route: string } | null }[];
+    };
+    const core = tree.branches.filter((branch) => branch.core);
+    assert.equal(core.length, 1, item.stage);
+    assert.ok(tree.branches.length >= 2, item.stage);
+    const routes = tree.nodes.filter((node) => node.mutex);
+    assert.ok(routes.length >= 2, item.stage);
+    assert.ok(
+      routes.every((node) => node.branch === core[0].name),
+      item.stage,
+    );
+  }
 });
 
 test('weaver preset examples use whole-week durations', () => {

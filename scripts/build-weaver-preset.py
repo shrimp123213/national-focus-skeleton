@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.5-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.6-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.5 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.6 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -337,14 +337,15 @@ Step 2：国情
 Step 3：议程
 - 本期议程及长期方向；保留有效长期方向的 id 与原文，修订或放弃要说明
 - 标准 10–16、大型 16–24（含承接），是篇幅目标，禁止为凑数补国策；分岔、汇流、互斥、核心分支与重要国策没有配额
-- 时间尺度：每项国策 days 只用 7／14／21／28／35（一至五周）；沿最长前置链加总的工期以 limits.periodDays 为目标（不含等待外部成果），终点是这段时间内能完成的阶段成果
+- 结构「主干加侧翼」：branches 共 limits.branches 条；恰好一条 core=true 的核心分支承载本期主要目的——开头 1–2 项共同国策，分岔成 limits.core.routes 条互斥路线，各路线以 OR 前置汇流到本期终点，核心共 limits.core.nodes 项；其余是 limits.wings.count 条侧翼，每条 limits.wings.nodes 项，可有自己的起点，处理并行的次要事务，宜短（每国一次只推进一项国策，侧翼会占用核心的时间）
+- 时间尺度：每项国策 days 只用 7／14／21／28／35（一至五周）；核心实际走过的一条路线（开局＋一条路线＋终点）合计约 limits.core.pathDays，加上会点的侧翼，整期约 limits.periodDays（不含等待外部成果）；终点是这段时间内能完成的阶段成果
 - outcomes 只在确实需要剧情结果时设定，否则国策会卡在等待
 Step 4：路线与代价
 - 写具体国家行动、利益及代价；持续执行交给事件（execution=ongoing）
 - 能力、事实、条件与产出分清：outcomes 是外部成果，不写本国策自己的产出；不要求自身成果
 Step 5：节点清单
-- 用代号列出每个国策：id｜branch｜days｜前置（写成两层阵列）｜mutex group/route 或 null｜impact
-- 算出最长前置链的工期总和，确认落在 limits.periodDays 内；太长就合并国策或缩短工期
+- 先定核心分支与侧翼，再用代号列出每个国策：id｜branch（核心／侧翼）｜days｜前置（写成两层阵列）｜mutex group/route 或 null｜impact
+- 算出核心一条路线的工期合计，确认约为 limits.core.pathDays；太长就合并国策或缩短工期
 - 前置不循环；每个 mutex.group 至少两个 route；互斥路线的共同后续用 OR 组
 Step 6：格式自检（对照<国策输出格式>逐条确认；只写发现的问题与修正，没有问题写「通过」）
 - 根物件：stage=generate 是整棵树；stage=period 只有 summary 与 tree
@@ -353,7 +354,7 @@ Step 6：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - 每个国策 17 键齐全；没有内容的列表写 []；mutex 是 null 或四键物件；normal 国策的 news 是 null，pivotal 国策的 news 三键齐全
 - prerequisites 每一组都是阵列（两层）；引用的国策 ID 都存在
 - 条件只有 kind、id、label（可加 negate）或 kind、minimum、label；效果都有自己的 id，能力与承诺用 key
-- branch 填分支 name 原文；每个分支至少一个国策；没有 x、y 或其它格式以外的键
+- branch 填分支 name 原文；每个分支至少一个国策；恰好一条分支 core=true；没有 x、y 或其它格式以外的键
 - stage=period 时另查：periodTitle、agenda 不为空；historical、capabilities 是 []；nodes 不含 anchor；新国策 id 与新 mutex.group 都有 prefix；前置只引用 anchor 或新国策；新国策数加 anchor 不超过 limits.max；summary 不超过 1200 字
 </analysis_format>''',
     'update': '''VOID: 织界者，以下是你的思维要求：
@@ -510,12 +511,13 @@ GENERATE_EXAMPLE = {
     'agenda': '本期主要目的',
     'longTerm': [{'id': 'lt_crown', 'text': '长期方向一句话'}],
     'branches': [
-        {'id': 'court', 'name': COURT, 'purpose': '分支目的', 'supporters': '王室近臣',
-         'opposition': '地方领主', 'tradeoff': '取舍', 'destination': '分支终点的新处境'},
-        {'id': 'trade', 'name': TRADE, 'purpose': '分支目的', 'supporters': '港口商会',
-         'opposition': '旧贵族', 'tradeoff': '取舍', 'destination': '分支终点的新处境'},
+        {'id': 'court', 'name': COURT, 'purpose': '本期主要目的', 'supporters': '王室近臣',
+         'opposition': '地方领主', 'tradeoff': '取舍', 'destination': '本期终点的新处境',
+         'core': True, 'coreReason': '为何这是本期主要目的'},
+        {'id': 'trade', 'name': TRADE, 'purpose': '并行的次要事务', 'supporters': '港口商会',
+         'opposition': '旧贵族', 'tradeoff': '取舍', 'destination': '侧翼终点的新处境'},
     ],
-    'relations': [{'from': 'n_army', 'to': 'n_port', 'kind': 'opportunity', 'change': '选了扩军，开港的财政余裕就会减少'}],
+    'relations': [{'from': 'n_army', 'to': 'n_market', 'kind': 'opportunity', 'change': '选了扩军，开市的财政余裕就会减少'}],
     'capabilities': [],
     'historical': [],
     'nodes': [
@@ -527,7 +529,7 @@ GENERATE_EXAMPLE = {
              investments=['王室卫队', '军费'],
              effects=[{'id': 'e_army_ws', 'kind': 'warSupport', 'value': 5}],
              mutex={'group': 'court_choice', 'route': 'army', 'lock': 'start', 'reason': '国库只够支持一条路线'}),
-        node('n_port', TRADE, 'trade', 28, [['n_council']],
+        node('n_port', COURT, 'trade', 28, [['n_council']],
              requirements=[{'kind': 'fact', 'id': 'port_blockaded', 'label': '港口未遭封锁', 'negate': True}],
              outcomes=[{'kind': 'fact', 'id': 'port_survey_done', 'label': '港口勘查完成'}],
              investments=['商会资金'],
@@ -542,6 +544,10 @@ GENERATE_EXAMPLE = {
              pivotal={'headline': '像报纸头条的一句话', 'body': '世界如何看待此事',
                       'option': {'label': '拭目以待', 'text': ''}},
              execution='once'),
+        node('n_market', TRADE, 'trade', 14, [], investments=['市舶司'],
+             effects=[{'id': 'e_market_tax', 'kind': 'capability', 'key': 'market_tax', 'name': '市舶税', 'active': True}]),
+        node('n_toll', TRADE, 'trade', 21, [['n_market']], investments=['关卡吏员'],
+             effects=[{'id': 'e_toll_rights', 'kind': 'commitment', 'key': 'toll_rights', 'name': '关税承诺'}]),
     ],
 }
 
@@ -561,10 +567,11 @@ PERIOD_EXAMPLE = {
         'agenda': '本期主要目的',
         'longTerm': [{'id': 'lt_crown', 'text': '长期方向一句话'}],
         'branches': [
-            {'id': 'cabinet_agenda', 'name': CABINET, 'purpose': '分支目的', 'supporters': '内阁大臣',
-             'opposition': '旧御前近臣', 'tradeoff': '取舍', 'destination': '分支终点的新处境'},
-            {'id': 'border_agenda', 'name': BORDER, 'purpose': '分支目的', 'supporters': '边境领主',
-             'opposition': '商会', 'tradeoff': '取舍', 'destination': '分支终点的新处境'},
+            {'id': 'cabinet_agenda', 'name': CABINET, 'purpose': '本期主要目的', 'supporters': '内阁大臣',
+             'opposition': '旧御前近臣', 'tradeoff': '取舍', 'destination': '本期终点的新处境',
+             'core': True, 'coreReason': '为何这是本期主要目的'},
+            {'id': 'border_agenda', 'name': BORDER, 'purpose': '并行的次要事务', 'supporters': '边境领主',
+             'opposition': '商会', 'tradeoff': '取舍', 'destination': '侧翼终点的新处境'},
         ],
         'relations': [],
         'capabilities': [],
@@ -574,18 +581,22 @@ PERIOD_EXAMPLE = {
                  requirements=[{'kind': 'capability', 'id': 'cabinet', 'label': '内阁已设立'}],
                  investments=['内阁书记处'],
                  effects=[{'id': 'p2_e_charter', 'kind': 'capability', 'key': 'charter_court', 'name': '宪章法院', 'active': True}]),
-            node('p2_fort', BORDER, 'army', 35, [], investments=['边防军', '石料'],
+            node('p2_fort', CABINET, 'army', 35, [['p2_charter']], investments=['边防军', '石料'],
                  effects=[{'id': 'p2_e_fort_ws', 'kind': 'warSupport', 'value': 3}],
                  mutex={'group': 'p2_border', 'route': 'fort', 'lock': 'start', 'reason': '边防预算只够一条路线'}),
-            node('p2_treaty', BORDER, 'diplomacy', 21, [], investments=['使节团'],
+            node('p2_treaty', CABINET, 'diplomacy', 21, [['p2_charter']], investments=['使节团'],
                  effects=[{'id': 'p2_e_treaty', 'kind': 'commitment', 'key': 'p2_border_treaty', 'name': '边境互不侵犯条约'}],
                  mutex={'group': 'p2_border', 'route': 'treaty', 'lock': 'start', 'reason': '边防预算只够一条路线'}),
-            node('p2_settle', CABINET, 'crown', 14, [['p2_fort', 'p2_treaty'], ['p2_charter']],
+            node('p2_settle', CABINET, 'crown', 14, [['p2_fort', 'p2_treaty']],
                  requirements=[{'kind': 'capability', 'id': 'charter_court', 'label': '宪章法院已设立'}],
                  investments=['宫廷法官'],
                  effects=[{'id': 'p2_e_settle', 'kind': 'stability', 'value': 5}],
                  pivotal={'headline': '像报纸头条的一句话', 'body': '世界如何看待此事',
                           'option': {'label': '拭目以待', 'text': ''}}),
+            node('p2_watch', BORDER, 'army', 14, [], investments=['斥候'],
+                 effects=[{'id': 'p2_e_watch', 'kind': 'warSupport', 'value': 2}]),
+            node('p2_drill', BORDER, 'army', 21, [['p2_watch']], investments=['边防军'],
+                 effects=[{'id': 'p2_e_drill', 'kind': 'capability', 'key': 'border_drill', 'name': '边防操演', 'active': True}]),
         ],
     },
 }
@@ -648,7 +659,7 @@ RESHAPE_EXAMPLE = {
     'edits': [{
         'country': '某王国',
         'remove': ['n_port'],
-        'nodes': [node('n_port_rebuild', TRADE, 'trade', 35, [['n_council']], investments=['商会资金', '流民劳力'],
+        'nodes': [node('n_port_rebuild', COURT, 'trade', 35, [['n_council']], investments=['商会资金', '流民劳力'],
                        effects=[{'id': 'e_rebuild_cap', 'kind': 'capability', 'key': 'deep_harbor', 'name': '深水港', 'active': True}],
                        mutex={'group': 'court_choice', 'route': 'trade', 'lock': 'start', 'reason': '国库只够支持一条路线'},
                        position=(400, 200))],
@@ -763,7 +774,7 @@ EFFECT_SHAPES = '''## 效果（changes[].effects 的每一项）——只有三�
 
 PERIOD_RULES = '''## 换期（stage=period）
 根物件只有两个键：{"summary":文字(≤1200字),"tree":{整棵树}}，tree 的键同上，另有以下规定：
-- 新一期同样是数月的施政阶段：days 只用 7／14／21／28／35，沿最长前置链的工期以 limits.periodDays 为目标
+- 新一期同样是数月的施政阶段与「主干加侧翼」：恰好一条 core=true 的核心分支，核心一条路线的工期合计约 limits.core.pathDays，days 只用 7／14／21／28／35
 - periodTitle、agenda 必填且不为空
 - historical 写 []；capabilities 写 []（现有能力、承诺与事实由程式沿用，不重新发放）
 - nodes 只放本期新国策，不放 anchor 国策（程式会自动保留它）；新国策数加上 anchor 不超过 limits.max
@@ -841,7 +852,7 @@ FORMAT = {
 - stability、warSupport：数字 0–100
 - periodTitle（≤80 字）、agenda（≤800 字）：文字
 - longTerm：[{"id":ID,"text":文字(≤200字)}]，最多 4 条
-- branches：[分支]，1–16 个；每个分支至少有一个国策
+- branches：[分支]，limits.branches 条；每个分支至少有一个国策；恰好一条 core=true（核心分支），其余是侧翼
 - relations：[关系]，没有写 []
 - capabilities：[{"id":能力ID,"name":文字,"active":布尔,"reason":文字}]，既有能力；没有写 []
 - historical：[{"node":国策ID,"evidence":文字}]，本树 nodes 中有证据已完成的国策，node 必须是 nodes 里的 id；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放这里；没有写 []
@@ -851,7 +862,8 @@ FORMAT = {
 
 ## 分支（branches 的每一项）
 {"id":ID,"name":文字,"purpose":文字,"supporters":文字,"opposition":文字,"tradeoff":文字,"destination":文字}
-可选：core（布尔）、coreReason（文字）、independent（文字）
+核心分支加 "core":true 与 "coreReason":文字（为何它是本期主要目的）；侧翼写 "core":false 或省略
+可选：independent（文字，侧翼为何能独立推进）
 
 ## 关系（relations 的每一项）
 {"from":国策ID,"to":国策ID,"kind":"exchange"|"synergy"|"opportunity"|"context"|"deferred"|"replacement","change":文字}

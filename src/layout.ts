@@ -1,8 +1,16 @@
 import type { FocusNode } from './model';
 
-/** Place branches in separate lanes and prerequisites above their dependants. */
+/** The core branch name of a tree, for the lane order. */
+export const coreBranch = (tree: { branches: { name: string; core?: boolean }[] }) =>
+  tree.branches.find((branch) => branch.core)?.name;
+
+/**
+ * Place branches in separate lanes and prerequisites above their dependants. The core branch, when
+ * named, takes the middle lane with the other branches split to its left and right.
+ */
 export function layoutTree<T extends Pick<FocusNode, 'id' | 'branch' | 'prerequisites'>>(
   nodes: T[],
+  core?: string,
 ): (T & { x: number; y: number })[] {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   if (byId.size !== nodes.length) {
@@ -49,8 +57,14 @@ export function layoutTree<T extends Pick<FocusNode, 'id' | 'branch' | 'prerequi
     }
   }
   const positions = new Map<string, { x: number; y: number }>();
+  let order = [...branches.keys()];
+  if (core && branches.has(core)) {
+    const others = order.filter((name) => name !== core);
+    const left = Math.floor(others.length / 2);
+    order = [...others.slice(0, left), core, ...others.slice(left)];
+  }
   let lane = 0;
-  for (const rows of branches.values()) {
+  for (const rows of order.map((name) => branches.get(name)!)) {
     const width = Math.max(...[...rows.values()].map((row) => row.length));
     for (const [y, row] of [...rows].sort(([a], [b]) => a - b)) {
       // Parent positions cannot change while sorting this row; calculate each center once.

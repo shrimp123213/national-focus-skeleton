@@ -171,6 +171,16 @@ export const periodDays = {
   standard: [90, 180],
   long: [180, 270],
 } as const;
+/**
+ * Core-and-wings trees (v0.14.17): one core branch holds the period's main aim (a shared opening,
+ * two or three exclusive routes, one end), short wings beside it hold side matters. Targets only.
+ */
+export const treeShape = {
+  standard: { branches: [2, 3], core: [7, 10], routes: [2, 3], wings: [1, 2], wingNodes: [2, 3] },
+  large: { branches: [3, 4], core: [10, 15], routes: [2, 3], wings: [2, 3], wingNodes: [2, 4] },
+} as const;
+/** Story days for the walked core path (opening, one route, end): about two thirds of the period. */
+export const corePathDays = { fast: 60, standard: 120, long: 180 } as const;
 /** Whole-tree focus counts, alternative routes included (v0.10.0: fewer, deeper branches). */
 export const sizeLimits = {
   small: [10, 16],

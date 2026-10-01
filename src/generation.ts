@@ -5,15 +5,17 @@ import { z } from 'zod';
 import {
   BranchSchema,
   NodeSchema,
+  corePathDays,
   focusDays,
   periodDays,
+  treeShape,
   TreeSchema,
   sizeLimits,
   type Candidate,
   type FocusNode,
   type State,
 } from './model';
-import { layoutTree } from './layout';
+import { coreBranch, layoutTree } from './layout';
 import type { Snapshot } from './platform';
 import { generateBySkeleton, type SkeletonProgress } from './skeleton';
 
@@ -199,6 +201,35 @@ export function normalizeGenerated<
   const initial = capabilities.filter((c) => c.active).map((c) => c.id);
   return { ...tree, capabilities, historical: kept, nodes: dropSelfConditions(tree.nodes, initial).nodes };
 }
+/**
+ * Exactly one core branch. A missing or repeated mark is fixed locally (it only orders the lanes and
+ * names the period's main line, no rule depends on it): the marked branch with the most focuses, or
+ * the branch with the most focuses when none is marked.
+ */
+export function normalizeCore<
+  T extends { branches: { name: string; core?: boolean }[]; nodes: { branch: string }[] },
+>(tree: T): T {
+  const marked = tree.branches.filter((branch) => branch.core);
+  if (marked.length === 1 || !tree.branches.length) {
+    return tree;
+  }
+  const count = (name: string) => tree.nodes.filter((node) => node.branch === name).length;
+  const pool = marked.length ? marked : tree.branches;
+  const core = pool.reduce((best, branch) => (count(branch.name) > count(best.name) ? branch : best));
+  return {
+    ...tree,
+    branches: tree.branches.map((branch) => ({ ...branch, core: branch === core })),
+  };
+}
+/** Structure targets sent with generation and period requests (not checked). */
+export function shapeLimits(settings: State['settings']) {
+  const shape = treeShape[settings.size === 'large' ? 'large' : 'standard'];
+  return {
+    branches: span(shape.branches),
+    core: { nodes: span(shape.core), routes: span(shape.routes), pathDays: corePathDays[settings.pace] },
+    wings: { count: span(shape.wings), nodes: span(shape.wingNodes) },
+  };
+}
 /** Data, schema and local checks for one country's single generation request. */
 export function generationPlan(snapshot: Snapshot, candidate: Candidate) {
   const size = snapshot.state.settings.size;
@@ -214,8 +245,7 @@ export function generationPlan(snapshot: Snapshot, candidate: Candidate) {
     limits: {
       min,
       max,
-      branches: span(budget.branches),
-      perBranch: span(budget.perBranch),
+      ...shapeLimits(snapshot.state.settings),
       minimumForks: minimumConnections,
       minimumJoins: minimumConnections,
       minimumCrossBranchLinks: crossLinkMinimums[size],
@@ -239,7 +269,7 @@ export function validateTree(
   const size = snapshot.state.settings.size;
   const [min, max] = sizeLimits[size];
   {
-    const raw = normalizeGenerated(normalizeBranchReferences(reply));
+    const raw = normalizeCore(normalizeGenerated(normalizeBranchReferences(reply)));
     requireThat(raw.id === candidate.id, '生成的国家 ID 与选取国家不一致');
     requireThat(
       raw.nodes.length >= 1 && raw.nodes.length <= max,
@@ -264,7 +294,7 @@ export function validateTree(
       raw.branches.map((b) => b.name),
     );
     validateTopology(raw.nodes, size);
-    const tree = TreeSchema.parse({ ...raw, nodes: layoutTree(raw.nodes) });
+    const tree = TreeSchema.parse({ ...raw, nodes: layoutTree(raw.nodes, coreBranch(raw)) });
     if (
       tree.relations?.some(
         (relation) =>
@@ -303,8 +333,8 @@ export async function generateCountry(
         return ask('generate', plan.data, plan.schema, plan.validate, '单次生成完整国策树');
       })()
     : await generateBySkeleton(snapshot, candidate, ask, progress, segmentMax, retries);
-  const normalized = normalizeGenerated(normalizeBranchReferences(raw));
-  return TreeSchema.parse({ ...normalized, nodes: layoutTree(normalized.nodes) });
+  const normalized = normalizeCore(normalizeGenerated(normalizeBranchReferences(raw)));
+  return TreeSchema.parse({ ...normalized, nodes: layoutTree(normalized.nodes, coreBranch(normalized)) });
 }
 /** Story days without progress after which an ongoing event is flagged for review. */
 export const staleEventDays = 120;

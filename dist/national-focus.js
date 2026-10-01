@@ -19689,8 +19689,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 依资料中的 context（世界书、正文、纪要）列出本局实际存在、能自主决定长期方向的国家或政权，作为候选。只列有正文或世界书依据者，evidence 写出依据；不列已在 state.countries 中的国家，也不虚构势力。
 description 用一两句说明其现状与主要矛盾。name 照抄世界书或设定中的国名原文（字形也一致，不翻译成英文），id 填与 name 相同的文字；脚本会以国名作为国家 ID。`,
     generate: `任务：生成一国当期国策。只输出符合本次 schema 的 JSON。
-每一期是一段数月的施政阶段，可包含数个并存议程：沿最长前置链加总的工期以 limits.periodDays（故事日，不含等待外部成果）为目标，终点是本期议程在这段时间内实际能完成的阶段成果；改天换地的大目标放进 longTerm，分多期完成。国策工期 days 只用 limits.days（7、14、21、28、35，即一至五周），durationReason 说明为何是这几周。国策影响国家与世界，间接影响 RP，不必安排玩家亲自介入。periodTitle 是期名，agenda 说明本期主要目的；longTerm 为 2–4 条长期方向（id、text），近期行动才做成节点。
-标准每期 10–16 项，大型 16–24 项，含承接节点。数量与分支数是篇幅目标；不足时不为凑数补节点。分岔、汇流、跨支关系、互斥与重要国策没有配额，依议程需要安排。保留内容深度，description 写国家具体行动、利益与后果，reason 区分设定依据和设计；不重复空泛建设。文字预算依 limits。
+每一期是一段数月的施政阶段：整期以 limits.periodDays（故事日，不含等待外部成果）为目标，终点是本期主要目的在这段时间内实际能完成的阶段成果；改天换地的大目标放进 longTerm，分多期完成。国策工期 days 只用 limits.days（7、14、21、28、35，即一至五周），durationReason 说明为何是这几周。国策影响国家与世界，间接影响 RP，不必安排玩家亲自介入。periodTitle 是期名，agenda 说明本期主要目的；longTerm 为 2–4 条长期方向（id、text），近期行动才做成节点。
+国策树采「主干加侧翼」：branches 共 limits.branches 条，其中恰好一条 core=true 的核心分支承载本期主要目的——开头 1–2 项共同国策，分岔成 limits.core.routes 条互斥路线，各路线以 OR 前置汇流到本期终点；核心共 limits.core.nodes 项，实际走过的一条路线（开局＋一条路线＋终点）工期合计约 limits.core.pathDays。其余为 limits.wings.count 条侧翼，每条 limits.wings.nodes 项，可有自己的起点，处理并行的次要事务，宜短，因为每国一次只推进一项国策。标准每期 10–16 项，大型 16–24 项，含承接节点；数量是篇幅目标，不为凑数补节点。保留内容深度，description 写国家具体行动、利益与后果，reason 区分设定依据和设计；不重复空泛建设。文字预算依 limits。
 prerequisites 为 AND of OR groups：[[a,b],[c]] 表示 a 或 b，且 c。前置不可缺失或循环；互斥共同终点使用 OR。mutex 同组不同 route 互斥，已定路线的后续节点保留对应路线前置。能力条件须已有或可由相容前置产生，不能要求自己完成才产生的能力。撤销能力只用于实际废除制度、终止条约等，不为制造制衡硬加撤销。
 requirements 是开始条件，sustain 是维持条件，outcomes 是完成前由剧情取得的外部成果（不是自身产出，只在确实需要剧情结果时设定，否则国策会卡在等待）；effects 是完成后的能力、承诺、有限稳定度或战争支持度变化。道路、外交、研究不因工期到期自动取得外部结果。execution=ongoing 表示决策完成后仍持续执行，后续交给事件推进。
 impact=pivotal 用于真正影响重大、值得公告的国策，必填 news（headline、body、option）；一般节点 normal 且 news=null。historical 只列本树 nodes 中有证据已完成的国策（node 必须是 nodes 里的 id），不重发成果，既有能力列 capabilities；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放 historical。x/y 由脚本布局，不输出座标。
@@ -19913,6 +19913,11 @@ ${DATA_TOKEN}`;
     standard: [90, 180],
     long: [180, 270]
   };
+  var treeShape = {
+    standard: { branches: [2, 3], core: [7, 10], routes: [2, 3], wings: [1, 2], wingNodes: [2, 3] },
+    large: { branches: [3, 4], core: [10, 15], routes: [2, 3], wings: [2, 3], wingNodes: [2, 4] }
+  };
+  var corePathDays = { fast: 60, standard: 120, long: 180 };
   var sizeLimits = {
     small: [10, 16],
     standard: [10, 16],
@@ -20992,7 +20997,8 @@ ${lines.join("\n")}
   }
 
   // src/layout.ts
-  function layoutTree(nodes) {
+  var coreBranch = (tree) => tree.branches.find((branch) => branch.core)?.name;
+  function layoutTree(nodes, core) {
     const byId = new Map(nodes.map((n) => [n.id, n]));
     if (byId.size !== nodes.length) {
       throw new Error("国策 ID 重复");
@@ -21038,8 +21044,14 @@ ${lines.join("\n")}
       }
     }
     const positions = /* @__PURE__ */ new Map();
+    let order = [...branches.keys()];
+    if (core && branches.has(core)) {
+      const others = order.filter((name) => name !== core);
+      const left = Math.floor(others.length / 2);
+      order = [...others.slice(0, left), core, ...others.slice(left)];
+    }
     let lane = 0;
-    for (const rows of branches.values()) {
+    for (const rows of order.map((name) => branches.get(name))) {
       const width = Math.max(...[...rows.values()].map((row) => row.length));
       for (const [y, row] of [...rows].sort(([a], [b]) => a - b)) {
         const centers = /* @__PURE__ */ new Map();
@@ -23006,6 +23018,27 @@ ${formatIssues(checked2.problems)}`
     const initial = capabilities.filter((c) => c.active).map((c) => c.id);
     return { ...tree, capabilities, historical: kept, nodes: dropSelfConditions(tree.nodes, initial).nodes };
   }
+  function normalizeCore(tree) {
+    const marked = tree.branches.filter((branch) => branch.core);
+    if (marked.length === 1 || !tree.branches.length) {
+      return tree;
+    }
+    const count = (name) => tree.nodes.filter((node2) => node2.branch === name).length;
+    const pool = marked.length ? marked : tree.branches;
+    const core = pool.reduce((best, branch) => count(branch.name) > count(best.name) ? branch : best);
+    return {
+      ...tree,
+      branches: tree.branches.map((branch) => ({ ...branch, core: branch === core }))
+    };
+  }
+  function shapeLimits(settings) {
+    const shape = treeShape[settings.size === "large" ? "large" : "standard"];
+    return {
+      branches: span(shape.branches),
+      core: { nodes: span(shape.core), routes: span(shape.routes), pathDays: corePathDays[settings.pace] },
+      wings: { count: span(shape.wings), nodes: span(shape.wingNodes) }
+    };
+  }
   function generationPlan(snapshot, candidate) {
     const size = snapshot.state.settings.size;
     const [min, max] = sizeLimits[size];
@@ -23020,8 +23053,7 @@ ${formatIssues(checked2.problems)}`
       limits: {
         min,
         max,
-        branches: span(budget.branches),
-        perBranch: span(budget.perBranch),
+        ...shapeLimits(snapshot.state.settings),
         minimumForks: minimumConnections,
         minimumJoins: minimumConnections,
         minimumCrossBranchLinks: crossLinkMinimums[size],
@@ -23037,7 +23069,7 @@ ${formatIssues(checked2.problems)}`
     const size = snapshot.state.settings.size;
     const [min, max] = sizeLimits[size];
     {
-      const raw = normalizeGenerated(normalizeBranchReferences(reply));
+      const raw = normalizeCore(normalizeGenerated(normalizeBranchReferences(reply)));
       requireThat3(raw.id === candidate.id, "生成的国家 ID 与选取国家不一致");
       requireThat3(
         raw.nodes.length >= 1 && raw.nodes.length <= max,
@@ -23060,7 +23092,7 @@ ${formatIssues(checked2.problems)}`
         raw.branches.map((b) => b.name)
       );
       validateTopology(raw.nodes, size);
-      const tree = TreeSchema.parse({ ...raw, nodes: layoutTree(raw.nodes) });
+      const tree = TreeSchema.parse({ ...raw, nodes: layoutTree(raw.nodes, coreBranch(raw)) });
       if (tree.relations?.some(
         (relation) => !tree.nodes.some((n) => n.id === relation.from) || !tree.nodes.some((n) => n.id === relation.to)
       )) {
@@ -23083,8 +23115,8 @@ ${formatIssues(checked2.problems)}`
       const plan = generationPlan(snapshot, candidate);
       return ask("generate", plan.data, plan.schema, plan.validate, "单次生成完整国策树");
     })() : await generateBySkeleton(snapshot, candidate, ask, progress, segmentMax, retries);
-    const normalized = normalizeGenerated(normalizeBranchReferences(raw));
-    return TreeSchema.parse({ ...normalized, nodes: layoutTree(normalized.nodes) });
+    const normalized = normalizeCore(normalizeGenerated(normalizeBranchReferences(raw)));
+    return TreeSchema.parse({ ...normalized, nodes: layoutTree(normalized.nodes, coreBranch(normalized)) });
   }
   var staleEventDays = 120;
   function workingState(state, fullDefinitions = false) {
@@ -23206,7 +23238,7 @@ ${formatIssues(checked2.problems)}`
     const anchor2 = periodAnchor(old, transition.invalidateActive);
     const number4 = old.period.number + 1;
     const prefix = `p${number4}_`;
-    const generated = normalizeBranchReferences(reply.tree);
+    const generated = normalizeCore(normalizeBranchReferences(reply.tree));
     if (generated.id !== old.id) {
       throw new Error("下一期国家 ID 不一致");
     }
@@ -23249,7 +23281,7 @@ ${formatIssues(checked2.problems)}`
     const tree = TreeSchema.parse({
       ...generated,
       branches,
-      nodes: layoutTree(nodes),
+      nodes: layoutTree(nodes, coreBranch({ branches })),
       capabilities: Object.values(old.capabilities)
     });
     assertCapabilityOrder(
@@ -30977,7 +31009,8 @@ ${managed}
               min: sizeLimits[snapshot.state.settings.size][0],
               max: sizeLimits[snapshot.state.settings.size][1],
               days: focusDays,
-              periodDays: periodDays[snapshot.state.settings.pace]
+              periodDays: periodDays[snapshot.state.settings.pace],
+              ...shapeLimits(snapshot.state.settings)
             },
             instructions: "生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程式原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。"
           },
@@ -34551,7 +34584,10 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
       const tree = shell.querySelector(".tree");
       const nodes = Object.values(country.nodes);
       positions = new Map(
-        layoutTree(nodes).map((n) => [n.id, { x: n.x * GRID_X + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y }])
+        layoutTree(nodes, coreBranch(country)).map((n) => [
+          n.id,
+          { x: n.x * GRID_X + ORIGIN_X, y: n.y * GRID_Y + ORIGIN_Y }
+        ])
       );
       const pos = (node2) => positions.get(node2.id);
       const summaries = /* @__PURE__ */ new Map();

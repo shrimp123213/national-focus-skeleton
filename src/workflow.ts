@@ -14,7 +14,14 @@ import {
   type JobKind,
   type State,
 } from './model';
-import { defaultSegmentMax, generateCountry, generationPlan, isSegmented, workingState } from './generation';
+import {
+  defaultSegmentMax,
+  generateCountry,
+  generationPlan,
+  isSegmented,
+  shapeLimits,
+  workingState,
+} from './generation';
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
 import { checkTransition, periodAnchor, PeriodReplySchema, transitionPeriod } from './periods';
 import { DATA_TOKEN, promptText } from './prompts';
@@ -401,6 +408,7 @@ export class FocusController {
                 max: sizeLimits[snapshot.state.settings.size][1],
                 days: focusDays,
                 periodDays: periodDays[snapshot.state.settings.pace],
+                ...shapeLimits(snapshot.state.settings),
               },
               instructions:
                 '生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程式原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。',
