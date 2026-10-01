@@ -76,6 +76,11 @@ textarea {
   padding: 8px 10px;
   max-width: 100%;
 }
+/* Same line height, so a select and an input side by side are the same height. */
+input,
+select {
+  line-height: 1.3;
+}
 input::placeholder,
 textarea::placeholder {
   color: var(--faint);
@@ -1707,6 +1712,8 @@ code {
 }
 .field {
   display: grid;
+  /* A field stretched to a taller neighbor in its row keeps its own control height. */
+  align-content: start;
   gap: 6px;
   font-size: 13px;
   color: #d5d0bf;
