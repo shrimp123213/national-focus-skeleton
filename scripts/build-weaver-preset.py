@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.6-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.7-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.6 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.7 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -351,7 +351,7 @@ Step 6：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - 根物件：stage=generate 是整棵树；stage=period 只有 summary 与 tree
 - 数字与布尔：stability、warSupport、days、minimum、value 是数字；active、negate 是布尔；都不加引号
 - 每个 days 都是 7、14、21、28 或 35
-- 每个国策 17 键齐全；没有内容的列表写 []；mutex 是 null 或四键物件；normal 国策的 news 是 null，pivotal 国策的 news 三键齐全
+- 每个国策 17 键齐全；name 是 4–12 字的短语；没有内容的列表写 []；mutex 是 null 或四键物件；normal 国策的 news 是 null，pivotal 国策的 news 三键齐全
 - prerequisites 每一组都是阵列（两层）；引用的国策 ID 都存在
 - 条件只有 kind、id、label（可加 negate）或 kind、minimum、label；效果都有自己的 id，能力与承诺用 key
 - branch 填分支 name 原文；每个分支至少一个国策；恰好一条分支 core=true；没有 x、y 或其它格式以外的键
@@ -468,11 +468,15 @@ def example(stage, obj, title):
     return f'## {title}\n<范例 stage="{stage}">\n{show(obj)}\n</范例>'
 
 
+# Example focus names are short phrases, like the 4–12 character names the preset asks for.
+NAMES = {'n_council': '召开御前会议', 'n_army': '扩编王室卫队', 'n_port': '开放南港', 'n_cabinet': '设立内阁', 'n_market': '设立市舶司', 'n_toll': '整顿关卡', 'p2_charter': '颁布宪章法院令', 'p2_fort': '修筑边境堡垒', 'p2_treaty': '签订边境和约', 'p2_settle': '新政定制', 'p2_watch': '派驻边境斥候', 'p2_drill': '边军操演', 'n_port_rebuild': '重建南港'}
+
+
 def node(id_, branch, icon, days, prerequisites, *, requirements=(), sustain=(), outcomes=(), investments,
          effects, mutex=None, pivotal=None, execution=None, position=None):
     item = {
         'id': id_,
-        'name': f'{id_} 的国策名称',
+        'name': NAMES[id_],
         'branch': branch,
         'description': f'{id_}：写国家具体做什么、谁得利、谁受损、代价是什么',
         'reason': '设定依据与设计理由',
@@ -694,6 +698,7 @@ J11 所有文字栏位一律使用简体中文，来源夹杂繁体时也改用�
 
 NODE_RULES = '''## 国策（nodes 的每一项）
 必写 17 键：id name branch description reason icon days durationReason prerequisites requirements sustain outcomes investments effects mutex impact news；execution 可省略
+- name：4–12 字的短语，像国策名称（例如「设立内阁」「修筑边境堡垒」），不写成句子；具体做法写进 description
 - branch：填 branches[].name 原文，逐字一致
 - icon："crown"｜"industry"｜"army"｜"trade"｜"science"｜"diplomacy" 六选一
 - days：7｜14｜21｜28｜35 五选一（一至五周的故事日；其它数字会被本机改成最接近的整周，超过 35 一律改成 35）；durationReason：说明为何是这几周

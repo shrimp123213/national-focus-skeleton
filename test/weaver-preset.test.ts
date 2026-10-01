@@ -15,7 +15,7 @@ import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 import YAML from 'yaml';
 
 /** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5.6-格式強化版.json', import.meta.url);
+const file = new URL('../presets/織界國策-任務預設-v5.7-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -302,6 +302,24 @@ test('weaver preset examples follow the core-and-wings shape', () => {
       item.stage,
     );
   }
+});
+
+test('weaver preset examples use short focus names', () => {
+  const names: string[] = [];
+  const collect = (value: unknown): void => {
+    if (Array.isArray(value)) value.forEach(collect);
+    else if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      if (typeof record.name === 'string' && 'days' in record) names.push(record.name);
+      Object.values(record).forEach(collect);
+    }
+  };
+  for (const job of ['generate', 'reshape']) examples(job).forEach((item) => collect(item.value));
+  assert.ok(names.length >= 13);
+  assert.ok(
+    names.every((name) => name.length >= 4 && name.length <= 12),
+    names.join('、'),
+  );
 });
 
 test('weaver preset examples use whole-week durations', () => {

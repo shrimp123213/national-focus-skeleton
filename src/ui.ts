@@ -44,10 +44,10 @@ const jobStates: Record<string, string> = {
 };
 const checked = (value: boolean) => (value ? 'checked' : '');
 /** Node card geometry on the tree canvas; layoutTree counts x in half-card steps (GRID_X / 2). */
-const NODE_W = 188;
-const NODE_H = 66;
-const GRID_X = 228;
-const GRID_Y = 122;
+const NODE_W = 168;
+const NODE_H = 94;
+const GRID_X = 200;
+const GRID_Y = 142;
 const ORIGIN_X = 28;
 const ORIGIN_Y = 70;
 const selected = (value: boolean) => (value ? 'selected' : '');
@@ -683,7 +683,7 @@ export function mountUI(
           (query && !`${node.name} ${node.description}`.includes(query)) ||
           (branch && node.branch !== branch);
         const isCurrent = country.current === node.id;
-        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-icon">${icon(node.icon)}</span><span class="node-text"><span class="node-name">${escape(node.name)}</span><span class="node-meta">${escape(meta(node, stateClass))}</span></span>${anchorBadge(country, node)}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${p.started !== null && stateClass !== 'completed' ? `<span class="node-progress"><i style="width:${Math.min(100, (p.days / node.days) * 100)}%"></i></span>` : ''}</button>`;
+        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape(node.name)}（${escape(meta(node, stateClass))}）" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-icon">${icon(node.icon)}</span><span class="node-text"><span class="node-name">${escape(node.name)}</span><span class="node-meta">${escape(meta(node, stateClass))}</span></span>${anchorBadge(country, node)}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${p.started !== null && stateClass !== 'completed' ? `<span class="node-progress"><i style="width:${Math.min(100, (p.days / node.days) * 100)}%"></i></span>` : ''}</button>`;
       })
       .join('')}`;
     const minimap = shell.querySelector<SVGSVGElement>('.minimap-svg');
