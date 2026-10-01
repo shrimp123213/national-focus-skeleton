@@ -249,20 +249,36 @@ VOID_INPUT = '''VOID: 以下是 VOID 在本轮的额外指令，作为最高指�
 - 如何满足<VOID_INPUT>？}}'''
 
 # Macro reset (Workflow Assistant style): clear the chat variables the chain reads, so a switched-off
-# segment leaves no trace from an earlier run. Default thinking text covers every model.
+# segment leaves no trace from an earlier run. With both model switches off the chain falls back to
+# the generic thinking text and sends no 卡COT.
 RESET = '''{{setvar::国策_VOID指令::}}
+{{setvar::国策_卡COT::}}
 {{setvar::国策_思考位置::- 若你具备原生思考（reasoning），就在原生思考中完成下列步骤，正文不重复。
-- 否则把思考写在 <thinking></thinking> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}
+- 否则把思考写在 <think></think> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。}}
 {{trim}}'''
 
-THINK_NATIVE = '''{{//思考方式二选一；两段都关闭时按模型自动判断}}
-{{setvar::国策_思考位置::- 在原生思考（reasoning）中完成下列步骤；正文不写任何思考，直接输出 JSON。}}
+# Model switches, as in 世界后台引擎 (gemini开／Deepseek开). Gemini 3.7f/3.8f take no assistant prefill:
+# the 卡COT is the last user message, written as the start of the reply, so the model skips native
+# reasoning and writes the analysis_format steps in <think>. DeepSeek thinks natively along the steps.
+MODEL_GEMINI = '''{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}
+{{setvar::国策_思考位置::- 不使用原生思考：把全部思考写在 <think></think> 内，以 <think> 开始，按下列步骤逐步写完。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。
+- </think> 之后紧接 JSON 的左大括号，中间不写任何文字。}}
+{{setvar::国策_卡COT::<thinking>
+世界在视线之外照常运转，诸国依自己的意志与恐惧选择道路。接下来我会以织界者 Weaver 的身份，先依<analysis_format>逐步思考，再严格按照<国策输出格式>输出一个合法的压缩 JSON 物件，首先从符合要求的<think>开始
+</thinking>
+
+Weaver:
+[START THINKING]}}
 {{trim}}'''
 
-THINK_TAG = '''{{//思考方式二选一；两段都关闭时按模型自动判断}}
-{{setvar::国策_思考位置::- 把思考写在 <thinking></thinking> 内，放在 JSON 之前。系统解析前会移除这一段；这是<国策律>「只输出 JSON」的唯一例外。
-- </thinking> 之后紧接 JSON 的左大括号，中间不写任何文字。}}
+MODEL_DEEPSEEK = '''{{//模型二选一（与世界后台引擎相同）；两段都关闭时按模型自动判断，不送卡COT}}
+{{setvar::国策_思考位置::- 在原生思考中按下列步骤逐步完成，注意缩进与符号；正文不写任何思考，直接输出 JSON。}}
+{{setvar::国策_卡COT::VOID:
+首先从<analysis_format>规定的步骤开始思考，注意思维内容的缩进与符号（如「-」「1.」等）；思考结束后只输出一个合法的压缩 JSON 物件。
+<｜begin▁of▁thinking｜>}}
 {{trim}}'''
+
+COT_LOCK = '{{getvar::国策_卡COT}}'
 
 THINK_WHERE = '''思维语言：中文
 思考位置：
@@ -953,8 +969,8 @@ def chain(job):
         core += CAUSAL + (PRUNE if job in ('generate', 'reshape') else '') + GUIDANCE
     items = [
         item('nf-reset', '宏重置（勿关，须在最前）', 'system', RESET),
-        item('nf-think-native', '思考方式（二选一，全关＝自动）·原生思考', 'system', THINK_NATIVE, False),
-        item('nf-think-tag', '思考方式（二选一，全关＝自动）·thinking 标签', 'system', THINK_TAG, False),
+        item('nf-model-gemini', '模型（二选一，全关＝自动）·Gemini', 'system', MODEL_GEMINI),
+        item('nf-model-deepseek', '模型（二选一，全关＝自动）·DeepSeek', 'system', MODEL_DEEPSEEK, False),
         item('nf-core', '织界核心载入', 'system', core.strip()),
     ]
     if job != 'identify':
@@ -980,6 +996,7 @@ def chain(job):
     items.append(item('nf-format', '国策输出格式', 'user', FORMAT[job]))
     items.append(item('nf-format-ack', '输出格式确认', 'assistant', FORMAT_ACK[job]))
     items.append(item('nf-tail', '开始编织', 'user', TAIL[job]))
+    items.append(item('nf-cot-lock', '卡COT（随模型切换，勿关）', 'user', COT_LOCK))
     return items
 
 

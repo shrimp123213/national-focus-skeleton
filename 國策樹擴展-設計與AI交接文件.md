@@ -2107,3 +2107,12 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - 生成思維要求 Step 6 與「输出格式确认」加入換期檢查項目。
 - `test/weaver-preset.test.ts` 新增：安裝生成範例、把 `n_cabinet` 標為完成並給予 `cabinet` 能力後，以真實 `transitionPeriod` 套用換期範例，確認進入第 2 期且保留 anchor。175／175 測試通過。未改程式與 dist，不升版本。
 
+## 68. 織界 v5：模型開關與卡COT（2026-10-01，僅預設）
+
+使用者確認：國策預設的最後一則要比照世界后台引擎 v6.3 的「卡COT」（v6.3 把前台／後台角色的卡COT 從 assistant 改成 user，以適配不支援預填的 Gemini 3.7f／3.8f），目的是讓這些模型不走原生思維鏈、正確執行提示詞段的 COT；思考方式也改回按模型分 Gemini／DeepSeek 兩種。v6.3 參考檔見 `docs/reference/workflow-assistant-preset-v6.3-*.json`。
+
+- 移除 `nf-think-native`／`nf-think-tag`，新增 `nf-model-gemini`（預設開）、`nf-model-deepseek`（預設關），放在宏重置之後。仍只用酒館原生巨集：各自 setvar `国策_思考位置` 與 `国策_卡COT`；宏重置把 `国策_卡COT` 清空、`国策_思考位置` 設為通用文字，所以兩段都關時沿用自動判斷且不送卡COT（空段落不送出）。
+- Gemini：思考全部寫在 `<think></think>`，`</think>` 後緊接 JSON；卡COT 內容為假的 `<thinking>` 開場加 `Weaver:` 與 `[START THINKING]`，寫法對照 v6.3。DeepSeek：在原生思考中照步驟進行，卡COT 為 `VOID:` 指示加 `<｜begin▁of▁thinking｜>`，對照世界后台引擎的 DeepSeek 尾部。
+- 新增 `nf-cot-lock`「卡COT（随模型切换，勿关）」為每項任務最後一段，user 角色，內容只有 `{{getvar::国策_卡COT}}`。setvar 值內不含 `::`、`{{`、`}}`（生成時檢查）；`parseJsonReply` 會移除 think／thinking 區塊並容忍 JSON 前的 `Weaver:` 等文字。
+- `test/weaver-preset.test.ts` 改為斷言最後一段是 user 的卡COT、模型開關預設值及其 setvar。175／175 測試通過。未改程式與 dist。是否確實關閉 Gemini 3.7f／3.8f 的原生思考需以真實模型與請求紀錄驗收。
+

@@ -15,7 +15,7 @@ import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 const file = new URL('../presets/織界國策-任務預設-v5-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
-type Item = { id: string; kind: string; content: string; enabled: boolean };
+type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
 const prompts = (job: string): Item[] => preset.jobs[job].prompts;
 const segment = (job: string, id: string) => prompts(job).find((item) => item.id === id)!;
 const examples = (job: string) =>
@@ -63,7 +63,22 @@ test('v5 chains reset macros first and read only variables they set', () => {
     assert.doesNotMatch(segment(job, 'nf-format').content, /\$(?:[125678]|U|C)/);
     const order = chain.map((item) => item.id);
     assert.ok(order.indexOf('data') < order.indexOf('nf-format'));
-    assert.equal(order.at(-1), 'nf-tail');
+    // Gemini 3.7f/3.8f take no assistant prefill: the chain ends with the 卡COT as a user message.
+    const last = chain.filter((item) => item.enabled).at(-1)!;
+    assert.equal(last.id, 'nf-cot-lock');
+    assert.equal(last.role, 'user');
+    assert.equal(last.content, '{{getvar::国策_卡COT}}');
+    // Model switches as in 世界后台引擎: Gemini on, DeepSeek off; both set the thinking text and the 卡COT.
+    for (const [id, enabled] of [
+      ['nf-model-gemini', true],
+      ['nf-model-deepseek', false],
+    ] as const) {
+      const model = segment(job, id);
+      assert.equal(model.enabled, enabled);
+      assert.match(model.content, /\{\{setvar::国策_思考位置::/);
+      assert.match(model.content, /\{\{setvar::国策_卡COT::/);
+      assert.ok(order.indexOf(id) < order.indexOf('nf-cot'));
+    }
   }
 });
 
