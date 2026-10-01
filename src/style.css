@@ -299,13 +299,52 @@ code {
   letter-spacing: 0.3em;
   color: var(--gold-deep);
 }
+.nation-scroller {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  margin-left: 10px;
+}
 .nation-tabs {
   display: flex;
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
-  margin-left: 10px;
   min-width: 0;
+}
+/* Arrows only at an edge with more tabs behind it; the fade shows the list goes on. */
+.nation-scroll {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: none;
+  place-items: center;
+  width: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 22px;
+  color: var(--gold);
+  background: linear-gradient(90deg, #19221c 45%, rgba(25, 34, 28, 0));
+}
+.nation-scroll.prev {
+  left: 0;
+  justify-content: start;
+  padding-left: 4px;
+}
+.nation-scroll.next {
+  right: 0;
+  justify-content: end;
+  padding-right: 4px;
+  background: linear-gradient(270deg, #19221c 45%, rgba(25, 34, 28, 0));
+}
+.nation-scroll:hover {
+  color: var(--text);
+}
+.nation-scroller.can-left .nation-scroll.prev,
+.nation-scroller.can-right .nation-scroll.next {
+  display: grid;
 }
 .nation-tabs::-webkit-scrollbar {
   display: none;
@@ -2103,7 +2142,7 @@ code {
     width: 34px;
     height: 34px;
   }
-  .nation-tabs,
+  .nation-scroller,
   .date-chip,
   .test-label {
     display: none;

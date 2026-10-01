@@ -103,6 +103,10 @@ export function mountUI(
   const collapsed = new Set<string>();
   let positions = new Map<string, { x: number; y: number }>();
   let centeredCountry = '';
+  /** Country whose tab was last brought into view, so a new selection scrolls to its tab once. */
+  let shownTab = '';
+  /** Watches the tab strip, so the arrows follow the panel opening or resizing. */
+  let tabsObserver: ResizeObserver | undefined;
   let zoom = 0.85;
   let pan = { x: 45, y: 45 };
   let detailsOpen = false;
@@ -338,7 +342,7 @@ export function mountUI(
           `<button class="nation-tab ${c.id === countryId ? 'active' : ''} ${c.control}" data-country="${escape(c.id)}" title="${escape(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === 'player' ? 'eagle' : 'crown')}</span><span class="tab-copy"><strong>${escape(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`,
       )
       .join('');
-    const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为介面示范">离线示范</span>' : ''}<div class="date-chip" title="故事内日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : '—'}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设定" aria-label="设定"><span class="cmd-icon">⚙</span><span class="cmd-text">设定</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
+    const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左卷动国家" aria-label="向左卷动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右卷动国家" aria-label="向右卷动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为介面示范">离线示范</span>' : ''}<div class="date-chip" title="故事内日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : '—'}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设定" aria-label="设定"><span class="cmd-icon">⚙</span><span class="cmd-text">设定</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
     const error = controller.error
       ? `<div class="error-banner" role="alert"><span>${escape(controller.error)}</span><button data-action="refresh">重新读取</button></div>`
       : '';
@@ -372,7 +376,10 @@ export function mountUI(
     } else {
       body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '为这个世界选择方向' : '连接你的故事'}</h2><p>${state ? '先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。' : '国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设定 API 与来源。'}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设定来源与 API</button></div></div></section>`;
     }
+    // The header is rebuilt on every render; keep where the country tabs were scrolled.
+    const tabsScroll = shell.querySelector<HTMLElement>('.nation-tabs')?.scrollLeft ?? 0;
     shell.innerHTML = `${command}${error}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ''}</span><button class="linkish" data-action="events">事件纪录</button></footer>`;
+    bindNationTabs(tabsScroll);
     if (country) {
       drawTree(country);
       bindCanvas();
@@ -862,6 +869,60 @@ export function mountUI(
     map.addEventListener('pointercancel', () => {
       dragging = false;
     });
+  }
+  /**
+   * The country tabs scroll sideways: the mouse wheel scrolls them, arrows appear at an edge with
+   * more tabs behind it, and a newly selected country's tab is brought into view.
+   */
+  function bindNationTabs(scrollLeft: number): void {
+    const scroller = shell.querySelector<HTMLElement>('.nation-scroller');
+    const tabs = scroller?.querySelector<HTMLElement>('.nation-tabs');
+    if (!scroller || !tabs) {
+      return;
+    }
+    const edges = () => {
+      const max = tabs.scrollWidth - tabs.clientWidth;
+      scroller.classList.toggle('can-left', tabs.scrollLeft > 1);
+      scroller.classList.toggle('can-right', tabs.scrollLeft < max - 1);
+    };
+    tabs.scrollLeft = scrollLeft;
+    const active = tabs.querySelector<HTMLElement>('.nation-tab.active');
+    if (active && shownTab !== countryId) {
+      shownTab = countryId;
+      const margin = 32;
+      if (active.offsetLeft < tabs.scrollLeft + margin) {
+        tabs.scrollLeft = active.offsetLeft - margin;
+      } else if (active.offsetLeft + active.offsetWidth > tabs.scrollLeft + tabs.clientWidth - margin) {
+        tabs.scrollLeft = active.offsetLeft + active.offsetWidth - tabs.clientWidth + margin;
+      }
+    }
+    edges();
+    tabs.addEventListener('scroll', edges, { passive: true });
+    tabsObserver?.disconnect();
+    if (typeof ResizeObserver !== 'undefined') {
+      tabsObserver = new ResizeObserver(edges);
+      tabsObserver.observe(tabs);
+    }
+    tabs.addEventListener(
+      'wheel',
+      (event) => {
+        if (tabs.scrollWidth <= tabs.clientWidth) {
+          return;
+        }
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+        event.preventDefault();
+        tabs.scrollLeft += event.deltaMode === 1 ? delta * 40 : delta;
+      },
+      { passive: false },
+    );
+    for (const arrow of scroller.querySelectorAll<HTMLElement>('[data-tabs-scroll]')) {
+      arrow.addEventListener('click', () => {
+        tabs.scrollBy({
+          left: Number(arrow.dataset.tabsScroll) * tabs.clientWidth * 0.7,
+          behavior: 'smooth',
+        });
+      });
+    }
   }
   function bindCanvas(): void {
     const canvas = shell.querySelector<HTMLElement>('.canvas')!;
@@ -1956,6 +2017,7 @@ export function mountUI(
     taskPanel = undefined;
     hud.dispose();
     stopNews();
+    tabsObserver?.disconnect();
     view.removeEventListener('resize', onResize);
     host.remove();
   };
