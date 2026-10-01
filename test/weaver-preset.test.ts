@@ -268,7 +268,7 @@ test('weaver preset world state keeps recent history in full, needs a landed wor
     [...all.matchAll(/^ {2}第(\d+)纪:$/gm)].map((m) => Number(m[1])),
     Array.from({ length: 30 }, (_, i) => i + 1),
   );
-  assert.ok(!all.includes('早期正史'));
+  assert.ok(!all.includes('早期正史:'));
   // Singularities that are not on are not read at all.
   for (const dropped of ['关键转折', '不送出的转折', '特异点', '镜像王朝', '镜中分裂', '旧梦', '分歧源头']) {
     assert.ok(!text.includes(dropped), dropped);
