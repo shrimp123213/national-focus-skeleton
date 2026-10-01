@@ -3508,6 +3508,16 @@ details.detail-section.fold > summary::before {
 .period-anchor-note strong {
   color: var(--blue);
 }
+.event-done-note {
+  border-left-color: var(--gold);
+}
+.event-done-note strong {
+  color: var(--gold);
+}
+.event-card.flash {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold) inset;
+}
 .period-shape {
   margin-left: 10px;
   padding: 1px 8px;

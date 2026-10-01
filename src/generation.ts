@@ -411,6 +411,7 @@ export function workingState(state: State, fullDefinitions = false): object {
                 started: p.started,
                 completed: p.completed,
                 public: p.public,
+                ...(p.by ? { by: { event: p.by.event, mode: p.by.mode } } : {}),
               },
             ]),
         ),

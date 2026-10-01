@@ -47,7 +47,12 @@ function progressText(country: Country): string {
 function completedOf(country: Country) {
   return Object.entries(country.progress)
     .filter(([id, progress]) => progress.status === 'completed' && country.nodes[id])
-    .map(([id, progress]) => ({ node: country.nodes[id], day: progress.completed, known: progress.public }))
+    .map(([id, progress]) => ({
+      node: country.nodes[id],
+      day: progress.completed,
+      known: progress.public,
+      by: progress.by,
+    }))
     .sort((a, b) => (b.day ?? -Infinity) - (a.day ?? -Infinity));
 }
 
@@ -147,8 +152,8 @@ export function promptView(state: State, news = true): PromptView {
           sections.push(
             `重要与近期完成：\n${detailed
               .map(
-                ({ node, day, known }) =>
-                  `- ${node.name}（${ago(state, day)}${node.impact === 'pivotal' ? '，重要国策' : ''}${known ? '' : '，未公开'}）：${clip(node.description, limits.description)}`,
+                ({ node, day, known, by }) =>
+                  `- ${node.name}（${ago(state, day)}${node.impact === 'pivotal' ? '，重要国策' : ''}${by ? `，${by.mode === 'achieved' ? '由' : '因'}「${by.title}」${by.mode === 'achieved' ? '达成' : '而略过'}` : ''}${known ? '' : '，未公开'}）：${clip(node.description, limits.description)}`,
               )
               .join('\n')}`,
           );

@@ -223,6 +223,15 @@ const ProgressSchema = z.object({
   investments: z.array(z.string()),
   applied: z.array(z.string()),
   public: z.boolean(),
+  /** v0.14.22: completed by a story event instead of its own work (HOI4 complete_national_focus / bypass). */
+  by: z
+    .object({
+      event: z.string(),
+      title: z.string(),
+      mode: z.enum(['achieved', 'bypassed']),
+      reason: z.string(),
+    })
+    .optional(),
 });
 const LotSchema = z.object({ category: z.string(), key: z.string(), name: z.string(), text: z.string() });
 /** Structure lots of the current period (v0.14.21): a tree type, a naming style and detail lots. */
@@ -391,6 +400,26 @@ export const ProposalSchema = z
               .array(z.object({ country: CountryId, node: Id, evidence: Text }).strict())
               .default([]),
             eventUpdates: z.array(EventUpdateSchema).default([]),
+            completions: z
+              .array(
+                z
+                  .object({
+                    country: CountryId,
+                    node: Id.describe('由事件完成的国策 id'),
+                    mode: z
+                      .enum(['achieved', 'bypassed'])
+                      .describe(
+                        'achieved＝本国已实际做成此国策描述的事，套用效果；bypassed＝结果已由他方或局势造成、或事件已给过同样效果，只标记完成',
+                      ),
+                    event: EventId.describe(
+                      '导致完成的事件 id：本步或更早写入的事件，或 state.events 中的既有事件',
+                    ),
+                    reason: Text.describe('正文或事件中哪件事做成了此国策'),
+                  })
+                  .strict(),
+              )
+              .default([])
+              .describe('由事件直接完成的国策；不检查前置与工期，只在国策描述的事已实际做成时使用'),
           })
           .strict(),
       )

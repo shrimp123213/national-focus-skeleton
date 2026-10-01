@@ -503,7 +503,7 @@ export function mountUI(
         ? `<div class="drawer-action">${startButton}${switchable && running ? `<small>会暂停「${escape(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之后可恢复），${progress.status === 'paused' ? '恢复' : '开始'}此国策。</small>` : ''}${reasons.length ? `<ul class="blockers">${reasons.map((r) => `<li>${escape(r)}</li>`).join('')}</ul>` : ''}</div>`
         : `<div class="drawer-action"><small>AI 依情势选择后续国策；切换为「玩家选策」即可介入。</small></div>`;
     return `<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="关闭详情">×</button><span class="drawer-emblem">${icon(node.icon)}</span><div><span class="drawer-branch">${escape(node.branch)}</span><h3>${escape(node.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node.days} 日</span></div></header>
-      <div class="drawer-body">${anchorNotice(country, node)}${progress.started !== null ? `<div class="drawer-progress"><div class="row between"><small>有效工期</small><strong>${progress.days.toFixed(1)} / ${node.days} 日</strong></div><div class="bar"><i style="width:${percent}%"></i></div>${progress.evidence ? `<small>${escape(progress.evidence)}</small>` : ''}</div>` : ''}
+      <div class="drawer-body">${anchorNotice(country, node)}${eventDoneNote(country, progress)}${progress.started !== null ? `<div class="drawer-progress"><div class="row between"><small>有效工期</small><strong>${progress.days.toFixed(1)} / ${node.days} 日</strong></div><div class="bar"><i style="width:${percent}%"></i></div>${progress.evidence && !progress.by ? `<small>${escape(progress.evidence)}</small>` : ''}</div>` : ''}
       ${action}
       <p class="description">${escape(node.description)}</p>
       <section class="detail-section"><h4>前置国策</h4>${node.prerequisites.length ? `<div class="prereqs">${node.prerequisites.map((group) => `<div class="prereq-group">${group.map((id, i) => `${i ? '<span class="or">或</span>' : ''}<button class="chip ${country.progress[id].status === 'completed' ? 'done' : ''}" data-goto="${escape(id)}">${escape(country.nodes[id].name)}</button>`).join('')}</div>`).join('<span class="and">且</span>')}</div>` : '<p class="muted">此路线的起点</p>'}</section>
@@ -511,13 +511,15 @@ export function mountUI(
         node.effects.map(
           (e) =>
             effectText(e) +
-            (e.when?.length && progress.status === 'completed'
-              ? isHistoricalEvidence(progress.evidence)
-                ? '（历史承接，实际效果未记录）'
-                : progress.applied.includes(e.id)
-                  ? '（已生效）'
-                  : '（条件未成立，未生效）'
-              : ''),
+            (progress.by?.mode === 'bypassed' && progress.status === 'completed'
+              ? '（已略过，未生效）'
+              : e.when?.length && progress.status === 'completed'
+                ? isHistoricalEvidence(progress.evidence)
+                  ? '（历史承接，实际效果未记录）'
+                  : progress.applied.includes(e.id)
+                    ? '（已生效）'
+                    : '（条件未成立，未生效）'
+                : ''),
         ),
       )}</section>
       ${conditions.length ? `<section class="detail-section"><h4>条件</h4><ul class="conditions">${conditions.map(([kind, label]) => `<li><span class="cond-kind">${kind}</span>${escape(label)}</li>`).join('')}</ul></section>` : ''}
@@ -526,6 +528,18 @@ export function mountUI(
       <section class="detail-section"><h4>投入与工期</h4>${list(node.investments)}${node.durationReason ? `<details class="fold"><summary>工期理由</summary><p class="reason">${escape(node.durationReason)}</p></details>` : ''}</section>
       ${route ? `<section class="detail-section"><h4>路线抉择 · ${escape(route.name)}</h4><p>${escape(route.purpose)}</p><dl class="route-facts"><dt>支持者</dt><dd>${escape(route.supporters)}</dd><dt>阻力</dt><dd>${escape(route.opposition)}</dd><dt>取舍</dt><dd>${escape(route.tradeoff)}</dd><dt>终点</dt><dd>${escape(route.destination)}</dd></dl></section>` : ''}
       ${node.reason ? `<details class="detail-section fold"><summary><h4>设计依据</h4></summary><p class="reason">${escape(node.reason)}</p></details>` : ''}</div>`;
+  }
+  /** A focus a story event completed (v0.14.22): which event, and why. */
+  function eventDoneNote(country: Country, progress: Country['progress'][string]): string {
+    const by = progress.by;
+    if (!by || progress.status !== 'completed') {
+      return '';
+    }
+    // Old finished events are pruned; the saved title still names the cause.
+    const cause = controller.state?.events[by.event]
+      ? `<button class="chip" data-show-event="${escape(by.event)}" title="在事件纪录中查看">${escape(by.title)}</button>`
+      : `<span>「${escape(by.title)}」</span>`;
+    return `<div class="period-anchor-note event-done-note"><strong>${by.mode === 'achieved' ? '事件达成' : '已略过'}</strong><span>${by.mode === 'achieved' ? '由事件直接完成，不经工期，国策效果已套用。' : '结果已由他方或局势造成，直接略过，不套用国策效果。'}</span><span>${escape(by.reason)}</span><div class="row">${cause}</div></div>`;
   }
   /** Name the competing routes, so a mutex never looks like it has no counterpart. */
   function mutexNote(country: Country, node: FocusNode): string {
@@ -654,7 +668,11 @@ export function mountUI(
     const meta = (node: FocusNode, stateClass: string) => {
       const p = country.progress[node.id];
       return stateClass === 'completed'
-        ? '✓ 已完成'
+        ? p.by
+          ? p.by.mode === 'achieved'
+            ? '✓ 事件达成'
+            : '✓ 已略过'
+          : '✓ 已完成'
         : stateClass === 'active'
           ? `${p.days.toFixed(0)} / ${node.days} 日`
           : stateClass === 'waiting'
@@ -693,7 +711,7 @@ export function mountUI(
         // Progress ring for running, waiting and paused focuses.
         const ring =
           p.started !== null && stateClass !== 'completed' ? Math.min(100, (p.days / node.days) * 100) : 0;
-        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape(node.name)}（${escape(meta(node, stateClass))}）" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-medal" style="--p:${ring}">${icon(node.icon)}<span class="node-meta">${escape(meta(node, stateClass))}</span>${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}</span><span class="node-plate"><span class="node-name">${escape(node.name)}</span></span>${anchorBadge(country, node)}</button>`;
+        return `<button class="node ${stateClass} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape(node.name)}（${escape(meta(node, stateClass))}${p.by && stateClass === 'completed' ? `：「${escape(p.by.title)}」` : ''}）" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-medal" style="--p:${ring}">${icon(node.icon)}<span class="node-meta">${escape(meta(node, stateClass))}</span>${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}</span><span class="node-plate"><span class="node-name">${escape(node.name)}</span></span>${anchorBadge(country, node)}</button>`;
       })
       .join('')}`;
     const minimap = shell.querySelector<SVGSVGElement>('.minimap-svg');
@@ -1175,7 +1193,7 @@ export function mountUI(
     const cards = events
       .map(
         (e) =>
-          `<article class="event-card"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape(names(e))}${e.public ? '' : ' · 未公开'}${e.status === 'ongoing' ? ' · 仍在发展' : e.result ? ` · ${resultNames[e.result]}` : ''}</span><h3>${escape(e.headline || e.title)}</h3><p>${escape(e.description)}</p>${e.current ? `<p class="event-current"><b>现况</b> ${escape(e.current)}</p>` : ''}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape(st.text)}${st.when ? ` <small>${escape(st.when)}</small>` : ''}</li>`).join('')}</ul>` : ''}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape(t.text)}</li>`).join('')}</ol>` : ''}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape(newsEffects(state, e))}</small>` : ''}<small>${escape(e.evidence)}</small></article>`,
+          `<article class="event-card" data-event-id="${escape(e.id)}"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape(names(e))}${e.public ? '' : ' · 未公开'}${e.status === 'ongoing' ? ' · 仍在发展' : e.result ? ` · ${resultNames[e.result]}` : ''}</span><h3>${escape(e.headline || e.title)}</h3><p>${escape(e.description)}</p>${e.current ? `<p class="event-current"><b>现况</b> ${escape(e.current)}</p>` : ''}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape(st.text)}${st.when ? ` <small>${escape(st.when)}</small>` : ''}</li>`).join('')}</ul>` : ''}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape(t.text)}</li>`).join('')}</ol>` : ''}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape(newsEffects(state, e))}</small>` : ''}<small>${escape(e.evidence)}</small></article>`,
       )
       .join('');
     const body = `${all.length ? toolbar : ''}${cards || `<p class="muted">${all.length ? '没有符合筛选的事件。' : '目前没有事件。局势更新会记录各国发生的事，包括未公开的。'}</p>`}`;
@@ -1367,6 +1385,17 @@ export function mountUI(
       centeredCountry = '';
       pan = { x: 30, y: 35 };
       render();
+      return;
+    }
+    if (target.dataset.showEvent) {
+      eventCountry = countryId;
+      eventFilter = 'all';
+      showEvents();
+      const card = [...backdrop.querySelectorAll<HTMLElement>('.event-card')].find(
+        (item) => item.dataset.eventId === target.dataset.showEvent,
+      );
+      card?.classList.add('flash');
+      card?.scrollIntoView({ block: 'center' });
       return;
     }
     if (target.dataset.goto) {

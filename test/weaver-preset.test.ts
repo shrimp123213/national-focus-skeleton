@@ -15,7 +15,7 @@ import { applyTaskPreset, importTaskPresets } from '../src/task-presets';
 import YAML from 'yaml';
 
 /** The latest weaver preset spells out output shapes; its examples must stay valid against the real schemas. */
-const file = new URL('../presets/織界國策-任務預設-v5.8-格式強化版.json', import.meta.url);
+const file = new URL('../presets/織界國策-任務預設-v5.9-格式強化版.json', import.meta.url);
 const raw = JSON.parse(readFileSync(file, 'utf8'));
 const preset = raw.presets[0];
 type Item = { id: string; kind: string; role: string; content: string; enabled: boolean };
@@ -57,6 +57,11 @@ test('weaver preset update, reshape and identify examples pass their schemas', (
   for (const { value } of update) {
     assert.deepEqual(ProposalSchema.parse(value).edits, []);
   }
+  // An event completing a focus points at an event written in the same or an earlier step.
+  const steps = ProposalSchema.parse(update[0].value).steps;
+  const completion = steps.flatMap((step) => step.completions)[0];
+  assert.equal(completion.mode, 'achieved');
+  assert.ok(steps.some((step) => step.events.some((event) => event.id === completion.event)));
   const [reshape] = examples('reshape');
   assert.equal(ProposalSchema.parse(reshape.value).edits.length, 1);
   CandidatesSchema.parse(examples('identify')[0].value);

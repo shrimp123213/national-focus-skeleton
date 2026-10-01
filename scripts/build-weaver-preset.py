@@ -1,10 +1,10 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.8-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.9-格式強化版.json
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.8 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v5.9 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -380,6 +380,7 @@ Step 4：逐国推演
 - 主国策：区间内是否完成？完成时点是否晚于前置与成果取得的时点？
 - 空闲的 AI 国：在空闲的时点，依当时的前置、互斥、条件与<weaving_style>选策，并写出理由
 - 玩家国：只有跳时且 skipDelegate=true 时才能代选
+- 事件完成国策：逐国核对，正文或事件中是否已实际做成某项未完成国策 description 所描述的事（不论是否开始、前置是否完成）？依<国策输出格式>的「事件完成判断」决定 achieved、bypassed 或不完成；正在进行、部分达成、只是条件变好都不算
 - 稳定度与战争支持度：只有明确原因时才小幅变动
 - 换期：本期主要目的已完成或已不适配吗？依据是什么？树有多个结局时，走到任一结局即算完成；没有就 transitions 为 []
 Step 5：事件
@@ -389,6 +390,7 @@ Step 5：事件
 - 需要时，每个新事件用一句话写出本期走向，并说明它承接了哪些正文、国策进展或既有事件；会持续发展的写 current，有明确计划的写 steps
 - 分清 front（承接正文已写出的事，不替玩家决定结果）与 back（镜头外，标 origin=background 并写依据）；填 importance、headline（报纸头条）、status、settle 与唯一的 option
 - 重要国策完成时系统会自动发布新闻；execution=ongoing 的国策完成时系统会建立执行事件（id 为 focus_国家id_国策id），之后用 eventUpdates 推进；不要为同一件事另建事件
+- 由事件完成的国策：导致完成的那件事只写一个事件（新事件或既有事件的 eventUpdates），completions 指向它；一件事可完成多项国策，系统不另发这些国策的新闻
 Step 6：跨国一致性
 - 牵涉两国以上的事件只写一次，共用 changes；双方结果不可矛盾
 Step 7：公开
@@ -401,6 +403,7 @@ Step 8：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - 新事件 16 个必写键齐全；countries 是阵列；public 是布尔；option 是 {label,text} 物件
 - changes 每项是 {country, effects}，每个效果有自己的 id；数值写数字（✗ "+5"）
 - eventUpdates 的 id 都是既有 ongoing 事件；填了 result 就不写 status:"ongoing"
+- completions 的 event 是本步或更早写入、或 state.events 中的事件，且参与国家含该国；mode 符合事件完成判断
 - 根物件的 steps（时间步骤）与事件的 steps（计划步骤）没有混用
 - 对照决策表：每项变化放在正确的位置（新事件、eventUpdates、facts、selections、publications、calibrations、transitions）
 - 所有引用的国家、国策与事件 ID 都存在
@@ -687,9 +690,15 @@ UPDATE_EXAMPLE = {
          'eventUpdates': []},
         {'at': 120,
          'facts': [],
-         'events': [],
+         'events': [{'id': 'ev_palace_coup', 'at': 120, 'countries': ['某王国'],
+                     'title': '宫廷夺权', 'description': '正文中实际发生了什么', 'evidence': '正文依据',
+                     'origin': 'story', 'public': True, 'changes': [],
+                     'scope': 'front', 'importance': 'major', 'headline': '像报纸头条的一句话', 'status': 'resolved',
+                     'settle': '', 'option': {'label': '风向变了', 'text': ''}, 'timeline': []}],
          'selections': [],
          'publications': [{'country': '某王国', 'node': 'n_council', 'evidence': '公开依据'}],
+         'completions': [{'country': '某王国', 'node': 'n_guard', 'mode': 'achieved', 'event': 'ev_palace_coup',
+                          'reason': '正文中哪件事做成了这项国策'}],
          'eventUpdates': [
              {'id': 'ev_harbor_works', 'text': '本期进展', 'current': '整句取代的现况',
               'changes': [{'country': '某王国',
@@ -805,10 +814,12 @@ NODE_TABLE = '''## 决策表
 STEP_RULES = '''## 时间步骤（根物件 steps 的每一项，依 at 由小到大排列）
 {"at":数字,"facts":[…],"events":[…],"selections":[…],"publications":[…],"eventUpdates":[…]}
 - 六个键都要写，没有内容写 []；整段时间没有任何变化时，根物件写 "steps":[]，不要造空步骤
+- 有国策由事件完成时，该步骤另加第七个键 "completions":[…]；没有就省略
 - at：故事日数字（与 now、cursor 同一单位），不早于 state.day、不晚于 until；✗ "1023年3月" ✗ "第95天"
 - facts 每项：{"country":国家ID,"id":事实ID,"value":布尔,"evidence":文字,"origin":"story"|"background"}
 - selections 每项：{"country":国家ID,"node":国策ID,"reason":文字}
 - publications 每项：{"country":国家ID,"node":国策ID,"evidence":文字}
+- completions 每项：{"country":国家ID,"node":国策ID,"mode":"achieved"|"bypassed","event":事件ID,"reason":文字}
 
 ## 新事件（events 的每一项）
 必写 16 键：{"id":ID,"at":数字,"countries":[国家ID,…],"title":文字,"description":文字,"evidence":文字,"origin":"story"|"background","public":布尔,"changes":[变更],"scope":"front"|"back","importance":"minor"|"major"|"world","headline":文字(可空),"status":"ongoing"|"resolved","settle":文字(可空),"option":{"label":文字,"text":文字(可空)},"timeline":[]}
@@ -882,9 +893,21 @@ UPDATE_TABLE = '''## 决策表
 | 剧情取得国策需要的外部成果 | 该时点的 facts 加 {"country":"国家ID","id":"outcomes 中的事实ID","value":true,"evidence":"…","origin":"story"} |
 | 空闲的 AI 国选下一项国策 | 该时点的 selections 加 {"country":"国家ID","node":"国策ID","reason":"…"} |
 | 已完成的国策对外公开 | 该时点的 publications 加 {"country":"国家ID","node":"国策ID","evidence":"…"} |
+| 正文或事件已实际做成某项未完成国策 | 该时点的 completions 加 {"country":"国家ID","node":"国策ID","mode":"achieved","event":"导致完成的事件ID","reason":"…"}；不论是否开始、前置是否完成 |
 | calibration=true 的国家承接了现况 | "calibrations":["国家ID"]；只能列 state 中 calibration=true 的国家 |
 | 本期主要目的已完成，换下一期 | "transitions":[{"country":"国家ID","cause":"completed","reason":"…","invalidateActive":false}] |
 | 世界变局使本期议程不再适用 | 同上，"cause":"incompatible"；进行中的国策本身也已失效时才写 "invalidateActive":true |
+
+## 事件完成判断（completions）
+| 情况 | 处理 |
+| 本国已实际做成国策所描述的事，事件没有给过同样效果 | "mode":"achieved"：套用国策效果；该国策在尚未选定的互斥路线上时，这条路线随之锁定 |
+| 已做成，但事件 changes 已给过同样效果；或结果由他方、意外或局势造成 | "mode":"bypassed"：只标记完成；只用于没有 mutex、或本国已走上该路线（locks 中该组即此 route）的国策 |
+| 正在进行、部分达成、谈判中、尚未见分晓 | 不完成：用事件 steps 记录；推进中的国策让工期继续 |
+| 只是条件变得有利 | 不完成：写 facts |
+| 结果不是本国做成，且该国策在本国尚未选定或已放弃的互斥路线上 | 不完成：只写事件与事实；影响目前路线时，依情况让国策等待，或以 transitions 换期 |
+| 本国做成的是已放弃的互斥路线上的事 | 不完成：本国已改走另一条路，用 transitions 换期（cause=incompatible） |
+| 玩家国，正文尚未写出结果 | 不完成，不替玩家决定 |
+导致完成的事件只写一个，一件事可完成多项国策；系统不另发这些国策的新闻。
 
 ✗ 常见退回原因：
 - at 或 until 写成日期字串（✗ "1023年3月"），或 until 不等于 now
@@ -896,6 +919,7 @@ UPDATE_TABLE = '''## 决策表
 - changes 写成 {"stability":-3}，或少了 country 外层；效果缺 id，或 value 写成 "+5"
 - 把计划步骤 {"text","state"} 写进根物件 steps，或把时间步骤写进事件的 steps
 - 同一项国策已有执行事件，又新建一个承接它的事件
+- completions 的 event 不存在、参与国家不含该国，或国策已完成；achieved 完成本国已放弃路线的国策；bypassed 用在尚未选定或已放弃的互斥路线上
 - calibrations 列了 calibration 不是 true 的国家
 - edits 不是 []；沿用上一次的根物件 id（会被当成已处理而整份忽略）'''
 
