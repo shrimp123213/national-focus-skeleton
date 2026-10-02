@@ -2,7 +2,7 @@
 
 最後更新：2026-10-01。第 1–12 節保留早期基線，後續章節記錄各次設計與實作；**目前進度以第 62 節的整合快照為入口**。
 
-目前實作版本：**v0.15.1-skeleton**（標籤 `v0.15.1-skeleton`，推送至 `main`）：介面改版第二、三階段，見第 82 節；v0.15.0 第一階段見第 81 節；v0.14.23 國家分頁可捲動見第 80 節；v0.14.22 事件完成國策見第 79 節；v0.14.21 結構籤見第 78 節；v0.14.20 勳章式國策節點見第 77 節；v0.14.19 直式卡片與短國策名見第 76 節；v0.14.18 國策樹置中排版見第 75 節；v0.14.17 主幹加側翼（試行）見第 74 節；v0.14.16 國策工期一至五週見第 73 節；v0.14.15 historical 修正見第 71 節；v0.14.14 一律輸出簡體與面板簡體字型見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
+目前實作版本：**v0.15.2-skeleton**（標籤 `v0.15.2-skeleton`，推送至 `main`）：快訊卡片整理等，見第 83 節；v0.15.1 介面改版第二、三階段見第 82 節；v0.15.0 第一階段見第 81 節；v0.14.23 國家分頁可捲動見第 80 節；v0.14.22 事件完成國策見第 79 節；v0.14.21 結構籤見第 78 節；v0.14.20 勳章式國策節點見第 77 節；v0.14.19 直式卡片與短國策名見第 76 節；v0.14.18 國策樹置中排版見第 75 節；v0.14.17 主幹加側翼（試行）見第 74 節；v0.14.16 國策工期一至五週見第 73 節；v0.14.15 historical 修正見第 71 節；v0.14.14 一律輸出簡體與面板簡體字型見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
 
 目前專案：`F:\命一串\national-focus-skeleton`；舊版 `F:\命一串\national-focus`（v0.11.1）僅供歷史參考，本輪未修改。
 
@@ -2261,4 +2261,13 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - `task-panel.ts`：任務分頁外包 `.task-layout`（`.task-tabs` 直排 + `.task-editors`）；任務預設說明移到 `.preset-title` 的 title；觸發方式文字改完整；同時請求數 0 以空白與 placeholder「不限」顯示（讀回 `Number('') || 0`）。
 - `ui.ts`：`settingsFooter` 加 `.footer-dirty`，`showDirty()` 以 requestAnimationFrame 在設定視窗的 input／change／click 後重算；`foldHints(scope)` 把 `.settings-section` 內超過 46 字、沒有子元素的 `small`／`.block-note`／`p.muted` 改成 `details.hint-fold`（以 `data-folded` 標記，略過任務分頁標籤、API 清單與 `role=status`），`hintObserver`（MutationObserver）處理各面板重繪，`closeModal` 時斷開；`.modal` 加 `tabindex="-1"`，`openModal` 改為聚焦視窗。`showJobs` 改為 `.job-card2`（`splitProblems` 以第一個「：」切出結論、以「；」切問題，`codeText` 標出欄位路徑與 snake_case id，`.job-elapsed[data-started]` 由每秒的 `clock` 更新）。`showLog` 改為 `.log-entry` 與 `.log-part2`，`logTexts` 保存每段文字，`pre[data-log-text]` 在 toggle 時才由 `fillLogPart` 填入（JSON 由 `highlightJson` 縮排分色，去掉 ```json 包裝，解析失敗照原文），`[data-copy]` 在 capture 階段攔下點擊（不觸發 summary 收合），用剪貼簿 API，失敗改用 execCommand。
 - `style.css`：v0.15.1（設定）與 v0.15.2（任務與紀錄）區塊；刪除不再使用的 `.job-log`、`.job-card`、`.request-log`、`.log-part`、`.job-detail`、`.job-message` 規則（18 條）；手機上 API 清單橫排、卡片與視窗底部可換行、按鈕不換行。
+
+## 83. v0.15.2：快訊卡片整理、設定視窗固定尺寸、詳情滑入（2026-10-02）
+
+快訊卡片依 Awwwards 標準評約 8.0（設計 8.5、易用 7.5、創意 8.5、內容 7.0），樣品 `docs/快訊卡片改版-樣品.html`（`docs/news-card-revamp/`）。使用者決定報名「阿斯塔利亚快讯」不改（擴展只用於這張角色卡），要目改兩行。
+
+- `src/news-card/card.html`：`item()` 不再輸出 `<small>`，改放 title；`.it` 兩行截斷（窄版恢復 `display: block` 單行橫排）；`heading(name, count)` 給頭版／內部密報／連載追蹤加則數；本报各版改為「本楼更新 N 栏」（指向第一個更新欄，欄名在 title）與「旧闻 N 栏」；連載 `now = current || 最新進展`，只在不等於描述及其第一句時顯示「现况」；`field()` 的時間等於 `bar.time` 時省略，`.fresh-head` 加 `.upd-time`；深色 `.slip` 樣式。移除 `.it small` 規則。
+- `ui.ts`：`drawerDrawn` 記錄上次繪製時詳情是否開啟，重繪時以舊位置繪製再以 reflow 後切換 `open`，讓 transition 執行；關閉時 transitionend 後清空內容。`insets()` 的右側改用 `drawer.offsetWidth`（不受滑動中的 transform 影響）。`openModal` 給視窗加 `modal-${name}` 類別。
+- `style.css`：`.modal.modal-settings { height: 90vh }`（手機 94dvh）；`.modal` 的 `modal-in` 與背景 `backdrop-in` 動畫。
+- 使用者回報 Firefox 看不到動效：原因一是詳情滑入的上述錯誤（所有瀏覽器）；原因二可能是系統或瀏覽器開啟「減少動態」——本擴展在 `prefers-reduced-motion: reduce` 時關閉所有動畫與轉場，Firefox 依 Windows「動畫效果」或 about:config 的 `ui.prefersReducedMotion` 判斷。若使用者想在減少動態時仍保留動效，可加「界面动效：跟随系统／开启／关闭」設定（尚未做）。
 

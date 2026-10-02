@@ -1,6 +1,6 @@
 {
   "name": "national-focus-tavern",
-  "version": "0.15.1-skeleton",
+  "version": "0.15.2-skeleton",
   "private": true,
   "type": "module",
   "scripts": {

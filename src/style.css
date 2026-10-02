@@ -4203,3 +4203,33 @@ details.detail-section.fold > summary::before {
     flex-basis: 100%;
   }
 }
+
+/* ---------- v0.15.3 · one size for the settings window; windows open with a short rise ---------- */
+.modal.modal-settings {
+  height: 90vh;
+}
+.modal.modal-settings .modal-body {
+  flex: 1;
+}
+@media (max-width: 760px) {
+  .modal.modal-settings {
+    height: 94dvh;
+  }
+}
+.modal {
+  animation: modal-in 0.2s ease-out;
+}
+.modal-backdrop:not([hidden]) {
+  animation: backdrop-in 0.2s ease-out;
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}

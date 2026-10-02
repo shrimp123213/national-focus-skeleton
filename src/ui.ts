@@ -103,6 +103,8 @@ export function mountUI(
   const collapsed = new Set<string>();
   let positions = new Map<string, { x: number; y: number }>();
   let centeredCountry = '';
+  /** Whether the last full drawing showed the drawer open. */
+  let drawerDrawn = false;
   /** Node states as last drawn per country, to mark focuses completed since then. */
   const seenStates = new Map<string, Map<string, string>>();
   /** Country whose tab was last brought into view, so a new selection scrolls to its tab once. */
@@ -388,7 +390,7 @@ export function mountUI(
           '',
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
       body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2 title="${escape(country.description)}">${escape(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · 故事日 ${state.day.toFixed(1)}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
-<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${detailsOpen ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
+<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
     } else {
       body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '为这个世界选择方向' : '连接你的故事'}</h2><p>${state ? '先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。' : '国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。'}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;
     }
@@ -396,6 +398,17 @@ export function mountUI(
     const tabsScroll = shell.querySelector<HTMLElement>('.nation-tabs')?.scrollLeft ?? 0;
     shell.innerHTML = `${command}${error}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ''}</span><button class="linkish" data-action="events">事件记录</button></footer>`;
     bindNationTabs(tabsScroll);
+    // v0.15.3: the panel is redrawn on every change, so the drawer is drawn in its old position
+    // and moved once, letting its transition run (opening and closing).
+    const drawer = shell.querySelector<HTMLElement>('.drawer');
+    if (drawer && detailsOpen !== drawerDrawn) {
+      void drawer.offsetWidth;
+      drawer.classList.toggle('open', detailsOpen);
+      if (!detailsOpen) {
+        drawer.addEventListener('transitionend', () => drawer.replaceChildren(), { once: true });
+      }
+    }
+    drawerDrawn = detailsOpen;
     if (country) {
       drawTree(country);
       bindCanvas();
@@ -819,7 +832,7 @@ export function mountUI(
     const drawer = shell.querySelector<HTMLElement>('.drawer.open');
     const wide = rect.width > 760;
     const left = wide && routes ? routes.getBoundingClientRect().right - rect.left : 0;
-    const right = wide && drawer ? rect.right - drawer.getBoundingClientRect().left : 0;
+    const right = wide && drawer ? drawer.offsetWidth : 0;
     return { left, right, width: rect.width };
   }
   /** Horizontal centre of the canvas area not covered by the routes panel or the drawer. */
@@ -1111,7 +1124,7 @@ export function mountUI(
     taskPanel = undefined;
     modal = name;
     backdrop.hidden = false;
-    backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
+    backdrop.innerHTML = `<section class="modal modal-${name}" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
     // v0.15.1: focus the window, so the close button does not look like the main action.
     backdrop.querySelector<HTMLElement>('.modal')?.focus();
     updateModalJobs();
