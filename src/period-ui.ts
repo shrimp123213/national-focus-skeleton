@@ -1,3 +1,4 @@
+import { storyTime } from './story-time';
 import type { Country, FocusNode } from './model';
 import type { JobStatus } from './platform';
 
@@ -6,12 +7,7 @@ const escape = (value: string): string =>
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
-const time = (day: number): string => {
-  const date = new Date((day - 719528) * 86400000);
-  return day < 366
-    ? `故事日 ${day.toFixed(1)}`
-    : `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日`;
-};
+const time = (day: number): string => storyTime(day);
 export function periodControl(country: Country): string {
   return `<label class="switch-label period-toggle" title="关闭后保留当前树，事件仍继续推进"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod ? 'checked' : ''}>自动换期</label>`;
 }

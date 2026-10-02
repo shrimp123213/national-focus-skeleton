@@ -567,7 +567,12 @@ export class TavernPlatform implements Platform {
     // The story view travels with the floor; chat worldbook entries render it.
     latest.国策 = {
       ...saved,
-      prompt: promptView(saved, this.config?.newsPrompt ?? true),
+      // The story time as the source wrote it, so the models read a date, not a day count.
+      prompt: promptView(
+        saved,
+        this.config?.newsPrompt ?? true,
+        this.config ? timeText(valueAt(latest.stat_data, this.config.sources.timePath)) : '',
+      ),
       ...(bar ? { 快讯: { ...bar, insiders: insiders(saved, bar.location) } } : {}),
     };
     // Migrate only this floor on a successful write; never rewrite ancestor saves.

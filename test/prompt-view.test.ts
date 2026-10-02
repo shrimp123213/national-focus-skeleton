@@ -239,3 +239,20 @@ test('持续事件在正文资料中带现况、步骤与最近 3 则进展，�
   assert.doesNotMatch(text, /第 30 天进展/);
   assert.match(text, /第 90 天进展/);
 });
+
+test('正文资料的各国动向标示故事时间而非日数：有来源时间用原文，否则还原成日期', async () => {
+  const { storyDay } = await import('../src/platform');
+  const state = installCountry(createState(storyDay('复兴纪元490年-10月-15日-星期三-14:25')), demoTree(), 0);
+  state.day = storyDay('复兴纪元490年-10月-15日-星期三-14:25');
+  assert.match(promptView(state).overview, /【各国动向】（490年10月15日 14:25）/);
+  assert.match(
+    promptView(state, true, '复兴纪元490年-10月-15日-星期三-14:25').overview,
+    /【各国动向】（复兴纪元490年-10月-15日-星期三-14:25）/,
+  );
+  assert.doesNotMatch(promptView(state).overview, /故事日 \d{5,}/);
+  state.countries.augustium.longTerm = [
+    { id: 'a', text: '恢复关税管辖权。' },
+    { id: 'b', text: '建造横渡巨舰。' },
+  ];
+  assert.match(promptView(state).countries.augustium.text, /长期方向：恢复关税管辖权；建造横渡巨舰\n/);
+});

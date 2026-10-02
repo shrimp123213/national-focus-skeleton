@@ -1,3 +1,4 @@
+import { storyTime } from './story-time';
 import {
   Country,
   Effect,
@@ -442,7 +443,7 @@ export function newsDigest(state: State, limit = 5, days = 30): string {
     .map((event) => {
       const names = event.countries.map((id) => state.countries[id]?.name ?? id).join('、');
       const scope = event.importance === 'world' ? '世界' : event.scope === 'front' ? '身边' : '各国';
-      return `- 〔${scope}〕${eventText(event, (day) => `故事日 ${Math.floor(day)}`)}（${names}）`;
+      return `- 〔${scope}〕${eventText(event, (day) => storyTime(day))}（${names}）`;
     });
   return lines.length
     ? `【近期国际大事】（供正文自然承接；标示「未公开」的只有当事方与知情者知道）\n${lines.join('\n')}\n呈现方式：可透过公告、报纸、传闻、商旅或 NPC 对话自然带出，不必一次全部写入；不得替玩家行动，也不得改变已写出的正文。`

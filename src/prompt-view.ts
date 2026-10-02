@@ -1,4 +1,5 @@
 import { eventText, eventUpdatedAt, newsDigest } from './engine';
+import { storyTime } from './story-time';
 import type { Country, State } from './model';
 
 /**
@@ -98,7 +99,11 @@ function eventHistory(state: State, event: State['events'][string]): string {
   return lines.join('\n');
 }
 
-export function promptView(state: State, news = true): PromptView {
+/**
+ * `now` is the story time as the source wrote it (for example 「复兴纪元490年-10月-15日-星期三-14:25」);
+ * without it the date is rebuilt from the day count (v0.15.6: never a bare day count).
+ */
+export function promptView(state: State, news = true, now = ''): PromptView {
   const countries = Object.values(state.countries).filter((country) => country.enabled);
   // Unresolved matters first, then the most recently updated.
   const events = Object.values(state.events).sort(
@@ -116,7 +121,7 @@ export function promptView(state: State, news = true): PromptView {
     countries.length || digest
       ? [
           promptHeader,
-          countries.length ? `【各国动向】（故事日 ${Math.floor(state.day)}）\n${lines.join('\n')}` : '',
+          countries.length ? `【各国动向】（${now || storyTime(state.day, true)}）\n${lines.join('\n')}` : '',
           digest,
         ]
           .filter(Boolean)
@@ -132,10 +137,15 @@ export function promptView(state: State, news = true): PromptView {
         ];
         const lastPeriod = country.period.history.at(-1);
         if (lastPeriod) {
-          sections.push(`前期（故事日 ${lastPeriod.start}–${lastPeriod.end}）：${lastPeriod.summary}`);
+          sections.push(
+            `前期（${storyTime(lastPeriod.start)}–${storyTime(lastPeriod.end)}）：${lastPeriod.summary}`,
+          );
         }
         if (country.longTerm.length) {
-          sections.push(`长期方向：${country.longTerm.map((goal) => goal.text).join('；')}`);
+          // Model-written goals often end with 。; drop it so the list reads 「…；…」, not 「…。；…」.
+          sections.push(
+            `长期方向：${country.longTerm.map((goal) => goal.text.trim().replace(/[。；;.]+$/, '')).join('；')}`,
+          );
         }
         const current = country.current ? country.nodes[country.current] : undefined;
         if (current) {

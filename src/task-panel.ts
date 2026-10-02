@@ -1,3 +1,4 @@
+import { storyTime } from './story-time';
 import {
   ConfigSchema,
   jobKinds,
@@ -91,7 +92,7 @@ export function mountTaskPanel(
       : job
         ? `上次：${job.state === 'success' ? '成功' : job.state === 'failed' ? '失败' : '已取消'} · ${job.time}`
         : saved
-          ? `上次成功：第 ${saved.turn} 则正文 · 故事日 ${Math.floor(saved.day)}`
+          ? `上次成功：第 ${saved.turn} 则正文 · ${storyTime(saved.day)}`
           : '尚未执行';
     return `<small class="last-run">${escape(text)}</small>`;
   }

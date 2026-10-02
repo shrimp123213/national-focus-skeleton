@@ -49,3 +49,12 @@ test('原有数值日序与日期格式保持相容', () => {
   assert.equal(storyDay('2026/09/26 14:25'), storyDay('2026-09-26T14:25'));
   assert.equal(storyDay('0000-01-01'), 0);
 });
+
+test('故事时间以日期呈现：日期来源还原成年月日，纯日序维持故事日', async () => {
+  const { storyTime } = await import('../src/story-time');
+  const day = storyDay('复兴纪元490年-10月-15日-星期三-14:25');
+  assert.equal(storyTime(day), '490年10月15日');
+  assert.equal(storyTime(day, true), '490年10月15日 14:25');
+  assert.equal(storyTime(storyDay('复兴纪元490年-10月-15日-星期三-00:00'), true), '490年10月15日');
+  assert.equal(storyTime(114.5), '故事日 114');
+});

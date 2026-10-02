@@ -19674,6 +19674,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return _coercedDate(ZodDate, params);
   }
 
+  // src/story-time.ts
+  function storyTime(day, withClock = false) {
+    if (!Number.isFinite(day)) {
+      return "";
+    }
+    if (day < 366) {
+      return `故事日 ${Math.floor(day)}`;
+    }
+    const date5 = new Date(Math.round((day - 719528) * 864e5 / 6e4) * 6e4);
+    const clock = withClock && (date5.getUTCHours() || date5.getUTCMinutes()) ? ` ${String(date5.getUTCHours()).padStart(2, "0")}:${String(date5.getUTCMinutes()).padStart(2, "0")}` : "";
+    return `${date5.getUTCFullYear()}年${date5.getUTCMonth() + 1}月${date5.getUTCDate()}日${clock}`;
+  }
+
   // src/prompts.ts
   var DATA_TOKEN = "{{data}}";
   var builtinKinds = ["guide", "task", "data"];
@@ -20721,7 +20734,7 @@ ${DATA_TOKEN}`;
     ).sort((a, b) => eventUpdatedAt(b) - eventUpdatedAt(a)).slice(0, limit).map((event) => {
       const names = event.countries.map((id) => state.countries[id]?.name ?? id).join("、");
       const scope2 = event.importance === "world" ? "世界" : event.scope === "front" ? "身边" : "各国";
-      return `- 〔${scope2}〕${eventText(event, (day) => `故事日 ${Math.floor(day)}`)}（${names}）`;
+      return `- 〔${scope2}〕${eventText(event, (day) => storyTime(day))}（${names}）`;
     });
     return lines.length ? `【近期国际大事】（供正文自然承接；标示「未公开」的只有当事方与知情者知道）
 ${lines.join("\n")}
@@ -32240,7 +32253,7 @@ ${pub}` : auth || pub;
     lines.push(...recent.map((step) => `  - ${when(step.at)}：${step.text}`));
     return lines.join("\n");
   }
-  function promptView(state, news = true) {
+  function promptView(state, news = true, now = "") {
     const countries = Object.values(state.countries).filter((country) => country.enabled);
     const events = Object.values(state.events).sort(
       (a, b) => Number(b.status === "ongoing") - Number(a.status === "ongoing") || eventUpdatedAt(b) - eventUpdatedAt(a)
@@ -32253,7 +32266,7 @@ ${pub}` : auth || pub;
     const digest = news ? newsDigest(state) : "";
     const overview = countries.length || digest ? [
       promptHeader,
-      countries.length ? `【各国动向】（故事日 ${Math.floor(state.day)}）
+      countries.length ? `【各国动向】（${now || storyTime(state.day, true)}）
 ${lines.join("\n")}` : "",
       digest
     ].filter(Boolean).join("\n\n") : "";
@@ -32267,10 +32280,14 @@ ${lines.join("\n")}` : "",
           ];
           const lastPeriod = country.period.history.at(-1);
           if (lastPeriod) {
-            sections.push(`前期（故事日 ${lastPeriod.start}–${lastPeriod.end}）：${lastPeriod.summary}`);
+            sections.push(
+              `前期（${storyTime(lastPeriod.start)}–${storyTime(lastPeriod.end)}）：${lastPeriod.summary}`
+            );
           }
           if (country.longTerm.length) {
-            sections.push(`长期方向：${country.longTerm.map((goal) => goal.text).join("；")}`);
+            sections.push(
+              `长期方向：${country.longTerm.map((goal) => goal.text.trim().replace(/[。；;.]+$/, "")).join("；")}`
+            );
           }
           const current = country.current ? country.nodes[country.current] : void 0;
           if (current) {
@@ -32867,7 +32884,12 @@ ${details.join("\n\n")}
       const bar = latest.国策?.快讯;
       latest.国策 = {
         ...saved,
-        prompt: promptView(saved, this.config?.newsPrompt ?? true),
+        // The story time as the source wrote it, so the models read a date, not a day count.
+        prompt: promptView(
+          saved,
+          this.config?.newsPrompt ?? true,
+          this.config ? timeText(valueAt(latest.stat_data, this.config.sources.timePath)) : ""
+        ),
         ...bar ? { 快讯: { ...bar, insiders: insiders(saved, bar.location) } } : {}
       };
       delete latest.stat_data.国策;
@@ -33251,10 +33273,7 @@ ${NEWS_TAG}` }], {
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
-  var time3 = (day) => {
-    const date5 = new Date((day - 719528) * 864e5);
-    return day < 366 ? `故事日 ${day.toFixed(1)}` : `${date5.getUTCFullYear()}年${date5.getUTCMonth() + 1}月${date5.getUTCDate()}日`;
-  };
+  var time3 = (day) => storyTime(day);
   function periodControl(country) {
     return `<label class="switch-label period-toggle" title="关闭后保留当前树，事件仍继续推进"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod ? "checked" : ""}>自动换期</label>`;
   }
@@ -33472,7 +33491,7 @@ ${NEWS_TAG}` }], {
         (item) => item.kind === kind && ["running", "queued"].includes(item.state)
       );
       const saved = controller.state?.schedules[kind];
-      const text2 = running ? "执行中" : job ? `上次：${job.state === "success" ? "成功" : job.state === "failed" ? "失败" : "已取消"} · ${job.time}` : saved ? `上次成功：第 ${saved.turn} 则正文 · 故事日 ${Math.floor(saved.day)}` : "尚未执行";
+      const text2 = running ? "执行中" : job ? `上次：${job.state === "success" ? "成功" : job.state === "failed" ? "失败" : "已取消"} · ${job.time}` : saved ? `上次成功：第 ${saved.turn} 则正文 · ${storyTime(saved.day)}` : "尚未执行";
       return `<small class="last-run">${escape2(text2)}</small>`;
     }
     const promptCount = (items) => `${items.length} 段 · 送出 ${items.filter((item) => item.enabled || item.kind === "data").length} 段`;
@@ -35140,7 +35159,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
       const tabs = countries.map(
         (c) => `<button class="nation-tab ${c.id === countryId ? "active" : ""} ${c.control}" data-country="${escape6(c.id)}" title="${escape6(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === "player" ? "eagle" : "crown")}</span><span class="tab-copy"><strong>${escape6(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`
       ).join("");
-      const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape6(c.id)}" ${selected(c.id === countryId)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>' : ""}<div class="date-chip" title="故事内日序"><small>故事日</small><strong>${state ? state.day.toFixed(1) : "—"}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
+      const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape6(c.id)}" ${selected(c.id === countryId)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>' : ""}<div class="date-chip" title="故事时间"><small>故事时间</small><strong>${state ? storyTime(state.day) : "—"}</strong></div>${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
       const error62 = controller.error ? `<div class="error-banner" role="alert"><span>${escape6(controller.error)}</span><button data-action="refresh">重新读取</button></div>` : "";
       let body;
       if (country && state) {
@@ -35157,7 +35176,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
         ).join(
           ""
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
-        body = `<section class="nation-bar ${nationMore ? "more-open" : ""}"><div class="nation-id"><span class="nation-crest">${icon(country.control === "player" ? "eagle" : "crown")}</span><div class="nation-copy"><h2 title="${escape6(country.description)}">${escape6(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · 故事日 ${state.day.toFixed(1)}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge("稳定度", country.stability, "stability")}${gauge("战争支持度", country.warSupport, "war")}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === "player")}>玩家选策</option><option value="ai" ${selected(country.control === "ai")}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
+        body = `<section class="nation-bar ${nationMore ? "more-open" : ""}"><div class="nation-id"><span class="nation-crest">${icon(country.control === "player" ? "eagle" : "crown")}</span><div class="nation-copy"><h2 title="${escape6(country.description)}">${escape6(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${storyTime(state.day)}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge("稳定度", country.stability, "stability")}${gauge("战争支持度", country.warSupport, "war")}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === "player")}>玩家选策</option><option value="ai" ${selected(country.control === "ai")}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
 <section class="stage ${detailsOpen ? "with-drawer" : ""}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? "" : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has("legend") ? "open" : ""}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? "" : "disabled"} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ""}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has("demo") ? "open" : ""}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ""}<button data-action="demo-reset">重设示范</button></details>` : ""}<aside class="drawer ${drawerDrawn ? "open" : ""}" aria-label="国策详情" ${detailsOpen ? "" : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ""}</aside></section>`;
       } else {
         body = `<section class="empty"><div class="empty-card">${icon("eagle")}<h2>${state ? "为这个世界选择方向" : "连接你的故事"}</h2><p>${state ? "先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。" : "国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。"}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;
@@ -35284,7 +35303,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
     }
     function doneStatus(country, node2, progress) {
       const by = progress.by;
-      const when = progress.completed === null ? "" : ` · 故事日 ${progress.completed.toFixed(1)}`;
+      const when = progress.completed === null ? "" : ` · ${storyTime(progress.completed)}`;
       const missed = node2.effects.some((e) => e.when?.length && !progress.applied.includes(e.id));
       const how = by ? by.mode === "achieved" ? "由事件直接达成，不经工期 · 效果已生效" : "结果已由他方或局势造成，直接略过 · 效果未生效" : isHistoricalEvidence(progress.evidence) ? "历史承接：生成时已经完成" : `依工期完成（${node2.days} 日）· ${missed ? "部分效果的条件未成立" : "效果已生效"}`;
       const cause = by ? `<p class="done-cause">${escape6(by.reason)}</p>${country && controller.state?.events[by.event] ? `<button class="chip" data-show-event="${escape6(by.event)}" title="在事件记录中查看">${escape6(by.title)}</button>` : `<span class="chip static">「${escape6(by.title)}」</span>`}` : "";
@@ -35994,7 +36013,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
         (c) => `<option value="${escape6(c.id)}" ${selected(c.id === eventCountry)}>${escape6(c.name)}</option>`
       ).join("")}</select><small>${events.length} / ${all2.length} 件</small></div>`;
       const cards = events.map(
-        (e) => `<article class="event-card" data-event-id="${escape6(e.id)}"><span class="tag">日序 ${e.at.toFixed(1)} · ${newsKicker(e)} · ${escape6(names(e))}${e.public ? "" : " · 未公开"}${e.status === "ongoing" ? " · 仍在发展" : e.result ? ` · ${resultNames[e.result]}` : ""}</span><h3>${escape6(e.headline || e.title)}</h3><p>${escape6(e.description)}</p>${e.current ? `<p class="event-current"><b>现况</b> ${escape6(e.current)}</p>` : ""}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape6(st.text)}${st.when ? ` <small>${escape6(st.when)}</small>` : ""}</li>`).join("")}</ul>` : ""}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${t.at.toFixed(1)}</b> ${escape6(t.text)}</li>`).join("")}</ol>` : ""}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape6(newsEffects(state, e))}</small>` : ""}<small>${escape6(e.evidence)}</small></article>`
+        (e) => `<article class="event-card" data-event-id="${escape6(e.id)}"><span class="tag">${storyTime(e.at, true)} · ${newsKicker(e)} · ${escape6(names(e))}${e.public ? "" : " · 未公开"}${e.status === "ongoing" ? " · 仍在发展" : e.result ? ` · ${resultNames[e.result]}` : ""}</span><h3>${escape6(e.headline || e.title)}</h3><p>${escape6(e.description)}</p>${e.current ? `<p class="event-current"><b>现况</b> ${escape6(e.current)}</p>` : ""}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape6(st.text)}${st.when ? ` <small>${escape6(st.when)}</small>` : ""}</li>`).join("")}</ul>` : ""}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${storyTime(t.at)}</b> ${escape6(t.text)}</li>`).join("")}</ol>` : ""}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape6(newsEffects(state, e))}</small>` : ""}<small>${escape6(e.evidence)}</small></article>`
       ).join("");
       const body = `${all2.length ? toolbar : ""}${cards || `<p class="muted">${all2.length ? "没有符合筛选的事件。" : "目前没有事件。局势更新会记录各国发生的事，包括未公开的。"}</p>`}`;
       if (modal === "events") {
