@@ -3500,40 +3500,6 @@ details.detail-section.fold > summary::before {
 }
 
 /* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */
-.period-strip {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 18px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
-  flex-shrink: 0;
-}
-.period-copy {
-  flex: 1;
-  min-width: 0;
-}
-.period-copy strong {
-  display: block;
-  color: var(--gold);
-  font-size: 13px;
-}
-.period-copy small {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.period-toggle {
-  white-space: nowrap;
-  font-size: 12px;
-}
-.period-strip button {
-  font-size: 12px;
-  white-space: nowrap;
-}
 .period-anchor-note {
   display: flex;
   flex-direction: column;
@@ -3546,12 +3512,6 @@ details.detail-section.fold > summary::before {
 }
 .period-anchor-note strong {
   color: var(--blue);
-}
-.event-done-note {
-  border-left-color: var(--gold);
-}
-.event-done-note strong {
-  color: var(--gold);
 }
 .event-card.flash {
   border-color: var(--gold);
@@ -3592,19 +3552,206 @@ details.detail-section.fold > summary::before {
 .period-history p {
   line-height: 1.95;
 }
+
+/* ---------- v0.15.0 · the period joins the nation bar; one tool cluster; drawer status ---------- */
+.period-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 3px;
+  font-size: 12.5px;
+}
+.period-line strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+.period-line .period-shape {
+  margin-left: 0;
+}
+.period-line .switch-label {
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.period-history-btn {
+  font-size: 12px;
+  color: var(--muted);
+}
+.nation-copy p.period-note {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tag-day {
+  display: none;
+}
+@media (min-width: 761px) {
+  .nation-bar {
+    padding: 9px 18px;
+  }
+  .nation-copy h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 21px;
+  }
+  .nation-copy h2 .control-tag {
+    display: inline;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .routes {
+    width: 244px;
+    bottom: auto;
+  }
+}
 @media (max-width: 760px) {
-  .period-strip {
-    gap: 8px;
-    padding: 8px 12px;
+  .nation-id {
+    grid-column: 1 / -1;
+  }
+  .gauges {
+    justify-self: start;
+  }
+  .tag-day {
+    display: inline;
+  }
+  .period-line {
+    font-size: 12px;
+  }
+  .stage-tools {
+    left: 8px;
+    right: 8px;
     flex-wrap: wrap;
+    justify-content: flex-end;
   }
-  .period-copy {
-    flex-basis: 100%;
+  .stage-tools [data-action='overview'] {
+    display: none;
   }
-  .period-copy small {
-    white-space: normal;
+  .nation-copy p.period-note {
+    display: none;
   }
-  .period-strip button {
-    margin-left: auto;
+}
+.stage-tools {
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(13, 19, 16, 0.82);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+.stage-tools > button,
+.stage-tools .zoom-controls,
+.stage-tools .legend-pop > summary {
+  height: 32px;
+  box-shadow: none;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.minimap {
+  bottom: 66px;
+}
+.legend-list {
+  bottom: 46px;
+}
+/* Readable small type on the tree. */
+.node-meta {
+  font-size: 11px;
+  color: #c3c9b9;
+  border-color: rgba(220, 194, 124, 0.45);
+}
+.node.locked .node-name,
+.node.unknown .node-name {
+  color: #b9bfae;
+}
+/* Drawer: a completed focus leads with how and when it was completed. */
+.drawer-status {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(238, 212, 141, 0.35);
+  background: linear-gradient(180deg, rgba(76, 64, 30, 0.35), rgba(40, 34, 18, 0.18));
+}
+.status-medal {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #2c240f;
+  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);
+}
+.drawer-status strong {
+  display: block;
+  color: #fff2c8;
+  font-size: 14px;
+}
+.drawer-status small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.drawer-status .done-cause {
+  margin: 6px 0;
+  font-size: 12.5px;
+}
+.drawer-status.bypassed {
+  border-color: rgba(143, 176, 214, 0.35);
+  background: rgba(143, 176, 214, 0.06);
+}
+.drawer-status.bypassed .status-medal {
+  color: var(--blue);
+  background: #1f2832;
+  border: 1px solid var(--blue);
+}
+.chip.static {
+  cursor: default;
+}
+.detail-section.gained {
+  border-top: 0;
+  padding-top: 0;
+}
+.blockers-title {
+  font-size: 12px;
+  color: var(--amber);
+}
+/* Motion; turned off with the system's reduced-motion setting (see above). */
+.tree.entering {
+  animation: tree-in 0.28s ease-out;
+}
+@keyframes tree-in {
+  from {
+    opacity: 0;
+    transform-origin: top center;
+  }
+}
+.node.just-done .node-medal {
+  animation: medal-shine 1.4s ease-out 0.15s;
+}
+@keyframes medal-shine {
+  0% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 5px rgba(238, 212, 141, 0.5);
+  }
+  35% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 7px #f6e2a6,
+      0 0 36px rgba(246, 226, 166, 0.85);
   }
 }

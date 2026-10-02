@@ -601,14 +601,14 @@ test('任务预设保存、套用、汇出与汇入，不含 API 路由', () => 
   assert.throws(() => saveTaskPreset(other, '  '), /名称/);
   assert.throws(
     () => importTaskPresets(other, { name: '世界后台引擎', tasks: [{ promptGroups: [] }] }),
-    /工作流助手的预设档/,
+    /工作流助手的预设文件/,
   );
   assert.throws(
     () =>
       importTaskPresets(other, { kind: 'national-focus-task-presets', version: 1, presets: [{ name: 'x' }] }),
-    /任务预设档内容有误：presets\.0\.jobs/,
+    /任务预设文件内容有误：presets\.0\.jobs/,
   );
-  assert.throws(() => importTaskPresets(other, { foo: 1 }), /这不是国策任务预设档/);
+  assert.throws(() => importTaskPresets(other, { foo: 1 }), /这不是国策任务预设文件/);
   other = deleteTaskPreset(other, '外交向');
   assert.equal(other.activeTaskPreset, '');
   assert.throws(() => exportTaskPresets(other), /没有/);

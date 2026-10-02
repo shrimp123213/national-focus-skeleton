@@ -2,7 +2,7 @@
 
 最後更新：2026-10-01。第 1–12 節保留早期基線，後續章節記錄各次設計與實作；**目前進度以第 62 節的整合快照為入口**。
 
-目前實作版本：**v0.14.23-skeleton**（標籤 `v0.14.23-skeleton`，推送至 `main`）：國家分頁可捲動，見第 80 節；v0.14.22 事件完成國策見第 79 節；v0.14.21 結構籤見第 78 節；v0.14.20 勳章式國策節點見第 77 節；v0.14.19 直式卡片與短國策名見第 76 節；v0.14.18 國策樹置中排版見第 75 節；v0.14.17 主幹加側翼（試行）見第 74 節；v0.14.16 國策工期一至五週見第 73 節；v0.14.15 historical 修正見第 71 節；v0.14.14 一律輸出簡體與面板簡體字型見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
+目前實作版本：**v0.15.0-skeleton**（標籤 `v0.15.0-skeleton`，推送至 `main`）：介面改版第一階段，見第 81 節；v0.14.23 國家分頁可捲動見第 80 節；v0.14.22 事件完成國策見第 79 節；v0.14.21 結構籤見第 78 節；v0.14.20 勳章式國策節點見第 77 節；v0.14.19 直式卡片與短國策名見第 76 節；v0.14.18 國策樹置中排版見第 75 節；v0.14.17 主幹加側翼（試行）見第 74 節；v0.14.16 國策工期一至五週見第 73 節；v0.14.15 historical 修正見第 71 節；v0.14.14 一律輸出簡體與面板簡體字型見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
 
 目前專案：`F:\命一串\national-focus-skeleton`；舊版 `F:\命一串\national-focus`（v0.11.1）僅供歷史參考，本輪未修改。
 
@@ -2242,4 +2242,14 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 
 - `ui.ts`：分頁包在 `.nation-scroller`，前後各一個 `[data-tabs-scroll]` 箭頭；`bindNationTabs(scrollLeft)` 在每次 render 後還原捲動位置、新選國家（`shownTab`）時把作用中分頁捲入可見範圍（留 32px）、滾輪縱向量轉為橫捲（deltaMode=1 以 40px 計，無溢出時不攔截）、箭頭以 0.7 個可見寬度平滑捲動；`can-left`／`can-right` 由 scroll 事件與 `tabsObserver`（ResizeObserver，每次 render 重新 observe，卸載時 disconnect）更新。
 - `style.css`：`.nation-scroll` 絕對定位於兩側、漸層底，只在 `can-left`／`can-right` 時顯示；手機寬度隱藏整個 `.nation-scroller`（仍用下拉選單）。
+
+## 81. v0.15.0：介面改版第一階段（2026-10-02）
+
+使用者要求以 Awwwards 標準評分（主畫面 7.4、任務與紀錄 6.2、設定 5.7，整體約 6.6），目標 7.5。先做改前／改後樣品 `docs/介面改版-樣品.html`（`docs/ui-revamp/*.jpg`；改後是在真實面板上套用提案後截圖），使用者確認後分三階段：主畫面與詳情（本版）→ 設定 → 任務與請求紀錄。樣品討論中的決定：API 預設保留自己的「保存此预设」且不關窗，改為左側清單＋右側編輯卡、清單獨立捲動、底部「新增預設」固定（第二階段）；不做自訂任務與任務排序（國策檔案的四項任務是有固定輸出格式的型別化任務，自訂需求交給工作流助手）；用語改為大陸簡中。上次評分的兩處更正：請求紀錄標題重複是測試資料造成；手機截斷是無頭瀏覽器最小寬度 492px 的假象。
+
+- `period-ui.ts`：`periodBar` 改為 `periodLine`（`.period-line` 與 `.period-note`），併入 `.nation-copy`；`ui.ts` 的 jobsOnly 更新改找 `.period-note`。國名 `h2` 內含 `.control-tag`（桌面 inline、手機 block，`.tag-day` 只在手機顯示故事日），國家簡介改為 `h2` 的 title。
+- `ui.ts`：`insets(canvas)` 由 `viewCenterX` 抽出；`overview()` 以節點座標算所有分支寬度，`scale = min(0.85, free / span)`，小於 0.6 時 `zoom = 0.8` 並 `locateNode(current || nodeId)`；初次開啟某國或新一期改呼叫 `overview()`，並給 `.tree` 加 `entering`。工具組新增 `data-action="overview"`。`doneStatus(country, node, progress)` 取代 `eventDoneNote`，已完成時取代 `drawer-action`；效果區塊在完成時改名「已取得」並移到摘要下。條件未滿時 `drawer-action.blocked` 先列「尚未满足」。`seenStates` 記錄每國上次繪製的節點狀態，新完成的節點加 `just-done`。`taskSummary` 對執行中的任務附「已执行 m:ss」（`hud.ts` 匯出 `elapsed`），`clock` 每秒在面板開啟且有執行中任務時更新 `.status-jobs` 與視窗提示，卸載時清除。
+- `style.css`：移除 `.period-strip` 系列；新增 v0.15.0 區塊（period-line、桌面 h2 flex、路線面板 244px 貼合內容、`.stage-tools` 成組、小地圖 bottom 66px、`.node-meta` 11px、條件未滿名稱 #b9bfae、`.drawer-status` 三種樣式、`tree-in` 與 `medal-shine` 動畫；手機隱藏全覽與本期目的、`.nation-id` 佔滿一列、工具組可換行）。減少動態時沿用既有全域關閉動畫。
+- 用語：`ui.ts`、`api-panel.ts`、`task-panel.ts`、`source-panel.ts`、`hud.ts`、`period-ui.ts`、`newsbar.ts`、`api-config.ts`、`task-presets.ts`、`tree-io.ts`、`tavern.ts`、`platform.ts`、`workflow.ts`、`news-card/card.html` 的介面文字改為大陸用語（約 230 處）；保護「国策档案」「目前连线」「使用者设定」「设定依据」「初始设定」；`prompts.ts`、`sources.ts`、模型資料不動。
+- 第二階段（設定）預定：API 預設清單＋編輯卡、設定只由底部保存並顯示未保存數、說明縮成一行可展開、任務分頁左右兩欄、進階參數收起、開視窗焦點不落在 ×。第三階段（任務與請求紀錄）：任務卡片、失敗訊息分層、請求紀錄標身分並格式化 JSON 與複製。
 

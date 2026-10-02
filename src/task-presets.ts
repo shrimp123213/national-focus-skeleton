@@ -102,7 +102,7 @@ const ExportSchema = z.object({
 export function exportTaskPresets(config: Config, name?: string): string {
   const presets = name ? config.taskPresets.filter((preset) => preset.name === name) : config.taskPresets;
   if (!presets.length) {
-    throw new Error(name ? `找不到任务预设「${name}」` : '目前没有可汇出的任务预设');
+    throw new Error(name ? `找不到任务预设「${name}」` : '目前没有可导出的任务预设');
   }
   return JSON.stringify({ kind: 'national-focus-task-presets', version: 1, presets }, null, 2);
 }
@@ -119,14 +119,16 @@ function explainImport(raw: unknown): never {
   const value = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   if (Array.isArray(value.tasks) || Array.isArray(value.promptGroups)) {
     throw new Error(
-      '这是工作流助手的预设档，格式与国策任务预设不同，不能直接汇入。请汇入由本扩展汇出、kind 为 national-focus-task-presets 的档案（例如「织界国策-任务预设.json」）。',
+      '这是工作流助手的预设文件，格式与国策任务预设不同，不能直接导入。请导入由本扩展导出、kind 为 national-focus-task-presets 的文件（例如「织界国策-任务预设.json」）。',
     );
   }
   if (value.kind === 'national-focus-task-presets') {
     const result = ExportSchema.safeParse(raw);
-    throw new Error(`任务预设档内容有误：${result.success ? '未知错误' : describeIssues(result.error)}`);
+    throw new Error(`任务预设文件内容有误：${result.success ? '未知错误' : describeIssues(result.error)}`);
   }
-  throw new Error('这不是国策任务预设档。请汇入由本扩展汇出、kind 为 national-focus-task-presets 的 JSON。');
+  throw new Error(
+    '这不是国策任务预设文件。请导入由本扩展导出、kind 为 national-focus-task-presets 的 JSON。',
+  );
 }
 
 /** Accept an export file, a single preset or a list; merge by name (imported wins). */

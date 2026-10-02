@@ -57,7 +57,7 @@ export function validateApi(input: unknown): ApiPreset {
       throw new Error('API URL 必须使用 http 或 https');
     }
     if (!api.model) {
-      throw new Error('自订 API 请填写模型名称，或载入模型后选择');
+      throw new Error('自定义 API 请填写模型名称，或加载模型后选择');
     }
   }
   yamlObject(api.bodyParams, '附加主体参数');
@@ -101,7 +101,7 @@ export function saveApiPreset(
   }
   const index = next.apis.findIndex((item) => item.name === original);
   if (original !== null && index < 0) {
-    throw new Error('原 API 预设已不存在，请重新开启设定');
+    throw new Error('原 API 预设已不存在，请重新开启设置');
   }
   if (index < 0) {
     next.apis.push(api);

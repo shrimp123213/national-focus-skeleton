@@ -25,7 +25,8 @@ export function periodNote(country: Country, jobs: JobStatus[]): string {
       ? country.agenda || '本期目的完成或局势不再适配时自动换期'
       : '保留当前国策树；事件仍继续更新';
 }
-export function periodBar(country: Country, jobs: JobStatus[]): string {
+/** The period under the country name (v0.15.0: the separate period strip joined the nation bar). */
+export function periodLine(country: Country, jobs: JobStatus[]): string {
   const note = periodNote(country, jobs);
   // Structure lots of this period (v0.14.21); trees made before have none.
   const lots = country.shape
@@ -36,7 +37,7 @@ export function periodBar(country: Country, jobs: JobStatus[]): string {
   const shape = country.shape
     ? `<span class="period-shape" title="${escape(lots.join('\n'))}">${escape(country.shape.type.name)} · ${escape(country.shape.naming.name)}</span>`
     : '';
-  return `<section class="period-strip" aria-label="当前期别"><div class="period-copy"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}${shape}</strong><small role="status" title="${escape(note)}">${escape(note)}</small></div>${periodControl(country)}<button data-action="period-history">往期摘要${country.period.history.length ? ` · ${country.period.history.length}` : ''}</button></section>`;
+  return `<div class="period-line" aria-label="当前期别"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}</strong>${shape}${periodControl(country)}<button class="linkish period-history-btn" data-action="period-history">往期摘要${country.period.history.length ? ` · ${country.period.history.length}` : ''}</button></div><p class="period-note" role="status" title="${escape(note)}">${escape(note)}</p>`;
 }
 export function anchorBadge(country: Country, node: FocusNode): string {
   return country.period.anchor === node.id ? '<span class="period-anchor-badge">前期承接</span>' : '';

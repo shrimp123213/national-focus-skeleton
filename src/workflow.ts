@@ -431,7 +431,7 @@ export class FocusController {
               },
               ...(structure ? { structure: structureData(structure) } : {}),
               instructions:
-                '生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程式原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。',
+                '生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程序原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。',
             },
             PeriodReplySchema,
             (value) => {
@@ -643,7 +643,7 @@ export class FocusController {
     const pool = this.pool(kind, chain);
     // Start on the first route with a free slot, then fail over through the rest of the chain.
     status.state = 'queued';
-    status.message = '等待 API 连线空位';
+    status.message = '等待 API 连接空位';
     this.notify();
     const first = await pool.acquire(chain, signal);
     status.state = 'running';
@@ -672,7 +672,7 @@ export class FocusController {
             status.inputCharacters = messageCharacters(messages);
             assertInputSize(messages, this.config.sources.maxInputCharacters);
             const reply = await new Promise<Awaited<ReturnType<Platform['generate']>>>((resolve, reject) => {
-              const stopWaiting = () => reject(new Error('API 任务已取消或逾时'));
+              const stopWaiting = () => reject(new Error('API 任务已取消或超时'));
               request.signal.addEventListener('abort', stopWaiting, { once: true });
               this.platform
                 .generate(messages, api, api.apiKey, request.signal)
@@ -732,7 +732,7 @@ export class FocusController {
                       2000,
                     )
                   : error instanceof SyntaxError
-                    ? `回应不是完整的 JSON（${error.message}），可能超出输出长度而被截断；请精简文字并输出完整物件`
+                    ? `回应不是完整的 JSON（${error.message}），可能超出输出长度而被截断；请精简文字并输出完整对象`
                     : error instanceof Error
                       ? error.message.slice(0, 1000)
                       : '';

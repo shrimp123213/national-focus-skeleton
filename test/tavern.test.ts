@@ -814,7 +814,7 @@ test('无角色主世界书时不使用聊天、附加或全域书；设定主�
     await settle();
     assert.equal(creations, 0);
     assert.match(state.injected, /各国动向/);
-    assert.match(state.warnings[0], /当前角色尚未设定主世界书/);
+    assert.match(state.warnings[0], /当前角色尚未设置主世界书/);
     assert.deepEqual(books.get('chat-only'), [unrelated]);
     assert.deepEqual(books.get('additional-only'), [unrelated]);
     books.set('primary-a', [unrelated]);

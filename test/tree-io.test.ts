@@ -120,8 +120,8 @@ test('汇入错误会指出国策与栏位；其他格式的档案给出明确�
       }),
     /只有一条路线/,
   );
-  assert.throws(() => parseTreeFile({ name: '世界后台引擎', tasks: [] }), /工作流助手的预设档/);
-  assert.throws(() => parseTreeFile({ kind: 'national-focus-task-presets' }), /任务预设档/);
+  assert.throws(() => parseTreeFile({ name: '世界后台引擎', tasks: [] }), /工作流助手的预设文件/);
+  assert.throws(() => parseTreeFile({ kind: 'national-focus-task-presets' }), /任务预设文件/);
 });
 
 test('重要国策缺少新闻时不能汇入；范本含一个重要国策', () => {

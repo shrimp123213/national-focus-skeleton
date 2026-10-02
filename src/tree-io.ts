@@ -81,7 +81,7 @@ export function countryTree(country: Country): Record<string, unknown> {
 export function exportTrees(state: State, ids?: string[]): string {
   const countries = Object.values(state.countries).filter((country) => !ids || ids.includes(country.id));
   if (!countries.length) {
-    throw new Error('没有可汇出的国策树');
+    throw new Error('没有可导出的国策树');
   }
   return JSON.stringify(
     {
@@ -136,7 +136,7 @@ function issuesText(error: z.ZodError, nodes: unknown[] = []): string {
 /** Fill the fields a hand-written tree may leave out; required story text stays required. */
 function withDefaults(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new Error('国策树必须是 JSON 物件');
+    throw new Error('国策树必须是 JSON 对象');
   }
   const repaired = repairReply(raw) as Record<string, unknown>;
   const nodes = Array.isArray(repaired.nodes) ? repaired.nodes : [];
@@ -144,7 +144,7 @@ function withDefaults(raw: unknown): Record<string, unknown> {
     description: repaired.name,
     stability: 50,
     warSupport: 50,
-    evidence: '汇入的国策树',
+    evidence: '导入的国策树',
     analysis: '',
     branches: [],
     capabilities: [],
@@ -156,8 +156,8 @@ function withDefaults(raw: unknown): Record<string, unknown> {
       delete node.y;
       return {
         icon: 'crown',
-        reason: '汇入的国策',
-        durationReason: '依汇入设定',
+        reason: '导入的国策',
+        durationReason: '依导入设置',
         ...node,
       };
     }),
@@ -222,10 +222,10 @@ export function parseTree(raw: unknown): Tree {
 /** Accept a tree file, an export entry, a bare tree or a list of trees. */
 export function parseTreeFile(raw: unknown): TreeImport[] {
   if (Array.isArray((raw as { tasks?: unknown })?.tasks)) {
-    throw new Error('这是工作流助手的预设档，不是国策树档案。');
+    throw new Error('这是工作流助手的预设文件，不是国策树文件。');
   }
   if ((raw as { kind?: unknown })?.kind === 'national-focus-task-presets') {
-    throw new Error('这是任务预设档，请到「设定 → 任务 → 任务预设」汇入。');
+    throw new Error('这是任务预设文件，请到「设置 → 任务 → 任务预设」导入。');
   }
   const list: unknown[] =
     (raw as { kind?: unknown })?.kind === TREE_FILE_KIND
@@ -234,7 +234,7 @@ export function parseTreeFile(raw: unknown): TreeImport[] {
         ? raw
         : [raw];
   if (!list.length) {
-    throw new Error('档案中没有国策树');
+    throw new Error('文件中没有国策树');
   }
   const entries = list.map((item) => {
     const entry = item as { tree?: unknown; status?: unknown; events?: unknown };
@@ -252,7 +252,7 @@ export function parseTreeFile(raw: unknown): TreeImport[] {
   const ids = entries.map((entry) => entry.tree.id);
   const duplicate = ids.find((id, index) => ids.indexOf(id) !== index);
   if (duplicate) {
-    throw new Error(`档案中有两棵 id 相同的国策树：${duplicate}`);
+    throw new Error(`文件中有两棵 id 相同的国策树：${duplicate}`);
   }
   return entries;
 }
@@ -271,7 +271,7 @@ export function importTrees(
     const id = entry.tree.id;
     if (state.countries[id]) {
       if (!options.replace) {
-        throw new Error(`国家 ${id}（${state.countries[id].name}）已存在；勾选「取代同 id 的国家」才能汇入`);
+        throw new Error(`国家 ${id}（${state.countries[id].name}）已存在；勾选「取代同 id 的国家」才能导入`);
       }
       state = removeCountry(state, id);
     }
@@ -339,7 +339,7 @@ export function treeTemplate(): string {
             description: '示范国策树的所有栏位；复制后改写即可。',
             stability: 55,
             warSupport: 40,
-            evidence: '玩家自订',
+            evidence: '玩家自定义',
             analysis: '核心矛盾：王权与地方贵族。',
             branches: [
               {

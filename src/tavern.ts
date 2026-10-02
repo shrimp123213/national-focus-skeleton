@@ -126,12 +126,12 @@ export function explainOpaqueError(detail: string): string {
     const code = /Error code (\d{3})/i.exec(detail)?.[1] ?? /\b(52[0-9])\b/.exec(detail)?.[1];
     const title = /<title>([^<]*)<\/title>/i.exec(detail)?.[1]?.trim();
     return code === '524'
-      ? `反向代理逾时（Cloudflare 524：约 100 秒内没有开始回应）。请在 API 预设开启「流式传输」（代理若有假流式也可开启），或调低推理强度、每批填写国策数，或改用没有此限制的连线${title ? `。代理页面：${title}` : ''}`
-      : `反向代理回传错误页（${code ? `错误码 ${code}` : '无错误码'}${title ? `：${title}` : ''}）。这通常是代理或上游服务的问题，请稍后重试或改用其他连线`;
+      ? `反向代理超时（Cloudflare 524：约 100 秒内没有开始回应）。请在 API 预设开启「流式传输」（代理若有假流式也可开启），或调低推理强度、每批填写国策数，或改用没有此限制的连接${title ? `。代理页面：${title}` : ''}`
+      : `反向代理返回错误页（${code ? `错误码 ${code}` : '无错误码'}${title ? `：${title}` : ''}）。这通常是代理或上游服务的问题，请稍后重试或改用其他连接`;
   }
   const bare = detail.replace(/^(Error:\s*)+/i, '').trim();
   if (!bare || /^(<none>|none|null|undefined|true|Response not OK|Unknown error)$/i.test(bare)) {
-    return `${detail}（API 或反向代理没有提供原因。常见原因：回应被供应商的安全过滤挡下、思考用完输出上限而没有正文、代理逾时或上游断线。请开启执行纪录查看请求，或改用其他连线／降低输出上限后重试）`;
+    return `${detail}（API 或反向代理没有提供原因。常见原因：回应被供应商的安全过滤挡下、思考用完输出上限而没有正文、代理超时或上游断线。请开启执行记录查看请求，或改用其他连接／降低输出上限后重试）`;
   }
   return detail;
 }
@@ -146,7 +146,7 @@ export class TavernPlatform implements Platform {
       throw new Error('请先填写端点（基础 URL），也可以直接手动输入模型名称');
     }
     if (!this.api.getModelList) {
-      throw new Error('目前酒馆助手未提供模型载入功能，请更新助手或手动输入模型名称');
+      throw new Error('目前酒馆助手未提供模型加载功能，请更新助手或手动输入模型名称');
     }
     try {
       const models = await this.api.getModelList({ apiurl: api.url.trim(), key: api.apiKey || undefined });
@@ -462,13 +462,13 @@ export class TavernPlatform implements Platform {
     signal.throwIfAborted();
     const mvu = this.api.Mvu;
     if (!mvu) {
-      throw new Error('尚未侦测到 MVU，请先启用 MVU 变数框架');
+      throw new Error('尚未检测到 MVU，请先启用 MVU 变数框架');
     }
     if (this.generating || this.mvuBusy || mvu.isDuringExtraAnalysis()) {
       throw new Error('正文或一般 MVU 更新尚未完成，请稍后重试');
     }
     if (this.pending && !this.readyIdentity) {
-      throw new Error('等待本楼正文完成及 MVU 写入事件；若已等待过久，请检查 MVU 工作状态后重新载入脚本');
+      throw new Error('等待本楼正文完成及 MVU 写入事件；若已等待过久，请检查 MVU 工作状态后重新加载脚本');
     }
     const message = this.current();
     if (!message || message.role !== 'assistant') {
@@ -488,7 +488,7 @@ export class TavernPlatform implements Platform {
       const found =
         rawTime === undefined ? '没有这个变量' : `读到「${String(JSON.stringify(rawTime)).slice(0, 60)}」`;
       throw new Error(
-        `读不到故事时间（stat_data.${config.sources.timePath}：${found}）。国策进度以故事日计算，所有国策任务暂停；请到「设定 › 世界书与上下文 › 故事时间路径」修正。${error instanceof Error ? error.message : ''}`,
+        `读不到故事时间（stat_data.${config.sources.timePath}：${found}）。国策进度以故事日计算，所有国策任务暂停；请到「设置 › 世界书与上下文 › 故事时间路径」修正。${error instanceof Error ? error.message : ''}`,
       );
     }
     const saved = data.国策 !== undefined ? data.国策 : data.stat_data.国策;
@@ -553,7 +553,7 @@ export class TavernPlatform implements Platform {
     snapshot.signal?.throwIfAborted();
     const mvu = this.api.Mvu;
     if (!mvu) {
-      throw new Error('尚未侦测到 MVU');
+      throw new Error('尚未检测到 MVU');
     }
     const message = this.api.getChatMessages(snapshot.messageId)[0];
     if (!message || message.role !== 'assistant') {
@@ -716,7 +716,7 @@ export class TavernPlatform implements Platform {
       }
     }
     if (hasAdvancedApi(api)) {
-      throw new Error('进阶 API 参数需要酒馆 ChatCompletionService 及明确 URL；未送出省略设定的请求');
+      throw new Error('进阶 API 参数需要酒馆 ChatCompletionService 及明确 URL；未送出省略设置的请求');
     }
     const id = requestId('national_focus');
     const stop = () => this.api.stopGenerationById(id);
@@ -907,7 +907,7 @@ export class TavernPlatform implements Platform {
         const wanted = view ? bookEntries(view, this.config?.countryEntries !== 'keyword') : [];
         const name = api.getCharWorldbookNames('current').primary?.trim() || null;
         if (!name && wanted.length) {
-          throw new Error('当前角色尚未设定主世界书。请在酒馆的角色设定中绑定主世界书；不会自动建立新书。');
+          throw new Error('当前角色尚未设置主世界书。请在酒馆的角色设置中绑定主世界书；不会自动建立新书。');
         }
         const previous = this.writtenBook?.chat === source.chat ? this.writtenBook.name : null;
         if (previous && previous !== name) {

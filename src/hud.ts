@@ -42,7 +42,8 @@ export type HudOptions = {
   onCollapse: (collapsed: boolean) => void;
 };
 
-function elapsed(ms: number): string {
+/** Minutes and seconds, e.g. 1:05; shared with the panel's status line. */
+export function elapsed(ms: number): string {
   const seconds = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
@@ -59,7 +60,7 @@ export function mountHud(options: HudOptions) {
   hud.hidden = true;
   hud.setAttribute('role', 'status');
   hud.setAttribute('aria-label', '国策任务进度');
-  hud.innerHTML = `<header class="hud-head" title="拖曳可移动悬浮球与本视窗"><i class="status-dot"></i><strong>国策任务</strong><span class="hud-count"></span><span class="hud-actions"><button data-hud="stop" class="danger" title="取消全部执行中与排队的任务">停止</button><button data-hud="log" title="开启任务纪录">纪录</button><button data-hud="collapse" class="icon" aria-label="收合"></button><button data-hud="dismiss" class="icon" aria-label="关闭已完成项目" title="关闭已完成项目">×</button></span></header><div class="hud-bar"><i></i></div><ul class="hud-list"></ul>`;
+  hud.innerHTML = `<header class="hud-head" title="拖动可移动悬浮球与本窗口"><i class="status-dot"></i><strong>国策任务</strong><span class="hud-count"></span><span class="hud-actions"><button data-hud="stop" class="danger" title="取消全部执行中与排队的任务">停止</button><button data-hud="log" title="开启任务记录">记录</button><button data-hud="collapse" class="icon" aria-label="收合"></button><button data-hud="dismiss" class="icon" aria-label="关闭已完成项目" title="关闭已完成项目">×</button></span></header><div class="hud-bar"><i></i></div><ul class="hud-list"></ul>`;
   root.append(hud);
   const head = hud.querySelector<HTMLElement>('.hud-head')!;
   const count = hud.querySelector<HTMLElement>('.hud-count')!;

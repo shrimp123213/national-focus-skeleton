@@ -142,7 +142,7 @@ export function storyDay(raw: unknown): number {
     }
   }
   throw new Error(
-    '无法辨识故事时间。支援「复兴纪元490年-10月-15日-星期三-14:25」、YYYY-MM-DD HH:mm、YYYY年M月D日或非负数值日序；请确认设定的来源路径与日期有效，不会以现实时间代算。',
+    '无法辨识故事时间。支持「复兴纪元490年-10月-15日-星期三-14:25」、YYYY-MM-DD HH:mm、YYYY年M月D日或非负数值日序；请确认设置的来源路径与日期有效，不会以现实时间代算。',
   );
 }
 export function stamp(value: unknown): string {
