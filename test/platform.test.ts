@@ -7,6 +7,10 @@ test('当前时间原文保留纪元、星期日、分隔符和零点，旧状�
   const time = '復興紀元490年-10月-15日-星期日-00:00';
   const day = storyDay('490-10-14 14:25');
   assert.equal(stateTime({ day, time }), time);
+  assert.equal(stateTime({ day, time }, false), '復興紀元490年10月15日');
+  assert.equal(stateTime({ day, time: '2026/10/02 14:25' }, false), '2026年10月02日');
+  assert.equal(stateTime({ day, time: '2026-10-02T14:25' }, false), '2026年10月02日');
+  assert.equal(stateTime({ day }, false), '490年10月14日');
   assert.equal(stateTime({ day }), '490年10月14日 14:25');
   assert.equal(stateTime({ day: 100 }), '故事日 100');
 });

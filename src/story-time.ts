@@ -20,5 +20,13 @@ export function storyTime(day: number, withClock = false): string {
 
 /** Current source text for display; `day` remains the last processed time used by game rules. */
 export function stateTime(state: { day: number; time?: string }, withClock = true): string {
-  return state.time || storyTime(state.day, withClock);
+  if (!state.time) {
+    return storyTime(state.day, withClock);
+  }
+  if (withClock) {
+    return state.time;
+  }
+  // Keep the source's era, but show only year/month/day without hyphens in the UI.
+  const date = state.time.match(/^.*?\d日|^\d{1,6}[-/]\d{1,2}[-/]\d{1,2}/)?.[0] ?? state.time;
+  return date.replace(/^(\d{1,6})[-/](\d{1,2})[-/](\d{1,2})$/, '$1年$2月$3日').replaceAll('-', '');
 }
