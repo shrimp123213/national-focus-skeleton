@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>國策檔案 · 快訊卡片改版樣品（改前／改後）</title>
+<style>
+:root {
+  --ink: #0d1310; --panel: #19221d; --raised: #212b25; --gold: #dcc27c; --gold-deep: #a88d4c;
+  --text: #ece6d4; --muted: #a8b0a1; --faint: #7d867a; --green: #72c492; --red: #d9705f;
+  --line: rgba(217, 191, 120, 0.14); --line-strong: rgba(217, 191, 120, 0.32);
+  --sans: 'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', 'Microsoft YaHei', system-ui, sans-serif;
+  --serif: 'Noto Serif TC', 'Source Han Serif TC', 'Noto Serif SC', Georgia, serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ink); color: var(--text); font: 15px/1.75 var(--sans); }
+header.top { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 24px;
+  background: rgba(13, 19, 16, 0.95); border-bottom: 1px solid var(--line-strong); backdrop-filter: blur(6px); }
+header.top h1 { margin: 0; font: 600 18px/1.3 var(--serif); color: var(--gold); letter-spacing: .06em; }
+nav.screens { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.screens a { padding: 4px 11px; border-radius: 8px; color: var(--muted); text-decoration: none; border: 1px solid transparent; font-size: 14px; }
+nav.screens a.on { color: var(--text); background: var(--raised); border-color: var(--line-strong); }
+main { max-width: 1520px; margin: 0 auto; padding: 22px 24px 60px; }
+.intro { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; margin-bottom: 26px; }
+.card { padding: 16px 20px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.card h2 { margin: 0 0 8px; font: 600 16px var(--serif); color: var(--gold); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+th { color: var(--muted); font-weight: 400; }
+td.num { font-variant-numeric: tabular-nums; }
+.up { color: var(--green); }
+ul.tight { margin: 4px 0 0; padding-left: 20px; }
+section.screen { display: none; }
+section.screen.on { display: block; }
+.screen-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-bottom: 12px; }
+.screen-head h2 { margin: 0; font: 600 20px var(--serif); }
+.toggle { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line-strong); }
+.toggle button { padding: 5px 14px; border: 0; border-radius: 7px; background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
+.toggle button.on { background: var(--gold); color: #1e1a0c; font-weight: 600; }
+.hint { font-size: 13px; color: var(--faint); }
+.view { display: grid; gap: 14px; }
+.view.side { grid-template-columns: 1fr 1fr; }
+figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line-strong); background: #000; }
+figure.mobile img { width: auto; max-width: 100%; max-height: 82vh; margin: 0 auto; }
+figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); text-align: center; }
+.view:not(.side) figure.hide { display: none; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-top: 16px; }
+.note { padding: 12px 16px; border-radius: 10px; background: var(--panel); border-left: 3px solid var(--gold); }
+.note b { color: var(--gold); }
+.note.fix { border-left-color: var(--green); }
+.note.warn { border-left-color: var(--red); }
+.score { font-size: 14px; color: var(--muted); }
+.score b { color: var(--text); }
+kbd { padding: 0 5px; border-radius: 4px; border: 1px solid var(--line-strong); font-size: 12px; }
+@media (max-width: 900px) { .intro { grid-template-columns: 1fr; } .view.side { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>快訊卡片改版樣品</h1>
+  <nav class="screens" id="tabs"></nav>
+  <span class="toggle" id="mode"><button data-mode="before">改前</button><button data-mode="after" class="on">改後</button><button data-mode="side">並排</button></span>
+  <span class="hint"><kbd>←</kbd><kbd>→</kbd> 切換畫面　<kbd>空白</kbd> 改前／改後</span>
+</header>
+<main>
+  <div class="intro" id="intro">
+    <div class="card">
+      <h2>這份樣品怎麼做的</h2>
+      <p>「改前」是目前的快訊卡片（v0.15.1）用示範資料實際渲染的截圖；「改後」是在同一張卡片上套用提案後截圖。示範資料：4 則事件（含 1 則未公開密報、2 則連載）與 4 欄本楼更新的新聞。</p>
+      <p>報名「阿斯塔利亚快讯」依你的決定維持不變（擴展目前只用於這張角色卡）。</p>
+    </div>
+    <div class="card">
+      <h2>預估分數（Awwwards 權重：設計 40％、易用 30％、創意 20％、內容 10％）</h2>
+      <table>
+        <tr><th>項目</th><th>目前</th><th>改後預估</th></tr>
+        <tr><td>設計</td><td class="num">8.5</td><td class="num up">8.7</td></tr>
+        <tr><td>易用性</td><td class="num">7.5</td><td class="num up">8.2</td></tr>
+        <tr><td>創意</td><td class="num">8.5</td><td class="num">8.5</td></tr>
+        <tr><td>內容</td><td class="num">7.0</td><td class="num up">7.6</td></tr>
+        <tr><td><b>加權</b></td><td class="num"><b>約 8.0</b></td><td class="num up"><b>約 8.4</b></td></tr>
+      </table>
+      <p class="hint">內容分沒有拉到 8 以上，是因為報名仍是固定字串；之後若要給其他角色卡使用，改成可設定可再加分。</p>
+    </div>
+  </div>
+  <div id="screens"></div>
+</main>
+<script>
+const screens = [
+  {
+    id: 'front', name: '頭版與本期要目', score: '',
+    notes: [
+      ['要目一項一行', '左側要目每項只留標題一行，太長以「…」截斷，國家與狀態移到滑鼠懸停的提示；各區標題後面加上則數（頭版 3、內部密報 1、連載追蹤 2）。要目高度約減少一半，按鈕不再被擠到最下面看不到。'],
+      ['本報各版縮成兩項', '要目不再逐欄列出新聞，改成「本楼更新 4 栏」與「旧闻 0 栏」兩項，點了跳到對應位置；逐欄名稱在懸停提示裡。'],
+      ['正文不變', '頭版、首字放大、兩欄、密報便條、連載與各版的版面都不動。'],
+    ],
+  },
+  {
+    id: 'serial', name: '連載與本報各版', score: '',
+    notes: [
+      ['「现况」不再重複「起因」', '右邊「北境秋收歉收」原本「起因」與「现况」是同一段話（事件剛建立、還沒寫現況時，現況會拿最新進展來補，而最新進展就是描述本身）。改後只在現況和起因不同時才顯示「现况」；左邊有寫現況的「海峡关税争端升级」照常顯示。'],
+      ['時間只寫一次', '「本期更新」的標題列寫一次「本楼更新于 复兴纪元490年10月15日 星期三 14:25」，各欄不再各自重複；旧闻或時間不同的欄位仍標出自己的更新時間。'],
+    ],
+  },
+  {
+    id: 'dark', name: '深色模式', score: '',
+    notes: [
+      ['密報便條和紙面分開', '便條改用較亮的深紙色、淡色邊框與較深的投影，迴紋針改成亮銀色，標題與內文提高對比；原本便條和紙面幾乎同色，糊在一起。'],
+      ['其他不變', '淺色模式的便條不動。'],
+    ],
+  },
+];
+const tabs = document.getElementById('tabs');
+const holder = document.getElementById('screens');
+for (const s of screens) {
+  tabs.insertAdjacentHTML('beforeend', `<a href="#${s.id}" data-id="${s.id}">${s.name}</a>`);
+  holder.insertAdjacentHTML('beforeend', `<section class="screen" id="s-${s.id}">
+    <div class="screen-head"><h2>${s.name}</h2>${s.score ? `<span class="score">分數 <b>${s.score}</b></span>` : ''}</div>
+    <div class="view">
+      <figure class="before ${s.mobile ? 'mobile' : ''}"><img src="news-card-revamp/before-${s.id}.jpg" alt="${s.name} 改前" loading="lazy"><figcaption>改前 · v0.15.1</figcaption></figure>
+      <figure class="after ${s.mobile ? 'mobile' : ''}"><img src="news-card-revamp/after-${s.id}.jpg" alt="${s.name} 改後" loading="lazy"><figcaption>改後 · 提案</figcaption></figure>
+    </div>
+    <div class="notes">${s.notes.map(([t, d], i) => `<div class="note ${t.startsWith('更正') ? 'warn' : ''}"><b>${i + 1}. ${t}</b><br>${d}</div>`).join('')}</div>
+  </section>`);
+}
+let mode = 'after';
+function apply() {
+  const id = (location.hash.slice(1) || 'front');
+  for (const a of tabs.children) a.classList.toggle('on', a.dataset.id === id);
+  for (const sec of holder.children) sec.classList.toggle('on', sec.id === `s-${id}`);
+  for (const b of document.querySelectorAll('#mode button')) b.classList.toggle('on', b.dataset.mode === mode);
+  for (const view of document.querySelectorAll('.view')) {
+    view.classList.toggle('side', mode === 'side');
+    view.querySelector('.before').classList.toggle('hide', mode === 'after');
+    view.querySelector('.after').classList.toggle('hide', mode === 'before');
+  }
+}
+document.getElementById('mode').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) { mode = b.dataset.mode; apply(); }
+});
+addEventListener('hashchange', apply);
+addEventListener('keydown', (e) => {
+  const ids = screens.map((s) => s.id);
+  const i = Math.max(0, ids.indexOf(location.hash.slice(1) || 'front'));
+  if (e.key === 'ArrowRight') location.hash = ids[(i + 1) % ids.length];
+  else if (e.key === 'ArrowLeft') location.hash = ids[(i - 1 + ids.length) % ids.length];
+  else if (e.key === ' ') { e.preventDefault(); mode = mode === 'after' ? 'before' : 'after'; apply(); }
+});
+apply();
+</script>
+</body>
+</html>
