@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>國策檔案 · 介面改版樣品（改前／改後）</title>
+<style>
+:root {
+  --ink: #0d1310; --panel: #19221d; --raised: #212b25; --gold: #dcc27c; --gold-deep: #a88d4c;
+  --text: #ece6d4; --muted: #a8b0a1; --faint: #7d867a; --green: #72c492; --red: #d9705f;
+  --line: rgba(217, 191, 120, 0.14); --line-strong: rgba(217, 191, 120, 0.32);
+  --sans: 'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', 'Microsoft YaHei', system-ui, sans-serif;
+  --serif: 'Noto Serif TC', 'Source Han Serif TC', 'Noto Serif SC', Georgia, serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ink); color: var(--text); font: 15px/1.75 var(--sans); }
+header.top { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 24px;
+  background: rgba(13, 19, 16, 0.95); border-bottom: 1px solid var(--line-strong); backdrop-filter: blur(6px); }
+header.top h1 { margin: 0; font: 600 18px/1.3 var(--serif); color: var(--gold); letter-spacing: .06em; }
+nav.screens { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.screens a { padding: 4px 11px; border-radius: 8px; color: var(--muted); text-decoration: none; border: 1px solid transparent; font-size: 14px; }
+nav.screens a.on { color: var(--text); background: var(--raised); border-color: var(--line-strong); }
+main { max-width: 1520px; margin: 0 auto; padding: 22px 24px 60px; }
+.intro { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; margin-bottom: 26px; }
+.card { padding: 16px 20px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.card h2 { margin: 0 0 8px; font: 600 16px var(--serif); color: var(--gold); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+th { color: var(--muted); font-weight: 400; }
+td.num { font-variant-numeric: tabular-nums; }
+.up { color: var(--green); }
+ul.tight { margin: 4px 0 0; padding-left: 20px; }
+section.screen { display: none; }
+section.screen.on { display: block; }
+.screen-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-bottom: 12px; }
+.screen-head h2 { margin: 0; font: 600 20px var(--serif); }
+.toggle { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line-strong); }
+.toggle button { padding: 5px 14px; border: 0; border-radius: 7px; background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
+.toggle button.on { background: var(--gold); color: #1e1a0c; font-weight: 600; }
+.hint { font-size: 13px; color: var(--faint); }
+.view { display: grid; gap: 14px; }
+.view.side { grid-template-columns: 1fr 1fr; }
+figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line-strong); background: #000; }
+figure.mobile img { width: auto; max-width: 100%; max-height: 82vh; margin: 0 auto; }
+figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); text-align: center; }
+.view:not(.side) figure.hide { display: none; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-top: 16px; }
+.note { padding: 12px 16px; border-radius: 10px; background: var(--panel); border-left: 3px solid var(--gold); }
+.note b { color: var(--gold); }
+.note.fix { border-left-color: var(--green); }
+.note.warn { border-left-color: var(--red); }
+.score { font-size: 14px; color: var(--muted); }
+.score b { color: var(--text); }
+kbd { padding: 0 5px; border-radius: 4px; border: 1px solid var(--line-strong); font-size: 12px; }
+@media (max-width: 900px) { .intro { grid-template-columns: 1fr; } .view.side { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>介面改版樣品</h1>
+  <nav class="screens" id="tabs"></nav>
+  <span class="toggle" id="mode"><button data-mode="before">改前</button><button data-mode="after" class="on">改後</button><button data-mode="side">並排</button></span>
+  <span class="hint"><kbd>←</kbd><kbd>→</kbd> 切換畫面　<kbd>空白</kbd> 改前／改後</span>
+</header>
+<main>
+  <div class="intro" id="intro">
+    <div class="card">
+      <h2>這份樣品怎麼做的</h2>
+      <p>「改前」是目前版本（v0.14.23）的離線測試頁截圖；「改後」是在同一個真實面板上套用提案的版面與樣式後截圖，資料、字型、元件都是實際的，不是另外畫的示意圖。主畫面用的是 12 項的分期示範樹（接近實際一期的規模），不是 136 項的舊示範樹。</p>
+      <p>截圖看不到的部分：詳情面板滑入、國策完成時勳章的金光、進度環平順推進、切換國家淡入（系統設定「減少動態」時全部關閉）。另外，任務的「已等待秒數」會即時跳動。</p>
+    </div>
+    <div class="card">
+      <h2>預估分數（Awwwards 權重：設計 40％、易用 30％、創意 20％、內容 10％）</h2>
+      <table>
+        <tr><th>介面</th><th>目前</th><th>改後預估</th></tr>
+        <tr><td>國策樹主畫面＋詳情</td><td class="num">7.4</td><td class="num up">8.0</td></tr>
+        <tr><td>任務與請求紀錄</td><td class="num">6.2</td><td class="num up">7.3</td></tr>
+        <tr><td>設定</td><td class="num">5.7</td><td class="num up">7.1</td></tr>
+        <tr><td><b>整體</b></td><td class="num"><b>6.6</b></td><td class="num up"><b>約 7.5</b></td></tr>
+      </table>
+      <p class="hint">更正上次評分的兩處：①「請求紀錄標題重複」是我測試資料造成的，實際的階段名稱（例如「生成骨架」）不會重複；②「手機版頂部被截掉」是無頭瀏覽器最小寬度 492px 造成的假象，真正 390px 寬時頂部與工具列都放得下（見「手機」）。</p>
+    </div>
+  </div>
+  <div id="screens"></div>
+</main>
+<script>
+const screens = [
+  {
+    id: 'main', name: '主畫面', score: '7.4 → 8.0',
+    notes: [
+      ['頂部壓成兩層', '分期列併入國家資訊列：國名旁是控制方式，下一行是「第 1 期 · 期名」、樹型標籤、自動換期、往期摘要，再下一行是本期目的。國策樹多出約 60px 高度。國家簡介移到國名的懸停提示。'],
+      ['一打開看到整棵樹', '第一次開啟時縮放到整棵樹的寬度放得下（最低 70%，太小就以可讀為準），扣掉路線面板與工具列佔的範圍置中。工具列多一顆「⤢ 全覽」。'],
+      ['工具集中在右下角一組', '圖例、主國策、全覽、縮放收進一個有底色的工具組，小地圖疊在正上方；「測試操作」只在離線頁出現，不再浮在國策樹右上角。'],
+      ['路線面板貼合內容', '面板高度跟著路線數量，三條路線時不再留一大片空白；寬度由 268px 收到 236px。'],
+      ['小字可讀', '勳章下的天數標 11px 並提高對比；未開始國策的名稱調亮。'],
+    ],
+  },
+  {
+    id: 'detail', name: '國策詳情', score: '主畫面的一部分',
+    notes: [
+      ['最上方是狀態摘要', '已完成的國策不再放一顆停用的「國策已完成」大按鈕和重複的「此國策已完成」，改成「已完成 · 故事日 80／依工期完成（21 日）· 效果已生效」。事件完成的國策會寫「事件達成：某事件」。'],
+      ['已取得的效果提到前面', '「完成效果」移到狀態摘要下方，標成「已取得」。'],
+      ['其他狀態', '可開始：主要位置是開始按鈕（不變）。條件未滿：主要位置直接列出卡住的條件。'],
+    ],
+  },
+  {
+    id: 'jobs', name: '任務', score: '6.2 → 7.3（含請求紀錄）',
+    notes: [
+      ['每項任務一張卡', '左邊是狀態圖示（進行中轉圈、失敗紅色驚嘆號、完成綠勾），標題後面用小標籤列出連線與時間。'],
+      ['進行中看得到進度', '「等待模型回應 · 已等待 21 秒 · 請求 48,213 字元」，秒數即時更新。完成的任務顯示用時。'],
+      ['失敗訊息分層', '第一行是結論「格式檢查未通過 · 已重試 2/2 次 · 2 個問題」，下面逐條列出問題，欄位名用等寬字；超過三條收起來。「重試」是主要按鈕。'],
+    ],
+  },
+  {
+    id: 'log', name: '請求紀錄', score: '',
+    notes: [
+      ['標題改成一般字重', '結果（✓ 格式通過／✕ 失敗）放最前面，連線、第幾次、耗時、送出與回應字數、時間改成小標籤。'],
+      ['每段標上身分', 'SYSTEM、USER、THINK（推理）、OUTPUT（回應）用不同顏色的標籤，每段都有「複製」。'],
+      ['回應格式化', '模型回應的 JSON 自動縮排、改等寬字，鍵、字串、數字分色；解析失敗時照原文顯示。'],
+    ],
+  },
+  {
+    id: 'general', name: '設定 · 一般', score: '5.7 → 7.1（設定全部）',
+    notes: [
+      ['只有一種儲存', '所有分頁的修改都是草稿，統一由底部「儲存設定」存檔；底部左側顯示「2 項修改尚未儲存」。用詞統一為「儲存」。'],
+      ['說明縮成一行', '每個欄位只留一行提示，完整說明收在「說明」裡，點開才看到。'],
+      ['開視窗不先選中 ×', '焦點放在視窗本身，鍵盤操作照樣可用，但右上角不再出現金色焦點框。'],
+    ],
+  },
+  {
+    id: 'tasks', name: '設定 · 任務', score: '',
+    notes: [
+      ['左右兩欄', '左邊直排四項任務，寫出目前的觸發方式（手動執行／勾選國家時／每則正文完成後）；右邊是選中任務的設定。'],
+      ['不再一層套一層', '任務預設縮成頂部一列工具；「API 路由」「執行設定」「世界書與上下文」「提示詞串」改成用分隔線隔開的段落，不再各自加框。'],
+      ['數值直覺', '「此連線同時請求數」空白顯示「不限」，不用再讀說明才知道 0 是什麼意思。'],
+    ],
+  },
+  {
+    id: 'api', name: '設定 · API', score: '',
+    notes: [
+      ['模型欄合併', '「模型名稱」與「模型列表」合成一欄，旁邊就是「載入模型」；載入後可直接從清單選。'],
+      ['進階參數收起', '嚴格 JSON、DeepSeek、推理、流式、主體參數與標頭收進「進階參數」，一般只要填連線的人看到的是一頁就完。'],
+      ['拿掉第二組儲存', '「放棄修改／保存預設」那一列拿掉，與其他分頁一樣由底部儲存。'],
+    ],
+  },
+  {
+    id: 'mobile', name: '手機', score: '', mobile: true,
+    notes: [
+      ['更正：目前沒有超出畫面', '用 390px 寬的實際視窗重拍，頂部與工具列都放得下，上次說的截斷是截圖工具的假象。'],
+      ['分期資訊併入國家列', '和桌面版一樣併成一列，國策樹多出約一行高度；本期目的在手機上收起。'],
+      ['工具列多一顆全覽', '手機上預設仍以主國策為中心（整棵樹縮到手機寬度會太小）。'],
+    ],
+  },
+];
+const tabs = document.getElementById('tabs');
+const holder = document.getElementById('screens');
+for (const s of screens) {
+  tabs.insertAdjacentHTML('beforeend', `<a href="#${s.id}" data-id="${s.id}">${s.name}</a>`);
+  holder.insertAdjacentHTML('beforeend', `<section class="screen" id="s-${s.id}">
+    <div class="screen-head"><h2>${s.name}</h2>${s.score ? `<span class="score">分數 <b>${s.score}</b></span>` : ''}</div>
+    <div class="view">
+      <figure class="before ${s.mobile ? 'mobile' : ''}"><img src="ui-revamp/before-${s.id}.jpg" alt="${s.name} 改前" loading="lazy"><figcaption>改前 · v0.14.23</figcaption></figure>
+      <figure class="after ${s.mobile ? 'mobile' : ''}"><img src="ui-revamp/after-${s.id}.jpg" alt="${s.name} 改後" loading="lazy"><figcaption>改後 · 提案</figcaption></figure>
+    </div>
+    <div class="notes">${s.notes.map(([t, d], i) => `<div class="note ${t.startsWith('更正') ? 'warn' : ''}"><b>${i + 1}. ${t}</b><br>${d}</div>`).join('')}</div>
+  </section>`);
+}
+let mode = 'after';
+function apply() {
+  const id = (location.hash.slice(1) || 'main');
+  for (const a of tabs.children) a.classList.toggle('on', a.dataset.id === id);
+  for (const sec of holder.children) sec.classList.toggle('on', sec.id === `s-${id}`);
+  for (const b of document.querySelectorAll('#mode button')) b.classList.toggle('on', b.dataset.mode === mode);
+  for (const view of document.querySelectorAll('.view')) {
+    view.classList.toggle('side', mode === 'side');
+    view.querySelector('.before').classList.toggle('hide', mode === 'after');
+    view.querySelector('.after').classList.toggle('hide', mode === 'before');
+  }
+}
+document.getElementById('mode').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) { mode = b.dataset.mode; apply(); }
+});
+addEventListener('hashchange', apply);
+addEventListener('keydown', (e) => {
+  const ids = screens.map((s) => s.id);
+  const i = Math.max(0, ids.indexOf(location.hash.slice(1) || 'main'));
+  if (e.key === 'ArrowRight') location.hash = ids[(i + 1) % ids.length];
+  else if (e.key === 'ArrowLeft') location.hash = ids[(i - 1 + ids.length) % ids.length];
+  else if (e.key === ' ') { e.preventDefault(); mode = mode === 'after' ? 'before' : 'after'; apply(); }
+});
+apply();
+</script>
+</body>
+</html>
