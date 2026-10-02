@@ -364,6 +364,8 @@ export const StateSchema = z.object({
   events: z.record(EventId, EventSchema),
   receipts: z.array(z.string()),
   schedules: z.record(z.string(), z.object({ turn: z.number(), day: Day })),
+  /** Current source time for display; independent of the last processed `day`. */
+  time: z.string().optional(),
 });
 export const ProposalSchema = z
   .object({

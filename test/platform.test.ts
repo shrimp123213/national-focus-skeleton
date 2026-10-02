@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { storyDay } from '../src/platform';
+import { stateTime } from '../src/story-time';
+
+test('当前时间原文保留纪元、星期日、分隔符和零点，旧状态没有原文时才用日期', () => {
+  const time = '復興紀元490年-10月-15日-星期日-00:00';
+  const day = storyDay('490-10-14 14:25');
+  assert.equal(stateTime({ day, time }), time);
+  assert.equal(stateTime({ day }), '490年10月14日 14:25');
+  assert.equal(stateTime({ day: 100 }), '故事日 100');
+});
 
 test('复兴纪元时间保留分钟精度，接受繁简名称且不以现实星期校正日期', () => {
   const expected = storyDay('490-10-15 14:25');

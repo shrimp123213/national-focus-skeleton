@@ -17,3 +17,8 @@ export function storyTime(day: number, withClock = false): string {
       : '';
   return `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日${clock}`;
 }
+
+/** Current source text for display; `day` remains the last processed time used by game rules. */
+export function stateTime(state: { day: number; time?: string }, withClock = true): string {
+  return state.time || storyTime(state.day, withClock);
+}

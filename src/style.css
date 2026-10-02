@@ -421,6 +421,8 @@ code {
 }
 .date-chip {
   display: grid;
+  max-width: 250px;
+  overflow-wrap: anywhere;
   line-height: 1.15;
   text-align: right;
   padding: 0 6px;

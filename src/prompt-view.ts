@@ -1,5 +1,5 @@
 import { eventText, eventUpdatedAt, newsDigest } from './engine';
-import { storyTime } from './story-time';
+import { stateTime, storyTime } from './story-time';
 import type { Country, State } from './model';
 
 /**
@@ -99,11 +99,7 @@ function eventHistory(state: State, event: State['events'][string]): string {
   return lines.join('\n');
 }
 
-/**
- * `now` is the story time as the source wrote it (for example 「复兴纪元490年-10月-15日-星期三-14:25」);
- * without it the date is rebuilt from the day count (v0.15.6: never a bare day count).
- */
-export function promptView(state: State, news = true, now = ''): PromptView {
+export function promptView(state: State, news = true): PromptView {
   const countries = Object.values(state.countries).filter((country) => country.enabled);
   // Unresolved matters first, then the most recently updated.
   const events = Object.values(state.events).sort(
@@ -121,7 +117,7 @@ export function promptView(state: State, news = true, now = ''): PromptView {
     countries.length || digest
       ? [
           promptHeader,
-          countries.length ? `【各国动向】（${now || storyTime(state.day, true)}）\n${lines.join('\n')}` : '',
+          countries.length ? `【各国动向】（${stateTime(state)}）\n${lines.join('\n')}` : '',
           digest,
         ]
           .filter(Boolean)

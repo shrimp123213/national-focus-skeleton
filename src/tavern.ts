@@ -496,6 +496,7 @@ export class TavernPlatform implements Platform {
     this.promptSaved = Boolean((data.国策 as { prompt?: unknown } | undefined)?.prompt);
     // Older saves keyed countries by English ID; read them under their worldbook names.
     const state = saved === undefined ? createState(day) : migrateCountryKeys(StateSchema.parse(saved));
+    state.time = timeText(rawTime);
     // Reuse this chat read for context and turn counting; do not hash story text.
     const messages = this.api.getChatMessages(`0-${message.message_id}`);
     let sourceData: Awaited<ReturnType<typeof buildSourceContext>> | undefined;
@@ -562,17 +563,15 @@ export class TavernPlatform implements Platform {
     const latest = mvu.getMvuData({ type: 'message', message_id: snapshot.messageId });
     const saved = StateSchema.parse(state);
     stampNews(saved, message.message_id);
+    // Preserve the current source text separately from the processed day.
+    const rawTime = this.config ? timeText(valueAt(latest.stat_data, this.config.sources.timePath)) : '';
+    saved.time = rawTime || saved.time;
     // The newspaper data of this floor stays; who the player may hear from follows the new state.
     const bar = (latest.国策 as { 快讯?: NewsBar } | undefined)?.快讯;
     // The story view travels with the floor; chat worldbook entries render it.
     latest.国策 = {
       ...saved,
-      // The story time as the source wrote it, so the models read a date, not a day count.
-      prompt: promptView(
-        saved,
-        this.config?.newsPrompt ?? true,
-        this.config ? timeText(valueAt(latest.stat_data, this.config.sources.timePath)) : '',
-      ),
+      prompt: promptView(saved, this.config?.newsPrompt ?? true),
       ...(bar ? { 快讯: { ...bar, insiders: insiders(saved, bar.location) } } : {}),
     };
     // Migrate only this floor on a successful write; never rewrite ancestor saves.

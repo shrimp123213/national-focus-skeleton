@@ -115,9 +115,39 @@ test('从世界时间读取复兴纪元格式并保存最外层国策，保留�
     env.getData().stat_data.世界.时间 = time;
     const snapshot = await env.platform.read(defaultConfig());
     assert.equal(snapshot.day, storyDay('490-10-15 14:25'));
+    assert.equal(snapshot.state.time, time);
     await env.platform.commit(snapshot, snapshot.state);
     assert.equal(env.getData().国策.day, snapshot.day);
+    assert.equal(env.getData().国策.time, time);
     assert.equal(env.getData().stat_data.世界.时间, time);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
+test('旧存档读入当前时间原文，不提前推进国策日数或写入变量', async () => {
+  const env = environment();
+  try {
+    const time = '復興紀元490年-10月-15日-星期日-00:00';
+    const old = demoState();
+    delete old.time;
+    env.getData().国策 = old;
+    env.getData().stat_data.世界.时间 = time;
+    const before = structuredClone(env.getData());
+    const snapshot = await env.platform.read(defaultConfig());
+    assert.equal(snapshot.state.time, time);
+    assert.equal(snapshot.state.day, old.day);
+    assert.equal(snapshot.day, storyDay(time));
+    assert.deepEqual(env.getData(), before);
+    await env.platform.commit(snapshot, snapshot.state);
+    assert.equal(env.getData().国策.time, time);
+    assert.equal(env.getData().国策.day, old.day);
+    assert.ok(env.getData().国策.prompt.overview.includes(`（${time}）`));
+    const nextTime = '復興紀元490年-10月-16日-星期一-09:05';
+    env.getData().stat_data.世界.时间 = nextTime;
+    const next = await env.platform.read(defaultConfig());
+    assert.equal(next.state.time, nextTime);
+    assert.equal(next.state.day, old.day);
   } finally {
     env.platform.dispose();
   }
@@ -427,6 +457,7 @@ test('旧版完整树与进度可读取，成功保存才移到最外层且不�
     const snapshot = await env.platform.read(defaultConfig());
     // Countries saved under English IDs are read under their worldbook names; the floor is untouched.
     const named = migrateCountryKeys(legacy);
+    named.time = '100';
     assert.deepEqual(
       Object.keys(named.countries),
       Object.values(legacy.countries).map((c) => c.name),
@@ -452,7 +483,7 @@ test('两位置同时有资料时以最外层为准，无效最外层资料明�
     env.getData().国策 = root;
     env.getData().stat_data.国策 = { ...root, day: 90 };
     const snapshot = await env.platform.read(defaultConfig());
-    assert.deepEqual(snapshot.state, migrateCountryKeys(root));
+    assert.deepEqual(snapshot.state, { ...migrateCountryKeys(root), time: '100' });
     await env.platform.commit(snapshot, snapshot.state);
     assert.equal(env.getData().stat_data.国策, undefined);
     env.getData().国策 = null;
