@@ -167,13 +167,13 @@ export function mountTaskPanel(
           `<div class="route-row" data-fb-row><label class="field">备援 ${index + 1}<select data-fb-name>${options(
             config.apis.map((a) => [a.name, a.name] as [string, string]),
             name,
-          )}</select></label><label class="field cap">此连接同时请求数<input type="number" min="0" max="16" data-fb-cap value="${job.fallbackMaxConcurrencies[index] ?? 0}"></label><button class="danger" data-task-action="fb-del" data-index="${index}">删除</button></div>`,
+          )}</select></label><label class="field cap">此连接同时请求数<input type="number" min="0" max="16" data-fb-cap placeholder="不限" value="${job.fallbackMaxConcurrencies[index] || ''}"></label><button class="danger" data-task-action="fb-del" data-index="${index}">删除</button></div>`,
       )
       .join('');
     return `<section class="task-editor" data-task-editor="${kind}" ${kind === selected ? '' : 'hidden'}>
       <div class="task-head"><h3>${taskNames[kind]}</h3><small>${taskHints[kind]}</small><span class="spacer"></span>${lastRun(kind)}${kind === 'generate' ? '' : `<button data-task-action="run-now" title="用目前保存的设置立即执行一次">立即执行</button>`}</div>
       <details class="task-block" open><summary>API 路由</summary>
-        <div class="route-row"><label class="field">主要连接<select data-t="api">${options(apis, job.api)}</select></label><label class="field cap">此连接同时请求数<input type="number" min="0" max="16" data-t="primaryMaxConcurrency" value="${job.primaryMaxConcurrency}"></label></div>
+        <div class="route-row"><label class="field">主要连接<select data-t="api">${options(apis, job.api)}</select></label><label class="field cap">此连接同时请求数<input type="number" min="0" max="16" data-t="primaryMaxConcurrency" placeholder="不限" value="${job.primaryMaxConcurrency || ''}"></label></div>
         <div data-fallbacks>${fallbackRows}</div>
         <button data-task-action="fb-add" ${config.apis.length ? '' : 'disabled'}>＋ 新增备援</button>
         <small class="block-note">失败时依序改用备援。「此连接同时请求数」只限制这项任务在该连接上同时送出的请求，0 为不限；主要连接满载时直接改用有空位的备援。各任务只受自己的路由额度限制，没有所有任务合计的并行上限。</small>
@@ -218,7 +218,7 @@ export function mountTaskPanel(
   function render(): void {
     const config = getDraft();
     const presets = config.taskPresets;
-    host.innerHTML = `<section class="preset-bar"><div class="preset-title"><h3>任务预设</h3><small>保存四项任务的提示词串、排程、重试、每批国策数与建议模型，以及世界书与上下文；不含 API 连接与金钥。预设操作会一并保存目前的任务设置。</small></div>
+    host.innerHTML = `<section class="preset-bar"><div class="preset-title" title="保存四项任务的提示词串、排程、重试、每批国策数与建议模型，以及世界书与上下文；不含 API 连接与金钥。预设操作会一并保存目前的任务设置。"><h3>任务预设</h3></div>
       <div class="preset-row"><select data-preset-select aria-label="任务预设"><option value="">${presets.length ? '选择预设以套用…' : '尚无任务预设'}</option>${presets
         .map(
           (preset) =>
@@ -232,15 +232,15 @@ export function mountTaskPanel(
           : `<button class="danger" data-preset="delete" ${config.activeTaskPreset ? '' : 'disabled'}>删除</button>`
       }<input type="file" accept=".json,application/json" data-preset-file hidden></div>
       <p class="api-status" role="status">${escape(status)}</p></section>
-      <nav class="task-tabs" aria-label="任务">${jobKinds
+      <div class="task-layout"><nav class="task-tabs" aria-label="任务">${jobKinds
         .map((kind) => {
           const job = config.jobs[kind];
           const custom = job.prompts.filter((item) => item.kind === 'custom').length;
           const modified = job.prompts.some(isModified);
-          return `<button class="task-tab ${kind === selected ? 'active' : ''}" data-task-tab="${kind}" aria-pressed="${kind === selected}"><strong>${taskNames[kind]}</strong><small>${kind === 'generate' ? '勾选国家时' : { reply: '每则正文', rounds: `每 ${job.interval} 则`, days: `每 ${job.interval} 日`, manual: '手动' }[job.schedule]}${custom ? ` · ${custom} 自定义段` : ''}${modified ? ' · 已改内建' : ''}</small></button>`;
+          return `<button class="task-tab ${kind === selected ? 'active' : ''}" data-task-tab="${kind}" aria-pressed="${kind === selected}"><strong>${taskNames[kind]}</strong><small>${kind === 'generate' ? '勾选国家时' : { reply: '每则正文完成后', rounds: `每 ${job.interval} 则正文`, days: `每 ${job.interval} 个故事日`, manual: '手动执行' }[job.schedule]}${custom ? ` · ${custom} 自定义段` : ''}${modified ? ' · 已改内建' : ''}</small></button>`;
         })
         .join('')}</nav>
-      ${jobKinds.map((kind) => editor(kind, config)).join('')}`;
+      <div class="task-editors">${jobKinds.map((kind) => editor(kind, config)).join('')}</div></div>`;
   }
 
   /** Write the form back into the draft config. */

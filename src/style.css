@@ -1859,7 +1859,6 @@ code {
   padding-left: 24px;
 }
 .api-row,
-.job-card,
 .candidate,
 .event-card {
   padding: 14px 16px;
@@ -1867,35 +1866,6 @@ code {
   background: var(--raised);
   border-radius: var(--radius);
   margin-bottom: 12px;
-}
-.job-card .job-title {
-  font-family: var(--serif);
-  font-size: 15px;
-  color: var(--gold);
-  margin-bottom: 12px;
-}
-.request-log > summary,
-.log-part > summary {
-  cursor: pointer;
-  overflow-wrap: anywhere;
-  line-height: 1.7;
-}
-.request-log > .job-title {
-  margin-bottom: 0;
-}
-.request-log[open] > .job-title {
-  margin-bottom: 12px;
-}
-.log-part {
-  border-top: 1px solid var(--line);
-  padding: 10px 0;
-}
-.log-part > summary {
-  color: var(--text);
-  font-size: 13px;
-}
-.log-part .field {
-  margin-top: 10px;
 }
 .candidate {
   display: flex;
@@ -1917,34 +1887,6 @@ code {
 }
 .event-card p {
   font-size: 13.5px;
-}
-.job-log {
-  display: grid;
-  grid-template-columns: 110px 1fr auto;
-  gap: 12px;
-  align-items: start;
-  border-bottom: 1px solid var(--line);
-  padding: 12px 0;
-  font-size: 13px;
-}
-.job-log > div:last-child {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.job-log .success {
-  color: var(--green);
-}
-.job-log .failed {
-  color: var(--red);
-}
-.job-log .running,
-.job-log .queued {
-  color: var(--gold);
-}
-.job-log .cancelled {
-  color: var(--muted);
 }
 .api-actions {
   display: flex;
@@ -2276,13 +2218,6 @@ code {
   .form-grid,
   .source-toggles {
     grid-template-columns: 1fr;
-  }
-  .job-log {
-    grid-template-columns: 80px 1fr;
-  }
-  .job-log > div:last-child {
-    grid-column: 1/-1;
-    justify-content: flex-start;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3131,11 +3066,6 @@ button.icon {
   color: var(--muted);
 }
 
-.job-message {
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
-
 /* v0.13.1 UI review */
 .status-jobs {
   color: var(--muted);
@@ -3194,17 +3124,6 @@ button.icon {
   flex-wrap: wrap;
   gap: 6px;
   justify-content: flex-end;
-}
-.job-detail summary {
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--muted);
-}
-.job-detail p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 .event-filters {
   display: flex;
@@ -3753,5 +3672,534 @@ details.detail-section.fold > summary::before {
       0 0 0 4px var(--bg),
       0 0 0 7px #f6e2a6,
       0 0 36px rgba(246, 226, 166, 0.85);
+  }
+}
+
+/* ---------- v0.15.1 · settings: preset list and card, flat task page, short hints ---------- */
+.modal:focus {
+  outline: none;
+}
+.footer-dirty {
+  margin-right: auto;
+  font-size: 12.5px;
+  color: var(--amber);
+}
+.footer-dirty:not(:empty)::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  vertical-align: 1px;
+}
+.hint-fold > summary {
+  display: inline;
+  list-style: none;
+  cursor: pointer;
+}
+.hint-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.hint-more {
+  margin-left: 6px;
+  color: var(--faint);
+  text-decoration: underline;
+  text-decoration-color: rgba(220, 194, 124, 0.35);
+  text-underline-offset: 3px;
+}
+.hint-fold[open] .hint-more,
+.hint-fold[open] .hint-cut {
+  display: none;
+}
+/* API presets: list on the left, the edited preset as a card with its own save. */
+.api-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.api-list {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(62vh, 560px);
+}
+.api-list-head {
+  padding: 0 4px 6px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-search {
+  margin-bottom: 6px;
+}
+.api-list-scroll {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+}
+.api-item {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  padding: 8px 12px;
+  border-color: transparent;
+  background: transparent;
+  min-width: 0;
+}
+.api-item[hidden] {
+  display: none;
+}
+.api-item b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.api-item small {
+  font-size: 11.5px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.api-item.on {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+.dirty-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+.api-add {
+  margin-top: 6px;
+  border-style: dashed;
+  color: var(--gold);
+}
+.api-card {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  min-width: 0;
+}
+.api-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.api-card-head small {
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-card-head b {
+  font-size: 15px;
+}
+.api-card-tools {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.api-card-tools button {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+.api-card > .confirm-row {
+  margin: 10px 14px 0;
+}
+.api-card-body {
+  padding: 4px 14px 6px;
+}
+.inline-field {
+  display: flex;
+  gap: 8px;
+}
+.inline-field input {
+  flex: 1;
+  min-width: 0;
+}
+.inline-field button {
+  white-space: nowrap;
+}
+.api-advanced {
+  border-top: 1px solid var(--line);
+}
+.api-advanced > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.api-advanced > summary small {
+  margin-left: 10px;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-card-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 12px 12px;
+  background: #1d2621;
+}
+.api-card-foot .api-status {
+  margin: 0 auto 0 0;
+  font-size: 12.5px;
+  color: var(--green);
+}
+/* Tasks: the four tasks on the left, one flat page on the right. */
+.preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+}
+.preset-bar .preset-title {
+  margin: 0;
+  cursor: help;
+}
+.preset-bar .preset-title h3 {
+  margin: 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.preset-bar .preset-row {
+  flex: 1;
+  margin: 0;
+}
+.preset-bar .api-status {
+  flex-basis: 100%;
+}
+.task-layout {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.task-layout .task-tabs {
+  position: sticky;
+  top: 0;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin: 0;
+}
+.task-layout .task-tab {
+  padding: 9px 12px;
+  border-color: transparent;
+  background: transparent;
+}
+.task-layout .task-tab small {
+  white-space: normal;
+}
+.task-layout .task-tab.active {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+.task-editors {
+  min-width: 0;
+}
+.task-editors .task-block {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+.task-editors .task-block.prompts-block {
+  padding-top: 12px;
+}
+@media (max-width: 760px) {
+  .api-layout,
+  .task-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .api-list,
+  .task-layout .task-tabs {
+    position: static;
+    max-height: none;
+  }
+  .api-list-scroll {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(140px, max-content);
+    overflow-x: auto;
+  }
+  .task-layout .task-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- v0.15.2 · task cards and request log ---------- */
+.job-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.job-card2 {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+.job-card2.running {
+  border-color: rgba(220, 194, 124, 0.45);
+}
+.job-card2.failed {
+  border-color: rgba(217, 112, 95, 0.45);
+  background: linear-gradient(180deg, rgba(217, 112, 95, 0.08), rgba(217, 112, 95, 0.02));
+}
+.job-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+}
+.job-card2.success .job-icon {
+  color: #0e1a12;
+  background: var(--green);
+  border-color: var(--green);
+}
+.job-card2.failed .job-icon {
+  color: #1a0f0c;
+  background: var(--red);
+  border-color: var(--red);
+}
+.job-card2.running .job-icon {
+  border-color: var(--gold);
+}
+.job-main {
+  min-width: 0;
+}
+.job-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-weight: 600;
+}
+.job-chip {
+  font-size: 11px;
+  font-weight: 400;
+  padding: 0 7px;
+  line-height: 18px;
+  border-radius: 9px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+}
+.job-sub {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.job-sub b {
+  color: var(--text);
+  font-weight: 600;
+}
+.job-card2.failed .job-sub b {
+  color: #f0a898;
+}
+.job-problems {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #e4cfc9;
+}
+.job-problems code,
+.log-code {
+  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+}
+.job-problems code {
+  font-size: 12px;
+  color: #f2d79a;
+}
+.job-more > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+.job-note {
+  margin-top: 14px;
+  font-size: 12px;
+}
+.log-entry {
+  margin-top: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.log-entry > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.log-entry > summary::-webkit-details-marker {
+  display: none;
+}
+.log-entry[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.log-result {
+  font-weight: 600;
+  font-size: 13px;
+}
+.log-result.ok {
+  color: var(--green);
+}
+.log-result.failed {
+  color: var(--red);
+}
+.log-title {
+  font-weight: 600;
+}
+.log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-basis: 100%;
+}
+.log-error {
+  margin: 10px 16px 0;
+}
+.log-part2 {
+  border-bottom: 1px solid var(--line);
+}
+.log-part2:last-child {
+  border-bottom: 0;
+}
+.log-part2 > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+.log-part2 > summary::-webkit-details-marker {
+  display: none;
+}
+.log-part2 > summary::before {
+  content: '▸';
+  width: 10px;
+  color: var(--faint);
+}
+.log-part2[open] > summary::before {
+  content: '▾';
+}
+.log-role {
+  font-family: Consolas, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #0f1512;
+  border: 1px solid var(--line-strong);
+  color: var(--blue);
+}
+.log-role.user {
+  color: var(--green);
+}
+.log-role.output,
+.log-role.assistant {
+  color: var(--gold);
+}
+.log-role.think {
+  color: var(--faint);
+}
+.log-count {
+  font-size: 12px;
+  color: var(--faint);
+}
+.log-copy {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 12px;
+}
+.log-code {
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  max-height: 340px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #0b100d;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #cfd5c6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-code .k {
+  color: #e6c97e;
+}
+.log-code .s {
+  color: #9fd3ae;
+}
+.log-code .n {
+  color: #8fb0d6;
+}
+.log-code .b {
+  color: #d9a0c8;
+}
+@media (max-width: 760px) {
+  .job-card2 {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .job-card2 .job-buttons {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+.api-card-foot button,
+.modal-footer button {
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .api-card-foot,
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+  .api-card-foot .api-status,
+  .footer-dirty:not(:empty) {
+    flex-basis: 100%;
   }
 }

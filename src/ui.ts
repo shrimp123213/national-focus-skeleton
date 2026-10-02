@@ -257,6 +257,9 @@ export function mountUI(
       status.outerHTML = renderTaskSummary();
     }
     updateModalJobs();
+    for (const span of backdrop.querySelectorAll<HTMLElement>('.job-elapsed[data-started]')) {
+      span.textContent = `已执行 ${elapsed(Date.now() - Number(span.dataset.started))}`;
+    }
   }, 1000);
   view.addEventListener('resize', onResize);
   function jobMessage(job: { message: string }): string {
@@ -1108,8 +1111,9 @@ export function mountUI(
     taskPanel = undefined;
     modal = name;
     backdrop.hidden = false;
-    backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
-    backdrop.querySelector<HTMLButtonElement>('button')?.focus();
+    backdrop.innerHTML = `<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
+    // v0.15.1: focus the window, so the close button does not look like the main action.
+    backdrop.querySelector<HTMLElement>('.modal')?.focus();
     updateModalJobs();
   }
   /** Windows cover the status line, so they show running tasks in their own header. */
@@ -1133,6 +1137,8 @@ export function mountUI(
     sourcePanel = undefined;
     taskPanel?.dispose();
     taskPanel = undefined;
+    hintObserver?.disconnect();
+    hintObserver = undefined;
     backdrop.hidden = true;
     backdrop.innerHTML = '';
     modal = '';
@@ -1201,6 +1207,32 @@ export function mountUI(
       openModal('countries', '管理国家', body, footer);
     }
   }
+  /** 「格式检查未通过（第 2/2 次）：问题一；问题二」 → the verdict and the list of problems. */
+  function splitProblems(text: string): { head: string; problems: string[] } {
+    const colon = text.indexOf('：');
+    if (colon < 0 || colon > 48) {
+      return { head: text, problems: [] };
+    }
+    const problems = text
+      .slice(colon + 1)
+      .split('；')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return problems.length > 1 || text.length > 90
+      ? { head: text.slice(0, colon), problems }
+      : { head: text, problems: [] };
+  }
+  /** Field paths and ids in a problem, set in a fixed-width face. */
+  const codeText = (text: string) =>
+    escape(text).replace(/([A-Za-z_][\w.]*\[\d+\][\w.[\]]*|\b[a-z]+_[\w]+\b)/g, '<code>$1</code>');
+  const jobIcons: Record<string, string> = {
+    running: '<i class="spinner"></i>',
+    queued: '…',
+    success: '✓',
+    failed: '!',
+    cancelled: '–',
+  };
+  /** v0.15.2: one card per task; a running task counts its time, a failure lists its problems. */
   function showJobs(): void {
     for (const job of controller.jobs) {
       if (job.state === 'failed') {
@@ -1208,52 +1240,131 @@ export function mountUI(
       }
     }
     const busy = controller.jobs.some((j) => ['running', 'queued'].includes(j.state));
-    const message = (j: (typeof controller.jobs)[number]) => {
-      const text = jobMessage(j);
-      return text.length > 140
-        ? `<details class="job-detail"><summary>${escape(text.slice(0, 120))}…</summary><p>${escape(text)}</p></details>`
-        : `<small class="job-message">${escape(text)}</small>`;
-    };
     const rows = controller.jobs
-      .map(
-        (j) =>
-          `<div class="job-log"><div><strong class="${j.state}">${jobStates[j.state]}</strong><br><small>${escape(j.time)}</small>${j.inputCharacters !== undefined ? `<br><small>请求 ${j.inputCharacters.toLocaleString()} 字符</small>` : ''}</div><div>${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${j.route ? ` · ${escape(j.route)}` : ''}<br>${message(j)}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button data-retry="${j.id}">重试</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">请求记录</button>` : ''}</div></div>`,
-      )
+      .map((j) => {
+        const text = jobMessage(j);
+        const time =
+          j.state === 'running' && j.started
+            ? `<span class="job-elapsed" data-started="${j.started}">已执行 ${elapsed(Date.now() - j.started)}</span>`
+            : j.started && j.finished
+              ? `用时 ${elapsed(j.finished - j.started)}`
+              : '';
+        const meta = [
+          time,
+          j.inputCharacters !== undefined ? `请求 ${j.inputCharacters.toLocaleString()} 字符` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        const { head, problems } = j.state === 'failed' ? splitProblems(text) : { head: text, problems: [] };
+        const list = problems.length
+          ? `<ul class="job-problems">${problems
+              .slice(0, 3)
+              .map((item) => `<li>${codeText(item)}</li>`)
+              .join('')}</ul>${
+              problems.length > 3
+                ? `<details class="job-more"><summary>另有 ${problems.length - 3} 个问题</summary><ul class="job-problems">${problems
+                    .slice(3)
+                    .map((item) => `<li>${codeText(item)}</li>`)
+                    .join('')}</ul></details>`
+                : ''
+            }`
+          : '';
+        const chips = [j.route, j.time]
+          .filter(Boolean)
+          .map((chip) => `<span class="job-chip">${escape(chip!)}</span>`);
+        return `<article class="job-card2 ${j.state}"><span class="job-icon" aria-hidden="true">${jobIcons[j.state] ?? ''}</span><div class="job-main"><div class="job-name">${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${chips.join('')}</div><div class="job-sub"><b>${escape(problems.length ? `${head} · ${problems.length} 个问题` : head)}</b>${meta ? ` · ${meta}` : ''}</div>${list}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button class="primary" data-retry="${j.id}">重试</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">请求记录</button>` : ''}</div></article>`;
+      })
       .join('');
-    const body = `<div class="job-actions"><button data-modal="run-reshape" title="剧情大幅改变时，修改尚未开始的国策">评估重大改树</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任务</button></div>${rows || '<p class="muted">尚无任务记录。正文与一般变数更新完成后，国策任务会在背景执行，不会锁住聊天；进度显示在悬浮球上方。</p>'}${controller.config.runLog ? '<p class="muted">执行记录已开启：请求内容只保存在此页记忆体，重新整理即清除。</p>' : ''}`;
+    const body = `<div class="job-actions"><button data-modal="run-reshape" title="剧情大幅改变时，修改尚未开始的国策">评估重大改树</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任务</button></div>${rows ? `<div class="job-list">${rows}</div>` : '<p class="muted">尚无任务记录。正文与一般变数更新完成后，国策任务会在背景执行，不会锁住聊天；进度显示在悬浮球上方。</p>'}${controller.config.runLog ? '<p class="muted job-note">执行记录已开启：请求内容只保存在此页记忆体，重新整理即清除。</p>' : ''}`;
     if (modal === 'jobs') {
       backdrop.querySelector('.modal-body')!.innerHTML = body;
     } else {
       openModal('jobs', '任务', body, '<button data-modal="close">返回</button>');
     }
   }
+  /** A model reply as indented, coloured JSON; text that is not JSON stays as it is. */
+  function highlightJson(raw: string): string {
+    const trimmed = raw.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '');
+    const first = trimmed.indexOf('{');
+    const last = trimmed.lastIndexOf('}');
+    let value: unknown;
+    try {
+      value = JSON.parse(first >= 0 && last > first ? trimmed.slice(first, last + 1) : trimmed);
+    } catch {
+      return escape(raw);
+    }
+    const pretty = JSON.stringify(value, null, 2);
+    const token = /("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+    let out = '';
+    let at = 0;
+    for (const match of pretty.matchAll(token)) {
+      out += escape(pretty.slice(at, match.index));
+      out += match[1]
+        ? match[2]
+          ? `<span class="k">${escape(match[1])}</span>${escape(match[2])}`
+          : `<span class="s">${escape(match[1])}</span>`
+        : `<span class="${/^[tfn]/.test(match[0]) ? 'b' : 'n'}">${escape(match[0])}</span>`;
+      at = match.index! + match[0].length;
+    }
+    return out + escape(pretty.slice(at));
+  }
+  /** Texts of the open request log, for 复制 and for filling a part when it opens. */
+  let logTexts: { text: string; json: boolean }[] = [];
+  function fillLogPart(part: HTMLElement): void {
+    const code = part.querySelector<HTMLElement>('pre[data-log-text]');
+    if (!code || code.dataset.filled) {
+      return;
+    }
+    const item = logTexts[Number(code.dataset.logText)];
+    code.innerHTML = item.json ? highlightJson(item.text) : escape(item.text);
+    code.dataset.filled = '1';
+  }
+  /** v0.15.2: each request lists its parts by role; the reply is formatted; every part can be copied. */
   function showLog(jobId: string): void {
     const entries = controller.logs.filter((log) => log.jobId === jobId).reverse();
-    const block = (label: string, text: string, rows = 8) =>
-      text
-        ? `<details class="log-part"><summary>${escape(label)}</summary><div class="field"><textarea aria-label="${escape(label)}" readonly rows="${rows}">${escape(text)}</textarea></div></details>`
-        : '';
+    logTexts = [];
+    const part = (role: string, label: string, text: string, json = false, open = false) => {
+      if (!text) {
+        return '';
+      }
+      logTexts.push({ text, json });
+      const index = logTexts.length - 1;
+      return `<details class="log-part2" ${open ? 'open' : ''}><summary><span class="log-role ${role.toLowerCase()}">${role}</span>${escape(label)}<span class="log-count">${text.length.toLocaleString()} 字符</span><button class="log-copy" data-copy="${index}">复制</button></summary><pre class="log-code" data-log-text="${index}"></pre></details>`;
+    };
     openModal(
       'log',
       '请求记录',
       `<p class="muted">只供调试，不含 API 金钥。</p>${entries
-        .map(
-          (log) =>
-            `<details class="job-card request-log"><summary class="job-title">${log.error ? '失败' : '格式通过'} · ${escape(jobNames[log.kind as keyof typeof jobNames] ?? log.kind)}${log.stage ? ` · ${escape(log.stage)}` : ''} · ${escape(log.route)} · 第 ${log.attempt} 次 · ${(log.durationMs / 1000).toFixed(1)} 秒 · ${escape(log.time)}</summary>${log.error ? `<p class="modal-error">${escape(log.error)}</p>` : '<p class="muted">✓ 格式通过</p>'}${log.messages
-              .map((message, index) =>
-                block(
-                  `#${index + 1} ${message.role} · ${message.content.length.toLocaleString()} 字符`,
-                  message.content,
-                  6,
-                ),
-              )
-              .join(
-                '',
-              )}${block('推理内容', log.reasoning, 6)}${block(`模型回应 · ${log.output.length.toLocaleString()} 字符`, log.output)}</details>`,
-        )
+        .map((log, i) => {
+          const sent = log.messages.reduce((sum, message) => sum + message.content.length, 0);
+          const chips = [
+            log.route,
+            `第 ${log.attempt} 次`,
+            `${(log.durationMs / 1000).toFixed(1)} 秒`,
+            `送出 ${sent.toLocaleString()} 字符`,
+            `回应 ${log.output.length.toLocaleString()} 字符`,
+            log.time,
+          ]
+            .map((chip) => `<span class="job-chip">${escape(chip)}</span>`)
+            .join('');
+          return `<details class="log-entry" ${i === 0 ? 'open' : ''}><summary><span class="log-result ${log.error ? 'failed' : 'ok'}">${log.error ? '✕ 失败' : '✓ 格式通过'}</span><span class="log-title">${escape(jobNames[log.kind as keyof typeof jobNames] ?? log.kind)}${log.stage ? ` · ${escape(log.stage)}` : ''}</span><span class="log-chips">${chips}</span></summary>${log.error ? `<p class="modal-error log-error">${escape(log.error)}</p>` : ''}${log.messages
+            .map((message, index) =>
+              part(
+                message.role === 'assistant' ? 'ASSISTANT' : message.role.toUpperCase(),
+                `#${index + 1}${message.name ? ` ${message.name}` : ''}`,
+                message.content,
+              ),
+            )
+            .join(
+              '',
+            )}${part('THINK', '推理内容', log.reasoning)}${part('OUTPUT', '模型回应', log.output, true, i === 0)}</details>`;
+        })
         .join('')}`,
       '<button data-modal="jobs">返回任务</button>',
     );
+    for (const open of backdrop.querySelectorAll<HTMLElement>('.log-part2[open]')) {
+      fillLogPart(open);
+    }
   }
   type NewsEvent = State['events'][string];
   const newsKicker = (event: NewsEvent) =>
@@ -1352,7 +1463,53 @@ export function mountUI(
       .join('');
   }
   const settingsFooter =
-    '<button data-modal="close">取消</button><button class="primary" data-modal="save-settings">保存设置</button>';
+    '<span class="footer-dirty" role="status"></span><button data-modal="close">取消</button><button class="primary" data-modal="save-settings">保存设置</button>';
+  /** v0.15.1: the settings footer says what is still unsaved. */
+  let dirtyCheck = 0;
+  function showDirty(): void {
+    cancelAnimationFrame(dirtyCheck);
+    dirtyCheck = requestAnimationFrame(() => {
+      const note = backdrop.querySelector<HTMLElement>('.footer-dirty');
+      if (!note || modal !== 'settings') {
+        return;
+      }
+      const preset = Boolean(apiPanel?.dirty());
+      note.textContent = preset
+        ? 'API 预设有修改尚未保存（保存设置时会一并保存）'
+        : settingsDirty()
+          ? '有修改尚未保存'
+          : '';
+    });
+  }
+  /**
+   * v0.15.1: a long hint in the settings window shows its first sentence; 说明 opens the rest.
+   * Panels redraw themselves, so a MutationObserver folds what they add.
+   */
+  let hintObserver: MutationObserver | undefined;
+  function foldHints(scope: ParentNode): void {
+    for (const hint of scope.querySelectorAll<HTMLElement>(
+      '.settings-section small, .settings-section .block-note, .settings-section p.muted',
+    )) {
+      if (
+        hint.dataset.folded ||
+        hint.children.length ||
+        hint.closest('.task-tab, .task-head, .api-list, .api-card-head, [role="status"], .hint-fold')
+      ) {
+        continue;
+      }
+      const text = (hint.textContent ?? '').trim();
+      if (text.length <= 46) {
+        hint.dataset.folded = 'short';
+        continue;
+      }
+      const cut = text.search(/[。；]/);
+      hint.dataset.folded = 'long';
+      hint.innerHTML =
+        cut > 0 && cut < 46
+          ? `<details class="hint-fold"><summary>${escape(text.slice(0, cut + 1))}<span class="hint-more">说明</span></summary>${escape(text.slice(cut + 1))}</details>`
+          : `<details class="hint-fold"><summary><span class="hint-cut">${escape(text.slice(0, 40))}…</span><span class="hint-more">说明</span></summary>${escape(text)}</details>`;
+    }
+  }
   /** Unsaved changes in the settings window (general, task and source forms; size and pace). */
   function settingsDirty(): boolean {
     if (modal !== 'settings') {
@@ -1461,6 +1618,12 @@ export function mountUI(
         draft.sources = sources;
       },
     );
+    const body = backdrop.querySelector<HTMLElement>('.modal-body')!;
+    hintObserver?.disconnect();
+    foldHints(body);
+    hintObserver = new MutationObserver(() => foldHints(body));
+    hintObserver.observe(body, { childList: true, subtree: true });
+    showDirty();
   }
   function switchSettingsTab(id: string): void {
     readSettingsDraft();
@@ -1853,6 +2016,55 @@ export function mountUI(
       }
     }
   });
+  backdrop.addEventListener(
+    'click',
+    (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('[data-copy]');
+      if (!button) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const text = logTexts[Number(button.dataset.copy)]?.text ?? '';
+      const done = () => {
+        button.textContent = '已复制';
+        setTimeout(() => (button.textContent = '复制'), 1500);
+      };
+      const fallback = () => {
+        const area = document.createElement('textarea');
+        area.value = text;
+        backdrop.append(area);
+        area.select();
+        document.execCommand('copy');
+        area.remove();
+        done();
+      };
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else {
+        fallback();
+      }
+    },
+    true,
+  );
+  backdrop.addEventListener(
+    'toggle',
+    (event) => {
+      const part = event.target as HTMLElement;
+      if (part.matches('.log-part2') && (part as HTMLDetailsElement).open) {
+        fillLogPart(part);
+      }
+    },
+    true,
+  );
+  // Recheck the unsaved note after any edit or panel action in the settings window.
+  for (const type of ['input', 'change', 'click']) {
+    backdrop.addEventListener(type, () => {
+      if (modal === 'settings') {
+        setTimeout(showDirty);
+      }
+    });
+  }
   backdrop.addEventListener('click', (event) => {
     const target = (event.target as Element).closest<HTMLElement>('button');
     if (!target) {

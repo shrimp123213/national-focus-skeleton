@@ -2,7 +2,7 @@
 
 最後更新：2026-10-01。第 1–12 節保留早期基線，後續章節記錄各次設計與實作；**目前進度以第 62 節的整合快照為入口**。
 
-目前實作版本：**v0.15.0-skeleton**（標籤 `v0.15.0-skeleton`，推送至 `main`）：介面改版第一階段，見第 81 節；v0.14.23 國家分頁可捲動見第 80 節；v0.14.22 事件完成國策見第 79 節；v0.14.21 結構籤見第 78 節；v0.14.20 勳章式國策節點見第 77 節；v0.14.19 直式卡片與短國策名見第 76 節；v0.14.18 國策樹置中排版見第 75 節；v0.14.17 主幹加側翼（試行）見第 74 節；v0.14.16 國策工期一至五週見第 73 節；v0.14.15 historical 修正見第 71 節；v0.14.14 一律輸出簡體與面板簡體字型見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
+目前實作版本：**v0.15.1-skeleton**（標籤 `v0.15.1-skeleton`，推送至 `main`）：介面改版第二、三階段，見第 82 節；v0.15.0 第一階段見第 81 節；v0.14.23 國家分頁可捲動見第 80 節；v0.14.22 事件完成國策見第 79 節；v0.14.21 結構籤見第 78 節；v0.14.20 勳章式國策節點見第 77 節；v0.14.19 直式卡片與短國策名見第 76 節；v0.14.18 國策樹置中排版見第 75 節；v0.14.17 主幹加側翼（試行）見第 74 節；v0.14.16 國策工期一至五週見第 73 節；v0.14.15 historical 修正見第 71 節；v0.14.14 一律輸出簡體與面板簡體字型見第 70 節；v0.14.13 任務頁欄位高度見第 65 節；v0.14.12 的國家 ID 改用世界書國名、織界 v5 預設見第 63–64 節。第 62 節的整合快照寫於 v0.14.11，其餘內容仍適用。
 
 目前專案：`F:\命一串\national-focus-skeleton`；舊版 `F:\命一串\national-focus`（v0.11.1）僅供歷史參考，本輪未修改。
 
@@ -2252,4 +2252,13 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 - `style.css`：移除 `.period-strip` 系列；新增 v0.15.0 區塊（period-line、桌面 h2 flex、路線面板 244px 貼合內容、`.stage-tools` 成組、小地圖 bottom 66px、`.node-meta` 11px、條件未滿名稱 #b9bfae、`.drawer-status` 三種樣式、`tree-in` 與 `medal-shine` 動畫；手機隱藏全覽與本期目的、`.nation-id` 佔滿一列、工具組可換行）。減少動態時沿用既有全域關閉動畫。
 - 用語：`ui.ts`、`api-panel.ts`、`task-panel.ts`、`source-panel.ts`、`hud.ts`、`period-ui.ts`、`newsbar.ts`、`api-config.ts`、`task-presets.ts`、`tree-io.ts`、`tavern.ts`、`platform.ts`、`workflow.ts`、`news-card/card.html` 的介面文字改為大陸用語（約 230 處）；保護「国策档案」「目前连线」「使用者设定」「设定依据」「初始设定」；`prompts.ts`、`sources.ts`、模型資料不動。
 - 第二階段（設定）預定：API 預設清單＋編輯卡、設定只由底部保存並顯示未保存數、說明縮成一行可展開、任務分頁左右兩欄、進階參數收起、開視窗焦點不落在 ×。第三階段（任務與請求紀錄）：任務卡片、失敗訊息分層、請求紀錄標身分並格式化 JSON 與複製。
+
+## 82. v0.15.1：介面改版第二、三階段（2026-10-02）
+
+使用者要求三階段全部做完後一次驗收，因此第二（設定）與第三（任務與請求紀錄）階段合併為一版。
+
+- `api-panel.ts`：`render` 改為 `.api-layout`：`.api-list`（`data-api-action="pick"` + `data-api-pick`、新增中的未保存項、超過 8 個時 `data-api-search` 就地篩選、`.api-add` 固定底部）與 `.api-card`（標題列 `default`／`copy`／`delete`，`confirm-row`，`.api-card-body` 內的表單，`.inline-field` 的模型輸入與 `models` 按鈕，載入後才出現 `data-api-model`，`details.api-advanced` 以 `advancedOpen` 記住展開，`.api-card-foot` 的狀態與 `discard`／`save`）。新增 `copy`（另存為：`original = null`、名稱加「副本」與序號）、`pick`（等同舊 select 的切換，未保存時 `pending`）、`justSaved`（狀態列附「＋ 再新增一个」）。移除 `data-api-select`。
+- `task-panel.ts`：任務分頁外包 `.task-layout`（`.task-tabs` 直排 + `.task-editors`）；任務預設說明移到 `.preset-title` 的 title；觸發方式文字改完整；同時請求數 0 以空白與 placeholder「不限」顯示（讀回 `Number('') || 0`）。
+- `ui.ts`：`settingsFooter` 加 `.footer-dirty`，`showDirty()` 以 requestAnimationFrame 在設定視窗的 input／change／click 後重算；`foldHints(scope)` 把 `.settings-section` 內超過 46 字、沒有子元素的 `small`／`.block-note`／`p.muted` 改成 `details.hint-fold`（以 `data-folded` 標記，略過任務分頁標籤、API 清單與 `role=status`），`hintObserver`（MutationObserver）處理各面板重繪，`closeModal` 時斷開；`.modal` 加 `tabindex="-1"`，`openModal` 改為聚焦視窗。`showJobs` 改為 `.job-card2`（`splitProblems` 以第一個「：」切出結論、以「；」切問題，`codeText` 標出欄位路徑與 snake_case id，`.job-elapsed[data-started]` 由每秒的 `clock` 更新）。`showLog` 改為 `.log-entry` 與 `.log-part2`，`logTexts` 保存每段文字，`pre[data-log-text]` 在 toggle 時才由 `fillLogPart` 填入（JSON 由 `highlightJson` 縮排分色，去掉 ```json 包裝，解析失敗照原文），`[data-copy]` 在 capture 階段攔下點擊（不觸發 summary 收合），用剪貼簿 API，失敗改用 execCommand。
+- `style.css`：v0.15.1（設定）與 v0.15.2（任務與紀錄）區塊；刪除不再使用的 `.job-log`、`.job-card`、`.request-log`、`.log-part`、`.job-detail`、`.job-message` 規則（18 條）；手機上 API 清單橫排、卡片與視窗底部可換行、按鈕不換行。
 
