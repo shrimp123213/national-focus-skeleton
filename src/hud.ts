@@ -17,7 +17,8 @@ const linger: Record<JobStatus['state'], number> = {
 };
 const symbols: Record<JobStatus['state'], string> = {
   queued: '<i class="hud-sym wait">…</i>',
-  running: '<i class="spinner"></i>',
+  // v0.15.4: static marks; the running time already shows the task is alive.
+  running: '<i class="hud-sym run">●</i>',
   success: '<i class="hud-sym ok">✓</i>',
   failed: '<i class="hud-sym bad">!</i>',
   cancelled: '<i class="hud-sym off">–</i>',
@@ -74,6 +75,9 @@ export function mountHud(options: HudOptions) {
   /** The panel shows task status in its own status line while it is open. */
   let suppressed = false;
   let timer: ReturnType<typeof setInterval> | undefined;
+  /** Jobs and states of the drawn list; the list is redrawn only when they change. */
+  let drawn = '';
+  let drawnIds = new Set<string>();
   const view = doc.defaultView!;
 
   function visibleJobs(now: number): JobStatus[] {
@@ -145,22 +149,51 @@ export function mountHud(options: HudOptions) {
     collapse.setAttribute('aria-label', collapsed ? '展开' : '收合');
     collapse.title = collapsed ? '展开清单' : '收合清单';
     hud.classList.toggle('collapsed', collapsed);
-    bar.classList.toggle('indeterminate', finished === 0);
+    // Progress of a batch only; a single task shows its time instead (no moving bar).
+    bar.hidden = jobs.length < 2;
     fill.style.width = `${Math.round((finished / jobs.length) * 100)}%`;
     list.hidden = collapsed;
-    list.innerHTML = jobs
-      .map((job) => {
-        const name = options.names[job.kind] ?? job.kind;
-        const time =
-          job.state === 'running' && job.started
-            ? elapsed(now - job.started)
-            : job.started && job.finished
-              ? elapsed(job.finished - job.started)
-              : '';
-        const detail = options.message(job);
-        return `<li class="hud-item ${job.state}">${symbols[job.state]}<div class="hud-text"><b>${escape(name)}${job.label ? ` · ${escape(job.label)}` : ''}</b><small title="${escape(detail)}">${escape(detail)}${job.route && job.state === 'success' ? ` · ${escape(job.route)}` : ''}</small></div><time>${time}</time>${job.state !== 'queued' && job.state !== 'running' ? `<button class="icon" data-hud-dismiss="${escape(job.id)}" aria-label="关闭此项">×</button>` : ''}</li>`;
-      })
-      .join('');
+    const time = (job: JobStatus) =>
+      job.state === 'running' && job.started
+        ? elapsed(now - job.started)
+        : job.started && job.finished
+          ? elapsed(job.finished - job.started)
+          : '';
+    const detail = (job: JobStatus) => {
+      const text = options.message(job);
+      return `${text}${job.route && job.state === 'success' ? ` · ${job.route}` : ''}`;
+    };
+    const signature = jobs.map((job) => `${job.id}:${job.state}`).join('|');
+    if (signature !== drawn) {
+      // Redraw when tasks come, go or change state; only new rows slide in.
+      list.innerHTML = jobs
+        .map((job) => {
+          const name = options.names[job.kind] ?? job.kind;
+          return `<li class="hud-item ${job.state} ${drawnIds.has(job.id) ? '' : 'enter'}" data-job="${escape(job.id)}">${symbols[job.state]}<div class="hud-text"><b>${escape(name)}${job.label ? ` · ${escape(job.label)}` : ''}</b><small title="${escape(detail(job))}">${escape(detail(job))}</small></div><time>${time(job)}</time>${job.state !== 'queued' && job.state !== 'running' ? `<button class="icon" data-hud-dismiss="${escape(job.id)}" aria-label="关闭此项">×</button>` : ''}</li>`;
+        })
+        .join('');
+      drawn = signature;
+      drawnIds = new Set(jobs.map((job) => job.id));
+    } else {
+      // Every second: change only the texts, so nothing moves.
+      for (const job of jobs) {
+        const row = list.querySelector<HTMLElement>(`[data-job="${CSS.escape(job.id)}"]`);
+        if (!row) {
+          continue;
+        }
+        const clock = row.querySelector('time')!;
+        const value = time(job);
+        if (clock.textContent !== value) {
+          clock.textContent = value;
+        }
+        const small = row.querySelector('small')!;
+        const text = detail(job);
+        if (small.textContent !== text) {
+          small.textContent = text;
+          small.title = text;
+        }
+      }
+    }
     const wasHidden = hud.hidden;
     hud.hidden = false;
     place();

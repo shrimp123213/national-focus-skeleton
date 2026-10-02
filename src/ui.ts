@@ -1139,7 +1139,11 @@ export function mountUI(
     const summary = taskSummary();
     pill.hidden = !summary.state || modal === 'jobs';
     pill.className = `modal-task-status ${summary.state}`;
-    pill.innerHTML = `${summary.state === 'busy' ? '<i class="spinner"></i>' : '<i class="status-dot failed"></i>'}${escape(summary.text.replace('，点此查看', ''))}`;
+    // A static dot: this note is rewritten every second while a task runs (v0.15.4).
+    const html = `<i class="status-dot ${summary.state === 'busy' ? 'busy' : 'failed'}"></i>${escape(summary.text.replace('，点此查看', ''))}`;
+    if (pill.innerHTML !== html) {
+      pill.innerHTML = html;
+    }
   }
   function closeModal(): void {
     removing = '';
