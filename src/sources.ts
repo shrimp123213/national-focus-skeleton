@@ -218,6 +218,10 @@ export function entryExclusion(
   names: TableNames = defaultTableNames,
 ): string {
   const name = normalizedEntryName(entry.name);
+  // v0.15.5: this script's own entries render the national state the task data already carries.
+  if (name.startsWith('国策档案-') || name.startsWith('國策檔案-')) {
+    return '国策档案自身条目（任务资料已含国策状态）';
+  }
   if (summaryIndexEntry(name)) {
     return '纪要索引专用（$5）';
   }

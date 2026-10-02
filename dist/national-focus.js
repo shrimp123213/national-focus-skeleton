@@ -30693,6 +30693,9 @@ ${end.comment}` : end.comment;
   ];
   function entryExclusion(entry, names = defaultTableNames) {
     const name = normalizedEntryName(entry.name);
+    if (name.startsWith("国策档案-") || name.startsWith("國策檔案-")) {
+      return "国策档案自身条目（任务资料已含国策状态）";
+    }
     if (summaryIndexEntry(name)) {
       return "纪要索引专用（$5）";
     }

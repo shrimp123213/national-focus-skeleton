@@ -101,3 +101,10 @@ test('旧繁体关系类型与来源排除词仍能识别', () => {
     assert.notEqual(entryExclusion({ name: `角色${word}` }), '');
   }
 });
+
+test('国策档案自己的世界书条目不进入任务的剧情世界书（任务资料已含国策状态）', () => {
+  for (const name of ['国策档案-世界概况', '国策档案-国家-奥古斯提姆帝国', '國策檔案-世界概況']) {
+    assert.match(entryExclusion({ name }), /国策档案自身条目/);
+  }
+  assert.equal(entryExclusion({ name: '国策设定' }), '');
+});
