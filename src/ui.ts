@@ -1124,20 +1124,21 @@ export function mountUI(
     taskPanel = undefined;
     modal = name;
     backdrop.hidden = false;
-    backdrop.innerHTML = `<section class="modal modal-${name}" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-jobs" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
+    backdrop.innerHTML = `<section class="modal modal-${name}" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><header class="modal-header"><h2 id="modal-title">${escape(title)}</h2><span class="modal-task-status" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}</section>`;
     // v0.15.1: focus the window, so the close button does not look like the main action.
     backdrop.querySelector<HTMLElement>('.modal')?.focus();
     updateModalJobs();
   }
   /** Windows cover the status line, so they show running tasks in their own header. */
   function updateModalJobs(): void {
-    const pill = backdrop.querySelector<HTMLElement>('.modal-jobs');
+    // Keep the badge distinct from modal-${name}; the task window itself is modal-jobs.
+    const pill = backdrop.querySelector<HTMLElement>('.modal-task-status');
     if (!pill) {
       return;
     }
     const summary = taskSummary();
     pill.hidden = !summary.state || modal === 'jobs';
-    pill.className = `modal-jobs ${summary.state}`;
+    pill.className = `modal-task-status ${summary.state}`;
     pill.innerHTML = `${summary.state === 'busy' ? '<i class="spinner"></i>' : '<i class="status-dot failed"></i>'}${escape(summary.text.replace('，点此查看', ''))}`;
   }
   function closeModal(): void {

@@ -3186,7 +3186,7 @@ button.icon {
 .field[hidden] {
   display: none;
 }
-.modal-jobs {
+.modal-task-status {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3199,18 +3199,18 @@ button.icon {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.modal-jobs[hidden] {
+.modal-task-status[hidden] {
   display: none;
 }
-.modal-jobs.failed {
+.modal-task-status.failed {
   color: var(--red);
 }
-.modal-jobs .spinner {
+.modal-task-status .spinner {
   flex: none;
   width: 12px;
   height: 12px;
 }
-.modal-jobs .status-dot {
+.modal-task-status .status-dot {
   margin-right: 0;
 }
 .status-jobs {
