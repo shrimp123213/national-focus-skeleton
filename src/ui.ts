@@ -118,6 +118,8 @@ export function mountUI(
   let routesOpen = (doc.defaultView?.innerWidth ?? 1200) > 760;
   /** Phone layout: the control select and 更新局势 sit behind the nation bar's ⋯ button. */
   let nationMore = false;
+  /** Last main-focus state per country and when it changed; a change flares the focus gauge once. */
+  const focusSeen = new Map<string, { key: string; at: number }>();
   const openPops = new Set<string>();
   let open = controller.platform.demo;
   let modal = '';
@@ -373,10 +375,35 @@ export function mountUI(
         current && currentProgress
           ? Math.min(100, Math.round((currentProgress.days / current.days) * 100))
           : 0;
-      const agenda =
-        current && currentProgress
-          ? `<button class="agenda ${currentProgress.status}" data-action="open-current" title="查看主国策"><span class="agenda-icon">${icon(current.icon)}</span><span class="agenda-copy"><small>主国策 · ${statuses[currentProgress.status]}</small><strong>${escape(current.name)}</strong><span class="agenda-bar"><i style="width:${percent}%"></i></span><span class="agenda-meta"><span>${currentProgress.days.toFixed(1)} / ${current.days} 日</span><span>${currentProgress.status === 'waiting' ? '工期已满 · 等待成果' : `尚余 ${Math.max(0, current.days - currentProgress.days).toFixed(1)} 日`}</span></span></span></button>`
-          : `<div class="agenda empty-agenda"><span class="agenda-icon">${icon('crown')}</span><span class="agenda-copy"><small>主国策</small><strong>${country.control === 'player' ? '尚未选定' : 'AI 评估中'}</strong><span class="agenda-meta"><span>${country.control === 'player' ? '在树上点击可开始的国策' : '下次局势更新时依情势选策'}</span></span></span></div>`;
+      // The main focus reads as a third gauge: one number (days left), no card. Colour stays on the dot
+      // and the bar; the outline only flares once when the focus or its status changes.
+      const daysText = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+      const focusKey = current && currentProgress ? `${current.id}:${currentProgress.status}` : '';
+      const seen = focusSeen.get(country.id);
+      if (!seen || seen.key !== focusKey)
+        focusSeen.set(country.id, { key: focusKey, at: seen ? Date.now() : 0 });
+      // Renders during the flare resume it where it was instead of restarting it.
+      const flareAge = Date.now() - (focusSeen.get(country.id)?.at ?? 0);
+      const flaring = focusKey !== '' && flareAge < 2200;
+      let focusGauge: string;
+      if (current && currentProgress) {
+        const status = currentProgress.status;
+        const left = daysText(Math.max(0, current.days - currentProgress.days));
+        const days = `<small>余</small><strong>${left}</strong><small>日</small>`;
+        const num =
+          status === 'waiting'
+            ? '<span class="focus-word">待成果</span>'
+            : status === 'paused'
+              ? `<span class="focus-word">暂停 ·</span>${days}`
+              : status === 'active'
+                ? days
+                : `<span class="focus-word">${statuses[status]}</span>`;
+        const detail = `${current.name} · ${status === 'waiting' ? '工期已满，等待成果' : statuses[status]} · ${daysText(currentProgress.days)} / ${current.days} 日${status === 'waiting' ? '' : ` · 尚余 ${left} 日`}`;
+        focusGauge = `<button class="gauge focus-gauge ${status}${flaring ? ' flare' : ''}"${flaring ? ` style="--flare-at:-${flareAge}ms"` : ''} data-action="open-current" title="${escape(detail)}" aria-label="主国策：${escape(detail)}，查看详情"><span class="gauge-head"><small class="focus-label"><i class="focus-dot"></i>主国策</small><span class="focus-name">${escape(current.name)}</span><span class="focus-num">${num}</span></span><span class="gauge-track"><i style="width:${percent}%"></i></span></button>`;
+      } else {
+        const hint = country.control === 'player' ? '在树上点击可开始的国策' : '下次局势更新时依情势选策';
+        focusGauge = `<div class="gauge focus-gauge empty" title="${hint}"><span class="gauge-head"><small class="focus-label"><i class="focus-dot"></i>主国策</small><span class="focus-name">${country.control === 'player' ? '尚未选定' : 'AI 评估中'}</span><span class="focus-num"></span></span><span class="gauge-track"></span></div>`;
+      }
       const gauge = (label: string, value: number, kind: string) =>
         `<div class="gauge ${kind}" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><div class="gauge-head"><small>${label}</small><strong>${value}</strong></div><div class="gauge-track"><i style="width:${value}%"></i></div></div>`;
       const stats = branchStats(country);
@@ -390,7 +417,7 @@ export function mountUI(
         .join(
           '',
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
-      body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2 title="${escape(country.description)}">${escape(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape(stateTime(state, false))}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${agenda}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
+      body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2 title="${escape(country.description)}">${escape(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape(stateTime(state, false))}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
 <section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
     } else {
       body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '为这个世界选择方向' : '连接你的故事'}</h2><p>${state ? '先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。' : '国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。'}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;

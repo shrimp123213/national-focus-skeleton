@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>主國策進度樣品</title>
+<style>
+:root {
+  --ink: #0d1310;
+  --bg: #131a16;
+  --panel: #19221d;
+  --raised: #212b25;
+  --raised-2: #29352e;
+  --line: rgba(217, 191, 120, 0.14);
+  --line-strong: rgba(217, 191, 120, 0.32);
+  --gold: #dcc27c;
+  --gold-deep: #a88d4c;
+  --text: #ece6d4;
+  --muted: #a8b0a1;
+  --faint: #7d867a;
+  --green: #72c492;
+  --amber: #e6a950;
+  --blue: #8fb0d6;
+  --radius: 10px;
+  --sans: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'Noto Serif TC', Georgia, var(--sans);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #0b0f0d;
+  color: var(--text);
+  font: 14px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+button, select { font: inherit; color: inherit; }
+button {
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  padding: 7px 12px;
+  border-radius: 7px;
+  line-height: 1.3;
+  transition: background .15s, border-color .15s, color .15s;
+}
+button:hover { border-color: var(--gold); background: var(--raised-2); }
+select { background: var(--ink); border: 1px solid rgba(217,191,120,.24); border-radius: 7px; }
+small { color: var(--muted); }
+h1, h2, h3, p { margin: 0; }
+
+/* ---------- page chrome (not part of the design) ---------- */
+.page { max-width: 1760px; margin: 0 auto; padding: 32px 16px 80px; }
+.page-head h1 { font-family: var(--serif); font-size: 26px; letter-spacing: .06em; }
+.page-head p { color: var(--muted); margin-top: 6px; max-width: 760px; }
+.controls {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center;
+  margin: 22px 0 8px; padding: 12px 14px;
+  background: rgba(19,26,22,.94); backdrop-filter: blur(6px);
+  border: 1px solid var(--line); border-radius: 10px;
+  font-size: 13px;
+}
+.controls label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 7px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 5px 10px; font-size: 12.5px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--raised-2); color: var(--gold); }
+.controls input[type=range] { width: 160px; accent-color: var(--gold); }
+.controls output { font-family: var(--serif); color: var(--gold); min-width: 64px; }
+.variant { margin-top: 34px; }
+.variant-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.variant-head h2 { font-family: var(--serif); font-size: 19px; }
+.variant-head .badge { font-size: 11.5px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--gold-deep); color: var(--gold); }
+.variant-head .badge.dim { border-color: var(--line-strong); color: var(--muted); }
+.frame-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+.frame { background: var(--bg); margin: 0 auto; transition: width .25s; container-type: inline-size; } /* stands in for the viewport */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 28px; margin-top: 12px; padding: 0 4px; color: var(--muted); font-size: 13px; }
+.notes p::before { content: '— '; color: var(--gold-deep); }
+.notes b { color: var(--text); font-weight: 600; }
+
+/* ---------- app replica: command bar ---------- */
+svg.ic { width: 100%; height: 100%; }
+.command { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 8px 14px; background: linear-gradient(180deg,#1c2620,#151d18); border-bottom: 1px solid var(--line); }
+.brand-mark { width: 38px; height: 38px; padding: 6px; color: var(--gold); border: 1px solid var(--line-strong); border-radius: 9px; background: rgba(220,194,124,.07); flex-shrink: 0; }
+.brand { display: grid; line-height: 1.15; flex-shrink: 0; }
+.brand b { font-size: 17px; letter-spacing: .12em; }
+.brand small { font-size: 9.5px; letter-spacing: .3em; color: var(--gold-deep); }
+.tabs { display: flex; gap: 6px; min-width: 0; overflow: hidden; margin-left: 10px; mask-image: linear-gradient(90deg,#000 88%,transparent); }
+.tab { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 9px; border: 1px solid transparent; white-space: nowrap; flex-shrink: 0; }
+.tab.active { background: var(--raised-2); border-color: var(--line-strong); box-shadow: inset 0 -2px 0 var(--gold); }
+.tab i { width: 30px; height: 30px; padding: 5px; border-radius: 7px; background: rgba(255,255,255,.04); color: var(--blue); }
+.tab span { display: grid; line-height: 1.2; }
+.tab strong { font-size: 13.5px; font-weight: 600; }
+.tab small { font-size: 11px; }
+.spacer { flex: 1; }
+.date-chip { display: grid; line-height: 1.15; text-align: right; padding: 0 6px; flex-shrink: 0; }
+.date-chip small { font-size: 10.5px; }
+.date-chip strong { font-family: var(--serif); font-size: 17px; color: var(--gold); }
+.cmd-btn { height: 38px; white-space: nowrap; flex-shrink: 0; }
+.cmd-btn.close { width: 38px; padding: 0; font-size: 20px; }
+
+/* ---------- app replica: nation bar (shared) ---------- */
+.nation-bar { position: relative; display: grid; align-items: center; gap: 20px; padding: 9px 18px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.nation-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.nation-crest { width: 48px; height: 48px; padding: 8px; border-radius: 12px; border: 1px solid var(--line-strong); background: linear-gradient(160deg,rgba(220,194,124,.16),rgba(220,194,124,.02)); color: var(--gold); flex-shrink: 0; }
+.nation-copy { min-width: 0; }
+.nation-copy h2 { display: flex; align-items: baseline; gap: 10px; font-size: 21px; line-height: 1.25; letter-spacing: .04em; }
+.nation-copy h2 small { white-space: nowrap; font-size: 12px; font-weight: 400; letter-spacing: 0; }
+.period-line { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px; font-size: 12.5px; }
+.period-line strong { color: var(--gold); font-weight: 600; }
+.period-shape { padding: 1px 8px; border-radius: 10px; font-size: 11.5px; color: #e5d3a0; background: rgba(220,194,124,.08); border: 1px solid rgba(220,194,124,.28); }
+.switch { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.switch input { accent-color: var(--gold); margin: 0; }
+.linkish { border: 0; background: none; padding: 0; font-size: 12px; color: var(--muted); }
+.linkish:hover { background: none; color: var(--gold); }
+.period-note { margin-top: 1px; font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gauges { display: flex; gap: 16px; }
+.gauge { width: 132px; }
+.gauge-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.gauge-head small { font-size: 12px; }
+.gauge-head strong { font-family: var(--serif); font-size: 22px; line-height: 1.1; }
+.gauge-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; margin-top: 4px; }
+.gauge-track i { display: block; height: 100%; border-radius: 3px; transition: width .4s ease; }
+.gauge.stability .gauge-track i { background: linear-gradient(90deg,#5f9e75,var(--green)); }
+.gauge.war .gauge-track i { background: linear-gradient(90deg,#b75a49,var(--amber)); }
+.nation-actions { display: flex; align-items: center; gap: 8px; }
+.nation-actions select { height: 36px; padding: 0 8px; }
+.primary { height: 36px; background: linear-gradient(180deg,#7a6a37,#5b4f28); border-color: var(--gold); color: #fff4d0; font-weight: 600; white-space: nowrap; }
+.primary:hover { background: linear-gradient(180deg,#8d7b41,#6a5c2f); }
+.canvas-strip { height: 120px; background-color: var(--bg); background-image: radial-gradient(rgba(217,191,120,.09) 1px, transparent 1px); background-size: 22px 22px; position: relative; }
+.canvas-strip::after { content: '国策画布'; position: absolute; left: 18px; top: 14px; font-size: 12px; color: var(--faint); }
+
+/* ---------- BEFORE: the current agenda card ---------- */
+.v-before .nation-bar { grid-template-columns: minmax(200px,1.1fr) auto minmax(260px,1.25fr) auto; }
+.agenda { display: grid; grid-template-columns: 46px 1fr; gap: 12px; align-items: center; text-align: left; padding: 9px 14px 9px 10px; border-radius: var(--radius); background: var(--raised); border: 1px solid var(--line-strong); min-width: 0; }
+.agenda.active { border-color: rgba(114,196,146,.6); }
+.agenda.waiting { border-color: rgba(230,169,80,.6); }
+.agenda.paused { border-color: rgba(143,176,214,.6); }
+.agenda.empty { border-style: dashed; }
+.agenda-icon { width: 46px; height: 46px; padding: 9px; border-radius: 10px; background: rgba(220,194,124,.1); color: var(--gold); }
+.agenda.active .agenda-icon { color: var(--green); background: rgba(114,196,146,.12); }
+.agenda.waiting .agenda-icon { color: var(--amber); background: rgba(230,169,80,.12); }
+.agenda-copy { display: grid; gap: 2px; min-width: 0; }
+.agenda-copy small { font-size: 11.5px; letter-spacing: .08em; }
+.agenda-copy strong { font-family: var(--serif); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 3px; }
+.agenda-bar i { display: block; height: 100%; background: linear-gradient(90deg,#4f9a6b,var(--green)); border-radius: 4px; transition: width .4s; }
+.agenda.waiting .agenda-bar i { background: linear-gradient(90deg,#b67c2f,var(--amber)); }
+.agenda.paused .agenda-bar i { background: linear-gradient(90deg,#5c7ca3,var(--blue)); }
+.agenda-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted); }
+
+/* ---------- shared: status colour per state ---------- */
+.s-active  { --state: var(--green); --state-deep: #4f9a6b; }
+.s-waiting { --state: var(--amber); --state-deep: #b67c2f; }
+.s-paused  { --state: var(--blue);  --state-deep: #5c7ca3; }
+.s-empty   { --state: var(--faint); --state-deep: var(--faint); }
+
+/* ---------- A: the main focus becomes a third gauge ---------- */
+/* the identity keeps its room; the focus gauge gives way first (300px → 180px) */
+.v-a .nation-bar { grid-template-columns: minmax(360px,1fr) auto auto; gap: 28px; }
+/* width depends only on the window, never on the text, so switching state never moves it */
+.v-a .gauges .fwrap { flex: none; width: 300px; }
+@container (max-width: 1499px) { .v-a .gauges .fwrap { width: 250px; } }
+@container (max-width: 1279px) { .v-a .gauges .fwrap { width: 200px; } }
+.v-a .gauges { align-items: center; gap: 20px; }
+.v-a .gauges .rule { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--line); }
+.fwrap { position: relative; }
+.fstat {
+  position: relative; display: block; width: calc(100% + 16px); padding: 4px 8px; margin: -4px -8px;
+  text-align: left; border: 0; border-radius: 8px; background: transparent;
+}
+.fstat:hover { background: rgba(255,255,255,.035); }
+.fstat:hover .fstat-name { text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 4px; }
+.fstat .gauge-head { justify-content: flex-start; }
+.fstat-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+.fstat-label .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--state); }
+.s-active .fstat-label .dot { box-shadow: 0 0 0 0 var(--state); animation: breathe 2.4s ease-out infinite; }
+.s-empty .fstat-label .dot { background: transparent; border: 1px solid var(--faint); }
+.fstat .gauge-head .fstat-name { font-family: var(--serif); font-size: 14.5px; font-weight: 600; min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-empty .fstat-name { color: var(--faint); font-weight: 400; }
+.fstat-num { display: inline-flex; align-items: baseline; gap: 3px; flex-shrink: 0; }
+/* invisible strut at the numeral's size: states without a number (待成果, 未选定) keep the same line height */
+.fstat-num::after { content: '\200b'; font-family: var(--serif); font-size: 22px; line-height: 1.1; }
+.fstat-num small { font-size: 11.5px; }
+.fstat .fstat-num strong { font-family: var(--serif); font-size: 22px; line-height: 1.1; font-weight: 700; }
+.fstat-num .state-word { color: var(--state); font-size: 12px; }
+.fstat .gauge-track i { background: linear-gradient(90deg,var(--state-deep),var(--state)); }
+.s-empty.fstat .gauge-track { background: repeating-linear-gradient(90deg,rgba(255,255,255,.09) 0 6px,transparent 6px 10px); }
+@keyframes breathe { 0% { box-shadow: 0 0 0 0 rgba(114,196,146,.55); } 70%,100% { box-shadow: 0 0 0 6px rgba(114,196,146,0); } }
+
+/* state-change moment: colour only shows up when something happens */
+.fstat.pulse::before {
+  content: ''; position: absolute; inset: -2px; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 1px var(--state), 0 0 22px -2px var(--state);
+  animation: flare 2.2s ease-out forwards;
+}
+@keyframes flare { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+
+/* popover with the detail that left the bar */
+.pop {
+  position: absolute; z-index: 10; top: calc(100% + 10px); right: 0; width: 340px;
+  padding: 14px 16px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line-strong);
+  box-shadow: 0 18px 40px -12px rgba(0,0,0,.6); font-size: 13px; cursor: default;
+  opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .15s, transform .15s;
+}
+.pop.open { opacity: 1; transform: none; pointer-events: auto; }
+.pop small.k { display: block; font-size: 11px; letter-spacing: .14em; color: var(--gold-deep); }
+.pop h3 { font-family: var(--serif); font-size: 17px; margin: 2px 0 8px; }
+.pop p { color: var(--muted); line-height: 1.7; }
+.pop dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 12px 0; padding: 10px 0; border-block: 1px solid var(--line); }
+.pop dt { color: var(--faint); font-size: 12px; }
+.pop dd { margin: 0; font-size: 12.5px; }
+.pop .row { display: flex; gap: 8px; justify-content: flex-end; }
+.pop .row button { font-size: 12.5px; padding: 5px 10px; }
+
+/* ---------- B: the bar's bottom edge is the progress ---------- */
+.v-b .nation-bar { grid-template-columns: minmax(0,1fr) auto auto auto; gap: 28px; border-bottom-color: transparent; }
+.edge { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--line); }
+.edge i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg,transparent,var(--state-deep) 30%,var(--state)); transition: width .4s ease; }
+.edge i::after { content: ''; position: absolute; right: -3px; top: -2px; width: 6px; height: 6px; border-radius: 50%; background: var(--state); box-shadow: 0 0 10px 2px var(--state); }
+.s-empty .edge i::after { display: none; }
+.focus-line { display: grid; gap: 1px; padding: 4px 8px; margin: -4px -8px; border: 0; background: transparent; text-align: right; max-width: 260px; }
+.focus-line:hover { background: rgba(255,255,255,.035); }
+.focus-line small { white-space: nowrap; font-size: 12px; display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.focus-line small .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--state); }
+.focus-line .fl-name { font-family: var(--serif); font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.focus-line em { font-style: normal; color: var(--state); }
+.s-empty.focus-line .fl-name { color: var(--faint); font-weight: 400; }
+.v-b .pulse-edge { animation: edgeflare 2.2s ease-out; }
+@keyframes edgeflare { 0%,100% { box-shadow: none; } 15% { box-shadow: 0 2px 18px -2px var(--state); } }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="page-head">
+    <h1>主國策進度 · 改版樣品</h1>
+    <p>上面是現況，下面兩個是提案。用下方工具列切換狀態、拖動工期、改變視窗寬度；點國策名稱可以打開細節彈窗；按「模擬完成」可以看到只在狀態改變時才出現的提示色。</p>
+  </header>
+
+  <div class="controls">
+    <label>狀態
+      <span class="seg" id="status">
+        <button data-v="active" class="on">进行中</button>
+        <button data-v="waiting">等待成果</button>
+        <button data-v="paused">已暂停</button>
+        <button data-v="empty">未选定</button>
+      </span>
+    </label>
+    <label>工期 <input type="range" id="days" min="0" max="14" step="0.5" value="0"><output id="days-out">0 / 14 日</output></label>
+    <label>視窗寬度
+      <span class="seg" id="width">
+        <button data-v="1674" class="on">1674</button>
+        <button data-v="1366">1366</button>
+        <button data-v="1180">1180</button>
+      </span>
+    </label>
+    <button id="complete">模擬完成</button>
+  </div>
+
+  <section class="variant v-before">
+    <div class="variant-head"><h2>現況</h2><span class="badge dim">對照</span></div>
+    <div class="frame-wrap"><div class="frame" data-frame></div></div>
+    <div class="notes">
+      <p>卡片有邊框、底色、綠色描邊和 46px 圖示，是整條欄<b>最重</b>的元素。</p>
+      <p>「0.0 / 14 日」和「尚余 14.0 日」說的是<b>同一件事</b>。</p>
+      <p>寬度約 580px，國家的期別摘要因此被<b>截斷</b>。</p>
+    </div>
+  </section>
+
+  <section class="variant v-a">
+    <div class="variant-head"><h2>方案 A · 降級為第三個指標</h2><span class="badge">推薦</span></div>
+    <div class="frame-wrap"><div class="frame" data-frame></div></div>
+    <div class="notes">
+      <p>和穩定度、戰爭支持度用<b>同一套語法</b>：標籤＋標題＋數字＋細條。</p>
+      <p>只保留一組數字：<b>還剩幾日</b>。完整的工期改放在彈窗。</p>
+      <p>平時只用一顆狀態點標示，描邊光暈<b>只在狀態改變</b>（例如工期已滿）時閃一下。</p>
+      <p>寬度從約 580px 縮到 300px，左邊的期別摘要可以<b>完整顯示</b>。</p>
+    </div>
+  </section>
+
+  <section class="variant v-b">
+    <div class="variant-head"><h2>方案 B · 底邊即進度</h2><span class="badge dim">實驗</span></div>
+    <div class="frame-wrap"><div class="frame" data-frame></div></div>
+    <div class="notes">
+      <p>整條國家欄的底線就是國策進度條，帶一顆發光的進度點。</p>
+      <p>文字縮成一個靠右的兩行標籤，幾乎不佔版面。</p>
+      <p>風險：第一次看的人<b>未必</b>看得出底線和國策的關係，需要靠互動或說明來建立連結。</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const crown = '<svg class="ic" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 18l10 9 12-17 12 17 10-9-6 29H16z"/><path d="M16 53h32M21 38h22"/></svg>';
+const eagle = '<svg class="ic" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M32 14v36M32 22c-6-8-16-10-24-6 6 2 10 6 12 12M32 22c6-8 16-10 24-6-6 2-10 6-12 12M24 40l8 10 8-10"/></svg>';
+const TOTAL = 14;
+const FOCUS = {
+  name: '巡天巨兽巡边勘界',
+  desc: '派遣巡天巨兽沿北境冻原巡行一周，勘定各部落的冬牧边界，为凛冬草约的分地条款取得实据。',
+  route: '凛冬草约',
+  effect: '稳定度 +5；解锁「冻原分牧令」',
+};
+const state = { status: 'active', days: 0, width: 1674 };
+const labels = { active: '进行中', waiting: '等待成果', paused: '已暂停', empty: '主国策' };
+const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+const command = () => `<header class="command">
+  <div class="brand-mark">${eagle}</div>
+  <div class="brand"><b>国策档案</b><small>NATIONAL FOCUS</small></div>
+  <nav class="tabs">${['兽族联盟-卡拉什利亚斯','翼民圣都-梵尼亚','奥古斯提姆帝国','伯伦斯法环','永夜盟约','瓦伦蒂亚公国','萨赫拉']
+    .map((n, i) => `<span class="tab ${i ? '' : 'active'}"><i>${crown}</i><span><strong>${n}</strong><small>AI 演化</small></span></span>`).join('')}</nav>
+  <div class="spacer"></div>
+  <div class="date-chip"><small>故事时间</small><strong>复兴纪元490年10月15日</strong></div>
+  <button class="cmd-btn">☰ 任务</button><button class="cmd-btn">⚙ 设置</button><button class="cmd-btn close">×</button>
+</header>`;
+
+const identity = () => `<div class="nation-id"><span class="nation-crest">${crown}</span><div class="nation-copy">
+  <h2>兽族联盟-卡拉什利亚斯<small>AI 演化</small></h2>
+  <div class="period-line"><strong>第 1 期 · 凛冬草约与金戈之盟</strong><span class="period-shape">双轨型 · 公式</span><label class="switch"><input type="checkbox" checked>自动换期</label><button class="linkish">往期摘要</button></div>
+  <p class="period-note">在严冬封冻草原前理顺巡天王庭对百族部落的法令调配，通过先祖大狩猎充实越冬储备，并以凛冬草约换取南方诸国对边境牧权的默认。</p>
+</div></div>`;
+
+const gauges = (extra = '') => `<div class="gauges">
+  <div class="gauge stability"><div class="gauge-head"><small>稳定度</small><strong>58</strong></div><div class="gauge-track"><i style="width:58%"></i></div></div>
+  <div class="gauge war"><div class="gauge-head"><small>战争支持度</small><strong>64</strong></div><div class="gauge-track"><i style="width:64%"></i></div></div>${extra}</div>`;
+
+const actions = (lead = '') => `<div class="nation-actions">${lead}<select><option>AI 自主演化</option><option>玩家选策</option></select><button class="primary">更新局势</button></div>`;
+
+const pct = () => Math.min(100, (state.days / TOTAL) * 100);
+const left = () => Math.max(0, TOTAL - state.days);
+
+const popover = () => `<div class="pop" role="dialog">
+  <small class="k">主国策 · ${labels[state.status]}</small>
+  <h3>${FOCUS.name}</h3>
+  <p>${FOCUS.desc}</p>
+  <dl><dt>工期</dt><dd>${fmt(state.days)} / ${TOTAL} 日 · 尚余 ${fmt(left())} 日</dd><dt>路线</dt><dd>${FOCUS.route}</dd><dt>成果</dt><dd>${FOCUS.effect}</dd></dl>
+  <div class="row"><button>暂停</button><button>在树上定位</button></div>
+</div>`;
+
+function before() {
+  const s = state.status;
+  const agenda = s === 'empty'
+    ? `<div class="agenda empty"><span class="agenda-icon">${crown}</span><span class="agenda-copy"><small>主国策</small><strong>AI 评估中</strong><span class="agenda-meta"><span>下次局势更新时依情势选策</span></span></span></div>`
+    : `<button class="agenda ${s}"><span class="agenda-icon">${crown}</span><span class="agenda-copy"><small>主国策 · ${labels[s]}</small><strong>${FOCUS.name}</strong><span class="agenda-bar"><i style="width:${pct()}%"></i></span><span class="agenda-meta"><span>${state.days.toFixed(1)} / ${TOTAL}.0 日</span><span>${s === 'waiting' ? '工期已满 · 等待成果' : `尚余 ${left().toFixed(1)} 日`}</span></span></span></button>`;
+  return command() + `<section class="nation-bar">${identity()}${gauges()}${agenda}${actions()}</section><div class="canvas-strip"></div>`;
+}
+
+function variantA() {
+  const s = state.status;
+  let num;
+  if (s === 'empty') num = '';
+  else if (s === 'waiting') num = '<span class="state-word">待成果</span>';
+  else if (s === 'paused') num = `<span class="state-word">暂停 ·</span><small>余</small><strong>${fmt(left())}</strong><small>日</small>`;
+  else num = `<small>余</small><strong>${fmt(left())}</strong><small>日</small>`;
+  const name = s === 'empty' ? 'AI 评估中' : FOCUS.name;
+  const fstat = `<span class="rule"></span><div class="fwrap" data-pop><button class="fstat s-${s}" title="${s === 'empty' ? '下次局势更新时依情势选策' : `${FOCUS.name} · ${fmt(state.days)} / ${TOTAL} 日`}">
+    <div class="gauge-head"><span class="fstat-label"><i class="dot"></i>主国策</span><span class="fstat-name">${name}</span><span class="fstat-num">${num}</span></div>
+    <div class="gauge-track"><i style="width:${s === 'empty' ? 0 : pct()}%"></i></div>
+  </button>${s === 'empty' ? '' : popover()}</div>`;
+  return command() + `<section class="nation-bar">${identity()}${gauges(fstat)}${actions()}</section><div class="canvas-strip"></div>`;
+}
+
+function variantB() {
+  const s = state.status;
+  const tail = s === 'empty' ? '下次局势更新时选策' : s === 'waiting' ? '<em>工期已满</em>' : `${s === 'paused' ? '<em>已暂停</em> · ' : ''}余 ${fmt(left())} 日`;
+  const line = `<div class="fwrap" data-pop><button class="focus-line s-${s}">
+    <small><i class="dot"></i>主国策 · ${tail}</small>
+    <span class="fl-name">${s === 'empty' ? 'AI 评估中' : FOCUS.name}</span>
+  </button>${s === 'empty' ? '' : popover()}</div>`;
+  return command() + `<section class="nation-bar s-${s}">${identity()}${gauges()}${line}${actions()}<div class="edge"><i style="width:${s === 'empty' ? 0 : pct()}%"></i></div></section><div class="canvas-strip"></div>`;
+}
+
+const renderers = { 'v-before': before, 'v-a': variantA, 'v-b': variantB };
+function render() {
+  document.querySelectorAll('.variant').forEach((sec) => {
+    const key = [...sec.classList].find((c) => renderers[c]);
+    const frame = sec.querySelector('[data-frame]');
+    frame.style.width = state.width + 'px';
+    frame.innerHTML = renderers[key]();
+  });
+  document.getElementById('days-out').textContent = `${fmt(state.days)} / ${TOTAL} 日`;
+}
+
+function segment(id, apply) {
+  const seg = document.getElementById(id);
+  seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    apply(b.dataset.v);
+    render();
+  });
+}
+const setStatus = (v) => {
+  state.status = v;
+  document.querySelectorAll('#status button').forEach((x) => x.classList.toggle('on', x.dataset.v === v));
+};
+segment('status', (v) => {
+  state.status = v;
+  if (v === 'waiting') state.days = TOTAL;
+  if (v === 'active' && state.days >= TOTAL) state.days = 0;
+  document.getElementById('days').value = state.days;
+});
+segment('width', (v) => (state.width = Number(v)));
+
+document.getElementById('days').addEventListener('input', (e) => {
+  const prev = state.status;
+  state.days = Number(e.target.value);
+  if (state.days >= TOTAL && prev === 'active') setStatus('waiting');
+  if (state.days < TOTAL && prev === 'waiting') setStatus('active');
+  render();
+  if (state.status !== prev) flare();
+});
+
+function flare() {
+  document.querySelectorAll('.fstat').forEach((el) => { el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); });
+  document.querySelectorAll('.v-b .nation-bar').forEach((el) => { el.classList.remove('pulse-edge'); void el.offsetWidth; el.classList.add('pulse-edge'); });
+}
+document.getElementById('complete').addEventListener('click', () => {
+  state.days = TOTAL;
+  document.getElementById('days').value = TOTAL;
+  setStatus('waiting');
+  render();
+  requestAnimationFrame(flare);
+});
+
+document.addEventListener('click', (e) => {
+  const trigger = e.target.closest('[data-pop]');
+  const insidePop = e.target.closest('.pop');
+  if (insidePop) return;
+  document.querySelectorAll('.pop.open').forEach((p) => { if (!trigger || !trigger.contains(p)) p.classList.remove('open'); });
+  if (trigger) trigger.querySelector('.pop')?.classList.toggle('open');
+});
+
+state.days = 5;
+document.getElementById('days').value = 5;
+render();
+</script>
+</body>
+</html>

@@ -472,7 +472,7 @@ code {
 /* Nation bar */
 .nation-bar {
   display: grid;
-  grid-template-columns: minmax(200px, 1.1fr) auto minmax(260px, 1.25fr) auto;
+  grid-template-columns: minmax(260px, 1fr) auto auto auto;
   align-items: center;
   gap: 20px;
   padding: 12px 18px;
@@ -555,92 +555,149 @@ code {
 .gauge.war .gauge-track i {
   background: linear-gradient(90deg, #b75a49, var(--amber));
 }
-.agenda {
-  display: grid;
-  grid-template-columns: 46px 1fr;
-  gap: 12px;
-  align-items: center;
+/* The main focus is a third gauge (v0.15.9): label, name, days left and a slim bar, no card.
+   Its width follows the window only, so a status change never moves or resizes it. */
+.focus-gauge {
+  --state: var(--green);
+  --state-deep: #4f9a6b;
+  position: relative;
+  display: block;
+  width: 300px;
+  padding: 4px 8px;
+  margin: -4px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   text-align: left;
-  padding: 9px 14px 9px 10px;
-  border-radius: var(--radius);
-  background: var(--raised);
-  border: 1px solid var(--line-strong);
+}
+.focus-gauge.waiting {
+  --state: var(--amber);
+  --state-deep: #b67c2f;
+}
+.focus-gauge.paused {
+  --state: var(--blue);
+  --state-deep: #5c7ca3;
+}
+.focus-gauge.empty {
+  --state: var(--faint);
+}
+/* hairline between the national gauges and the focus */
+.focus-gauge::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line);
+}
+button.focus-gauge:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.035);
+}
+button.focus-gauge:hover .focus-name {
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+}
+.focus-gauge .gauge-head {
+  justify-content: flex-start;
+  gap: 8px;
+}
+.focus-gauge .gauge-track {
+  display: block;
+}
+.focus-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.focus-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state);
+}
+.focus-gauge.active .focus-dot {
+  animation: focus-breathe 2.4s ease-out infinite;
+}
+.focus-gauge.empty .focus-dot {
+  background: transparent;
+  border: 1px solid var(--faint);
+}
+.focus-name {
+  flex: 1;
   min-width: 0;
-}
-.agenda.active {
-  border-color: rgba(114, 196, 146, 0.6);
-}
-.agenda.waiting {
-  border-color: rgba(230, 169, 80, 0.6);
-}
-.agenda.paused {
-  border-color: rgba(143, 176, 214, 0.6);
-}
-.agenda-icon {
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: rgba(220, 194, 124, 0.1);
-  color: var(--gold);
-}
-.agenda.active .agenda-icon {
-  color: var(--green);
-  background: rgba(114, 196, 146, 0.12);
-}
-.agenda.waiting .agenda-icon {
-  color: var(--amber);
-  background: rgba(230, 169, 80, 0.12);
-}
-.agenda-icon svg {
-  width: 28px;
-  height: 28px;
-}
-.agenda-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.agenda-copy small {
-  font-size: 11.5px;
-  letter-spacing: 0.08em;
-}
-.agenda-copy strong {
   font-family: var(--serif);
-  font-size: 16px;
+  font-size: 14.5px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.agenda-bar {
-  height: 7px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  margin-top: 3px;
+.focus-gauge.empty .focus-name {
+  color: var(--faint);
+  font-weight: 400;
 }
-.agenda-bar i {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, #4f9a6b, var(--green));
-  border-radius: 4px;
+.focus-num {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
 }
-.agenda.waiting .agenda-bar i {
-  background: linear-gradient(90deg, #b67c2f, var(--amber));
+.focus-num small {
+  font-size: 11.5px;
 }
-.agenda.paused .agenda-bar i {
-  background: linear-gradient(90deg, #5c7ca3, var(--blue));
+/* invisible strut at the numeral's size: 待成果 and 尚未选定 keep the same line height */
+.focus-num::after {
+  content: '\200b';
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
 }
-.agenda-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+.focus-word {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--state);
 }
-.empty-agenda {
-  border-style: dashed;
+.focus-gauge .gauge-track i {
+  background: linear-gradient(90deg, var(--state-deep), var(--state));
+}
+.focus-gauge.empty .gauge-track {
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 6px, transparent 6px 10px);
+}
+/* colour shows up only when something changes: one outline flare (resumed across re-renders) */
+.focus-gauge.flare::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 10px;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 0 0 1px var(--state),
+    0 0 22px -2px var(--state);
+  animation: focus-flare 2.2s ease-out var(--flare-at, 0ms) forwards;
+}
+@keyframes focus-flare {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes focus-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgba(114, 196, 146, 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px rgba(114, 196, 146, 0);
+  }
 }
 .nation-actions {
   display: flex;
@@ -2031,17 +2088,25 @@ code {
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 1280px) {
+/* the focus gauge gives way in steps, by window width only */
+@media (max-width: 1499px) {
+  .focus-gauge {
+    width: 260px;
+  }
+}
+@media (max-width: 1279px) {
+  .nation-copy p {
+    -webkit-line-clamp: 1;
+  }
+}
+@media (max-width: 1180px) {
   .nation-bar {
-    grid-template-columns: minmax(180px, 1fr) auto minmax(240px, 1.2fr);
+    grid-template-columns: minmax(180px, 1fr) auto auto;
   }
   .nation-actions {
     grid-column: 1/-1;
     justify-content: flex-end;
     margin-top: -4px;
-  }
-  .nation-copy p {
-    -webkit-line-clamp: 1;
   }
 }
 @media (max-width: 1100px) {
@@ -2060,11 +2125,17 @@ code {
     grid-template-columns: 1fr auto;
     gap: 12px 16px;
   }
-  .agenda {
-    grid-column: 1/-1;
+  /* the focus shares the second row with the actions */
+  .focus-gauge {
     order: 3;
+    width: auto;
+  }
+  .focus-gauge::after {
+    display: none;
   }
   .nation-actions {
+    grid-column: auto;
+    margin-top: 0;
     order: 4;
   }
   :host {
@@ -2142,14 +2213,6 @@ code {
   }
   .gauge-head strong {
     font-size: 18px;
-  }
-  .agenda {
-    padding: 7px 10px 7px 8px;
-    grid-template-columns: 38px 1fr;
-  }
-  .agenda-icon {
-    width: 38px;
-    height: 38px;
   }
   .nation-actions {
     grid-column: 1/-1;
@@ -3278,36 +3341,22 @@ button.icon {
     border-color: var(--gold);
     color: var(--gold);
   }
-  .agenda {
+  /* the main focus as one slim full-width row: dot, name, days left, bar */
+  .focus-gauge {
     grid-column: 1/-1;
-    grid-template-columns: minmax(0, 1fr);
-    padding: 5px 10px;
+    width: auto;
+    padding: 2px 0;
+    margin: 0;
   }
-  .agenda-icon,
-  .agenda-copy small,
-  .agenda-meta > span + span {
-    display: none;
+  .focus-gauge .gauge-head {
+    display: flex;
+    gap: 8px;
   }
-  .agenda-copy {
-    grid-template-columns: minmax(0, auto) minmax(40px, 1fr) auto;
-    align-items: center;
-    column-gap: 8px;
-  }
-  .agenda-copy strong {
+  .focus-name {
     font-size: 14px;
   }
-  .agenda-bar {
-    margin: 0;
-    height: 5px;
-  }
-  .empty-agenda .agenda-copy {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .empty-agenda .agenda-meta > span {
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .focus-num::after {
+    font-size: 16px;
   }
   .nation-actions {
     display: none;
