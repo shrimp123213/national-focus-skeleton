@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>帝國國策檔案 · 分期 UI 樣品</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101713; --panel:#19221c; --raised:#253027; --line:#374438; --gold:#d8bd78; --text:#eee9da; --muted:#a5aea0; --green:#8dc5a0; --blue:#91b5d2; --red:#c98778; --serif:Georgia,'Noto Serif TC','PMingLiU',serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.6 'Microsoft JhengHei',system-ui,sans-serif; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; color:inherit; }
+    button:disabled { opacity:.45; cursor:default; }
+    button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible { outline:2px solid var(--gold); outline-offset:4px; }
+    button,select { border:1px solid var(--line); background:#202a23; border-radius:5px; }
+    button:hover:not(:disabled) { border-color:#948358; background:#2c372c; }
+    [hidden] { display:none !important; }
+    .demo-bar { min-height:56px; padding:10px 26px; display:flex; align-items:center; gap:12px; background:#29261f; border-bottom:1px solid #63573b; flex-wrap:wrap; }
+    .demo-tag { font-size:11px; letter-spacing:.15em; color:var(--gold); border:1px solid #6a5a37; padding:3px 7px; white-space:nowrap; }
+    .demo-bar label { color:#d0c7b2; font-size:12px; }
+    .demo-bar select { padding:6px 26px 6px 9px; color:var(--text); background:#353025; max-width:230px; }
+    .demo-bar button { padding:7px 12px; }
+    .demo-bar .primary { background:#d8bd78; color:#201e17; border-color:#d8bd78; font-weight:700; }
+    .demo-bar .primary:hover:not(:disabled) { background:#e8ce8c; }
+    .demo-hint { margin-left:auto; font-size:12px; color:#bdb49f; }
+    .app { min-height:calc(100dvh - 56px); display:flex; flex-direction:column; }
+    .masthead { padding:22px 30px 19px; display:flex; gap:18px; align-items:center; border-bottom:1px solid var(--line); background:linear-gradient(100deg,#253026,#172019 72%); }
+    .crest { width:57px; height:65px; color:var(--gold); flex-shrink:0; }
+    .eyebrow { margin:0 0 3px; font-size:10px; color:var(--gold); letter-spacing:.22em; text-transform:uppercase; }
+    h1 { font-family:var(--serif); font-size:25px; font-weight:600; letter-spacing:.13em; margin:0; }
+    .nation-sub { color:var(--muted); font-size:12px; margin-top:3px; }
+    .nation-metrics { display:flex; gap:28px; margin-left:auto; }
+    .metric span { color:var(--muted); display:block; font-size:11px; }
+    .metric strong { color:#ddd5bb; font:22px/1.5 Georgia,serif; font-weight:400; }
+    .switch-block { border-left:1px solid var(--line); margin-left:8px; padding-left:25px; }
+    .switch-row { display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13px; }
+    .switch-row input { appearance:none; width:34px; height:19px; border-radius:20px; background:#4d5146; position:relative; cursor:pointer; margin:0; transition:background .2s; }
+    .switch-row input::after { content:''; position:absolute; width:13px; height:13px; left:3px; top:3px; border-radius:50%; background:#eee8d7; transition:transform .2s; }
+    .switch-row input:checked { background:#758c5f; }
+    .switch-row input:checked::after { transform:translateX(15px); }
+    .switch-note { font-size:10px; color:var(--muted); margin-top:5px; }
+    .period-heading { padding:18px 30px; display:flex; align-items:center; gap:17px; background:#151e18; border-bottom:1px solid var(--line); }
+    .period-number { font:30px/1 Georgia,serif; color:var(--gold); padding:5px 17px 5px 0; border-right:1px solid #605338; }
+    h2 { margin:0; font:600 20px/1.5 var(--serif); letter-spacing:.06em; }
+    .period-description { margin:4px 0 0; color:var(--muted); font-size:12px; max-width:850px; }
+    .period-count { margin-left:auto; white-space:nowrap; font-size:11px; color:#b4baa8; }
+    .workspace { display:grid; grid-template-columns:minmax(0,1fr) 350px; flex:1; min-height:600px; }
+    .map-area { min-width:0; position:relative; display:flex; flex-direction:column; }
+    .map-toolbar { display:flex; align-items:center; gap:9px; padding:10px 18px; background:#18211a; border-bottom:1px solid #2b372c; min-height:47px; }
+    .map-toolbar .legend { display:flex; flex-wrap:wrap; gap:14px; font-size:10px; color:#aeb5a7; }
+    .legend span { display:flex; align-items:center; gap:5px; }
+    .dot { width:6px; height:6px; border-radius:50%; display:inline-block; background:#626d5c; }
+    .dot.done { background:var(--green); } .dot.active { background:var(--gold); } .dot.inherited { background:var(--blue); }
+    .zoom-tools { display:flex; align-items:center; gap:5px; margin-left:auto; }
+    .zoom-tools button { height:29px; min-width:29px; padding:2px 7px; font-size:12px; }
+    #zoom-label { min-width:38px; font-size:11px; text-align:center; color:var(--muted); font-variant-numeric:tabular-nums; }
+    .viewport { height:clamp(560px,68dvh,920px); position:relative; overflow:hidden; touch-action:none; cursor:grab; background:radial-gradient(ellipse at 50% 20%,#27302480,transparent 70%),radial-gradient(circle,#84907228 .7px,transparent .8px); background-size:auto,24px 24px; }
+    .viewport.dragging { cursor:grabbing; }
+    .world { position:absolute; left:0; top:0; width:1140px; height:830px; transform-origin:0 0; }
+    .wires { position:absolute; inset:0; width:1140px; height:830px; overflow:visible; pointer-events:none; }
+    .wire { fill:none; stroke:#62705a; stroke-width:1.7; }
+    .wire.done { stroke:#7da087; } .wire.future { stroke:#4c584a; }
+    .wire.mutex { stroke:#9a6c60; stroke-dasharray:5 5; }
+    .lane { position:absolute; top:12px; color:#8f9986; font-size:11px; letter-spacing:.18em; text-align:center; width:240px; }
+    .focus { width:176px; height:112px; padding:0; border:0; background:transparent; position:absolute; display:flex; flex-direction:column; align-items:center; border-radius:8px; user-select:none; -webkit-user-select:none; }
+    .focus:hover:not(:disabled) { background:transparent; }
+    .medal { width:56px; height:56px; position:relative; display:grid; place-items:center; background:linear-gradient(145deg,#384133,#1b241c); border:1px solid #68705b; outline:3px solid #19211a; border-radius:14px 14px 20px 20px; box-shadow:0 4px 12px #0006; color:#9da58d; transition:transform .15s; }
+    .medal::before { content:''; inset:4px; border:1px solid currentColor; opacity:.35; position:absolute; border-radius:10px 10px 15px 15px; }
+    .medal svg { width:29px; height:29px; }
+    .focus.done .medal { color:#afcfac; border-color:#8caa83; background:linear-gradient(145deg,#3f5740,#263b2b); }
+    .focus.active .medal { color:#eedba6; border-color:var(--gold); background:linear-gradient(145deg,#75613a,#3e3525); box-shadow:0 0 24px #d8bd7822; }
+    .focus.inherited .medal { outline-color:#344b56; }
+    .focus:hover .medal { transform:translateY(-3px); color:#f0ddb0; }
+    .focus.selected .focus-title { border-color:var(--gold); background:#3a3b2a; }
+    .focus.selected .medal { box-shadow:0 0 0 2px #d8bd78,0 0 25px #d8bd782a; }
+    .focus.excluded { opacity:.45; }
+    .focus-title { display:block; margin-top:7px; min-width:154px; max-width:176px; padding:4px 7px; font-family:var(--serif); font-size:13px; letter-spacing:.025em; line-height:1.3; border:1px solid #46503e; border-radius:3px; background:#202a20; box-shadow:0 2px 7px #0004; white-space:nowrap; }
+    .focus.active .focus-title { border-color:#998453; color:#e9d39a; }
+    .focus-state { font-size:10px; margin-top:3px; color:#a5ae9b; white-space:nowrap; }
+    .focus.active .focus-state { color:#dbc280; } .focus.done .focus-state { color:#9cc4a3; }
+    .anchor-tag { position:absolute; left:117px; top:11px; font-size:9px; color:#aec8dc; border:1px solid #516d7f; background:#20333d; padding:0 4px; border-radius:3px; white-space:nowrap; }
+    .map-footer { display:flex; align-items:center; justify-content:space-between; gap:15px; border-top:1px solid #2c382c; padding:10px 18px; color:#9fa996; font-size:11px; background:#172019; }
+    .current-mark { color:var(--gold); } .input-hint { font-size:10px; color:#8c9786; }
+    .sidebar { background:#1b241d; border-left:1px solid var(--line); min-width:0; display:flex; flex-direction:column; }
+    .tabs { display:flex; padding:0 16px; border-bottom:1px solid var(--line); }
+    .tab { flex:1; padding:14px 2px 11px; border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); font-size:12px; }
+    .tab[aria-selected=true] { color:var(--gold); border-bottom-color:var(--gold); }
+    .tab:hover:not(:disabled) { background:#263027; }
+    .tab-count { margin-left:4px; font:10px Georgia,serif; color:#d8bd78; }
+    .side-content { padding:24px; flex:1; overflow-y:auto; max-height:calc(68dvh + 47px); min-height:460px; }
+    .detail-emblem { width:66px; height:66px; margin:4px 0 21px; display:grid; place-items:center; border:1px solid #8c7951; color:var(--gold); background:#2c3326; border-radius:14px 14px 24px 24px; }
+    .detail-emblem svg { width:35px; height:35px; }
+    .side-title { font:600 21px/1.6 var(--serif); margin:7px 0 12px; }
+    .chip { display:inline-block; color:var(--gold); border:1px solid #71613f; background:#393324; border-radius:3px; padding:2px 7px; font-size:10px; }
+    .chip.blue { color:#acc8dd; background:#273844; border-color:#4b6678; }
+    .chip.green { color:#aed0b1; background:#293e2b; border-color:#516c50; }
+    .prose { color:#c0c7b8; font-size:13px; line-height:1.95; margin:15px 0 22px; }
+    .section-label { color:#aab49d; font-size:10px; letter-spacing:.15em; margin:22px 0 9px; display:flex; align-items:center; gap:9px; }
+    .section-label::after { content:''; height:1px; background:#394634; flex:1; }
+    .fact { border-left:2px solid #8d8154; background:#242d22; padding:12px 13px; font-size:12px; line-height:1.9; color:#d6dccb; }
+    .progress-head { display:flex; justify-content:space-between; font-size:11px; color:#b9c3af; margin-bottom:8px; }
+    .progress-track { height:5px; background:#3a4334; border-radius:5px; overflow:hidden; }
+    .progress-fill { height:100%; width:60%; background:linear-gradient(90deg,#887444,#ddc586); }
+    .fine { color:#9aa791; font-size:11px; line-height:1.9; margin-top:10px; }
+    .related { width:100%; text-align:left; padding:12px; margin-top:18px; font-size:12px; display:flex; justify-content:space-between; }
+    .event-card { padding:17px 0 23px; border-bottom:1px solid #3e4a38; }
+    .event-card h3 { font:600 18px/1.6 var(--serif); margin:9px 0; }
+    .event-card p { font-size:12px; color:#b9c3af; line-height:1.95; }
+    .event-time { color:#9cac90; font-size:10px; }
+    .event-step { display:flex; gap:10px; color:#b0bfa6; font-size:11px; padding:7px 0; }
+    .event-step::before { content:'○'; color:#8f9f7b; }
+    .event-step.finished::before { content:'✓'; color:var(--green); }
+    .timeline { position:relative; padding-left:19px; border-left:1px solid #786b4a; margin:24px 0 10px; }
+    .timeline::before { content:''; position:absolute; width:7px; height:7px; border:1px solid var(--gold); background:var(--panel); left:-4px; top:7px; border-radius:50%; }
+    .timeline time { font-size:11px; color:var(--gold); line-height:1.9; }
+    .timeline p { color:#c6cbbb; font-size:13px; line-height:2.1; }
+    .empty { padding:26px 0; font-size:13px; color:#a7b49b; line-height:2; }
+    .side-bottom { padding:12px 24px; border-top:1px solid #344130; font-size:10px; color:#929f86; }
+    .ticker { padding:13px 28px; border-top:1px solid #63583c; background:#d7ceb6; color:#29291e; display:flex; align-items:center; gap:19px; }
+    .ticker-brand { font:700 15px var(--serif); white-space:nowrap; padding-right:18px; border-right:1px solid #9b9078; }
+    .ticker-text { font-size:12px; line-height:1.7; }
+    .ticker button { margin-left:auto; flex-shrink:0; padding:4px 10px; color:#393a29; border-color:#a69c85; background:transparent; font-size:11px; }
+    .ticker button:hover { background:#c2b99f; }
+    .toast { position:fixed; left:50%; bottom:25px; transform:translate(-50%,15px); background:#e1d3ac; color:#2b2c20; border:1px solid #f2e6bf; border-radius:6px; padding:12px 20px; box-shadow:0 10px 40px #0008; max-width:90vw; width:max-content; font-size:12px; opacity:0; pointer-events:none; transition:opacity .2s,transform .2s; z-index:20; }
+    .toast.show { opacity:1; transform:translate(-50%,0); }
+    .mobile-close { display:none; }
+    @media(min-width:1700px) { .workspace { grid-template-columns:minmax(0,1fr) 395px; } .side-content { padding:28px; } }
+    @media(max-width:1050px) { .nation-metrics { gap:18px; } .metric.optional { display:none; } .workspace { grid-template-columns:minmax(0,1fr) 300px; } .side-content { padding:20px; } .demo-hint { display:none; } .period-count { display:none; } .map-toolbar { padding:9px 12px; } .legend span:last-child { display:none; } }
+    @media(max-width:760px) {
+      .demo-bar { padding:9px 12px; gap:8px; } .demo-tag { font-size:9px; } .demo-bar label { display:none; } .demo-bar select { font-size:11px; max-width:158px; padding-right:6px; } .demo-bar button { font-size:11px; padding:6px 8px; }
+      .masthead { padding:17px 16px; gap:10px; flex-wrap:wrap; } .crest { width:40px; height:49px; } h1 { font-size:21px; } .eyebrow { font-size:9px; } .nation-sub { font-size:10px; } .nation-metrics { display:none; } .switch-block { padding-left:0; border:0; margin-left:auto; } .switch-row { font-size:11px; } .switch-note { font-size:9px; }
+      .period-heading { padding:15px 16px; gap:12px; } .period-number { font-size:25px; padding-right:12px; } h2 { font-size:18px; } .period-description { font-size:11px; }
+      .workspace { display:block; min-height:0; } .viewport { height:65dvh; min-height:460px; } .map-toolbar .legend { gap:10px; } .input-hint { display:none; } .map-footer { font-size:10px; }
+      .sidebar { display:none; position:fixed; z-index:10; left:0; right:0; bottom:0; max-height:76dvh; border:1px solid #6d674b; border-radius:15px 15px 0 0; box-shadow:0 -20px 80px #0009; }
+      .sidebar.mobile-open { display:flex; } .tabs { padding-right:43px; } .side-content { min-height:0; max-height:calc(76dvh - 95px); padding:18px 23px; } .mobile-close { display:block; position:absolute; top:10px; right:10px; width:28px; height:28px; padding:0; }
+      .ticker { padding:12px 15px; gap:10px; } .ticker-brand { font-size:13px; padding-right:10px; } .ticker-text { font-size:11px; } .detail-emblem { display:none; }
+    }
+    @media(prefers-reduced-motion:reduce) { *,*::after { transition:none !important; } }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="i-scroll" viewBox="0 0 32 32"><path d="M8 5h17v21H8M8 5C2 5 3 12 8 12V5Zm0 21c-5 0-5-6 0-6m5-9h7m-7 5h7m-7 5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-ship" viewBox="0 0 32 32"><path d="M5 21h23l-5 6H10L5 21Zm11-17v16M14 6 5 18h9V6Zm4 1 8 11h-8V7ZM3 29c3-3 5 3 9 0s5 3 9 0 5 2 9-1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 32 32"><path d="m16 3 11 4v10c0 6-11 12-11 12S5 23 5 17V7l11-4Zm0 4v17M9 13h14" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 32 32"><path d="M16 4v22M10 28h12M5 10h22M9 10 4 20h10L9 10Zm14 0-5 10h10l-5-10Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grain" viewBox="0 0 32 32"><path d="M16 29V4m0 9C7 13 7 5 7 5s9 0 9 8Zm0 7C6 20 6 12 6 12s10 0 10 8Zm0-7c9 0 9-8 9-8s-9 0-9 8Zm0 7c10 0 10-8 10-8s-10 0-10 8Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 32 32"><path d="m16 3 4 8 9 1-6 7 2 10-9-5-9 5 2-10-6-7 9-1 4-8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cross" viewBox="0 0 32 32"><path d="M12 4h8v8h8v8h-8v8h-8v-8H4v-8h8V4Z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-crest" viewBox="0 0 60 70"><path d="m30 6 22 7v22c0 17-22 29-22 29S8 52 8 35V13l22-7Z" fill="#2d3728" stroke="currentColor"/><path d="m30 16 7 10 10-4-5 13 5 10-12-3-5 13-5-13-12 3 5-10-5-13 10 4 7-10Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M30 22v26M21 33h18M23 2l7 3 7-3" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  </defs></svg>
+  <div class="demo-bar" aria-label="樣品演示控制">
+    <span class="demo-tag">互動樣品</span>
+    <label for="scenario">換期情境</label>
+    <select id="scenario"><option value="crisis">局勢突變 · 跨境災害</option><option value="complete">議程完成 · 貿易新秩序</option></select>
+    <button id="advance" class="primary">推進局勢 →</button>
+    <button id="reset">重看第一期</button>
+    <span class="demo-hint">虛構劇情演示 · 不連接 API、不改動酒館資料</span>
+  </div>
+  <main class="app">
+    <header class="masthead">
+      <svg class="crest" aria-hidden="true"><use href="#i-crest"/></svg>
+      <div><p class="eyebrow">Imperial Archives / National Focus</p><h1>奧古斯提姆帝國</h1><div class="nation-sub">維奧萊塔治下 · 國家議程與政策檔案</div></div>
+      <div class="nation-metrics" aria-label="樣品國家數值"><div class="metric"><span>穩定度</span><strong>68<span style="display:inline;font-size:13px"> %</span></strong></div><div class="metric"><span>戰爭支持度</span><strong>42<span style="display:inline;font-size:13px"> %</span></strong></div><div class="metric optional"><span>國家控制</span><strong style="font-family:inherit;font-size:14px;line-height:2.4">自主演化</strong></div></div>
+      <div class="switch-block"><label class="switch-row"><input type="checkbox" id="auto" checked><span>自動換期</span></label><div class="switch-note" id="auto-note">依議程與世界局勢延伸</div></div>
+    </header>
+    <section class="period-heading" aria-label="當前時期"><div class="period-number" id="period-number">I</div><div><p class="eyebrow" id="period-kicker">第一期 · 復興紀元 490 年冬</p><h2 id="period-title">北境的帳，帝國的糧</h2><p class="period-description" id="period-description"></p></div><div class="period-count" id="period-count"></div></section>
+    <div class="workspace">
+      <section class="map-area" aria-label="國策樹">
+        <div class="map-toolbar"><div class="legend"><span><i class="dot done"></i>已完成</span><span><i class="dot active"></i>進行中</span><span><i class="dot inherited"></i>跨期承接</span></div><div class="zoom-tools"><button id="zoom-out" aria-label="縮小">−</button><span id="zoom-label">100%</span><button id="zoom-in" aria-label="放大">＋</button><button id="fit">全覽</button><button id="history-shortcut" aria-label="查看往期摘要">往期</button></div></div>
+        <div class="viewport" id="viewport" tabindex="0" aria-label="可拖曳國策圖。方向鍵移動畫布，加減鍵縮放，Tab 可選擇國策。"><div class="world" id="world"></div></div>
+        <div class="map-footer"><span id="current-caption"></span><span class="input-hint">拖曳移動 · 滾輪／雙指縮放 · 點擊國策</span></div>
+      </section>
+      <aside class="sidebar" id="sidebar" aria-label="國策資訊">
+        <button class="mobile-close" id="close-side" aria-label="收起資訊">×</button>
+        <div class="tabs" role="tablist" aria-label="資訊頁籤"><button class="tab" id="tab-detail" role="tab" aria-selected="true" aria-controls="side-content" data-tab="detail">國策詳情</button><button class="tab" id="tab-events" role="tab" aria-selected="false" aria-controls="side-content" data-tab="events">事件<span class="tab-count">1</span></button><button class="tab" id="tab-history" role="tab" aria-selected="false" aria-controls="side-content" data-tab="history">往期<span class="tab-count" id="history-count">0</span></button></div>
+        <div class="side-content" id="side-content" role="tabpanel" aria-labelledby="tab-detail"></div>
+        <div class="side-bottom">長期方向：維持帝國主導權與糧運韌性</div>
+      </aside>
+    </div>
+    <section class="ticker" aria-label="最新消息"><span class="ticker-brand">阿斯塔利亞快訊</span><span class="ticker-text" id="ticker-text"></span><button id="news-events">閱覽事件 ↗</button></section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script id="demo-model">
+    const demo = (() => {
+      const node = (id,title,icon,x,y,requires,description,effect,extra={}) => ({id,title,icon,x,y,requires,description,effect,...extra});
+      const first = [
+        node('A01','北境商路總核查','scroll',482,55,[],'信用爭議延燒到渡鴉港。朝廷必須先知道，帝國與北境究竟欠了彼此多少，以及哪一條商路一旦中斷，會先讓自己的城市缺糧。','核查報告呈交，取得欠款、貨源與航運依賴的決策依據。'),
+        node('A02','凍結新增官方信用','scale',482,195,[['A01']],'皇家印信不再為新一批北境交易背書。既有契約仍有處理窗口，但任何新的風險，都不能再由朝廷默默承擔。','暫停新增官方擔保；已簽契約另行處理。'),
+        node('A03','民生日用豁免表','grain',172,335,[['A02']],'邊境可以停止奢侈品通行，卻不能停止百姓吃飯。糧食與藥材將得到明確豁免，避免地方關口自行擴大禁令。','公布基本糧食、藥材的豁免與受理辦法。'),
+        node('A05','舊債另案清理','scroll',792,335,[['A02']],'舊債不會因一句凍結命令消失。朝廷將逐筆核驗欠款，把真實損失、投機押注與外交籌碼分開處理。','建立既有債務申報、核驗與交涉程序。'),
+        node('A04','渡鴉港糧運統籌','ship',172,480,[['A03']],'渡鴉港從不缺少帳簿，缺的是願意對同一批糧食負責的人。港務官把延誤歸咎於商人，商人指向領主，領主則抱怨軍方徵用。朝廷將把船位、倉儲與轉運納入同一份調度規程。','糧運統籌規程生效，指定跨部門責任；實際運糧由事件繼續追蹤。',{days:18,total:30}),
+        node('A06','定向禁運清單','shield',677,480,[['A05']],'施壓必須指向能夠承受壓力的人。限制指定貨物與交易對象，保留帝國仍然需要的商路。','禁運清單生效；不代表對方已經讓步。',{mutex:'A07'}),
+        node('A07','限期交涉訓令','scale',907,480,[['A05']],'使節帶走的不只是抗議，也是期限與底線。朝廷仍為協議留出位置，但不再接受無止境的拖延。','授權使節依明確底線展開交涉。',{mutex:'A06'}),
+        node('A08','西境軍需優先','shield',57,625,[['A04']],'軍方要求船位先裝載軍需。讓步的會是城市糧商，而朝廷必須承擔這項選擇帶來的民生壓力。','緊缺船位優先供軍需調度。',{mutex:'A09'}),
+        node('A09','平民糧運保留額','grain',287,625,[['A04']],'城市的麵包不能只靠軍需官的餘裕。朝廷將為平民糧運留出底線，讓徵用也必須有所節制。','建立民用最低運量；軍需使用其餘船位。',{mutex:'A08'}),
+        node('A10','過境聯查規程','scroll',677,625,[['A06']],'同一份禁令不該在十座關口變成十種收費。聯查規程將約束查驗，也為被扣貨物提供申訴辦法。','統一禁運查驗與申訴程序。'),
+        node('A11','有條件恢復清算','scale',907,625,[['A07']],'印信可以重新落在票據上，但必須先看見對方履行承諾。清算恢復將以核驗條件為限。','對方實際接受並履行條款後，恢復部分信用清算。',{condition:'交涉已取得實際成果'}),
+        node('A12','北境貿易新秩序','star',482,765,[['A10','A11'],['A08','A09']],'臨時措施終究需要一個終點。依所選路線確立常態貿易與糧運規則，讓每一艘船不必等待新的御前命令。','本輪貿易與糧運制度安排告一段落；舊債回收等事件繼續推進。')
+      ];
+      const crisis = [
+        {...first.find(n=>n.id==='A04'),x:482,y:55,requires:[],inherited:true},
+        node('B02','救援物資特別許可','cross',137,195,[],'邊境同時湧入求援信與承運申請。救援需要專門窗口，也需要有人對貨物確實送達負責。','建立跨境救援申請、查驗與承運責任。'),
+        node('B03','暫緩新增貿易限制','scale',137,335,[['B02']],'裂隙沒有在國界前停下。朝廷將暫緩擴大施壓，為救援交易設置有限例外；既有爭議仍須處理。','暫停新增限制；救援以外的信用凍結仍有效。'),
+        node('B07','境內接濟與轉運站','grain',827,335,[['B02']],'逃離災區的人需要暫住之所，救援糧也需要轉運之地。地方責任不能只寫在一紙沒有預算的命令裡。','核定接濟網絡、預算與責任；站點建設由事件追蹤。'),
+        node('B04','邊境聯合報災','scroll',137,480,[['B03']],'兩國各自掌握一半消息，就可能重複救援一座城，卻遺漏另一座。先從交換可以核實的災情開始。','建立災情交換渠道並完成首輪互報。',{condition:'合作方實際接受災情交換'}),
+        node('B10','災時糧運優先序','ship',827,625,[['A04'],['B07']],'軍隊、城市與災區都說自己的糧船不能再等。既有統籌規程將承接新的分配次序，而代價必須公開交代。','確立民生、救援與軍需的災時配額。'),
+        node('B05','開放聯合救援','cross',22,625,[['B04']],'聯盟藥材停在邊境，帝國糧船等候靠岸。雙方都願意救人，也都不願先讓自己的印信失去效力。協議必須說清楚，誰排定次序、誰查驗貨艙，又由誰負責。','合作方簽署並啟用共同調度與查驗安排。',{mutex:'B06',condition:'合作方接受共同救援協議'}),
+        node('B06','帝國主持援助','shield',252,625,[['B04']],'援助可以跨越邊境，指揮權則留在帝國手中。這會保住主導權，也意味著更多支出與責任由朝廷承擔。','由帝國機構主持物資分配與運輸。',{mutex:'B05'}),
+        node('B08','救援費用共擔協議','scale',22,765,[['B05']],'共同救援不能只有共同的名義。各方必須議定支付、核帳與追索辦法。','依實際簽署的協議分攤費用；承諾不等於款項已到帳。'),
+        node('B09','皇家救災專款','grain',252,765,[['B06']],'帝國主持援助，就要說明錢從哪裡來。專款將列出來源，以及因此必須延後的一般支出。','設立專款與預算來源。'),
+        node('B11','跨境災情總錄','scroll',562,765,[['B05','B06']],'把實際收到的報告整理成共同依據。仍然未知的地區留白，不以整齊的帳冊掩蓋失聯的村鎮。','編成首版總錄，明確標出未知區域。'),
+        node('B12','災害應對常設章程','star',482,915,[['B10'],['B11'],['B08','B09']],'最初的命令都是暫准與特許。如今接濟站仍在收人，港口每天要安排船位。下一批受災者不該再等一輪御前爭論。','常設應對制度生效；災害、運輸及收容事件繼續演變。')
+      ];
+      const continuation = [
+        {...first.find(n=>n.id==='A12'),x:482,y:55,requires:[],inherited:true},
+        node('C01','帝國承運擔保制度','ship',137,235,[['A12']],'秩序恢復後，帝國需要能夠長久承擔航運風險的制度。','建立承運擔保資格與責任。'),
+        node('C02','港口信用爭議裁決所','scale',482,235,[['A12']],'讓下一次欠款爭議先走進裁決所，而非直接走上外交談判桌。','成立裁決機構與受理程序。'),
+        node('C03','內陸備援糧路','grain',827,235,[['A12']],'海路重新暢通，不代表帝國可以忘記斷糧時的脆弱。','核定備援糧路及分期建設預算。'),
+        node('C04','皇家承運名冊','scroll',137,415,[['C01']],'承運資格必須看得見，也必須可以追責。','完成首批資格核驗。'),
+        node('C05','共同仲裁席位','scale',367,415,[['C02']],'邀請交易對方參與仲裁，換取裁決更容易獲得承認。','實際達成共同仲裁安排。',{mutex:'C06'}),
+        node('C06','帝國專屬裁決','shield',597,415,[['C02']],'由帝國掌握裁決權，承擔對方可能拒絕承認結果的代價。','確立帝國管轄與執行程序。',{mutex:'C05'}),
+        node('C07','地方糧倉協調章程','grain',827,415,[['C03']],'備援道路需要沿途糧倉願意配合。','議定調撥與保管責任。'),
+        node('C08','承運風險準備金','ship',137,595,[['C04']],'擔保需要資金，不能只靠皇家名義。','設立準備金與賠付邊界。'),
+        node('C09','跨境票據核驗','scroll',482,595,[['C05','C06']],'將所選裁決安排落實到每張票據的核驗上。','形成票據核驗程序。'),
+        node('C10','啟用備援調糧','grain',827,595,[['C07']],'在道路與糧倉具備實際條件後，執行首輪備援調糧。','完成首輪調度驗證。',{condition:'道路與糧倉已具備運作條件'}),
+        node('C11','帝國供應韌性章程','star',482,775,[['C08'],['C09'],['C10']],'把本期建立的擔保、裁決與備援調度納入常態運作。','確立多路供應與風險分擔制度。')
+      ];
+      const summaries = {
+        crisis:'帝國核查北境商路並凍結新增官方信用，同時保留糧食與藥材豁免，著手統籌渡鴉港糧運。禁運與交涉路線尚未選定，跨境地脈災害便迫使朝廷轉向救援與民生供應。糧運統籌仍在進行；信用凍結尚未解除，對外救援也尚未獲得正式授權。',
+        complete:'帝國以新增信用凍結促成北境清算交涉，最終在核驗條件下恢復部分交易，並保留平民糧運最低配額。貿易與糧運常態規則已生效，本輪爭議的制度安排告一段落；舊債實際回收與承運商履約仍持續追蹤。'
+      };
+      const doneRoute = ['A01','A02','A03','A04','A05','A07','A09','A11','A12'];
+      function initial(scenario='crisis',auto=true) {
+        return {scenario,auto,period:1,updates:0,history:[]};
+      }
+      function advance(state) {
+        const next = {...state,updates:state.updates+1,history:[...state.history]};
+        if (state.period===1 && state.auto) {
+          next.period=2;
+          next.history.push({time:'復興紀元 490 年 10 月 — 491 年 1 月',summary:summaries[state.scenario]});
+        }
+        return next;
+      }
+      function tree(state) {
+        const source = state.period===1 ? first : state.scenario==='crisis' ? crisis : continuation;
+        const completed = new Set(state.scenario==='complete' ? doneRoute : ['A01','A02','A03']);
+        return source.map(n=>{
+          let status='locked';
+          if (completed.has(n.id)) {
+            status='done';
+          } else if (state.scenario==='crisis' && n.id==='A04') {
+            status='active';
+          } else if (state.scenario==='complete' && ['A06','A08','A10'].includes(n.id)) {
+            status='excluded';
+          } else if (n.requires.every(group=>group.some(id=>completed.has(id)))) {
+            status='available';
+          }
+          return {...n,status};
+        });
+      }
+      function event(state) {
+        if (state.scenario==='complete') {
+          return {id:'old-debts',title:'港口帳簿上的舊債',description:state.updates===0 ? '清算制度已經恢復，第一批到期債款仍在核驗。裁決程序生效，不代表款項已經入庫。' : state.updates===1 ? '第一批核驗結果已送達商館。部分債務人承諾分期清償，欠款仍待實際收回；事件持續追蹤。' : '商館補交了第二批抵押資料，核驗範圍擴大。部分款項仍未到帳，既有追索工作繼續。',steps:['既有欠款申報完成','核驗與清償交涉持續','依實際到帳更新回收結果']};
+        }
+        return {id:'ship-space',title:'渡鴉港的船位之爭',description:state.updates===0 ? '軍需官與糧商爭奪船位，港務署正在核定內陸轉運配額。統籌規程尚未生效，已排定的糧船照既定安排航行。' : state.updates===1 ? '北境急需救援糧，帝國城市也擔心缺糧。船位爭議擴大為軍需、民生與救援的分配問題。已離港的糧船照原目的地航行，新申請尚未核准。' : '港務署收到更多援糧意向，先行核對倉儲與可用船位。救援授權尚未生效，因此仍未批准跨境出航；各方持續爭取配額。',steps:['港口與糧倉名冊已核定','內陸轉運配額協調中',state.updates===0?'統籌規程等待完成':'救援申請等待政策授權']};
+      }
+      return {initial,advance,tree,event};
+    })();
+  </script>
+  <script id="demo-ui">
+    const $ = id=>document.getElementById(id);
+    const escapeHtml = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const icon = name=>`<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+    let state=demo.initial();
+    let selected='A04';
+    let activeTab='detail';
+    let view={x:0,y:0,scale:1};
+    let toastTimer;
+    const statusText={done:'已完成',active:'進行中 · 18 / 30 日',available:'可選擇',locked:'待前置完成',excluded:'未選路線'};
+    function toast(message) {
+      clearTimeout(toastTimer);
+      $('toast').textContent=message;
+      $('toast').classList.add('show');
+      toastTimer=setTimeout(()=>{$('toast').classList.remove('show');},4300);
+    }
+    function showTab(tab,openMobile=true) {
+      activeTab=tab;
+      if (openMobile) {
+        $('sidebar').classList.add('mobile-open');
+      }
+      renderSide();
+    }
+    function drawTree() {
+      const nodes=demo.tree(state);
+      const byId=new Map(nodes.map(n=>[n.id,n]));
+      let paths='';
+      for (const target of nodes) {
+        for (const group of target.requires) {
+          for (const id of group) {
+            const source=byId.get(id);
+            if (!source) {
+              continue;
+            }
+            const sx=source.x+88,sy=source.y+100,tx=target.x+88,ty=target.y-8;
+            const mid=sy+(ty-sy)*.52;
+            paths+=`<path class="wire ${source.status==='done'?'done':'future'}" d="M${sx},${sy} L${sx},${mid} L${tx},${mid} L${tx},${ty}"/>`;
+          }
+        }
+        if (target.mutex && target.id<target.mutex && byId.has(target.mutex)) {
+          const other=byId.get(target.mutex);
+          paths+=`<path class="wire mutex" d="M${target.x+117},${target.y+27} L${other.x+59},${other.y+27}"/><text x="${(target.x+other.x)/2+88}" y="${target.y+22}" fill="#bc8b7a" text-anchor="middle" font-size="10">互斥</text>`;
+        }
+      }
+      const height=Math.max(...nodes.map(n=>n.y))+132;
+      $('world').style.height=`${height}px`;
+      $('world').innerHTML=`<svg class="wires" style="height:${height}px" aria-hidden="true">${paths}</svg>`+nodes.map(n=>`<button class="focus ${n.status} ${n.inherited?'inherited':''} ${n.id===selected?'selected':''}" data-node="${n.id}" style="left:${n.x}px;top:${n.y}px" aria-label="${escapeHtml(n.title)}，${statusText[n.status]}${n.inherited?'，跨期承接':''}" aria-pressed="${n.id===selected}"><span class="medal">${icon(n.icon)}</span>${n.inherited?'<span class="anchor-tag">前期承接</span>':''}<span class="focus-title">${escapeHtml(n.title)}</span><span class="focus-state">${statusText[n.status]}</span></button>`).join('');
+    }
+    function renderSide() {
+      const nodes=demo.tree(state);
+      document.querySelectorAll('[data-tab]').forEach(button=>{
+        button.setAttribute('aria-selected',String(button.dataset.tab===activeTab));
+      });
+      $('side-content').setAttribute('aria-labelledby',`tab-${activeTab}`);
+      if (activeTab==='history') {
+        $('side-content').innerHTML=`<p class="eyebrow">Past periods</p><h3 class="side-title">往期摘要</h3>${state.history.length ? state.history.map(h=>`<article class="timeline"><time>${escapeHtml(h.time)}</time><p>${escapeHtml(h.summary)}</p></article>`).join('') : '<div class="empty">這個國家仍在第一期。<br>換期後，這裡會留下本期的時間與摘要。</div>'}`;
+        return;
+      }
+      if (activeTab==='events') {
+        const e=demo.event(state);
+        $('side-content').innerHTML=`<p class="eyebrow">Ongoing events</p><h3 class="side-title">世界仍在前進</h3><article class="event-card"><span class="chip green">持續中</span> <span class="event-time">${state.updates?'最新局勢更新':'本期紀錄'}</span><h3>${escapeHtml(e.title)}</h3><p>${escapeHtml(e.description)}</p>${e.steps.map((s,i)=>`<div class="event-step ${i===0?'finished':''}">${escapeHtml(s)}</div>`).join('')}<div class="fine">${state.scenario==='crisis'?'起因：渡鴉港糧運統籌':'起因：舊債另案清理'}${state.period===2?' · 延續自上一期':''}</div></article>`;
+        return;
+      }
+      const n=nodes.find(item=>item.id===selected) || nodes[0];
+      const required=n.requires.map(group=>group.map(id=>nodes.find(item=>item.id===id)?.title || id).join(' 或 ')).join('，並完成 ');
+      const conflicting=nodes.find(item=>item.id===n.mutex);
+      $('side-content').innerHTML=`<div class="detail-emblem">${icon(n.icon)}</div><p class="eyebrow">National focus</p><h3 class="side-title">${escapeHtml(n.title)}</h3><span class="chip ${n.status==='done'?'green':''}">${statusText[n.status]}</span> ${n.inherited?'<span class="chip blue">前期承接</span>':''}<p class="prose">${escapeHtml(n.description)}</p>${n.status==='active'?'<div class="progress-head"><span>政策推進</span><span>18 / 30 故事日</span></div><div class="progress-track"><div class="progress-fill"></div></div><p class="fine">港口與糧倉名冊已核定，內陸轉運配額仍在協調。</p>':''}${n.inherited?`<div class="fact">${n.status==='done'?'保留已完成狀態，作為新一期起點。既有成果持續有效。':'同一項國策繼續推進，保留 18／30 日進度與原有事件。'}</div>`:''}<div class="section-label">完成成果</div><div class="fact">${escapeHtml(n.effect)}</div><div class="section-label">推動條件</div><p class="fine">${n.inherited?'承接既有狀態，無須重做前期國策。':required?escapeHtml(required):'本期可直接選擇的議程。'}${n.condition?`<br>${escapeHtml(n.condition)}。`:''}${conflicting?`<br>與「${escapeHtml(conflicting.title)}」互斥。`:''}</p>${['A04','A05','A12'].includes(n.id)?'<button class="related" data-related>查看相關事件 <span>↗</span></button>':''}`;
+    }
+    function render(fit=false) {
+      const isSecond=state.period===2;
+      $('period-number').textContent=isSecond?'II':'I';
+      $('period-kicker').textContent=isSecond?'第二期 · 復興紀元 491 年初':'第一期 · 復興紀元 490 年冬';
+      $('period-title').textContent=!isSecond?'北境的帳，帝國的糧':state.scenario==='crisis'?'災厄越過國境':'秩序之後的遠見';
+      $('period-description').textContent=!isSecond?'處理北境信用爭議，在外交施壓與民生供應之間建立新的秩序。':state.scenario==='crisis'?'跨境災害改變了原本的議程。帝國必須重整救援、合作與糧食分配。':'貿易秩序已經建立，下一個問題是如何降低對單一信用與商路的依賴。';
+      $('period-count').textContent=isSecond?'12 項國策 · 1 項承接':'12 項國策 · 3 項主要議程';
+      $('history-count').textContent=state.history.length;
+      $('auto').checked=state.auto;
+      $('auto-note').textContent=state.auto?'依議程與世界局勢延伸':'保留當前樹 · 事件照常發展';
+      $('advance').textContent=isSecond?'再推進一次事件 →':state.updates?'再次推進局勢 →':'推進局勢 →';
+      $('current-caption').innerHTML=state.scenario==='crisis'?'<span class="current-mark">◈</span> 正在推進：渡鴉港糧運統籌 · 18 / 30 日':isSecond?'<span class="current-mark">◇</span> 已承接貿易新秩序 · 等待新議程':'<span class="current-mark">✓</span> 北境貿易新秩序已完成 · 本期目的已達成';
+      $('ticker-text').textContent=state.scenario==='crisis' ? state.updates===0?'渡鴉港協調糧運船位，朝廷仍未決定對北境採取禁運或交涉。':state.updates===1?'北境道路斷裂，第一批避難者抵達邊境；朝廷收到跨境救援請求。':'援糧意向持續增加，港務署核對船位；救援授權尚未生效。' : state.updates===0?'北境清算與民生糧運規則生效，舊債實際回收仍在追蹤。':'商館持續核驗舊債，清償交涉跨期推進；制度成果並未讓欠款自動消失。';
+      drawTree();
+      renderSide();
+      if (fit) {
+        fitView(true);
+      }
+    }
+    function updateTransform() {
+      $('world').style.transform=`translate(${view.x}px,${view.y}px) scale(${view.scale})`;
+      $('zoom-label').textContent=`${Math.round(view.scale*100)}%`;
+    }
+    function fitView(initial=false) {
+      const rect=$('viewport').getBoundingClientRect();
+      const height=parseFloat($('world').style.height);
+      const mobile=window.matchMedia('(max-width:760px)').matches;
+      view.scale=mobile && initial ? .68 : Math.max(.2,Math.min((rect.width-34)/1140,(rect.height-34)/height,1.05));
+      view.x=(rect.width-1140*view.scale)/2;
+      view.y=Math.max(20,(rect.height-height*view.scale)/2);
+      if (mobile && initial) {
+        const anchor=demo.tree(state).find(n=>n.id===selected);
+        if (anchor) {
+          view.x=rect.width/2-(anchor.x+88)*view.scale;
+          view.y=75-anchor.y*view.scale;
+        }
+      }
+      updateTransform();
+    }
+    function zoom(factor,x,y) {
+      const next=Math.min(1.65,Math.max(.25,view.scale*factor));
+      view.x=x-(x-view.x)*next/view.scale;
+      view.y=y-(y-view.y)*next/view.scale;
+      view.scale=next;
+      updateTransform();
+    }
+    function zoomCenter(factor) {
+      const rect=$('viewport').getBoundingClientRect();
+      zoom(factor,rect.width/2,rect.height/2);
+    }
+    $('world').addEventListener('click',event=>{
+      const button=event.target.closest('[data-node]');
+      if (!button || suppressClick) {
+        return;
+      }
+      selected=button.dataset.node;
+      document.querySelectorAll('[data-node]').forEach(element=>{
+        const selectedNow=element.dataset.node===selected;
+        element.classList.toggle('selected',selectedNow);
+        element.setAttribute('aria-pressed',String(selectedNow));
+      });
+      showTab('detail');
+    });
+    $('side-content').addEventListener('click',event=>{
+      if (event.target.closest('[data-related]')) {
+        showTab('events');
+      }
+    });
+    document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
+    document.querySelector('.tabs').addEventListener('keydown',event=>{
+      if (!['ArrowLeft','ArrowRight'].includes(event.key)) {
+        return;
+      }
+      const buttons=[...document.querySelectorAll('[data-tab]')];
+      const current=buttons.indexOf(event.target);
+      const next=buttons[(current+(event.key==='ArrowRight'?1:2))%3];
+      event.preventDefault();
+      next.focus();
+      showTab(next.dataset.tab);
+    });
+    $('history-shortcut').addEventListener('click',()=>showTab('history'));
+    $('news-events').addEventListener('click',()=>showTab('events'));
+    $('close-side').addEventListener('click',()=>{
+      $('sidebar').classList.remove('mobile-open');
+      $('viewport').focus({preventScroll:true});
+    });
+    document.addEventListener('keydown',event=>{
+      if (event.key==='Escape') {
+        $('sidebar').classList.remove('mobile-open');
+      }
+    });
+    $('advance').addEventListener('click',()=>{
+      const before=state.period;
+      state=demo.advance(state);
+      if (state.period!==before) {
+        selected=state.scenario==='crisis'?'A04':'A12';
+        activeTab='detail';
+        render(true);
+        toast(state.scenario==='crisis'?'進入第二期。糧運國策保留 18／30 日進度，舊期已整理成摘要。':'本期目的已完成。以「北境貿易新秩序」承接第二期。');
+      } else {
+        render();
+        showTab('events');
+        toast(state.period===1?'局勢與事件已更新；自動換期關閉，保留原國策樹。':'原事件已更新；沒有重建事件，也沒有重複結算國策。');
+      }
+    });
+    function reset() {
+      state=demo.initial($('scenario').value,state.auto);
+      selected=state.scenario==='crisis'?'A04':'A12';
+      activeTab='detail';
+      $('sidebar').classList.remove('mobile-open');
+      render(true);
+    }
+    $('scenario').addEventListener('change',reset);
+    $('reset').addEventListener('click',reset);
+    $('auto').addEventListener('change',event=>{
+      state={...state,auto:event.target.checked};
+      render();
+      toast(state.auto?'已開啟。下次局勢更新符合條件時，才會換期。':'已關閉自動換期。世界事件仍會繼續更新。');
+    });
+    $('zoom-in').addEventListener('click',()=>zoomCenter(1.15));
+    $('zoom-out').addEventListener('click',()=>zoomCenter(1/1.15));
+    $('fit').addEventListener('click',()=>fitView());
+    const viewport=$('viewport');
+    viewport.addEventListener('wheel',event=>{
+      event.preventDefault();
+      const rect=viewport.getBoundingClientRect();
+      zoom(Math.exp(-event.deltaY*.0015),event.clientX-rect.left,event.clientY-rect.top);
+    },{passive:false});
+    let suppressClick=false;
+    const pointers=new Map();
+    let gesture=null;
+    function beginGesture() {
+      const points=[...pointers.values()];
+      if (points.length>=2) {
+        gesture={type:'pinch',x:(points[0].x+points[1].x)/2,y:(points[0].y+points[1].y)/2,distance:Math.max(1,Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y))};
+      } else if (points.length===1) {
+        gesture={type:'pan',x:points[0].x,y:points[0].y};
+      } else {
+        gesture=null;
+      }
+    }
+    viewport.addEventListener('pointerdown',event=>{
+      if (event.pointerType==='mouse' && event.button!==0) {
+        return;
+      }
+      if (pointers.size===0) {
+        suppressClick=false;
+      }
+      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY,target:event.target});
+      beginGesture();
+    });
+    window.addEventListener('pointermove',event=>{
+      if (!pointers.has(event.pointerId)) {
+        return;
+      }
+      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+      const points=[...pointers.values()];
+      if (points.length>=2 && gesture?.type==='pinch') {
+        suppressClick=true;
+        const center={x:(points[0].x+points[1].x)/2,y:(points[0].y+points[1].y)/2};
+        const distance=Math.max(1,Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y));
+        const rect=viewport.getBoundingClientRect();
+        zoom(distance/gesture.distance,gesture.x-rect.left,gesture.y-rect.top);
+        view.x+=center.x-gesture.x;
+        view.y+=center.y-gesture.y;
+        gesture={type:'pinch',...center,distance};
+      } else if (gesture?.type==='pan') {
+        const dx=points[0].x-gesture.x,dy=points[0].y-gesture.y;
+        if (!suppressClick && Math.hypot(dx,dy)<5) {
+          return;
+        }
+        suppressClick=true;
+        viewport.classList.add('dragging');
+        view.x+=dx;
+        view.y+=dy;
+        gesture={type:'pan',x:points[0].x,y:points[0].y};
+      }
+      updateTransform();
+    });
+    function endPointer(event) {
+      pointers.delete(event.pointerId);
+      beginGesture();
+      if (pointers.size===0) {
+        viewport.classList.remove('dragging');
+        setTimeout(()=>{suppressClick=false;},0);
+      }
+    }
+    window.addEventListener('pointerup',endPointer);
+    window.addEventListener('pointercancel',endPointer);
+    window.addEventListener('blur',()=>{
+      pointers.clear();
+      gesture=null;
+      viewport.classList.remove('dragging');
+      suppressClick=false;
+    });
+    viewport.addEventListener('keydown',event=>{
+      const moves={ArrowLeft:[45,0],ArrowRight:[-45,0],ArrowUp:[0,45],ArrowDown:[0,-45]};
+      if (moves[event.key]) {
+        event.preventDefault();
+        view.x+=moves[event.key][0];
+        view.y+=moves[event.key][1];
+        updateTransform();
+      } else if (event.key==='+' || event.key==='=') {
+        event.preventDefault();
+        zoomCenter(1.15);
+      } else if (event.key==='-') {
+        event.preventDefault();
+        zoomCenter(1/1.15);
+      }
+    });
+    $('world').addEventListener('focusin',event=>{
+      const button=event.target.closest('[data-node]');
+      if (!button || !button.matches(':focus-visible')) {
+        return;
+      }
+      const nodeRect=button.getBoundingClientRect(),rect=viewport.getBoundingClientRect();
+      if (nodeRect.left<rect.left || nodeRect.right>rect.right || nodeRect.top<rect.top || nodeRect.bottom>rect.bottom) {
+        view.x+=(rect.left+rect.width/2)-(nodeRect.left+nodeRect.width/2);
+        view.y+=(rect.top+rect.height/2)-(nodeRect.top+nodeRect.height/2);
+        updateTransform();
+      }
+    });
+    let resizeTimer;
+    window.addEventListener('resize',()=>{
+      clearTimeout(resizeTimer);
+      resizeTimer=setTimeout(fitView,150);
+    });
+    render(true);
+  </script>
+</body>
+</html>

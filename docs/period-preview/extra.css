@@ -1,0 +1,19 @@
+/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */
+.period-strip { display:flex; align-items:center; gap:16px; padding:8px 18px; border-bottom:1px solid var(--line); background:var(--panel); flex-shrink:0; }
+.period-copy { flex:1; min-width:0; }
+.period-copy strong { display:block; color:var(--gold); font-size:13px; }
+.period-copy small { display:block; color:var(--muted); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.period-toggle { white-space:nowrap; font-size:12px; }
+.period-strip button { font-size:12px; white-space:nowrap; }
+.period-anchor-note { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; border-left:2px solid var(--blue); padding:10px 12px; background:var(--raised); font-size:12px; }
+.period-anchor-note strong { color:var(--blue); }
+.period-anchor-badge { position:absolute; top:-18px; right:0; font-size:10px; line-height:16px; padding:0 5px; color:var(--blue); background:var(--panel); border:1px solid var(--line-strong); border-radius:3px; }
+.period-history { margin:14px 0; border-left:2px solid var(--gold-deep); padding:4px 16px; }
+.period-history time { color:var(--gold); font-size:12px; }
+.period-history p { line-height:1.95; }
+@media(max-width:760px) {
+  .period-strip { gap:8px; padding:8px 12px; flex-wrap:wrap; }
+  .period-copy { flex-basis:100%; }
+  .period-copy small { white-space:normal; }
+  .period-strip button { margin-left:auto; }
+}
