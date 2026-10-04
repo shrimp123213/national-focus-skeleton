@@ -562,6 +562,35 @@ test('收到正文而一般 MVU 尚未写入时，不启动背景任务；两者
     env.platform.dispose();
   }
 });
+test('MVU 写入比对使用当前正文，swipe 文本尚未同步时仍能完成本楼', async () => {
+  const env = environment();
+  let count = 0;
+  const readMessages = env.api.getChatMessages;
+  env.api.getChatMessages = (range, options) => readMessages(range, options).map((message) => ({
+    ...message,
+    message: options?.include_swipes ? undefined : '当前正文',
+    swipes: ['尚未同步的旧正文', '另一正文'],
+  }));
+  env.platform.onReady(() => { count++; });
+  try {
+    env.emit('generation-start', 'swipe');
+    env.emit('received', 3, 'swipe');
+    env.emit('generation-end');
+    env.emit('mvu-write', { message_content: '其他楼的正文' });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.equal(count, 0, '其他楼的事件不能解除本楼等待');
+    env.emit('mvu-write', { message_content: '当前正文' });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.equal(count, 1);
+    await env.platform.read(defaultConfig());
+    env.emit('mvu-write', { message_content: '当前正文' });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.equal(count, 1);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
 test('新正文一开始就取消旧任务，即使新楼尚未插入', async () => {
   const env = environment();
   try {

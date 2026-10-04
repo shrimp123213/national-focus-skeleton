@@ -12,6 +12,7 @@ import {
   type Candidate,
   type Config,
   type JobKind,
+  type Proposal,
   type State,
 } from './model';
 import {
@@ -30,6 +31,22 @@ import { currentApiName, parseJsonReply, redactApiError, validateApi } from './a
 import { repairReply } from './repair';
 import { assertInputSize, InputSizeError, messageCharacters } from './sources';
 import { RoutePool, routeLimits } from './route-pool';
+import { FocusIntegration, sameData, unavailable, type IntegrationRegistration } from './integration';
+import {
+  parseWorldProposal,
+  worldEvidence,
+  worldFingerprint,
+  type ProposalDiagnostic,
+  type ProposalReason,
+  type ProposalReceptionState,
+  type WorldEvidence,
+} from './world-proposal';
+import {
+  PREDICTION_WAIT_MS,
+  type ScheduleSource,
+  type ScheduleCoordination,
+  type RollbackNotice,
+} from './world-schedule';
 import {
   requestId,
   type JobStatus,
@@ -43,9 +60,41 @@ import {
 function taskData(snapshot: Snapshot, full: boolean) {
   return { now: snapshot.day, state: workingState(snapshot.state, full), context: snapshot.context };
 }
+function scheduledDue(job: Config['jobs'][JobKind], snapshot: Snapshot, kind: JobKind): boolean {
+  const last = snapshot.state.schedules[kind];
+  return job.schedule === 'reply'
+    ? last?.turn !== snapshot.turn
+    : job.schedule === 'rounds'
+      ? !last || snapshot.turn - last.turn >= job.interval
+      : job.schedule === 'days'
+        ? !last || snapshot.day - last.day >= job.interval
+        : false;
+}
+
+export type UpdateCommit = {
+  state: State;
+  periods: { candidate: Candidate; work: PeriodWork }[];
+};
+
+class ProposalBlocked extends Error {
+  constructor(
+    readonly reason: ProposalReason,
+    readonly detail?: string,
+  ) {
+    super(reason);
+  }
+}
+type ProposalReview = {
+  registration: IntegrationRegistration;
+  proposal: Proposal;
+  preview: State;
+  evidence: WorldEvidence;
+  evidenceKey: string;
+};
 
 export class FocusController {
   config: Config;
+  readonly integration: FocusIntegration;
   state: State | null = null;
   candidates: Candidate[] = [];
   jobs: JobStatus[] = [];
@@ -63,9 +112,50 @@ export class FocusController {
   private pendingReady = false;
   private disposed = false;
   private stops: (() => void)[] = [];
+  private reception: ProposalReceptionState = { status: 'none' };
+  private diagnostics: ProposalDiagnostic[] = [];
+  private review: ProposalReview | null = null;
+  private accepting: Promise<boolean> | null = null;
+  private overwriteTicks = 0;
+  private proposalPeriods: AbortController | null = null;
+  private rollback: RollbackNotice | null = null;
+  private acceptedCheckpoint: {
+    source: Omit<ScheduleSource, 'content'>;
+    proposalId: string;
+    before: string | null;
+  } | null = null;
+  private coordination: ScheduleCoordination = { status: 'idle' };
+  private coordinationEpoch = 0;
+  private yieldedSource = '';
+  private waitFloor = '';
+  private waitedSources = new Set<string>();
+  private predictionWait: {
+    source: ScheduleSource;
+    startedAt: number;
+    previousAt: number;
+    taskId: string;
+    timer: ReturnType<typeof setTimeout>;
+    finish: (proceed: boolean) => void;
+  } | null = null;
 
   constructor(readonly platform: Platform) {
     this.config = ConfigSchema.parse(platform.loadConfig());
+    this.integration = new FocusIntegration(
+      (messageId) => platform.readIntegration?.(messageId, this.config) ?? unavailable('unsupported'),
+      (reason) => {
+        if (this.review && this.integration.current()?.nonce !== this.review.registration.nonce) {
+          this.proposalPeriods?.abort();
+          this.setProposalState({
+            ...this.reception,
+            status: 'expired',
+            reason: reason ?? 'request_expired',
+          });
+          this.review = null;
+        }
+        this.pollPredictionWait();
+        this.notify();
+      },
+    );
   }
   subscribe(callback: () => void): () => void {
     this.listeners.add(callback);
@@ -80,6 +170,21 @@ export class FocusController {
     }
   }
   async initialize(): Promise<void> {
+    const stopTick = this.platform.onIntegrationTick?.(() => {
+      this.pollPredictionWait();
+      this.refreshProposal();
+    });
+    if (stopTick) {
+      this.stops.push(stopTick);
+    }
+    const unbind = this.platform.bindIntegration?.({
+      version: 1,
+      prepare: (messageId, options) => this.integration.prepare(messageId, options, this.writes),
+      lookup: (nonce) => this.integration.lookup(nonce),
+    });
+    if (unbind) {
+      this.stops.push(unbind);
+    }
     this.stops.push(
       this.platform.onReady(() => {
         this.cancelAll();
@@ -102,6 +207,12 @@ export class FocusController {
     );
     this.stops.push(
       this.platform.onChange(() => {
+        this.dismissRollback();
+        this.waitFloor = '';
+        this.waitedSources.clear();
+        this.yieldedSource = '';
+        this.setCoordination({ status: 'idle' });
+        this.integration.invalidate();
         this.cancelAll();
         this.pendingReady = false;
         this.candidates = [];
@@ -115,6 +226,7 @@ export class FocusController {
       return;
     }
     this.disposed = true;
+    this.integration.dispose();
     this.pendingReady = false;
     this.cancelAll();
     for (const stop of this.stops) {
@@ -145,7 +257,7 @@ export class FocusController {
     this.notify();
   }
   /** Serialize local saves so concurrent API replies apply to the latest committed state. */
-  private writeState(operation: (snapshot: Snapshot) => State, signal?: AbortSignal): Promise<State> {
+  private writeState(operation: (snapshot: Snapshot) => State | null, signal?: AbortSignal): Promise<State> {
     const epoch = this.runEpoch;
     const save = this.writes.then(async () => {
       const checkCancelled = () => {
@@ -158,11 +270,379 @@ export class FocusController {
       const snapshot = await this.platform.read(this.config);
       checkCancelled();
       const next = operation(snapshot);
+      if (next === null) {
+        return snapshot.state;
+      }
       await this.platform.commit(snapshot, next);
       return next;
     });
     this.writes = save.catch(() => {});
     return save;
+  }
+  /** Commit a parsed update; only the first saved receipt returns work for the next period. */
+  async commitUpdate(
+    proposal: Proposal,
+    source: Snapshot,
+    signal?: AbortSignal,
+    verifyExternal?: () => void,
+  ): Promise<UpdateCommit> {
+    if (proposal.until !== source.day) {
+      throw new Error('更新终点必须等于来源故事时间');
+    }
+    const periods: UpdateCommit['periods'] = [];
+    const state = await this.writeState((current) => {
+      source.signal?.throwIfAborted();
+      verifyExternal?.();
+      if (current.state.receipts.includes(proposal.id)) {
+        return null;
+      }
+      const next = this.proposedState('update', current, proposal);
+      next.schedules.update = { turn: source.turn, day: source.day };
+      for (const transition of proposal.transitions) {
+        const country = next.countries[transition.country];
+        if (!country.enabled || !country.autoPeriod || country.calibration) {
+          continue;
+        }
+        periods.push({
+          candidate: {
+            id: country.id,
+            name: country.name,
+            description: country.description,
+            evidence: country.evidence,
+          },
+          work: { transition },
+        });
+      }
+      return next;
+    }, signal ?? source.signal);
+    return { state, periods };
+  }
+  get externalProposal(): ProposalReceptionState {
+    return structuredClone(this.reception);
+  }
+  get proposalDiagnostics(): ProposalDiagnostic[] {
+    return structuredClone(this.diagnostics);
+  }
+  clearProposalDiagnostics(): void {
+    this.diagnostics = [];
+    this.notify();
+  }
+  private setProposalState(state: ProposalReceptionState): void {
+    if (sameData(this.reception, state)) {
+      return;
+    }
+    this.reception = structuredClone(state);
+    this.diagnostics.unshift({
+      at: Date.now(),
+      status: state.status,
+      reason: state.reason,
+      detail: state.detail,
+      source: structuredClone(state.source),
+      proposalId: state.proposal?.id,
+      evidence: structuredClone(state.evidence),
+    });
+    this.diagnostics = this.diagnostics.slice(0, 60);
+    this.notify();
+  }
+  private proposalCandidate(registration: IntegrationRegistration): ProposalReview {
+    const source = this.integration.readSource(registration.messageId);
+    if ('status' in source) {
+      throw new ProposalBlocked(source.reason);
+    }
+    const observation = this.platform.readWorldProposal?.(registration.messageId);
+    if (!observation) {
+      throw new ProposalBlocked('workflow_unknown');
+    }
+    const { world } = registration;
+    if (
+      !world ||
+      !observation.member ||
+      world.taskId !== observation.member.taskId ||
+      world.rootId !== observation.member.rootId
+    ) {
+      throw new ProposalBlocked('member_mismatch');
+    }
+    const run = observation.run;
+    if (!run || run.messageId !== registration.messageId || run.at < registration.registeredAt) {
+      throw new ProposalBlocked('waiting_workflow');
+    }
+    const results = run.taskResults.filter((result) => result.taskId === world.taskId);
+    if (results.length !== 1) {
+      throw new ProposalBlocked('waiting_workflow');
+    }
+    const result = results[0];
+    const evidence = worldEvidence(observation, registration, result);
+    // Evidence is available to the reviewer even when it rules out acceptance.
+    this.reception.evidence = structuredClone(evidence);
+    if (result.skipped) {
+      throw new ProposalBlocked('world_skipped');
+    }
+    if (!result.success) {
+      throw new ProposalBlocked('world_failed');
+    }
+    // Addon also records successful path/format repairs as issues with kind "heal".
+    if (
+      evidence.patch.issues.some((issue) => issue.kind !== 'heal') ||
+      evidence.patch.failedFragments.length
+    ) {
+      throw new ProposalBlocked('world_patch_failed');
+    }
+    const raw = result.extractedTags?.['国策提案'];
+    if (!raw?.trim()) {
+      throw new ProposalBlocked('missing_proposal');
+    }
+    let parsed: ReturnType<typeof parseWorldProposal>;
+    try {
+      parsed = parseWorldProposal(raw);
+    } catch (error) {
+      throw new ProposalBlocked(
+        'invalid_proposal',
+        error instanceof Error ? error.message.slice(0, 1000) : undefined,
+      );
+    }
+    if (parsed.nonce !== registration.nonce) {
+      throw new ProposalBlocked('nonce_mismatch');
+    }
+    if (parsed.proposal.until !== registration.now) {
+      throw new ProposalBlocked('until_mismatch');
+    }
+    const snapshot: Snapshot = {
+      identity: '',
+      messageId: registration.messageId,
+      day: registration.now,
+      turn: 0,
+      state: source.state,
+      context: {},
+    };
+    let preview: State;
+    try {
+      preview = this.proposedState('update', snapshot, parsed.proposal);
+    } catch (error) {
+      throw new ProposalBlocked(
+        'invalid_rules',
+        error instanceof Error ? error.message.slice(0, 1000) : undefined,
+      );
+    }
+    return {
+      registration,
+      proposal: parsed.proposal,
+      preview,
+      evidence,
+      evidenceKey: JSON.stringify({ at: run.at, raw, evidence, fingerprint: observation.fingerprint }),
+    };
+  }
+  private blockProposal(reason: ProposalReason, detail?: string): void {
+    const waiting = ['waiting_workflow', 'mvu_busy', 'update_busy'].includes(reason);
+    const expired = [
+      'source_changed',
+      'not_latest',
+      'not_assistant',
+      'request_expired',
+      'preview_changed',
+      'invalid_time',
+    ].includes(reason);
+    const unavailable = [
+      'workflow_unknown',
+      'missing_proposal',
+      'invalid_proposal',
+      'read_failed',
+      'mvu_unavailable',
+    ].includes(reason);
+    const state: ProposalReceptionState = {
+      ...this.reception,
+      status: waiting ? 'waiting' : expired ? 'expired' : unavailable ? 'unavailable' : 'rejected',
+      reason,
+      detail,
+    };
+    // An unpaired/late workflow record can block acceptance, but cannot revoke a live request.
+    const unpaired = [
+      'workflow_unknown',
+      'nonce_mismatch',
+      'missing_proposal',
+      'invalid_proposal',
+      'world_failed',
+      'world_skipped',
+      'world_patch_failed',
+    ].includes(reason);
+    if (!waiting && !unpaired) {
+      this.proposalPeriods?.abort();
+      this.review = null;
+      this.integration.invalidate();
+    }
+    this.setProposalState(state);
+  }
+  /** Called by the existing platform timer, and available for the review panel's refresh button. */
+  refreshProposal(): void {
+    if (this.disposed || this.accepting) {
+      return;
+    }
+    this.observeRollback();
+    if (this.reception.status === 'accepted' && this.overwriteTicks <= 0) {
+      return;
+    }
+    const registration = this.integration.current();
+    if (!registration) {
+      return;
+    }
+    if (this.reception.status === 'accepted') {
+      if (this.overwriteTicks <= 0 || !this.review) {
+        return;
+      }
+      const source = this.integration.readSource(registration.messageId);
+      if ('status' in source) {
+        if (source.reason !== 'mvu_busy') {
+          this.blockProposal(source.reason);
+        }
+        return;
+      }
+      this.overwriteTicks--;
+      if (
+        source.chatId !== registration.chatId ||
+        source.swipeId !== registration.swipeId ||
+        source.now !== registration.now
+      ) {
+        this.blockProposal('source_changed');
+      } else if (!source.state.receipts.includes(this.review.proposal.id)) {
+        this.proposalPeriods?.abort();
+        if (sameData(source.state, registration.state)) {
+          this.setProposalState({ ...this.reception, status: 'overwritten', reason: 'overwritten' });
+        } else {
+          this.blockProposal('preview_changed');
+        }
+      }
+      return;
+    }
+    if (this.reception.status === 'overwritten') {
+      const current = this.integration.readSource(registration.messageId);
+      if ('status' in current && current.reason === 'mvu_busy') {
+        return;
+      }
+      if (!this.integration.retry(registration.nonce)) {
+        this.blockProposal('preview_changed');
+      }
+      return;
+    }
+    const source = {
+      chatId: registration.chatId,
+      messageId: registration.messageId,
+      swipeId: registration.swipeId,
+      now: registration.now,
+      nonce: registration.nonce,
+    };
+    if (this.reception.source?.nonce !== registration.nonce) {
+      this.setProposalState({ status: 'waiting', reason: 'waiting_workflow', source });
+    }
+    try {
+      const input = this.integration.readSource(registration.messageId);
+      if ('status' in input) {
+        throw new ProposalBlocked(input.reason);
+      }
+      if (!this.integration.lookup(registration.nonce)) {
+        throw new ProposalBlocked('source_changed');
+      }
+      const candidate = this.proposalCandidate(registration);
+      if (this.review && candidate.evidenceKey !== this.review.evidenceKey) {
+        throw new ProposalBlocked('preview_changed');
+      }
+      this.review = candidate;
+      this.setProposalState({
+        status: 'pending',
+        source,
+        proposal: candidate.proposal,
+        preview: candidate.preview,
+        evidence: candidate.evidence,
+      });
+    } catch (error) {
+      this.blockProposal(
+        error instanceof ProposalBlocked ? error.reason : 'read_failed',
+        error instanceof ProposalBlocked ? error.detail : undefined,
+      );
+    }
+  }
+  reject(): void {
+    if (this.accepting || !['pending', 'waiting', 'overwritten'].includes(this.reception.status)) {
+      return;
+    }
+    this.review = null;
+    this.integration.invalidate();
+    this.setProposalState({ ...this.reception, status: 'rejected', reason: 'user_rejected' });
+  }
+  accept(): Promise<boolean> {
+    if (this.accepting) {
+      return this.accepting;
+    }
+    if (!this.review || !['pending', 'overwritten'].includes(this.reception.status)) {
+      return Promise.resolve(false);
+    }
+    const review = this.review;
+    const retry = this.reception.status === 'overwritten';
+    const verify = () => {
+      const source = this.integration.readSource(review.registration.messageId);
+      if ('status' in source) {
+        throw new ProposalBlocked(source.reason);
+      }
+      const registered = retry
+        ? this.integration.retry(review.registration.nonce)
+        : this.integration.lookup(review.registration.nonce);
+      if (!registered) {
+        throw new ProposalBlocked('preview_changed');
+      }
+      const candidate = this.proposalCandidate(registered);
+      if (candidate.evidenceKey !== review.evidenceKey || !sameData(candidate.preview, review.preview)) {
+        throw new ProposalBlocked('preview_changed');
+      }
+    };
+    this.accepting = (async () => {
+      try {
+        verify();
+        const snapshot = await this.platform.read(this.config);
+        verify();
+        const committed = await this.commitUpdate(review.proposal, snapshot, snapshot.signal, verify);
+        if (this.integration.current()?.nonce !== review.registration.nonce) {
+          throw new ProposalBlocked('request_expired');
+        }
+        this.integration.consume(review.registration.nonce);
+        this.acceptedCheckpoint = review.registration.state.receipts.includes(review.proposal.id)
+          ? null
+          : {
+              source: {
+                chatId: review.registration.chatId,
+                messageId: review.registration.messageId,
+                swipeId: review.registration.swipeId,
+              },
+              proposalId: review.proposal.id,
+              before: worldFingerprint(review.registration.state),
+            };
+        this.rollback = null;
+        if (this.coordination.status === 'proposal_wait') {
+          this.setCoordination({ ...this.coordination, status: 'idle' });
+        }
+        this.state = committed.state;
+        this.overwriteTicks = 10;
+        this.setProposalState({ ...this.reception, status: 'accepted', reason: undefined });
+        this.proposalPeriods?.abort();
+        const periods = new AbortController();
+        this.proposalPeriods = periods;
+        for (const period of committed.periods) {
+          void this.run('generate', period.candidate, period.work, {
+            signal: periods.signal,
+            receipt: review.proposal.id,
+          });
+        }
+        return true;
+      } catch (error) {
+        const reason = error instanceof ProposalBlocked ? error.reason : 'save_failed';
+        if (retry && ['mvu_busy', 'workflow_unknown', 'waiting_workflow'].includes(reason)) {
+          this.setProposalState({ ...this.reception, status: 'overwritten', reason });
+        } else {
+          this.blockProposal(reason, error instanceof ProposalBlocked ? error.detail : undefined);
+        }
+        return false;
+      }
+    })().finally(() => {
+      this.accepting = null;
+    });
+    return this.accepting;
   }
   async mutate(operation: (state: State) => State, changesTimeline = false): Promise<void> {
     if (this.disposed) {
@@ -196,6 +676,7 @@ export class FocusController {
       }
     }
     this.platform.saveConfig(parsed);
+    this.integration.invalidate();
     this.cancelAll();
     this.config = parsed;
     this.pools.clear();
@@ -212,6 +693,8 @@ export class FocusController {
     this.aborters.get(id)?.abort();
   }
   cancelAll(): void {
+    this.coordinationEpoch++;
+    this.finishPredictionWait(false, 'cancelled');
     this.runEpoch++;
     this.progress.clear();
     for (const aborter of this.aborters.values()) {
@@ -220,6 +703,7 @@ export class FocusController {
   }
   async runScheduled(): Promise<void> {
     const epoch = this.runEpoch;
+    const coordinationEpoch = this.coordinationEpoch;
     for (const kind of ['identify', 'update', 'reshape'] as const) {
       if (this.disposed || epoch !== this.runEpoch) {
         return;
@@ -232,19 +716,223 @@ export class FocusController {
       if (this.disposed || epoch !== this.runEpoch) {
         return;
       }
-      const last = snapshot.state.schedules[kind];
-      const due =
-        job.schedule === 'reply'
-          ? last?.turn !== snapshot.turn
-          : job.schedule === 'rounds'
-            ? !last || snapshot.turn - last.turn >= job.interval
-            : job.schedule === 'days'
-              ? !last || snapshot.day - last.day >= job.interval
-              : false;
+      const due = scheduledDue(job, snapshot, kind);
       if (due && (kind === 'identify' || Object.values(snapshot.state.countries).some((c) => c.enabled))) {
-        await this.run(kind);
+        if (kind === 'update') {
+          await this.scheduledUpdate(snapshot, epoch, coordinationEpoch);
+        } else {
+          await this.run(kind);
+        }
       }
     }
+  }
+  get rollbackNotice(): RollbackNotice | null {
+    return structuredClone(this.rollback);
+  }
+  dismissRollback(): void {
+    this.rollback = null;
+    this.acceptedCheckpoint = null;
+    this.notify();
+  }
+  private observeRollback(): void {
+    const checkpoint = this.acceptedCheckpoint;
+    if (!checkpoint) {
+      return;
+    }
+    const source = this.integration.readSource(checkpoint.source.messageId);
+    if ('status' in source) {
+      if (source.reason === 'not_latest' || source.reason === 'not_assistant') {
+        this.dismissRollback();
+      }
+      return;
+    }
+    const identity = { chatId: source.chatId, messageId: source.messageId, swipeId: source.swipeId };
+    if (!sameData(identity, checkpoint.source)) {
+      this.dismissRollback();
+      return;
+    }
+    if (this.rollback) {
+      return;
+    }
+    const receiptMissing = !source.state.receipts.includes(checkpoint.proposalId);
+    if (!receiptMissing) {
+      return;
+    }
+    const returnedToBefore = worldFingerprint(source.state) === checkpoint.before;
+    if (receiptMissing || returnedToBefore) {
+      this.rollback = {
+        ...identity,
+        proposalId: checkpoint.proposalId,
+        detectedAt: Date.now(),
+        receiptMissing,
+        returnedToBefore,
+      };
+      this.notify();
+    }
+  }
+  get scheduleCoordination(): ScheduleCoordination {
+    return structuredClone(this.coordination);
+  }
+  private scheduleIdentity(source: ScheduleSource): string {
+    return JSON.stringify([source.chatId, source.messageId, source.swipeId]);
+  }
+  private setCoordination(state: ScheduleCoordination): void {
+    this.coordination = state;
+    this.notify();
+  }
+  private finishPredictionWait(proceed: boolean, reason: ScheduleCoordination['reason']): void {
+    const wait = this.predictionWait;
+    if (!wait) {
+      return;
+    }
+    clearTimeout(wait.timer);
+    this.predictionWait = null;
+    this.setCoordination({ ...this.coordination, status: proceed ? 'idle' : 'cancelled', reason });
+    wait.finish(proceed);
+  }
+  private pollPredictionWait(): void {
+    const currentSource = this.platform.readScheduleSource?.();
+    if (
+      currentSource &&
+      this.coordination.source &&
+      this.scheduleIdentity(currentSource) !==
+        this.scheduleIdentity({ ...this.coordination.source, content: '' })
+    ) {
+      this.yieldedSource = '';
+      this.finishPredictionWait(false, 'source_changed');
+      this.setCoordination({ status: 'idle' });
+    }
+    const wait = this.predictionWait;
+    if (!wait) {
+      return;
+    }
+    if (!sameData(currentSource, wait.source)) {
+      this.finishPredictionWait(false, 'source_changed');
+      return;
+    }
+    const registration = this.integration.current();
+    if (registration && this.integration.lookup(registration.nonce)) {
+      this.finishPredictionWait(true, 'nonce');
+      return;
+    }
+    const run = this.platform.readWorldProposal?.(wait.source.messageId)?.run;
+    if (
+      run &&
+      run.messageId === wait.source.messageId &&
+      run.at >= wait.startedAt &&
+      run.at > wait.previousAt
+    ) {
+      const result = run.taskResults.find((item) => item.taskId === wait.taskId);
+      if (result && (result.skipped || !result.extractedTags?.['国策提案']?.trim())) {
+        this.finishPredictionWait(true, 'result');
+      }
+    }
+  }
+  private async scheduledUpdate(snapshot: Snapshot, epoch: number, coordinationEpoch: number): Promise<void> {
+    if (this.predictionWait || coordinationEpoch !== this.coordinationEpoch) {
+      return;
+    }
+    const observed = this.platform.readScheduleSource?.();
+    if (this.platform.readScheduleSource && (!observed || observed.messageId !== snapshot.messageId)) {
+      this.setCoordination({ status: 'cancelled', reason: 'source_changed' });
+      return;
+    }
+    const source = observed ?? {
+      chatId: this.platform.chatId(),
+      messageId: snapshot.messageId,
+      swipeId: 0,
+      content: '',
+    };
+    const floor = this.scheduleIdentity(source);
+    if (this.waitFloor !== floor) {
+      this.waitFloor = floor;
+      this.waitedSources.clear();
+      this.yieldedSource = '';
+    }
+    const yieldToProposal = () => {
+      const registration = this.integration.current();
+      const valid = registration && this.integration.lookup(registration.nonce);
+      if (valid || this.yieldedSource === floor) {
+        this.yieldedSource = floor;
+        const { content: _content, ...identity } = source;
+        this.setCoordination({ status: 'proposal_wait', source: identity, reason: 'nonce' });
+        this.refreshProposal();
+        return true;
+      }
+      return false;
+    };
+    if (yieldToProposal()) {
+      return;
+    }
+    const prediction = this.platform.predictWorldSchedule?.(source) ?? {
+      status: 'unknown' as const,
+      reason: 'unavailable' as const,
+    };
+    const key = JSON.stringify([source, snapshot.day, worldFingerprint(snapshot.state)]);
+    const { content: _content, ...identity } = source;
+    this.setCoordination({ status: 'idle', source: identity, prediction });
+    if (
+      prediction.status === 'due' &&
+      prediction.member &&
+      this.platform.readScheduleSource &&
+      !this.waitedSources.has(key)
+    ) {
+      this.waitedSources.add(key);
+      const startedAt = Date.now();
+      const previousAt = this.platform.readWorldProposal?.(source.messageId)?.run?.at ?? -1;
+      const proceed = await new Promise<boolean>((finish) => {
+        const timer = setTimeout(() => {
+          this.pollPredictionWait();
+          this.finishPredictionWait(true, 'timeout');
+        }, PREDICTION_WAIT_MS);
+        this.predictionWait = {
+          source,
+          startedAt,
+          previousAt,
+          taskId: prediction.member!.taskId,
+          timer,
+          finish,
+        };
+        this.setCoordination({
+          status: 'prediction_wait',
+          source: identity,
+          prediction,
+          startedAt,
+          deadline: startedAt + PREDICTION_WAIT_MS,
+        });
+      });
+      if (
+        !proceed ||
+        this.disposed ||
+        epoch !== this.runEpoch ||
+        coordinationEpoch !== this.coordinationEpoch
+      ) {
+        return;
+      }
+      if (yieldToProposal()) {
+        return;
+      }
+      const current = await this.platform.read(this.config);
+      if (
+        this.disposed ||
+        epoch !== this.runEpoch ||
+        coordinationEpoch !== this.coordinationEpoch ||
+        current.identity !== snapshot.identity ||
+        current.day !== snapshot.day ||
+        !sameData(this.platform.readScheduleSource(), source)
+      ) {
+        this.setCoordination({ ...this.coordination, status: 'cancelled', reason: 'source_changed' });
+        return;
+      }
+      const job = this.config.jobs.update;
+      const due = scheduledDue(job, current, 'update');
+      if (!due || !Object.values(current.state.countries).some((country) => country.enabled)) {
+        this.setCoordination({ ...this.coordination, status: 'idle', reason: 'not_due' });
+        return;
+      }
+    }
+    // runTask checks the nonce and takes ownership synchronously, including arrivals after the await.
+    await this.runTask('update', undefined, undefined, undefined, 'scheduled');
   }
   /**
    * Delete a country's tree from the current floor. The country goes back to the candidates, so
@@ -292,7 +980,27 @@ export class FocusController {
     // Route pools limit requests; independent countries keep their own result and failure state.
     await Promise.all(candidates.map((candidate) => this.run('generate', candidate)));
   }
-  async run(kind: JobKind, candidate?: Candidate, periodWork?: PeriodWork): Promise<void> {
+  async run(
+    kind: JobKind,
+    candidate?: Candidate,
+    periodWork?: PeriodWork,
+    externalPeriod?: { signal: AbortSignal; receipt: string },
+  ): Promise<void> {
+    if (kind === 'update') {
+      this.coordinationEpoch++;
+      this.finishPredictionWait(false, 'manual');
+      this.yieldedSource = '';
+      this.setCoordination({ ...this.coordination, status: 'idle', reason: 'manual' });
+    }
+    await this.runTask(kind, candidate, periodWork, externalPeriod, 'manual');
+  }
+  private async runTask(
+    kind: JobKind,
+    candidate?: Candidate,
+    periodWork?: PeriodWork,
+    externalPeriod?: { signal: AbortSignal; receipt: string },
+    mode: 'manual' | 'scheduled' = 'manual',
+  ): Promise<void> {
     if (this.disposed) {
       return;
     }
@@ -307,8 +1015,31 @@ export class FocusController {
     ) {
       return;
     }
+    const access = kind === 'update' ? this.integration.beginUpdate(mode) : undefined;
+    if (access && access.status !== 'acquired') {
+      if (access.status === 'waiting') {
+        this.yieldedSource = this.waitFloor;
+        this.setCoordination({ ...this.coordination, status: 'proposal_wait', reason: 'nonce' });
+        this.refreshProposal();
+      }
+      return;
+    }
+    if (kind === 'update' && mode === 'scheduled') {
+      this.setCoordination({ ...this.coordination, status: 'running' });
+    }
+    const releaseUpdate = () => {
+      if (access?.status === 'acquired') {
+        this.integration.endUpdate(access.token);
+      }
+    };
     const id = requestId('job');
     const aborter = new AbortController();
+    const cancelPeriod = () => aborter.abort();
+    externalPeriod?.signal.addEventListener('abort', cancelPeriod, { once: true });
+    if (externalPeriod?.signal.aborted) {
+      aborter.abort();
+    }
+    aborter.signal.addEventListener('abort', releaseUpdate, { once: true });
     const status: JobStatus = {
       id,
       kind,
@@ -324,7 +1055,7 @@ export class FocusController {
     this.notify();
     let sourceSignal: AbortSignal | undefined;
     const cancelSource = () => aborter.abort();
-    const periods: { candidate: Candidate; work: PeriodWork }[] = [];
+    const periods: UpdateCommit['periods'] = [];
     try {
       aborter.signal.throwIfAborted();
       status.state = 'running';
@@ -332,6 +1063,9 @@ export class FocusController {
       status.message = '正在分析本楼资料';
       this.notify();
       const snapshot = await this.platform.read(this.config, kind);
+      if (externalPeriod && !snapshot.state.receipts.includes(externalPeriod.receipt)) {
+        throw new Error('外部提案的保存记录已失效');
+      }
       sourceSignal = snapshot.signal;
       sourceSignal?.addEventListener('abort', cancelSource, { once: true });
       if (sourceSignal?.aborted) {
@@ -459,34 +1193,25 @@ export class FocusController {
             );
       aborter.signal.throwIfAborted();
       // Apply to current data in save order, without comparing it to the request input.
-      const next = await this.writeState((current) => {
-        const state = periodWork
-          ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result))
-          : this.proposedState(kind, current, result, candidate);
-        if (structure && state.countries[candidate!.id]) {
-          state.countries[candidate!.id].shape = structure;
-        }
-        state.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
-        return state;
-      }, aborter.signal);
-      if (kind === 'update' && !snapshot.state.receipts.includes(ProposalSchema.parse(result).id)) {
-        for (const transition of ProposalSchema.parse(result).transitions) {
-          const country = next.countries[transition.country];
-          if (!country.enabled || !country.autoPeriod || country.calibration) {
-            continue;
+      let next: State;
+      if (kind === 'update') {
+        const committed = await this.commitUpdate(ProposalSchema.parse(result), snapshot, aborter.signal);
+        next = committed.state;
+        periods.push(...committed.periods);
+      } else {
+        next = await this.writeState((current) => {
+          if (externalPeriod && !current.state.receipts.includes(externalPeriod.receipt)) {
+            throw new Error('外部提案的保存记录已失效');
           }
-          periods.push({
-            candidate: {
-              id: country.id,
-              name: country.name,
-              description: country.description,
-              evidence: country.evidence,
-            },
-            work: {
-              transition,
-            },
-          });
-        }
+          const state = periodWork
+            ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result))
+            : this.proposedState(kind, current, result, candidate);
+          if (structure && state.countries[candidate!.id]) {
+            state.countries[candidate!.id].shape = structure;
+          }
+          state.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
+          return state;
+        }, aborter.signal);
       }
       if (kind === 'identify') {
         this.candidates = candidateKeys(CandidatesSchema.parse(result).countries, next);
@@ -507,6 +1232,12 @@ export class FocusController {
       status.message =
         status.state === 'cancelled' ? '已取消，未套用结果' : `未提交：${message.slice(0, 1500)}`;
     } finally {
+      if (kind === 'update' && mode === 'scheduled' && this.coordination.status === 'running') {
+        this.setCoordination({ ...this.coordination, status: 'idle' });
+      }
+      externalPeriod?.signal.removeEventListener('abort', cancelPeriod);
+      releaseUpdate();
+      aborter.signal.removeEventListener('abort', releaseUpdate);
       sourceSignal?.removeEventListener('abort', cancelSource);
       status.finished = Date.now();
       this.aborters.delete(id);

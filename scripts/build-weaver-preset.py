@@ -1,10 +1,11 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v5.9-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v6.0-格式強化版.json
+# Other build scripts import the prompt constants; only running this file writes a preset.
 import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v5.9 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v6.0 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -374,6 +375,7 @@ Step 2：事实校验
 - 回顾<故事信息>：从各国 cursor 到 now，发生了哪些与国家有关的事？各在哪个时间点（换算成故事日数字）？
 - 哪些可以写成 facts（附依据）？哪些等待中国策的 outcomes 已在剧情中取得？
 - {{user}}正在参与的事件：不擅自决定结果，只承接正文已写出的部分
+- 有<世界局势>时：局势落后 now 几天（无法换算写「未知」）？刊报之后的期间依<世界局势>段的规则处理，不补出他国反应与第三方事件
 Step 3：力量锚定（仅在涉及冲突或颠覆时）
 - 依<因果权重自适应法则>判断这些冲突允许的走向
 Step 4：逐国推演
@@ -1096,6 +1098,18 @@ const nfPick = (world) => {
   if (Object.keys(trade).length) out.世界经济简报 = trade;
   return nfStrip(out);
 };
+// 刊报日期换算成故事日数字（与国策 now、cursor 同一公式），供比较世界局势落后多少天；认不出日期时为 null。
+const nfStoryDay = (text) => {
+  const match = String(text || '').match(/(\d{1,6})年-?(\d{1,2})月(?:[(（][^)）]*[)）])?-?(\d{1,2})日/);
+  if (!match) return null;
+  const date = new Date(0);
+  date.setUTCFullYear(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (date.getUTCMonth() !== Number(match[2]) - 1 || date.getUTCDate() !== Number(match[3])) return null;
+  return date.getTime() / 86400000 + 719528;
+};
+const nfDates = nfNames
+  .filter((name) => nfWorldMap[name] && nfWorldMap[name].刊报日期)
+  .map((name) => ({ name, text: String(nfWorldMap[name].刊报日期), day: nfStoryDay(nfWorldMap[name].刊报日期) }));
 const nfDump = (value) => (typeof YAML !== 'undefined' && YAML && YAML.stringify ? YAML.stringify(value) : JSON.stringify(value, null, 1));
 const nfDetails = nfNames
   .map((name) => ({ name, data: nfPick(nfWorldMap[name]) }))
@@ -1107,6 +1121,17 @@ VOID: 以下是世界后台引擎在本楼记录的即时世界局势（截至�
 <%_ if (nfSingular.length) { _%>
 注意：目前正处于特异点「<%= nfSingular.join('、') %>」（分歧经过见「当前特异点」），以下局势属于这条分歧时间线，回到正史时世界后台引擎会还原世界资料。只把它当作当下的背景，不要据此写入长期事实、不可逆的国家变化或国策 outcomes。
 <%_ } _%>
+<%_ if (nfDates.length) { _%>
+
+刊报时间（故事日与任务资料的 now、cursor 同一单位）：
+<%_ for (const item of nfDates) { _%>
+- <%= item.name %>：<%= item.text %>（<%= item.day === null ? '无法换算成故事日' : `故事日 ${item.day}` %>）
+<%_ } _%>
+<%_ } _%>
+世界局势只记录到刊报日期为止。先用 now 减去刊报的故事日，在思考中写出局势落后几天；无法换算时写「未知」，不要当成零。刊报之后到 now 的这段时间：
+- 沿用上次已知的世界状态，但不把它当成刊报之后发生了新事件的证据；
+- 选策与进度依<前文剧情>、既有国策与已确认的事实处理；依赖谈判、战争或外部工程结果的成果，照既有规则等待证据；
+- 不要自行补出尚未确认的他国反应、第三方事件或外部成果。这些留给世界后台引擎在下次刊报时推演。
 
 <世界局势>
 <%_ for (const item of nfSummaries) { _%>
@@ -1215,23 +1240,27 @@ def chain(job):
     return items
 
 
-settings = {
-    'identify': dict(retries=2, timeout=300, schedule='manual', interval=1),
-    'generate': dict(retries=1, timeout=600, schedule='manual', interval=1),
-    'update': dict(retries=2, timeout=300, schedule='days', interval=7),
-    'reshape': dict(retries=1, timeout=300, schedule='manual', interval=1),
-}
-jobs = {}
-for job in ['identify', 'generate', 'update', 'reshape']:
-    jobs[job] = {**settings[job], 'prompts': chain(job)}
+def main(out):
+    settings = {
+        'identify': dict(retries=2, timeout=300, schedule='manual', interval=1),
+        'generate': dict(retries=1, timeout=600, schedule='manual', interval=1),
+        'update': dict(retries=2, timeout=300, schedule='days', interval=7),
+        'reshape': dict(retries=1, timeout=300, schedule='manual', interval=1),
+    }
+    jobs = {}
+    for job in ['identify', 'generate', 'update', 'reshape']:
+        jobs[job] = {**settings[job], 'prompts': chain(job)}
 
-preset = {
-    'kind': 'national-focus-task-presets',
-    'version': 1,
-    'presets': [{'name': PRESET_NAME, 'savedAt': int(time.time() * 1000), 'jobs': jobs}],
-}
-out = sys.argv[1]
-with open(out, 'w', encoding='utf-8') as f:
-    json.dump(preset, f, ensure_ascii=False, indent=2)
-    f.write('\n')
-print('written', out, {k: len(v['prompts']) for k, v in jobs.items()})
+    preset = {
+        'kind': 'national-focus-task-presets',
+        'version': 1,
+        'presets': [{'name': PRESET_NAME, 'savedAt': int(time.time() * 1000), 'jobs': jobs}],
+    }
+    with open(out, 'w', encoding='utf-8') as f:
+        json.dump(preset, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    print('written', out, {k: len(v['prompts']) for k, v in jobs.items()})
+
+
+if __name__ == '__main__':
+    main(sys.argv[1])

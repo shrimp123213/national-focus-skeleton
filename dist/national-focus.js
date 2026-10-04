@@ -1217,11 +1217,11 @@
   }
   var highSurrogate = /[\uD800-\uDBFF]/;
   function codePointLength(str) {
-    const units = str.length;
+    const units2 = str.length;
     if (!highSurrogate.test(str))
-      return units;
-    let count = units;
-    for (let i = 0; i < units - 1; i++) {
+      return units2;
+    let count = units2;
+    for (let i = 0; i < units2 - 1; i++) {
       if ((str.charCodeAt(i) & 64512) === 55296 && (str.charCodeAt(i + 1) & 64512) === 56320) {
         count--;
         i++;
@@ -2082,12 +2082,12 @@
     inst._zod.def = def;
     (_a3 = inst._zod).onattach ?? (_a3.onattach = []);
   });
-  var _whenHasSize = (payload) => {
-    const val = payload.value;
+  var _whenHasSize = (payload2) => {
+    const val = payload2.value;
     return !nullish(val) && val.size !== void 0;
   };
-  var _whenHasLength = (payload) => {
-    const val = payload.value;
+  var _whenHasLength = (payload2) => {
+    const val = payload2.value;
     return !nullish(val) && val.length !== void 0;
   };
   var numericOriginMap = {
@@ -2098,15 +2098,15 @@
   var $ZodCheckLessThan = /* @__PURE__ */ $constructor("$ZodCheckLessThan", (inst, def) => {
     $ZodCheck.init(inst, def);
     const origin = numericOriginMap[typeof def.value];
-    inst._zod.check = (payload) => {
-      if (def.inclusive ? payload.value <= def.value : payload.value < def.value) {
+    inst._zod.check = (payload2) => {
+      if (def.inclusive ? payload2.value <= def.value : payload2.value < def.value) {
         return;
       }
-      payload.issues.push({
-        origin: numericOriginMap[typeof payload.value] ?? origin,
+      payload2.issues.push({
+        origin: numericOriginMap[typeof payload2.value] ?? origin,
         code: "too_big",
         maximum: typeof def.value === "object" ? def.value.getTime() : def.value,
-        input: payload.value,
+        input: payload2.value,
         inclusive: def.inclusive,
         inst,
         continue: !def.abort
@@ -2116,15 +2116,15 @@
   var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", (inst, def) => {
     $ZodCheck.init(inst, def);
     const origin = numericOriginMap[typeof def.value];
-    inst._zod.check = (payload) => {
-      if (def.inclusive ? payload.value >= def.value : payload.value > def.value) {
+    inst._zod.check = (payload2) => {
+      if (def.inclusive ? payload2.value >= def.value : payload2.value > def.value) {
         return;
       }
-      payload.issues.push({
-        origin: numericOriginMap[typeof payload.value] ?? origin,
+      payload2.issues.push({
+        origin: numericOriginMap[typeof payload2.value] ?? origin,
         code: "too_small",
         minimum: typeof def.value === "object" ? def.value.getTime() : def.value,
-        input: payload.value,
+        input: payload2.value,
         inclusive: def.inclusive,
         inst,
         continue: !def.abort
@@ -2133,20 +2133,20 @@
   });
   var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
     $ZodCheck.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (typeof payload.value !== typeof def.value)
+    inst._zod.check = (payload2) => {
+      if (typeof payload2.value !== typeof def.value)
         throw new Error("Cannot mix number and bigint in multiple_of check.");
-      const isMultiple = typeof payload.value === "bigint" ? (
+      const isMultiple = typeof payload2.value === "bigint" ? (
         // `value % 0n` throws, and nothing is a multiple of zero — the number branch already fails this way via NaN
-        def.value !== BigInt(0) && payload.value % def.value === BigInt(0)
-      ) : floatSafeRemainder(payload.value, def.value) === 0;
+        def.value !== BigInt(0) && payload2.value % def.value === BigInt(0)
+      ) : floatSafeRemainder(payload2.value, def.value) === 0;
       if (isMultiple)
         return;
-      payload.issues.push({
-        origin: typeof payload.value,
+      payload2.issues.push({
+        origin: typeof payload2.value,
         code: "not_multiple_of",
         divisor: def.value,
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -2158,11 +2158,11 @@
     const isInt = def.format?.includes("int");
     const origin = isInt ? "int" : "number";
     const [minimum, maximum] = NUMBER_FORMAT_RANGES[def.format];
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
       if (isInt) {
         if (!Number.isInteger(input2)) {
-          payload.issues.push({
+          payload2.issues.push({
             expected: origin,
             format: def.format,
             code: "invalid_type",
@@ -2174,7 +2174,7 @@
         }
         if (!Number.isSafeInteger(input2)) {
           if (input2 > 0) {
-            payload.issues.push({
+            payload2.issues.push({
               input: input2,
               code: "too_big",
               maximum: Number.MAX_SAFE_INTEGER,
@@ -2185,7 +2185,7 @@
               continue: !def.abort
             });
           } else {
-            payload.issues.push({
+            payload2.issues.push({
               input: input2,
               code: "too_small",
               minimum: Number.MIN_SAFE_INTEGER,
@@ -2200,7 +2200,7 @@
         }
       }
       if (input2 < minimum) {
-        payload.issues.push({
+        payload2.issues.push({
           origin: "number",
           input: input2,
           code: "too_small",
@@ -2211,7 +2211,7 @@
         });
       }
       if (input2 > maximum) {
-        payload.issues.push({
+        payload2.issues.push({
           origin: "number",
           input: input2,
           code: "too_big",
@@ -2226,10 +2226,10 @@
   var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat", (inst, def) => {
     $ZodCheck.init(inst, def);
     const [minimum, maximum] = BIGINT_FORMAT_RANGES[def.format];
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
       if (input2 < minimum) {
-        payload.issues.push({
+        payload2.issues.push({
           origin: "bigint",
           input: input2,
           code: "too_small",
@@ -2240,7 +2240,7 @@
         });
       }
       if (input2 > maximum) {
-        payload.issues.push({
+        payload2.issues.push({
           origin: "bigint",
           input: input2,
           code: "too_big",
@@ -2256,12 +2256,12 @@
     var _a3;
     $ZodCheck.init(inst, def);
     (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasSize);
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
       const size = input2.size;
       if (size <= def.maximum)
         return;
-      payload.issues.push({
+      payload2.issues.push({
         origin: getSizableOrigin(input2),
         code: "too_big",
         maximum: def.maximum,
@@ -2276,12 +2276,12 @@
     var _a3;
     $ZodCheck.init(inst, def);
     (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasSize);
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
       const size = input2.size;
       if (size >= def.minimum)
         return;
-      payload.issues.push({
+      payload2.issues.push({
         origin: getSizableOrigin(input2),
         code: "too_small",
         minimum: def.minimum,
@@ -2296,18 +2296,18 @@
     var _a3;
     $ZodCheck.init(inst, def);
     (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasSize);
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
       const size = input2.size;
       if (size === def.size)
         return;
       const tooBig = size > def.size;
-      payload.issues.push({
+      payload2.issues.push({
         origin: getSizableOrigin(input2),
         ...tooBig ? { code: "too_big", maximum: def.size } : { code: "too_small", minimum: def.size },
         inclusive: true,
         exact: true,
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -2317,14 +2317,14 @@
     var _a3;
     $ZodCheck.init(inst, def);
     (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasLength);
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
-      const units = input2.length;
-      const length = typeof input2 === "string" && units > def.maximum ? codePointLength(input2) : units;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
+      const units2 = input2.length;
+      const length = typeof input2 === "string" && units2 > def.maximum ? codePointLength(input2) : units2;
       if (length <= def.maximum)
         return;
       const origin = getLengthableOrigin(input2);
-      payload.issues.push({
+      payload2.issues.push({
         origin,
         code: "too_big",
         maximum: def.maximum,
@@ -2339,14 +2339,14 @@
     var _a3;
     $ZodCheck.init(inst, def);
     (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasLength);
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
-      const units = input2.length;
-      const length = typeof input2 === "string" && units >= def.minimum && units < def.minimum * 2 ? codePointLength(input2) : units;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
+      const units2 = input2.length;
+      const length = typeof input2 === "string" && units2 >= def.minimum && units2 < def.minimum * 2 ? codePointLength(input2) : units2;
       if (length >= def.minimum)
         return;
       const origin = getLengthableOrigin(input2);
-      payload.issues.push({
+      payload2.issues.push({
         origin,
         code: "too_small",
         minimum: def.minimum,
@@ -2361,20 +2361,20 @@
     var _a3;
     $ZodCheck.init(inst, def);
     (_a3 = inst._zod.def).when ?? (_a3.when = _whenHasLength);
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
-      const units = input2.length;
-      const length = typeof input2 === "string" && units >= def.length && units <= def.length * 2 ? codePointLength(input2) : units;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
+      const units2 = input2.length;
+      const length = typeof input2 === "string" && units2 >= def.length && units2 <= def.length * 2 ? codePointLength(input2) : units2;
       if (length === def.length)
         return;
       const origin = getLengthableOrigin(input2);
       const tooBig = length > def.length;
-      payload.issues.push({
+      payload2.issues.push({
         origin,
         ...tooBig ? { code: "too_big", maximum: def.length } : { code: "too_small", minimum: def.length },
         inclusive: true,
         exact: true,
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -2384,15 +2384,15 @@
     var _a3, _b;
     $ZodCheck.init(inst, def);
     if (def.pattern)
-      (_a3 = inst._zod).check ?? (_a3.check = (payload) => {
+      (_a3 = inst._zod).check ?? (_a3.check = (payload2) => {
         def.pattern.lastIndex = 0;
-        if (def.pattern.test(payload.value))
+        if (def.pattern.test(payload2.value))
           return;
-        payload.issues.push({
+        payload2.issues.push({
           origin: "string",
           code: "invalid_format",
           format: def.format,
-          input: payload.value,
+          input: payload2.value,
           ...def.pattern ? { pattern: def.pattern.toString() } : {},
           inst,
           continue: !def.abort
@@ -2404,15 +2404,15 @@
   });
   var $ZodCheckRegex = /* @__PURE__ */ $constructor("$ZodCheckRegex", (inst, def) => {
     $ZodCheckStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
+    inst._zod.check = (payload2) => {
       def.pattern.lastIndex = 0;
-      if (def.pattern.test(payload.value))
+      if (def.pattern.test(payload2.value))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         origin: "string",
         code: "invalid_format",
         format: "regex",
-        input: payload.value,
+        input: payload2.value,
         pattern: def.pattern.toString(),
         inst,
         continue: !def.abort
@@ -2432,15 +2432,15 @@
     const escapedRegex = escapeRegex(def.includes);
     const pattern = new RegExp(typeof def.position === "number" ? `^.{${def.position},}${escapedRegex}` : escapedRegex);
     def.pattern = pattern;
-    inst._zod.check = (payload) => {
-      if (payload.value.includes(def.includes, def.position))
+    inst._zod.check = (payload2) => {
+      if (payload2.value.includes(def.includes, def.position))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         origin: "string",
         code: "invalid_format",
         format: "includes",
         includes: def.includes,
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -2450,15 +2450,15 @@
     $ZodCheck.init(inst, def);
     const pattern = new RegExp(`^${escapeRegex(def.prefix)}.*`);
     def.pattern ?? (def.pattern = pattern);
-    inst._zod.check = (payload) => {
-      if (payload.value.startsWith(def.prefix))
+    inst._zod.check = (payload2) => {
+      if (payload2.value.startsWith(def.prefix))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         origin: "string",
         code: "invalid_format",
         format: "starts_with",
         prefix: def.prefix,
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -2468,36 +2468,36 @@
     $ZodCheck.init(inst, def);
     const pattern = new RegExp(`.*${escapeRegex(def.suffix)}$`);
     def.pattern ?? (def.pattern = pattern);
-    inst._zod.check = (payload) => {
-      if (payload.value.endsWith(def.suffix))
+    inst._zod.check = (payload2) => {
+      if (payload2.value.endsWith(def.suffix))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         origin: "string",
         code: "invalid_format",
         format: "ends_with",
         suffix: def.suffix,
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
     };
   });
-  function handleCheckPropertyResult(result, payload, property) {
+  function handleCheckPropertyResult(result, payload2, property) {
     if (result.issues.length) {
-      payload.issues.push(...prefixIssues(property, result.issues));
+      payload2.issues.push(...prefixIssues(property, result.issues));
     }
   }
   var $ZodCheckProperty = /* @__PURE__ */ $constructor("$ZodCheckProperty", (inst, def) => {
     $ZodCheck.init(inst, def);
-    inst._zod.check = (payload) => {
+    inst._zod.check = (payload2) => {
       const result = def.schema._zod.run({
-        value: payload.value[def.property],
+        value: payload2.value[def.property],
         issues: []
       }, {});
       if (result instanceof Promise) {
-        return result.then((result2) => handleCheckPropertyResult(result2, payload, def.property));
+        return result.then((result2) => handleCheckPropertyResult(result2, payload2, def.property));
       }
-      handleCheckPropertyResult(result, payload, def.property);
+      handleCheckPropertyResult(result, payload2, def.property);
       return;
     };
   });
@@ -2507,21 +2507,21 @@
       yield inst;
     });
     let entries;
-    inst._zod.check = (payload) => {
-      if (payload.value == null) {
-        payload.issues.push({ expected: "object", code: "invalid_type", input: payload.value, inst });
+    inst._zod.check = (payload2) => {
+      if (payload2.value == null) {
+        payload2.issues.push({ expected: "object", code: "invalid_type", input: payload2.value, inst });
         return void 0;
       }
       entries ?? (entries = Reflect.ownKeys(def.shape).map((key) => [key, def.shape[key]]));
-      const input2 = payload.value;
+      const input2 = payload2.value;
       let proms;
       for (const [key, schema4] of entries) {
         const result = schema4._zod.run({ value: input2[key], issues: [] }, {});
         if (result instanceof Promise) {
           proms ?? (proms = []);
-          proms.push(result.then((result2) => handleCheckPropertyResult(result2, payload, key)));
+          proms.push(result.then((result2) => handleCheckPropertyResult(result2, payload2, key)));
         } else {
-          handleCheckPropertyResult(result, payload, key);
+          handleCheckPropertyResult(result, payload2, key);
         }
       }
       if (proms)
@@ -2532,13 +2532,13 @@
   var $ZodCheckMimeType = /* @__PURE__ */ $constructor("$ZodCheckMimeType", (inst, def) => {
     $ZodCheck.init(inst, def);
     const mimeSet = new Set(def.mime);
-    inst._zod.check = (payload) => {
-      if (mimeSet.has(payload.value.type))
+    inst._zod.check = (payload2) => {
+      if (mimeSet.has(payload2.value.type))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_value",
         values: def.mime,
-        input: payload.value.type,
+        input: payload2.value.type,
         inst,
         continue: !def.abort
       });
@@ -2546,8 +2546,8 @@
   });
   var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (inst, def) => {
     $ZodCheck.init(inst, def);
-    inst._zod.check = (payload) => {
-      payload.value = def.tx(payload.value);
+    inst._zod.check = (payload2) => {
+      payload2.value = def.tx(payload2.value);
     };
   });
 
@@ -2619,58 +2619,58 @@ ${content.join("\n")}
         inst._zod.run = inst._zod.parse;
       });
     } else {
-      const runChecks = (payload, checks2, ctx) => {
-        if (payload.memo)
-          return payload;
-        let isAborted = aborted(payload);
+      const runChecks = (payload2, checks2, ctx) => {
+        if (payload2.memo)
+          return payload2;
+        let isAborted = aborted(payload2);
         let asyncResult;
         for (const ch of checks2) {
           if (ch._zod.def.when) {
-            if (explicitlyAborted(payload))
+            if (explicitlyAborted(payload2))
               continue;
-            const shouldRun = ch._zod.def.when(payload);
+            const shouldRun = ch._zod.def.when(payload2);
             if (!shouldRun)
               continue;
           } else if (isAborted) {
             continue;
           }
-          const currLen = payload.issues.length;
-          const _ = ch._zod.check(payload);
+          const currLen = payload2.issues.length;
+          const _ = ch._zod.check(payload2);
           if (_ instanceof Promise && ctx?.async === false) {
             throw new $ZodAsyncError();
           }
           if (asyncResult || _ instanceof Promise) {
             asyncResult = (asyncResult ?? Promise.resolve()).then(async () => {
               await _;
-              const nextLen = payload.issues.length;
+              const nextLen = payload2.issues.length;
               if (nextLen === currLen)
                 return;
-              attachSchema(payload.issues, currLen, inst);
+              attachSchema(payload2.issues, currLen, inst);
               if (!isAborted)
-                isAborted = aborted(payload, currLen);
+                isAborted = aborted(payload2, currLen);
             });
           } else {
-            const nextLen = payload.issues.length;
+            const nextLen = payload2.issues.length;
             if (nextLen === currLen)
               continue;
-            attachSchema(payload.issues, currLen, inst);
+            attachSchema(payload2.issues, currLen, inst);
             if (!isAborted)
-              isAborted = aborted(payload, currLen);
+              isAborted = aborted(payload2, currLen);
           }
         }
         if (asyncResult) {
           return asyncResult.then(() => {
-            return payload;
+            return payload2;
           });
         }
-        return payload;
+        return payload2;
       };
-      const handleCanaryResult = (canary, payload, ctx) => {
+      const handleCanaryResult = (canary, payload2, ctx) => {
         if (aborted(canary)) {
           canary.aborted = true;
           return canary;
         }
-        const checkResult = runChecks(payload, checks, ctx);
+        const checkResult = runChecks(payload2, checks, ctx);
         if (checkResult instanceof Promise) {
           if (ctx.async === false)
             throw new $ZodAsyncError();
@@ -2678,20 +2678,20 @@ ${content.join("\n")}
         }
         return inst._zod.parse(checkResult, ctx);
       };
-      inst._zod.run = (payload, ctx) => {
+      inst._zod.run = (payload2, ctx) => {
         if (ctx.skipChecks) {
-          return inst._zod.parse(payload, ctx);
+          return inst._zod.parse(payload2, ctx);
         }
         if (ctx.direction === "backward") {
-          const canary = inst._zod.parse({ value: payload.value, issues: [] }, { ...ctx, skipChecks: true });
+          const canary = inst._zod.parse({ value: payload2.value, issues: [] }, { ...ctx, skipChecks: true });
           if (canary instanceof Promise) {
             return canary.then((canary2) => {
-              return handleCanaryResult(canary2, payload, ctx);
+              return handleCanaryResult(canary2, payload2, ctx);
             });
           }
-          return handleCanaryResult(canary, payload, ctx);
+          return handleCanaryResult(canary, payload2, ctx);
         }
-        const result = inst._zod.parse(payload, ctx);
+        const result = inst._zod.parse(payload2, ctx);
         if (result instanceof Promise) {
           if (ctx.async === false)
             throw new $ZodAsyncError();
@@ -2733,21 +2733,21 @@ ${content.join("\n")}
   var $ZodString = /* @__PURE__ */ $constructor("$ZodString", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = def.pattern ?? anyString;
-    inst._zod.parse = (payload, _) => {
+    inst._zod.parse = (payload2, _) => {
       if (def.coerce)
         try {
-          payload.value = String(payload.value);
+          payload2.value = String(payload2.value);
         } catch (_2) {
         }
-      if (typeof payload.value === "string")
-        return payload;
-      payload.issues.push({
+      if (typeof payload2.value === "string")
+        return payload2;
+      payload2.issues.push({
         expected: "string",
         code: "invalid_type",
-        input: payload.value,
+        input: payload2.value,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodStringFormat = /* @__PURE__ */ $constructor("$ZodStringFormat", (inst, def) => {
@@ -2829,64 +2829,64 @@ ${content.join("\n")}
   }
   var $ZodURL = /* @__PURE__ */ $constructor("$ZodURL", (inst, def) => {
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
+    inst._zod.check = (payload2) => {
       try {
-        const trimmed = payload.value.trim();
+        const trimmed = payload2.value.trim();
         const url2 = validateURL(trimmed, def);
         if (url2 === URL_BAD_FORMAT) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "invalid_format",
             format: "url",
             note: "Invalid URL format",
-            input: payload.value,
+            input: payload2.value,
             inst,
             continue: !def.abort
           });
           return;
         }
         if (url2 === URL_UNPARSEABLE) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "invalid_format",
             format: "url",
-            input: payload.value,
+            input: payload2.value,
             inst,
             continue: !def.abort
           });
           return;
         }
         if (url2 === true) {
-          payload.value = stripTabAndNewline(trimmed);
+          payload2.value = stripTabAndNewline(trimmed);
           return;
         }
         if (def.hostname && !urlHostnameOk(url2, def.hostname)) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "invalid_format",
             format: "url",
             note: "Invalid hostname",
             pattern: def.hostname.source,
-            input: payload.value,
+            input: payload2.value,
             inst,
             continue: !def.abort
           });
         }
         if (def.protocol && !urlProtocolOk(url2, def.protocol)) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "invalid_format",
             format: "url",
             note: "Invalid protocol",
             pattern: def.protocol.source,
-            input: payload.value,
+            input: payload2.value,
             inst,
             continue: !def.abort
           });
         }
-        payload.value = def.normalize ? url2.href : stripTabAndNewline(trimmed);
+        payload2.value = def.normalize ? url2.href : stripTabAndNewline(trimmed);
         return;
       } catch (_) {
-        payload.issues.push({
+        payload2.issues.push({
           code: "invalid_format",
           format: "url",
-          input: payload.value,
+          input: payload2.value,
           inst,
           continue: !def.abort
         });
@@ -2952,12 +2952,12 @@ ${content.join("\n")}
   var $ZodIPv6 = /* @__PURE__ */ $constructor("$ZodIPv6", (inst, def) => {
     def.pattern ?? (def.pattern = ipv6);
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (!isValidIPv6(payload.value)) {
-        payload.issues.push({
+    inst._zod.check = (payload2) => {
+      if (!isValidIPv6(payload2.value)) {
+        payload2.issues.push({
           code: "invalid_format",
           format: "ipv6",
-          input: payload.value,
+          input: payload2.value,
           inst,
           continue: !def.abort
         });
@@ -2989,12 +2989,12 @@ ${content.join("\n")}
   var $ZodCIDRv6 = /* @__PURE__ */ $constructor("$ZodCIDRv6", (inst, def) => {
     def.pattern ?? (def.pattern = cidrv6);
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (!isValidCIDRv6(payload.value)) {
-        payload.issues.push({
+    inst._zod.check = (payload2) => {
+      if (!isValidCIDRv6(payload2.value)) {
+        payload2.issues.push({
           code: "invalid_format",
           format: "cidrv6",
-          input: payload.value,
+          input: payload2.value,
           inst,
           continue: !def.abort
         });
@@ -3019,13 +3019,13 @@ ${content.join("\n")}
   var $ZodBase64 = /* @__PURE__ */ $constructor("$ZodBase64", (inst, def) => {
     def.pattern ?? (def.pattern = base64Charset);
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (isValidBase64(payload.value))
+    inst._zod.check = (payload2) => {
+      if (isValidBase64(payload2.value))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_format",
         format: "base64",
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -3042,13 +3042,13 @@ ${content.join("\n")}
   var $ZodBase64URL = /* @__PURE__ */ $constructor("$ZodBase64URL", (inst, def) => {
     def.pattern ?? (def.pattern = base64urlCharset);
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (isValidBase64URL(payload.value))
+    inst._zod.check = (payload2) => {
+      if (isValidBase64URL(payload2.value))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_format",
         format: "base64url",
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -3078,13 +3078,13 @@ ${content.join("\n")}
   var $ZodCreditCard = /* @__PURE__ */ $constructor("$ZodCreditCard", (inst, def) => {
     def.pattern ?? (def.pattern = creditCard);
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (isValidCreditCard(payload.value))
+    inst._zod.check = (payload2) => {
+      if (isValidCreditCard(payload2.value))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_format",
         format: "credit_card",
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -3111,13 +3111,13 @@ ${content.join("\n")}
   var $ZodIBAN = /* @__PURE__ */ $constructor("$ZodIBAN", (inst, def) => {
     def.pattern ?? (def.pattern = iban);
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (isValidIBAN(payload.value))
+    inst._zod.check = (payload2) => {
+      if (isValidIBAN(payload2.value))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_format",
         format: "iban",
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -3145,13 +3145,13 @@ ${content.join("\n")}
   }
   var $ZodJWT = /* @__PURE__ */ $constructor("$ZodJWT", (inst, def) => {
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (isValidJWT(payload.value, def.alg))
+    inst._zod.check = (payload2) => {
+      if (isValidJWT(payload2.value, def.alg))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_format",
         format: "jwt",
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -3159,13 +3159,13 @@ ${content.join("\n")}
   });
   var $ZodCustomStringFormat = /* @__PURE__ */ $constructor("$ZodCustomStringFormat", (inst, def) => {
     $ZodStringFormat.init(inst, def);
-    inst._zod.check = (payload) => {
-      if (def.fn(payload.value))
+    inst._zod.check = (payload2) => {
+      if (def.fn(payload2.value))
         return;
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_format",
         format: def.format,
-        input: payload.value,
+        input: payload2.value,
         inst,
         continue: !def.abort
       });
@@ -3174,25 +3174,25 @@ ${content.join("\n")}
   var $ZodNumber = /* @__PURE__ */ $constructor("$ZodNumber", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = number;
-    inst._zod.parse = (payload, _ctx) => {
+    inst._zod.parse = (payload2, _ctx) => {
       if (def.coerce)
         try {
-          payload.value = Number(payload.value);
+          payload2.value = Number(payload2.value);
         } catch (_) {
         }
-      const input2 = payload.value;
+      const input2 = payload2.value;
       if (typeof input2 === "number" && !Number.isNaN(input2) && Number.isFinite(input2)) {
-        return payload;
+        return payload2;
       }
       const received = typeof input2 === "number" ? Number.isNaN(input2) ? "NaN" : !Number.isFinite(input2) ? String(input2) : void 0 : void 0;
-      payload.issues.push({
+      payload2.issues.push({
         expected: "number",
         code: "invalid_type",
         input: input2,
         inst,
         ...received ? { received } : {}
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodNumberFormat = /* @__PURE__ */ $constructor("$ZodNumberFormat", (inst, def) => {
@@ -3202,42 +3202,42 @@ ${content.join("\n")}
   var $ZodBoolean = /* @__PURE__ */ $constructor("$ZodBoolean", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = boolean;
-    inst._zod.parse = (payload, _ctx) => {
+    inst._zod.parse = (payload2, _ctx) => {
       if (def.coerce)
         try {
-          payload.value = Boolean(payload.value);
+          payload2.value = Boolean(payload2.value);
         } catch (_) {
         }
-      const input2 = payload.value;
+      const input2 = payload2.value;
       if (typeof input2 === "boolean")
-        return payload;
-      payload.issues.push({
+        return payload2;
+      payload2.issues.push({
         expected: "boolean",
         code: "invalid_type",
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodBigInt = /* @__PURE__ */ $constructor("$ZodBigInt", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = bigint;
-    inst._zod.parse = (payload, _ctx) => {
+    inst._zod.parse = (payload2, _ctx) => {
       if (def.coerce)
         try {
-          payload.value = BigInt(payload.value);
+          payload2.value = BigInt(payload2.value);
         } catch (_) {
         }
-      if (typeof payload.value === "bigint")
-        return payload;
-      payload.issues.push({
+      if (typeof payload2.value === "bigint")
+        return payload2;
+      payload2.issues.push({
         expected: "bigint",
         code: "invalid_type",
-        input: payload.value,
+        input: payload2.value,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodBigIntFormat = /* @__PURE__ */ $constructor("$ZodBigIntFormat", (inst, def) => {
@@ -3246,110 +3246,110 @@ ${content.join("\n")}
   });
   var $ZodSymbol = /* @__PURE__ */ $constructor("$ZodSymbol", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, _ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, _ctx) => {
+      const input2 = payload2.value;
       if (typeof input2 === "symbol")
-        return payload;
-      payload.issues.push({
+        return payload2;
+      payload2.issues.push({
         expected: "symbol",
         code: "invalid_type",
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodUndefined = /* @__PURE__ */ $constructor("$ZodUndefined", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = _undefined;
     inst._zod.values = /* @__PURE__ */ new Set([void 0]);
-    inst._zod.parse = (payload, _ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, _ctx) => {
+      const input2 = payload2.value;
       if (typeof input2 === "undefined")
-        return payload;
-      payload.issues.push({
+        return payload2;
+      payload2.issues.push({
         expected: "undefined",
         code: "invalid_type",
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodNull = /* @__PURE__ */ $constructor("$ZodNull", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = _null;
     inst._zod.values = /* @__PURE__ */ new Set([null]);
-    inst._zod.parse = (payload, _ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, _ctx) => {
+      const input2 = payload2.value;
       if (input2 === null)
-        return payload;
-      payload.issues.push({
+        return payload2;
+      payload2.issues.push({
         expected: "null",
         code: "invalid_type",
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodAny = /* @__PURE__ */ $constructor("$ZodAny", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload) => payload;
+    inst._zod.parse = (payload2) => payload2;
   });
   var $ZodUnknown = /* @__PURE__ */ $constructor("$ZodUnknown", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload) => payload;
+    inst._zod.parse = (payload2) => payload2;
   });
   var $ZodNever = /* @__PURE__ */ $constructor("$ZodNever", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, _ctx) => {
-      payload.issues.push({
+    inst._zod.parse = (payload2, _ctx) => {
+      payload2.issues.push({
         expected: "never",
         code: "invalid_type",
-        input: payload.value,
+        input: payload2.value,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodVoid = /* @__PURE__ */ $constructor("$ZodVoid", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, _ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, _ctx) => {
+      const input2 = payload2.value;
       if (typeof input2 === "undefined")
-        return payload;
-      payload.issues.push({
+        return payload2;
+      payload2.issues.push({
         expected: "void",
         code: "invalid_type",
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodDate = /* @__PURE__ */ $constructor("$ZodDate", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, _ctx) => {
+    inst._zod.parse = (payload2, _ctx) => {
       if (def.coerce) {
         try {
-          payload.value = new Date(payload.value);
+          payload2.value = new Date(payload2.value);
         } catch (_err) {
         }
       }
-      const input2 = payload.value;
+      const input2 = payload2.value;
       const isDate = input2 instanceof Date;
       const isValidDate = isDate && !Number.isNaN(input2.getTime());
       if (isValidDate)
-        return payload;
-      payload.issues.push({
+        return payload2;
+      payload2.issues.push({
         expected: "date",
         code: "invalid_type",
         input: input2,
         ...isDate ? { received: "Invalid Date" } : {},
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   function handleArrayResult(result, final, index) {
@@ -3362,18 +3362,18 @@ ${content.join("\n")}
     $ZodType.init(inst, def);
     const memo2 = globalConfig.memoizer;
     memo2?.attach(inst);
-    inst._zod.parse = (payload, ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, ctx) => {
+      const input2 = payload2.value;
       if (!Array.isArray(input2)) {
-        payload.issues.push({
+        payload2.issues.push({
           expected: "array",
           code: "invalid_type",
           input: input2,
           inst
         });
-        return payload;
+        return payload2;
       }
-      payload.value = memo2 ? memo2.alloc(inst, payload, Array(input2.length), ctx) : Array(input2.length);
+      payload2.value = memo2 ? memo2.alloc(inst, payload2, Array(input2.length), ctx) : Array(input2.length);
       const proms = [];
       const abortEarly = ctx?.abortEarly;
       for (let i = 0; i < input2.length; i++) {
@@ -3383,17 +3383,17 @@ ${content.join("\n")}
           issues: []
         }, ctx);
         if (result instanceof Promise) {
-          proms.push(result.then((result2) => handleArrayResult(result2, payload, i)));
+          proms.push(result.then((result2) => handleArrayResult(result2, payload2, i)));
         } else {
-          handleArrayResult(result, payload, i);
+          handleArrayResult(result, payload2, i);
           if (abortEarly && result.issues.length !== 0 && aborted(result))
             break;
         }
       }
       if (proms.length) {
-        return Promise.all(proms).then(() => payload);
+        return Promise.all(proms).then(() => payload2);
       }
-      return payload;
+      return payload2;
     };
   });
   function handlePropertyResult(result, final, key, input2, optin, optout) {
@@ -3449,7 +3449,7 @@ ${content.join("\n")}
       optionalKeys: new Set(okeys)
     };
   }
-  function handleCatchall(proms, input2, payload, ctx, def, inst, abortEarly) {
+  function handleCatchall(proms, input2, payload2, ctx, def, inst, abortEarly) {
     const unrecognized = [];
     const keySet = def.keySet;
     const _catchall = def.catchall._zod;
@@ -3458,10 +3458,10 @@ ${content.join("\n")}
     const optout = _catchall.optout;
     let seen = 0;
     for (const key in input2) {
-      if (abortEarly && payload.issues.length !== seen) {
-        if (aborted(payload, seen))
+      if (abortEarly && payload2.issues.length !== seen) {
+        if (aborted(payload2, seen))
           break;
-        seen = payload.issues.length;
+        seen = payload2.issues.length;
       }
       if (keySet.has(key))
         continue;
@@ -3476,13 +3476,13 @@ ${content.join("\n")}
       }
       const r = _catchall.run({ value: input2[key], issues: [] }, ctx);
       if (r instanceof Promise) {
-        proms.push(r.then((r2) => handlePropertyResult(r2, payload, key, input2, optin, optout)));
+        proms.push(r.then((r2) => handlePropertyResult(r2, payload2, key, input2, optin, optout)));
       } else {
-        handlePropertyResult(r, payload, key, input2, optin, optout);
+        handlePropertyResult(r, payload2, key, input2, optin, optout);
       }
     }
     if (unrecognized.length) {
-      payload.issues.push({
+      payload2.issues.push({
         code: "unrecognized_keys",
         keys: unrecognized,
         input: input2,
@@ -3492,9 +3492,9 @@ ${content.join("\n")}
       });
     }
     if (!proms.length)
-      return payload;
+      return payload2;
     return Promise.all(proms).then(() => {
-      return payload;
+      return payload2;
     });
   }
   var $ZodObject = /* @__PURE__ */ $constructor("$ZodObject", (inst, def) => {
@@ -3534,28 +3534,28 @@ ${content.join("\n")}
     let value;
     const memo2 = globalConfig.memoizer;
     memo2?.attach(inst);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       value ?? (value = _normalized.value);
-      const input2 = payload.value;
+      const input2 = payload2.value;
       if (!isObject2(input2)) {
-        payload.issues.push({
+        payload2.issues.push({
           expected: "object",
           code: "invalid_type",
           input: input2,
           inst
         });
-        return payload;
+        return payload2;
       }
-      payload.value = memo2 ? memo2.alloc(inst, payload, {}, ctx) : {};
+      payload2.value = memo2 ? memo2.alloc(inst, payload2, {}, ctx) : {};
       const proms = [];
       const shape = value.shape;
       const abortEarly = ctx?.abortEarly;
-      let seen = payload.issues.length;
+      let seen = payload2.issues.length;
       for (const key of value.allKeys) {
-        if (abortEarly && payload.issues.length !== seen) {
-          if (aborted(payload, seen))
+        if (abortEarly && payload2.issues.length !== seen) {
+          if (aborted(payload2, seen))
             break;
-          seen = payload.issues.length;
+          seen = payload2.issues.length;
         }
         if (key === "__proto__")
           continue;
@@ -3564,15 +3564,15 @@ ${content.join("\n")}
         const optout = el._zod.optout;
         const r = el._zod.run({ value: input2[key], issues: [] }, ctx);
         if (r instanceof Promise) {
-          proms.push(r.then((r2) => handlePropertyResult(r2, payload, key, input2, optin, optout)));
+          proms.push(r.then((r2) => handlePropertyResult(r2, payload2, key, input2, optin, optout)));
         } else {
-          handlePropertyResult(r, payload, key, input2, optin, optout);
+          handlePropertyResult(r, payload2, key, input2, optin, optout);
         }
       }
       if (!catchall) {
-        return proms.length ? Promise.all(proms).then(() => payload) : payload;
+        return proms.length ? Promise.all(proms).then(() => payload2) : payload2;
       }
-      return handleCatchall(proms, input2, payload, ctx, _normalized.value, inst, abortEarly === true);
+      return handleCatchall(proms, input2, payload2, ctx, _normalized.value, inst, abortEarly === true);
     };
   });
   var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) => {
@@ -3679,27 +3679,27 @@ ${content.join("\n")}
     const fastEnabled = jit && allowsEval2.value;
     const catchall = def.catchall;
     let value;
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       value ?? (value = _normalized.value);
-      const input2 = payload.value;
+      const input2 = payload2.value;
       if (!isObject2(input2)) {
-        payload.issues.push({
+        payload2.issues.push({
           expected: "object",
           code: "invalid_type",
           input: input2,
           inst
         });
-        return payload;
+        return payload2;
       }
       if (jit && fastEnabled && ctx?.async === false && ctx.jitless !== true) {
         if (!fastpass)
           fastpass = generateFastpass(def.shape);
-        payload = fastpass(payload, ctx);
+        payload2 = fastpass(payload2, ctx);
         if (!catchall)
-          return payload;
-        return handleCatchall([], input2, payload, ctx, value, inst, ctx?.abortEarly === true);
+          return payload2;
+        return handleCatchall([], input2, payload2, ctx, value, inst, ctx?.abortEarly === true);
       }
-      return superParse(payload, ctx);
+      return superParse(payload2, ctx);
     };
   });
   function handleUnionResults(results, final, inst, ctx) {
@@ -3740,15 +3740,15 @@ ${content.join("\n")}
       return void 0;
     });
     const first = def.options.length === 1 ? def.options[0]._zod.run : null;
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (first) {
-        return first(payload, ctx);
+        return first(payload2, ctx);
       }
       let async = false;
       const results = [];
       for (const option of def.options) {
         const result = option._zod.run({
-          value: payload.value,
+          value: payload2.value,
           issues: []
         }, ctx);
         if (result instanceof Promise) {
@@ -3761,9 +3761,9 @@ ${content.join("\n")}
         }
       }
       if (!async)
-        return handleUnionResults(results, payload, inst, ctx);
+        return handleUnionResults(results, payload2, inst, ctx);
       return Promise.all(results).then((results2) => {
-        return handleUnionResults(results2, payload, inst, ctx);
+        return handleUnionResults(results2, payload2, inst, ctx);
       });
     };
   });
@@ -3800,15 +3800,15 @@ ${content.join("\n")}
     $ZodUnion.init(inst, def);
     def.inclusive = false;
     const first = def.options.length === 1 ? def.options[0]._zod.run : null;
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (first) {
-        return first(payload, ctx);
+        return first(payload2, ctx);
       }
       let async = false;
       const results = [];
       for (const option of def.options) {
         const result = option._zod.run({
-          value: payload.value,
+          value: payload2.value,
           issues: []
         }, ctx);
         if (result instanceof Promise) {
@@ -3819,9 +3819,9 @@ ${content.join("\n")}
         }
       }
       if (!async)
-        return handleExclusiveUnionResults(results, payload, inst, ctx);
+        return handleExclusiveUnionResults(results, payload2, inst, ctx);
       return Promise.all(results).then((results2) => {
-        return handleExclusiveUnionResults(results2, payload, inst, ctx);
+        return handleExclusiveUnionResults(results2, payload2, inst, ctx);
       });
     };
   });
@@ -3888,26 +3888,26 @@ ${content.join("\n")}
       }
     });
     const disc = cached(() => discriminatorMap(def));
-    inst._zod.parse = (payload, ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, ctx) => {
+      const input2 = payload2.value;
       if (!isObject(input2)) {
-        payload.issues.push({
+        payload2.issues.push({
           code: "invalid_type",
           expected: "object",
           input: input2,
           inst
         });
-        return payload;
+        return payload2;
       }
       const value = input2?.[def.discriminator];
       const opt = disc.value.get(value);
       if (opt && (value !== void 0 || ctx.direction !== "backward")) {
-        return opt._zod.run(payload, ctx);
+        return opt._zod.run(payload2, ctx);
       }
       if (def.unionFallback || ctx.direction === "backward") {
-        return _super(payload, ctx);
+        return _super(payload2, ctx);
       }
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_union",
         errors: [],
         note: "No matching discriminator",
@@ -3917,22 +3917,22 @@ ${content.join("\n")}
         path: [def.discriminator],
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodIntersection = /* @__PURE__ */ $constructor("$ZodIntersection", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, ctx) => {
+      const input2 = payload2.value;
       const left = def.left._zod.run({ value: input2, issues: [] }, ctx);
       const right = def.right._zod.run({ value: input2, issues: [] }, ctx);
       const async = left instanceof Promise || right instanceof Promise;
       if (async) {
         return Promise.all([left, right]).then(([left2, right2]) => {
-          return handleIntersectionResults(payload, left2, right2);
+          return handleIntersectionResults(payload2, left2, right2);
         });
       }
-      return handleIntersectionResults(payload, left, right);
+      return handleIntersectionResults(payload2, left, right);
     };
   });
   function mergeValues(a, b) {
@@ -4039,24 +4039,24 @@ ${content.join("\n")}
     const items = def.items;
     const memo2 = globalConfig.memoizer;
     memo2?.attach(inst);
-    inst._zod.parse = (payload, ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, ctx) => {
+      const input2 = payload2.value;
       if (!Array.isArray(input2)) {
-        payload.issues.push({
+        payload2.issues.push({
           input: input2,
           inst,
           expected: "tuple",
           code: "invalid_type"
         });
-        return payload;
+        return payload2;
       }
-      payload.value = memo2 ? memo2.alloc(inst, payload, [], ctx) : [];
+      payload2.value = memo2 ? memo2.alloc(inst, payload2, [], ctx) : [];
       const proms = [];
       const optinStart = getTupleOptStart(items, "optin");
       const optoutStart = getTupleOptStart(items, "optout");
       if (!def.rest) {
         if (input2.length < optinStart) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "too_small",
             minimum: optinStart,
             inclusive: true,
@@ -4064,10 +4064,10 @@ ${content.join("\n")}
             inst,
             origin: "array"
           });
-          return payload;
+          return payload2;
         }
         if (input2.length > items.length) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "too_big",
             maximum: items.length,
             inclusive: true,
@@ -4095,26 +4095,26 @@ ${content.join("\n")}
       if (def.rest && !itemAborted) {
         let i = items.length - 1;
         const rest = input2.slice(items.length);
-        let seen = payload.issues.length;
+        let seen = payload2.issues.length;
         for (const el of rest) {
-          if (abortEarly && payload.issues.length !== seen) {
-            if (aborted(payload, seen))
+          if (abortEarly && payload2.issues.length !== seen) {
+            if (aborted(payload2, seen))
               break;
-            seen = payload.issues.length;
+            seen = payload2.issues.length;
           }
           i++;
           const result = def.rest._zod.run({ value: el, issues: [] }, ctx);
           if (result instanceof Promise) {
-            proms.push(result.then((r) => handleTupleResult(r, payload, i)));
+            proms.push(result.then((r) => handleTupleResult(r, payload2, i)));
           } else {
-            handleTupleResult(result, payload, i);
+            handleTupleResult(result, payload2, i);
           }
         }
       }
       if (proms.length) {
-        return Promise.all(proms).then(() => handleTupleResults(itemResults, payload, items, input2, optoutStart));
+        return Promise.all(proms).then(() => handleTupleResults(itemResults, payload2, items, input2, optoutStart));
       }
-      return handleTupleResults(itemResults, payload, items, input2, optoutStart);
+      return handleTupleResults(itemResults, payload2, items, input2, optoutStart);
     };
   });
   function getTupleOptStart(items, key) {
@@ -4161,21 +4161,21 @@ ${content.join("\n")}
     $ZodType.init(inst, def);
     const memo2 = globalConfig.memoizer;
     memo2?.attach(inst);
-    inst._zod.parse = (payload, ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, ctx) => {
+      const input2 = payload2.value;
       if (!isPlainObject(input2)) {
-        payload.issues.push({
+        payload2.issues.push({
           expected: "record",
           code: "invalid_type",
           input: input2,
           inst
         });
-        return payload;
+        return payload2;
       }
       const proms = [];
       const values = def.keyType._zod.values;
       if (values && !def.partial) {
-        payload.value = memo2 ? memo2.alloc(inst, payload, {}, ctx) : {};
+        payload2.value = memo2 ? memo2.alloc(inst, payload2, {}, ctx) : {};
         const recordKeys = /* @__PURE__ */ new Set();
         for (const key of values) {
           if (typeof key === "string" || typeof key === "number" || typeof key === "symbol") {
@@ -4187,7 +4187,7 @@ ${content.join("\n")}
               throw new Error("Async schemas not supported in object keys currently");
             }
             if (keyResult.issues.length) {
-              payload.issues.push({
+              payload2.issues.push({
                 code: "invalid_key",
                 origin: "record",
                 issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
@@ -4204,15 +4204,15 @@ ${content.join("\n")}
             if (result instanceof Promise) {
               proms.push(result.then((result2) => {
                 if (result2.issues.length) {
-                  payload.issues.push(...prefixIssues(key, result2.issues));
+                  payload2.issues.push(...prefixIssues(key, result2.issues));
                 }
-                payload.value[outKey] = result2.value;
+                payload2.value[outKey] = result2.value;
               }));
             } else {
               if (result.issues.length) {
-                payload.issues.push(...prefixIssues(key, result.issues));
+                payload2.issues.push(...prefixIssues(key, result.issues));
               }
-              payload.value[outKey] = result.value;
+              payload2.value[outKey] = result.value;
             }
           }
         }
@@ -4222,7 +4222,7 @@ ${content.join("\n")}
             if (def.mode === "loose") {
               if (key === "__proto__")
                 continue;
-              payload.value[key] = input2[key];
+              payload2.value[key] = input2[key];
             } else {
               unrecognized = unrecognized ?? [];
               unrecognized.push(key);
@@ -4230,7 +4230,7 @@ ${content.join("\n")}
           }
         }
         if (unrecognized && unrecognized.length > 0) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "unrecognized_keys",
             input: input2,
             inst,
@@ -4239,7 +4239,7 @@ ${content.join("\n")}
           });
         }
       } else {
-        payload.value = memo2 ? memo2.alloc(inst, payload, {}, ctx) : {};
+        payload2.value = memo2 ? memo2.alloc(inst, payload2, {}, ctx) : {};
         let unrecognized;
         for (const key of Reflect.ownKeys(input2)) {
           if (key === "__proto__")
@@ -4262,12 +4262,12 @@ ${content.join("\n")}
           }
           if (keyResult.issues.length) {
             if (def.mode === "loose") {
-              payload.value[key] = input2[key];
+              payload2.value[key] = input2[key];
             } else if (values) {
               unrecognized = unrecognized ?? [];
               unrecognized.push(key);
             } else {
-              payload.issues.push({
+              payload2.issues.push({
                 code: "invalid_key",
                 origin: "record",
                 issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
@@ -4285,19 +4285,19 @@ ${content.join("\n")}
           if (result instanceof Promise) {
             proms.push(result.then((result2) => {
               if (result2.issues.length) {
-                payload.issues.push(...prefixIssues(key, result2.issues));
+                payload2.issues.push(...prefixIssues(key, result2.issues));
               }
-              payload.value[outKey] = result2.value;
+              payload2.value[outKey] = result2.value;
             }));
           } else {
             if (result.issues.length) {
-              payload.issues.push(...prefixIssues(key, result.issues));
+              payload2.issues.push(...prefixIssues(key, result.issues));
             }
-            payload.value[outKey] = result.value;
+            payload2.value[outKey] = result.value;
           }
         }
         if (unrecognized && unrecognized.length > 0) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "unrecognized_keys",
             input: input2,
             inst,
@@ -4307,49 +4307,49 @@ ${content.join("\n")}
         }
       }
       if (proms.length) {
-        return Promise.all(proms).then(() => payload);
+        return Promise.all(proms).then(() => payload2);
       }
-      return payload;
+      return payload2;
     };
   });
   var $ZodMap = /* @__PURE__ */ $constructor("$ZodMap", (inst, def) => {
     $ZodType.init(inst, def);
     const memo2 = globalConfig.memoizer;
     memo2?.attach(inst);
-    inst._zod.parse = (payload, ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, ctx) => {
+      const input2 = payload2.value;
       if (!(input2 instanceof Map)) {
-        payload.issues.push({
+        payload2.issues.push({
           expected: "map",
           code: "invalid_type",
           input: input2,
           inst
         });
-        return payload;
+        return payload2;
       }
       const proms = [];
-      payload.value = memo2 ? memo2.alloc(inst, payload, /* @__PURE__ */ new Map(), ctx) : /* @__PURE__ */ new Map();
+      payload2.value = memo2 ? memo2.alloc(inst, payload2, /* @__PURE__ */ new Map(), ctx) : /* @__PURE__ */ new Map();
       const abortEarly = ctx?.abortEarly;
-      let seen = payload.issues.length;
+      let seen = payload2.issues.length;
       for (const [key, value] of input2) {
-        if (abortEarly && payload.issues.length !== seen) {
-          if (aborted(payload, seen))
+        if (abortEarly && payload2.issues.length !== seen) {
+          if (aborted(payload2, seen))
             break;
-          seen = payload.issues.length;
+          seen = payload2.issues.length;
         }
         const keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
         const valueResult = def.valueType._zod.run({ value, issues: [] }, ctx);
         if (keyResult instanceof Promise || valueResult instanceof Promise) {
           proms.push(Promise.all([keyResult, valueResult]).then(([keyResult2, valueResult2]) => {
-            handleMapResult(keyResult2, valueResult2, payload, key, input2, inst, ctx);
+            handleMapResult(keyResult2, valueResult2, payload2, key, input2, inst, ctx);
           }));
         } else {
-          handleMapResult(keyResult, valueResult, payload, key, input2, inst, ctx);
+          handleMapResult(keyResult, valueResult, payload2, key, input2, inst, ctx);
         }
       }
       if (proms.length)
-        return Promise.all(proms).then(() => payload);
-      return payload;
+        return Promise.all(proms).then(() => payload2);
+      return payload2;
     };
   });
   function handleMapResult(keyResult, valueResult, final, key, input2, inst, ctx) {
@@ -4386,36 +4386,36 @@ ${content.join("\n")}
     $ZodType.init(inst, def);
     const memo2 = globalConfig.memoizer;
     memo2?.attach(inst);
-    inst._zod.parse = (payload, ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, ctx) => {
+      const input2 = payload2.value;
       if (!(input2 instanceof Set)) {
-        payload.issues.push({
+        payload2.issues.push({
           input: input2,
           inst,
           expected: "set",
           code: "invalid_type"
         });
-        return payload;
+        return payload2;
       }
       const proms = [];
-      payload.value = memo2 ? memo2.alloc(inst, payload, /* @__PURE__ */ new Set(), ctx) : /* @__PURE__ */ new Set();
+      payload2.value = memo2 ? memo2.alloc(inst, payload2, /* @__PURE__ */ new Set(), ctx) : /* @__PURE__ */ new Set();
       const abortEarly = ctx?.abortEarly;
-      let seen = payload.issues.length;
+      let seen = payload2.issues.length;
       for (const item of input2) {
-        if (abortEarly && payload.issues.length !== seen) {
-          if (aborted(payload, seen))
+        if (abortEarly && payload2.issues.length !== seen) {
+          if (aborted(payload2, seen))
             break;
-          seen = payload.issues.length;
+          seen = payload2.issues.length;
         }
         const result = def.valueType._zod.run({ value: item, issues: [] }, ctx);
         if (result instanceof Promise) {
-          proms.push(result.then((result2) => handleSetResult(result2, payload)));
+          proms.push(result.then((result2) => handleSetResult(result2, payload2)));
         } else
-          handleSetResult(result, payload);
+          handleSetResult(result, payload2);
       }
       if (proms.length)
-        return Promise.all(proms).then(() => payload);
-      return payload;
+        return Promise.all(proms).then(() => payload2);
+      return payload2;
     };
   });
   function handleSetResult(result, final) {
@@ -4433,18 +4433,18 @@ ${content.join("\n")}
       const patternValues = getEnumValues(zod.def.entries).filter((k) => propertyKeyTypes.has(typeof k));
       return new RegExp(patternValues.length ? `^(${patternValues.map((o) => escapeRegex(o.toString())).join("|")})$` : "^[^\\s\\S]$");
     });
-    inst._zod.parse = (payload, _ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, _ctx) => {
+      const input2 = payload2.value;
       if (valuesSet.has(input2)) {
-        return payload;
+        return payload2;
       }
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_value",
         values,
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodLiteral = /* @__PURE__ */ $constructor("$ZodLiteral", (inst, def) => {
@@ -4455,61 +4455,61 @@ ${content.join("\n")}
       const vals = zod.def.values;
       return new RegExp(vals.length ? `^(${vals.map((o) => typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)).join("|")})$` : "^[^\\s\\S]$");
     });
-    inst._zod.parse = (payload, _ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, _ctx) => {
+      const input2 = payload2.value;
       if (values.has(input2)) {
-        return payload;
+        return payload2;
       }
-      payload.issues.push({
+      payload2.issues.push({
         code: "invalid_value",
         values: def.values,
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodFile = /* @__PURE__ */ $constructor("$ZodFile", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, _ctx) => {
-      const input2 = payload.value;
+    inst._zod.parse = (payload2, _ctx) => {
+      const input2 = payload2.value;
       if (input2 instanceof File)
-        return payload;
-      payload.issues.push({
+        return payload2;
+      payload2.issues.push({
         expected: "file",
         code: "invalid_type",
         input: input2,
         inst
       });
-      return payload;
+      return payload2;
     };
   });
   var $ZodTransform = /* @__PURE__ */ $constructor("$ZodTransform", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.optin = "optional";
     globalConfig.memoizer?.guard(inst);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (ctx.direction === "backward") {
         throw new $ZodEncodeError(inst.constructor.name);
       }
-      const _out = def.transform(payload.value, payload);
+      const _out = def.transform(payload2.value, payload2);
       if (ctx.async) {
         const output2 = _out instanceof Promise ? _out : Promise.resolve(_out);
         return output2.then((output3) => {
-          payload.value = output3;
-          return payload;
+          payload2.value = output3;
+          return payload2;
         });
       }
       if (_out instanceof Promise) {
         throw new $ZodAsyncError();
       }
-      payload.value = _out;
-      return payload;
+      payload2.value = _out;
+      return payload2;
     };
   });
-  function handleOptionalResult(payload, result) {
-    payload.value = result.issues.length ? void 0 : result.value;
-    return payload;
+  function handleOptionalResult(payload2, result) {
+    payload2.value = result.issues.length ? void 0 : result.value;
+    return payload2;
   }
   var $ZodOptional = /* @__PURE__ */ $constructor("$ZodOptional", (inst, def) => {
     $ZodType.init(inst, def);
@@ -4523,24 +4523,24 @@ ${content.join("\n")}
       const pattern = zod.def.innerType._zod.pattern;
       return pattern ? new RegExp(`^(${cleanRegex(pattern.source)})?$`) : void 0;
     });
-    inst._zod.parse = (payload, ctx) => {
-      if (payload.value === void 0) {
+    inst._zod.parse = (payload2, ctx) => {
+      if (payload2.value === void 0) {
         if (def.innerType._zod.optin !== "defaulted")
-          return payload;
-        const result = def.innerType._zod.run({ value: payload.value, issues: [] }, ctx);
+          return payload2;
+        const result = def.innerType._zod.run({ value: payload2.value, issues: [] }, ctx);
         if (result instanceof Promise)
-          return result.then((result2) => handleOptionalResult(payload, result2));
-        return handleOptionalResult(payload, result);
+          return result.then((result2) => handleOptionalResult(payload2, result2));
+        return handleOptionalResult(payload2, result);
       }
-      return def.innerType._zod.run(payload, ctx);
+      return def.innerType._zod.run(payload2, ctx);
     };
   });
   var $ZodExactOptional = /* @__PURE__ */ $constructor("$ZodExactOptional", (inst, def) => {
     $ZodOptional.init(inst, def);
     defineLazyInternal(inst, "values", (zod) => zod.def.innerType._zod.values);
     defineLazyInternal(inst, "pattern", (zod) => zod.def.innerType._zod.pattern);
-    inst._zod.parse = (payload, ctx) => {
-      return def.innerType._zod.run(payload, ctx);
+    inst._zod.parse = (payload2, ctx) => {
+      return def.innerType._zod.run(payload2, ctx);
     };
   });
   var $ZodNullable = /* @__PURE__ */ $constructor("$ZodNullable", (inst, def) => {
@@ -4554,49 +4554,49 @@ ${content.join("\n")}
     defineLazyInternal(inst, "values", (zod) => {
       return zod.def.innerType._zod.values ? /* @__PURE__ */ new Set([...zod.def.innerType._zod.values, null]) : void 0;
     });
-    inst._zod.parse = (payload, ctx) => {
-      if (payload.value === null)
-        return payload;
-      return def.innerType._zod.run(payload, ctx);
+    inst._zod.parse = (payload2, ctx) => {
+      if (payload2.value === null)
+        return payload2;
+      return def.innerType._zod.run(payload2, ctx);
     };
   });
   var $ZodDefault = /* @__PURE__ */ $constructor("$ZodDefault", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.optin = "defaulted";
     defineLazyInternal(inst, "values", (zod) => zod.def.innerType._zod.values);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (ctx.direction === "backward") {
-        return def.innerType._zod.run(payload, ctx);
+        return def.innerType._zod.run(payload2, ctx);
       }
-      if (payload.value === void 0) {
-        payload.value = def.defaultValue;
-        return payload;
+      if (payload2.value === void 0) {
+        payload2.value = def.defaultValue;
+        return payload2;
       }
-      const result = def.innerType._zod.run(payload, ctx);
+      const result = def.innerType._zod.run(payload2, ctx);
       if (result instanceof Promise) {
         return result.then((result2) => handleDefaultResult(result2, def));
       }
       return handleDefaultResult(result, def);
     };
   });
-  function handleDefaultResult(payload, def) {
-    if (payload.value === void 0) {
-      payload.value = def.defaultValue;
+  function handleDefaultResult(payload2, def) {
+    if (payload2.value === void 0) {
+      payload2.value = def.defaultValue;
     }
-    return payload;
+    return payload2;
   }
   var $ZodPrefault = /* @__PURE__ */ $constructor("$ZodPrefault", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.optin = "defaulted";
     defineLazyInternal(inst, "values", (zod) => zod.def.innerType._zod.values);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (ctx.direction === "backward") {
-        return def.innerType._zod.run(payload, ctx);
+        return def.innerType._zod.run(payload2, ctx);
       }
-      if (payload.value === void 0) {
-        payload.value = def.defaultValue;
+      if (payload2.value === void 0) {
+        payload2.value = def.defaultValue;
       }
-      return def.innerType._zod.run(payload, ctx);
+      return def.innerType._zod.run(payload2, ctx);
     };
   });
   var $ZodNonOptional = /* @__PURE__ */ $constructor("$ZodNonOptional", (inst, def) => {
@@ -4605,88 +4605,88 @@ ${content.join("\n")}
       const v = zod.def.innerType._zod.values;
       return v ? new Set([...v].filter((x) => x !== void 0)) : void 0;
     });
-    inst._zod.parse = (payload, ctx) => {
-      const result = def.innerType._zod.run(payload, ctx);
+    inst._zod.parse = (payload2, ctx) => {
+      const result = def.innerType._zod.run(payload2, ctx);
       if (result instanceof Promise) {
         return result.then((result2) => handleNonOptionalResult(result2, inst));
       }
       return handleNonOptionalResult(result, inst);
     };
   });
-  function handleNonOptionalResult(payload, inst) {
-    if (!payload.issues.length && payload.value === void 0) {
-      payload.issues.push({
+  function handleNonOptionalResult(payload2, inst) {
+    if (!payload2.issues.length && payload2.value === void 0) {
+      payload2.issues.push({
         code: "invalid_type",
         expected: "nonoptional",
-        input: payload.value,
+        input: payload2.value,
         inst
       });
     }
-    return payload;
+    return payload2;
   }
   var $ZodSuccess = /* @__PURE__ */ $constructor("$ZodSuccess", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (ctx.direction === "backward") {
         throw new $ZodEncodeError("ZodSuccess");
       }
-      const result = def.innerType._zod.run(payload, ctx);
+      const result = def.innerType._zod.run(payload2, ctx);
       if (result instanceof Promise) {
         return result.then((result2) => {
-          payload.value = result2.issues.length === 0;
-          return payload;
+          payload2.value = result2.issues.length === 0;
+          return payload2;
         });
       }
-      payload.value = result.issues.length === 0;
-      return payload;
+      payload2.value = result.issues.length === 0;
+      return payload2;
     };
   });
-  function handleCatchResult(payload, result, def, ctx) {
+  function handleCatchResult(payload2, result, def, ctx) {
     if (!result.issues.length) {
-      payload.value = result.value;
+      payload2.value = result.value;
       if (result.memo)
-        payload.memo = true;
-      return payload;
+        payload2.memo = true;
+      return payload2;
     }
-    payload.value = def.catchValue({
+    payload2.value = def.catchValue({
       ...result,
-      value: payload.value,
+      value: payload2.value,
       error: {
         issues: result.issues.map((iss) => finalizeIssue(iss, ctx, config()))
       },
-      input: payload.value
+      input: payload2.value
     });
-    return payload;
+    return payload2;
   }
   var $ZodCatch = /* @__PURE__ */ $constructor("$ZodCatch", (inst, def) => {
     $ZodType.init(inst, def);
     defineLazyInternal(inst, "optin", (zod) => zod.def.innerType._zod.optin === "defaulted" ? "defaulted" : "optional");
     defineLazyInternal(inst, "optout", (zod) => zod.def.innerType._zod.optout);
     defineLazyInternal(inst, "values", (zod) => zod.def.innerType._zod.values);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (ctx.direction === "backward") {
-        return def.innerType._zod.run(payload, ctx);
+        return def.innerType._zod.run(payload2, ctx);
       }
-      const result = def.innerType._zod.run({ value: payload.value, issues: [] }, ctx);
+      const result = def.innerType._zod.run({ value: payload2.value, issues: [] }, ctx);
       if (result instanceof Promise) {
-        return result.then((result2) => handleCatchResult(payload, result2, def, ctx));
+        return result.then((result2) => handleCatchResult(payload2, result2, def, ctx));
       }
-      return handleCatchResult(payload, result, def, ctx);
+      return handleCatchResult(payload2, result, def, ctx);
     };
   });
   var $ZodNaN = /* @__PURE__ */ $constructor("$ZodNaN", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, _ctx) => {
-      if (typeof payload.value !== "number" || !Number.isNaN(payload.value)) {
-        payload.issues.push({
-          input: payload.value,
+    inst._zod.parse = (payload2, _ctx) => {
+      if (typeof payload2.value !== "number" || !Number.isNaN(payload2.value)) {
+        payload2.issues.push({
+          input: payload2.value,
           inst,
           expected: "nan",
           code: "invalid_type"
         });
-        return payload;
+        return payload2;
       }
-      return payload;
+      return payload2;
     };
   });
   var $ZodPipe = /* @__PURE__ */ $constructor("$ZodPipe", (inst, def) => {
@@ -4695,15 +4695,15 @@ ${content.join("\n")}
     defineLazyInternal(inst, "optin", (zod) => zod.def.in._zod.optin);
     defineLazyInternal(inst, "optout", (zod) => zod.def.out._zod.optout);
     defineLazyInternal(inst, "propValues", (zod) => zod.def.in._zod.propValues);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (ctx.direction === "backward") {
-        const right = def.out._zod.run(payload, ctx);
+        const right = def.out._zod.run(payload2, ctx);
         if (right instanceof Promise) {
           return right.then((right2) => handlePipeResult(right2, def.in, ctx));
         }
         return handlePipeResult(right, def.in, ctx);
       }
-      const left = def.in._zod.run(payload, ctx);
+      const left = def.in._zod.run(payload2, ctx);
       if (left instanceof Promise) {
         return left.then((left2) => handlePipeResult(left2, def.out, ctx));
       }
@@ -4723,16 +4723,16 @@ ${content.join("\n")}
     defineLazyInternal(inst, "optin", (zod) => zod.def.in._zod.optin);
     defineLazyInternal(inst, "optout", (zod) => zod.def.out._zod.optout);
     defineLazyInternal(inst, "propValues", (zod) => zod.def.in._zod.propValues);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       const direction = ctx.direction || "forward";
       if (direction === "forward") {
-        const left = def.in._zod.run(payload, ctx);
+        const left = def.in._zod.run(payload2, ctx);
         if (left instanceof Promise) {
           return left.then((left2) => handleCodecAResult(left2, def, ctx));
         }
         return handleCodecAResult(left, def, ctx);
       } else {
-        const right = def.out._zod.run(payload, ctx);
+        const right = def.out._zod.run(payload2, ctx);
         if (right instanceof Promise) {
           return right.then((right2) => handleCodecAResult(right2, def, ctx));
         }
@@ -4776,21 +4776,21 @@ ${content.join("\n")}
     defineLazyInternal(inst, "values", (zod) => zod.def.innerType._zod.values);
     defineLazyInternal(inst, "optin", (zod) => zod.def.innerType?._zod?.optin);
     defineLazyInternal(inst, "optout", (zod) => zod.def.innerType?._zod?.optout);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       if (ctx.direction === "backward") {
-        return def.innerType._zod.run(payload, ctx);
+        return def.innerType._zod.run(payload2, ctx);
       }
-      const result = def.innerType._zod.run(payload, ctx);
+      const result = def.innerType._zod.run(payload2, ctx);
       if (result instanceof Promise) {
         return result.then(handleReadonlyResult);
       }
       return handleReadonlyResult(result);
     };
   });
-  function handleReadonlyResult(payload) {
-    if (!payload.memo)
-      payload.value = Object.freeze(payload.value);
-    return payload;
+  function handleReadonlyResult(payload2) {
+    if (!payload2.memo)
+      payload2.value = Object.freeze(payload2.value);
+    return payload2;
   }
   function leafPattern(schema4) {
     const def = schema4._zod.def;
@@ -4855,28 +4855,28 @@ ${content.join("\n")}
       }
     }
     inst._zod.pattern = new RegExp(`^${regexParts.join("")}$`);
-    inst._zod.parse = (payload, _ctx) => {
-      if (typeof payload.value !== "string") {
-        payload.issues.push({
-          input: payload.value,
+    inst._zod.parse = (payload2, _ctx) => {
+      if (typeof payload2.value !== "string") {
+        payload2.issues.push({
+          input: payload2.value,
           inst,
           expected: "string",
           code: "invalid_type"
         });
-        return payload;
+        return payload2;
       }
       inst._zod.pattern.lastIndex = 0;
-      if (!inst._zod.pattern.test(payload.value)) {
-        payload.issues.push({
-          input: payload.value,
+      if (!inst._zod.pattern.test(payload2.value)) {
+        payload2.issues.push({
+          input: payload2.value,
           inst,
           code: "invalid_format",
           format: def.format ?? "template_literal",
           pattern: inst._zod.pattern.source
         });
-        return payload;
+        return payload2;
       }
-      return payload;
+      return payload2;
     };
   });
   var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
@@ -4909,23 +4909,23 @@ ${content.join("\n")}
         return result;
       }, "_zod", { value: inst._zod, enumerable: false });
     };
-    inst._zod.parse = (payload, _ctx) => {
-      if (typeof payload.value !== "function") {
-        payload.issues.push({
+    inst._zod.parse = (payload2, _ctx) => {
+      if (typeof payload2.value !== "function") {
+        payload2.issues.push({
           code: "invalid_type",
           expected: "function",
-          input: payload.value,
+          input: payload2.value,
           inst
         });
-        return payload;
+        return payload2;
       }
       const hasPromiseOutput = inst._def.output && inst._def.output._zod.def.type === "promise";
       if (hasPromiseOutput) {
-        payload.value = inst.implementAsync(payload.value);
+        payload2.value = inst.implementAsync(payload2.value);
       } else {
-        payload.value = inst.implement(payload.value);
+        payload2.value = inst.implement(payload2.value);
       }
-      return payload;
+      return payload2;
     };
     inst.input = (...args) => {
       const F = inst.constructor;
@@ -4958,8 +4958,8 @@ ${content.join("\n")}
   });
   var $ZodPromise = /* @__PURE__ */ $constructor("$ZodPromise", (inst, def) => {
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, ctx) => {
-      return Promise.resolve(payload.value).then((inner) => def.innerType._zod.run({ value: inner, issues: [] }, ctx));
+    inst._zod.parse = (payload2, ctx) => {
+      return Promise.resolve(payload2.value).then((inner) => def.innerType._zod.run({ value: inner, issues: [] }, ctx));
     };
   });
   var $ZodLazy = /* @__PURE__ */ $constructor("$ZodLazy", (inst, def) => {
@@ -4974,28 +4974,28 @@ ${content.join("\n")}
     defineLazyInternal(inst, "propValues", (zod) => zod.innerType?._zod?.propValues);
     defineLazyInternal(inst, "optin", (zod) => zod.innerType?._zod?.optin ?? void 0);
     defineLazyInternal(inst, "optout", (zod) => zod.innerType?._zod?.optout ?? void 0);
-    inst._zod.parse = (payload, ctx) => {
+    inst._zod.parse = (payload2, ctx) => {
       const inner = inst._zod.innerType;
-      return inner._zod.run(payload, ctx);
+      return inner._zod.run(payload2, ctx);
     };
   });
   var $ZodCustom = /* @__PURE__ */ $constructor("$ZodCustom", (inst, def) => {
     $ZodCheck.init(inst, def);
     $ZodType.init(inst, def);
-    inst._zod.parse = (payload, _) => {
-      return payload;
+    inst._zod.parse = (payload2, _) => {
+      return payload2;
     };
-    inst._zod.check = (payload) => {
-      const input2 = payload.value;
+    inst._zod.check = (payload2) => {
+      const input2 = payload2.value;
       const r = def.fn(input2);
       if (r instanceof Promise) {
-        return r.then((r2) => handleRefineResult(r2, payload, input2, inst));
+        return r.then((r2) => handleRefineResult(r2, payload2, input2, inst));
       }
-      handleRefineResult(r, payload, input2, inst);
+      handleRefineResult(r, payload2, input2, inst);
       return;
     };
   });
-  function handleRefineResult(result, payload, input2, inst) {
+  function handleRefineResult(result, payload2, input2, inst) {
     if (!result) {
       const _iss = {
         code: "custom",
@@ -5009,7 +5009,7 @@ ${content.join("\n")}
       };
       if (inst._zod.def.params)
         _iss.params = inst._zod.def.params;
-      payload.issues.push(issue(_iss));
+      payload2.issues.push(issue(_iss));
     }
   }
 
@@ -5183,13 +5183,13 @@ ${content.join("\n")}
   var handoff;
   var open = [];
   var memo = {
-    alloc(_inst, payload, empty) {
+    alloc(_inst, payload2, empty) {
       const bucket = handoff;
       if (!bucket)
         return empty;
       handoff = void 0;
       const entry = { value: empty, issues: null };
-      bucket.set(payload.value, entry);
+      bucket.set(payload2.value, entry);
       open.push(entry);
       return empty;
     },
@@ -5198,10 +5198,10 @@ ${content.join("\n")}
       (_a3 = inst._zod).deferred ?? (_a3.deferred = []);
       inst._zod.deferred.push(() => {
         const base = inst._zod.parse;
-        const wrapped = (payload, ctx) => {
-          if (ctx.direction !== "backward" && isBackEdge(ctx, payload.value))
+        const wrapped = (payload2, ctx) => {
+          if (ctx.direction !== "backward" && isBackEdge(ctx, payload2.value))
             throw new $ZodCyclicError();
-          return base(payload, ctx);
+          return base(payload2, ctx);
         };
         inst._zod.parse = wrapped;
         if (inst._zod.run === base)
@@ -5217,23 +5217,23 @@ ${content.join("\n")}
       (_a3 = inst._zod).deferred ?? (_a3.deferred = []);
       inst._zod.deferred.push(() => {
         const base = inst._zod.parse;
-        const wrapped = (payload, ctx) => {
+        const wrapped = (payload2, ctx) => {
           if (isRecursiveInst === void 0) {
             const walked = isRecursive(inst, /* @__PURE__ */ new Set(), false);
             if (walked === NONE) {
               inst._zod.parse = base;
               if (inst._zod.run === wrapped)
                 inst._zod.run = base;
-              return base(payload, ctx);
+              return base(payload2, ctx);
             }
             if (walked === PROVEN || rechecked)
               isRecursiveInst = true;
             else
               rechecked = true;
           }
-          const input2 = payload.value;
+          const input2 = payload2.value;
           if (!isRef(input2))
-            return base(payload, ctx);
+            return base(payload2, ctx);
           let state = ctx[STATE];
           if (!state) {
             state = { buckets: /* @__PURE__ */ new WeakMap(), backEdges: void 0 };
@@ -5249,20 +5249,20 @@ ${content.join("\n")}
           }
           const hit = bucket.get(input2);
           if (hit) {
-            payload.value = hit.value;
+            payload2.value = hit.value;
             if (hit.issues) {
               if (hit.issues.length)
-                payload.issues.push(...cloneIssues(hit.issues));
+                payload2.issues.push(...cloneIssues(hit.issues));
             } else {
-              payload.memo = true;
+              payload2.memo = true;
               state.backEdges ?? (state.backEdges = /* @__PURE__ */ new WeakSet());
               state.backEdges.add(hit.value);
             }
-            return payload;
+            return payload2;
           }
           handoff = bucket;
           const depth = open.length;
-          const result = base(payload, ctx);
+          const result = base(payload2, ctx);
           handoff = void 0;
           const entry = open.length > depth ? open.pop() : void 0;
           if (result instanceof Promise) {
@@ -12949,21 +12949,21 @@ ${content.join("\n")}
     const clone2 = clone(schema4);
     const liveRun = schema4._zod.run;
     const originalRun = liveRun.__originalRun ?? liveRun;
-    const wrapped = (payload, ctx) => {
+    const wrapped = (payload2, ctx) => {
       if (ctx?.async || ctx?.direction === "backward" || ctx?.skipChecks || ctx?.[FALLBACK_FLAG]) {
-        return originalRun(payload, ctx);
+        return originalRun(payload2, ctx);
       }
-      if (ctx && isBackEdge(ctx, payload.value)) {
-        return originalRun(payload, ctx);
+      if (ctx && isBackEdge(ctx, payload2.value)) {
+        return originalRun(payload2, ctx);
       }
-      const out = parser(payload.value);
+      const out = parser(payload2.value);
       if (out !== INVALID) {
-        payload.value = out;
-        return payload;
+        payload2.value = out;
+        return payload2;
       }
       if (ctx)
         ctx[FALLBACK_FLAG] = true;
-      return originalRun(payload, ctx);
+      return originalRun(payload2, ctx);
     };
     wrapped.__originalRun = originalRun;
     clone2._zod.bag.fallbackRun = originalRun;
@@ -15442,23 +15442,23 @@ ${code}
   }
   // @__NO_SIDE_EFFECTS__
   function _superRefine(fn, params) {
-    const ch = /* @__PURE__ */ _check((payload) => {
-      payload.addIssue = (issue2) => {
+    const ch = /* @__PURE__ */ _check((payload2) => {
+      payload2.addIssue = (issue2) => {
         if (typeof issue2 === "string") {
-          payload.issues.push(issue(issue2, payload.value, ch._zod.def));
+          payload2.issues.push(issue(issue2, payload2.value, ch._zod.def));
         } else {
           const _issue = issue2;
           if (_issue.fatal)
             _issue.continue = false;
           _issue.code ?? (_issue.code = "custom");
           if (!("input" in _issue))
-            _issue.input = payload.value;
+            _issue.input = payload2.value;
           _issue.inst ?? (_issue.inst = ch);
           _issue.continue ?? (_issue.continue = !ch._zod.def.abort);
-          payload.issues.push(issue(_issue));
+          payload2.issues.push(issue(_issue));
         }
       };
-      return fn(payload.value, payload);
+      return fn(payload2.value, payload2);
     }, params);
     return ch;
   }
@@ -15517,7 +15517,7 @@ ${code}
       type: "pipe",
       in: stringSchema,
       out: booleanSchema,
-      transform: ((input2, payload) => {
+      transform: ((input2, payload2) => {
         let data = input2;
         if (params.case !== "sensitive")
           data = data.toLowerCase();
@@ -15526,11 +15526,11 @@ ${code}
         } else if (falsySet.has(data)) {
           return false;
         } else {
-          payload.issues.push({
+          payload2.issues.push({
             code: "invalid_value",
             expected: "stringbool",
             values: [...truthySet, ...falsySet],
-            input: payload.value,
+            input: payload2.value,
             inst: codec2,
             continue: false
           });
@@ -18342,33 +18342,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     $ZodTransform.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json2, params) => transformProcessor(inst, ctx, json2, params);
-    inst._zod.parse = (payload, _ctx) => {
+    inst._zod.parse = (payload2, _ctx) => {
       if (_ctx.direction === "backward") {
         throw new $ZodEncodeError(inst.constructor.name);
       }
-      payload.addIssue = (issue2) => {
+      payload2.addIssue = (issue2) => {
         if (typeof issue2 === "string") {
-          payload.issues.push(util_exports.issue(issue2, payload.value, def));
+          payload2.issues.push(util_exports.issue(issue2, payload2.value, def));
         } else {
           const _issue = issue2;
           if (_issue.fatal)
             _issue.continue = false;
           _issue.code ?? (_issue.code = "custom");
           if (!("input" in _issue))
-            _issue.input = payload.value;
+            _issue.input = payload2.value;
           _issue.inst ?? (_issue.inst = inst);
-          payload.issues.push(util_exports.issue(_issue));
+          payload2.issues.push(util_exports.issue(_issue));
         }
       };
-      const output2 = def.transform(payload.value, payload);
+      const output2 = def.transform(payload2.value, payload2);
       if (output2 instanceof Promise) {
         return output2.then((output3) => {
-          payload.value = output3;
-          return payload;
+          payload2.value = output3;
+          return payload2;
         });
       }
-      payload.value = output2;
-      return payload;
+      payload2.value = output2;
+      return payload2;
     };
   });
   function transform(fn) {
@@ -18636,12 +18636,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       ...util_exports.normalizeParams(params)
     });
     inst._zod.bag.Class = cls;
-    inst._zod.check = (payload) => {
-      if (!(payload.value instanceof cls)) {
-        payload.issues.push({
+    inst._zod.check = (payload2) => {
+      if (!(payload2.value instanceof cls)) {
+        payload2.issues.push({
           code: "invalid_type",
           expected: cls.name,
-          input: payload.value,
+          input: payload2.value,
           inst,
           path: [...inst._zod.def.path ?? []]
         });
@@ -18834,13 +18834,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     throw new Error(`Reference not found: ${ref}`);
   }
   function checkObjectGuards(objectSchema, guards) {
-    const guard = z.transform((value) => value).check((payload) => {
-      const value = payload.value;
+    const guard = z.transform((value) => value).check((payload2) => {
+      const value = payload2.value;
       if (typeof value !== "object" || value === null || Array.isArray(value))
         return;
       const keys = Object.getOwnPropertyNames(value);
       if (guards.minProperties !== void 0 && keys.length < guards.minProperties) {
-        payload.issues.push({
+        payload2.issues.push({
           origin: "object",
           code: "too_small",
           minimum: guards.minProperties,
@@ -18852,7 +18852,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         });
       }
       if (guards.maxProperties !== void 0 && keys.length > guards.maxProperties) {
-        payload.issues.push({
+        payload2.issues.push({
           origin: "object",
           code: "too_big",
           maximum: guards.maxProperties,
@@ -18868,7 +18868,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           const result = guards.keySchema.safeParse(key);
           if (result.success)
             continue;
-          payload.issues.push({
+          payload2.issues.push({
             code: "invalid_key",
             origin: "record",
             issues: result.error.issues,
@@ -18963,8 +18963,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return n === 1 ? "element" : "elements";
   }
   function checkArrayGuards(arraySchema, guards) {
-    const guard = z.transform((value) => value).check((payload) => {
-      const items = payload.value;
+    const guard = z.transform((value) => value).check((payload2) => {
+      const items = payload2.value;
       if (!Array.isArray(items))
         return;
       if (guards.uniqueItems === true) {
@@ -18978,7 +18978,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
             firstSeen.set(key, i);
             continue;
           }
-          payload.issues.push({
+          payload2.issues.push({
             code: "custom",
             message: `Array items must be unique: element at index ${i} duplicates the one at index ${first}`,
             input: items,
@@ -18996,7 +18996,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
             break;
         }
         if (matches < minContains) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "custom",
             message: `Array must contain at least ${minContains} matching ${plural(minContains)}; found ${matches}`,
             input: items,
@@ -19004,7 +19004,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           });
         }
         if (guards.maxContains !== void 0 && matches > guards.maxContains) {
-          payload.issues.push({
+          payload2.issues.push({
             code: "custom",
             message: `Array must contain at most ${guards.maxContains} matching ${plural(guards.maxContains)}`,
             input: items,
@@ -19247,11 +19247,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
             const propertyKeys = Object.keys(shape);
             const patterns = patternKeys.map((p) => new RegExp(p));
             const basePatternSchema = zodSchema;
-            zodSchema = zodSchema.check((payload) => {
-              if (!isPlainObject(payload.value))
+            zodSchema = zodSchema.check((payload2) => {
+              if (!isPlainObject(payload2.value))
                 return;
               const unrecognized = [];
-              for (const key of Object.keys(payload.value)) {
+              for (const key of Object.keys(payload2.value)) {
                 if (propertyKeys.includes(key))
                   continue;
                 if (patterns.some((regex) => regex.test(key)))
@@ -19259,10 +19259,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
                 unrecognized.push(key);
               }
               if (unrecognized.length) {
-                payload.issues.push({
+                payload2.issues.push({
                   code: "unrecognized_keys",
                   keys: unrecognized,
-                  input: payload.value,
+                  input: payload2.value,
                   inst: basePatternSchema
                 });
               }
@@ -21184,15 +21184,15 @@ ${lines.join("\n")}
       }
     }
     const mean = (ids, at) => ids.reduce((sum, id) => sum + at.get(id), 0) / ids.length;
-    let order = [...branches.keys()];
+    let order2 = [...branches.keys()];
     if (core && branches.has(core)) {
-      const others = order.filter((name) => name !== core);
+      const others = order2.filter((name) => name !== core);
       const left = Math.floor(others.length / 2);
-      order = [...others.slice(0, left), core, ...others.slice(left)];
+      order2 = [...others.slice(0, left), core, ...others.slice(left)];
     }
     const positions = /* @__PURE__ */ new Map();
     let lane = 0;
-    for (const name of order) {
+    for (const name of order2) {
       const rows = [...branches.get(name)].sort(([a], [b]) => a - b).map(([y, row]) => ({ y, row: [...row] }));
       const x = /* @__PURE__ */ new Map();
       for (const { row } of rows) {
@@ -30748,14 +30748,14 @@ ${end.comment}` : end.comment;
   }
   function orderKey(entry) {
     const type = String(entry.position?.type ?? "").toLowerCase();
-    const order = Number.isFinite(entry.position?.order) ? entry.position.order : Number.MAX_SAFE_INTEGER;
+    const order2 = Number.isFinite(entry.position?.order) ? entry.position.order : Number.MAX_SAFE_INTEGER;
     if (["before_character_definition", "before_char", "before_character", "0"].includes(type)) {
-      return [0, 0, order];
+      return [0, 0, order2];
     }
     if (["after_character_definition", "after_char", "after_character", "1"].includes(type)) {
-      return [1, 0, order];
+      return [1, 0, order2];
     }
-    return [2, -(Number(entry.position?.depth) || 0), order];
+    return [2, -(Number(entry.position?.depth) || 0), order2];
   }
   function orderEntries(entries) {
     const indexed = entries.map((entry, index) => ({ entry, index }));
@@ -31272,16 +31272,539 @@ ${managed}
     return limits2;
   }
 
+  // src/integration.ts
+  function unavailable(reason) {
+    return { version: 1, status: "unavailable", reason };
+  }
+  function integrationSource(input2) {
+    if ("status" in input2) {
+      return input2;
+    }
+    if (input2.signal?.aborted) {
+      return unavailable("source_changed");
+    }
+    if (input2.messageId !== input2.lastMessageId) {
+      return unavailable("not_latest");
+    }
+    if (input2.role !== "assistant") {
+      return unavailable("not_assistant");
+    }
+    if (input2.extraAnalysis) {
+      return unavailable("mvu_busy");
+    }
+    if (!input2.data.stat_data) {
+      return unavailable("missing_stat_data");
+    }
+    let now;
+    try {
+      now = storyDay(valueAt(input2.data.stat_data, input2.timePath));
+    } catch {
+      return unavailable("invalid_time");
+    }
+    const saved = input2.data.国策 !== void 0 ? input2.data.国策 : input2.data.stat_data.国策;
+    if (saved === void 0) {
+      return unavailable("missing_state");
+    }
+    const parsed = StateSchema.safeParse(saved);
+    if (!parsed.success) {
+      return unavailable("invalid_state");
+    }
+    const state = migrateCountryKeys(parsed.data);
+    return {
+      chatId: input2.chatId,
+      messageId: input2.messageId,
+      swipeId: input2.swipeId,
+      timePath: input2.timePath,
+      now,
+      cursors: Object.fromEntries(
+        Object.values(state.countries).map((country) => [country.id, country.cursor])
+      ),
+      state
+    };
+  }
+  function sameData(left, right) {
+    if (left === right) {
+      return true;
+    }
+    if (!left || !right || typeof left !== "object" || typeof right !== "object") {
+      return false;
+    }
+    const a = Object.entries(left);
+    const b = right;
+    return a.length === Object.keys(b).length && a.every(([key, value]) => Object.hasOwn(b, key) && sameData(value, b[key]));
+  }
+  function payload(registration) {
+    const { state, now, cursors, nonce } = registration;
+    const working = workingState(state, true);
+    delete working.instructions;
+    for (const event of working.events.ongoing) {
+      delete event.review;
+    }
+    return structuredClone({
+      version: 1,
+      status: "ready",
+      nonce,
+      now,
+      cursors,
+      state: working,
+      schema: external_exports.toJSONSchema(ProposalSchema, { io: "input" }),
+      history: {
+        complete: false,
+        since: null,
+        countries: Object.fromEntries(
+          Object.values(state.countries).map((country) => [
+            country.id,
+            {
+              progress: country.progress,
+              periods: country.period.history
+            }
+          ])
+        ),
+        events: state.events
+      }
+    });
+  }
+  var FocusIntegration = class {
+    constructor(read, changed = () => {
+    }) {
+      this.read = read;
+      this.changed = changed;
+    }
+    registration = null;
+    consumed = null;
+    sourceSignal;
+    owner = null;
+    epoch = 0;
+    pendingRequest = "";
+    sourceKey = "";
+    seenRequests = /* @__PURE__ */ new Set();
+    disposed = false;
+    current() {
+      return structuredClone(this.registration ?? this.consumed);
+    }
+    readSource(messageId) {
+      return integrationSource(this.read(messageId));
+    }
+    /** Accepted nonces are hidden from ordinary lookup, but retain a revocable retry checkpoint. */
+    consume(nonce) {
+      if (this.registration?.nonce === nonce) {
+        this.consumed = this.registration;
+        this.registration = null;
+      }
+    }
+    retry(nonce) {
+      if (this.consumed?.nonce !== nonce || this.owner || this.disposed) {
+        return null;
+      }
+      return this.validate(this.consumed);
+    }
+    invalidate(reason = "request_expired") {
+      this.epoch++;
+      this.registration = null;
+      this.consumed = null;
+      this.sourceSignal = void 0;
+      this.pendingRequest = "";
+      this.changed(reason);
+    }
+    dispose() {
+      this.disposed = true;
+      this.invalidate();
+      this.owner = null;
+      this.seenRequests.clear();
+    }
+    lookup(nonce) {
+      const registered = this.registration;
+      if (this.disposed || !registered || registered.nonce !== nonce) {
+        return null;
+      }
+      return this.validate(registered);
+    }
+    validate(registered) {
+      const source = this.readSource(registered.messageId);
+      if ("status" in source && source.reason === "mvu_busy") {
+        return null;
+      }
+      const {
+        nonce: _nonce,
+        requestId: _requestId,
+        registeredAt: _at,
+        world: _world,
+        ...expected
+      } = registered;
+      if (this.sourceSignal?.aborted || "status" in source || !sameData(source, expected)) {
+        this.invalidate();
+        return null;
+      }
+      return structuredClone(registered);
+    }
+    beginUpdate(mode) {
+      if (this.disposed) {
+        return { status: "unavailable", reason: "disposed" };
+      }
+      if (this.owner) {
+        return { status: "unavailable", reason: "update_busy" };
+      }
+      const registered = this.registration && this.lookup(this.registration.nonce);
+      if (mode === "scheduled" && registered) {
+        return { status: "waiting", nonce: registered.nonce };
+      }
+      this.invalidate("update_started");
+      this.owner = Symbol("focus-update");
+      return { status: "acquired", token: this.owner };
+    }
+    endUpdate(token) {
+      if (this.owner === token) {
+        this.owner = null;
+      }
+    }
+    async prepare(messageId, options = {}, writes = Promise.resolve()) {
+      if (this.disposed) {
+        return unavailable("disposed");
+      }
+      if (options.mode !== "request") {
+        return unavailable("preview");
+      }
+      const id = typeof options.requestId === "string" ? options.requestId.trim() : "";
+      if (!id) {
+        return unavailable("invalid_request");
+      }
+      if (this.owner) {
+        return unavailable("update_busy");
+      }
+      const input2 = this.read(messageId);
+      const signal = "signal" in input2 ? input2.signal : void 0;
+      const initial = integrationSource(input2);
+      if ("status" in initial) {
+        return initial;
+      }
+      const key = JSON.stringify([initial.chatId, initial.messageId, initial.swipeId]);
+      if (key !== this.sourceKey) {
+        this.invalidate();
+        this.sourceKey = key;
+        this.seenRequests.clear();
+      }
+      const registered = this.registration && this.lookup(this.registration.nonce);
+      if (registered?.requestId === id) {
+        return payload(registered);
+      }
+      if (this.pendingRequest !== id) {
+        if (this.seenRequests.has(id)) {
+          return unavailable("request_expired");
+        }
+        this.invalidate();
+        this.pendingRequest = id;
+        this.seenRequests.add(id);
+      }
+      const epoch = this.epoch;
+      await writes;
+      if (this.disposed) {
+        return unavailable("disposed");
+      }
+      if (this.owner) {
+        return unavailable("update_busy");
+      }
+      if (epoch !== this.epoch) {
+        return unavailable("request_expired");
+      }
+      const latestInput = this.read(messageId);
+      const current = integrationSource(latestInput);
+      if ("status" in current) {
+        this.invalidate();
+        return current;
+      }
+      if (signal?.aborted || !sameData(initial, current)) {
+        this.invalidate();
+        return unavailable("source_changed");
+      }
+      if (this.registration?.requestId === id) {
+        return payload(this.registration);
+      }
+      const next = {
+        ...current,
+        nonce: requestId("focus"),
+        requestId: id,
+        registeredAt: Date.now(),
+        world: "world" in latestInput ? structuredClone(latestInput.world) : void 0
+      };
+      const result = payload(next);
+      this.registration = next;
+      this.sourceSignal = signal;
+      this.pendingRequest = "";
+      this.changed();
+      return result;
+    }
+  };
+
+  // src/world-proposal.ts
+  var FOCUS_WORLD = "阿斯塔利亚";
+  var WORLD_FAMILY = "世界状态摘要@world";
+  var TaskSchema = external_exports.object({
+    id: external_exports.string(),
+    syncAsReplicaFamily: external_exports.boolean().optional(),
+    replicaFamilySpec: external_exports.string().optional(),
+    replicaFamilyRootId: external_exports.string().optional(),
+    replicaFamilyAttrValue: external_exports.string().optional()
+  });
+  var ResultSchema = external_exports.object({
+    taskId: external_exports.string(),
+    success: external_exports.boolean(),
+    skipped: external_exports.boolean().optional(),
+    skipReason: external_exports.string().optional(),
+    extractedTags: external_exports.record(external_exports.string(), external_exports.string()).optional()
+  });
+  var RunStatusSchema = external_exports.object({
+    messageId: external_exports.number(),
+    at: external_exports.number(),
+    taskResults: external_exports.array(ResultSchema)
+  });
+  function worldMember(settings) {
+    const parsed = external_exports.object({ tasks: external_exports.array(TaskSchema) }).safeParse(settings);
+    if (!parsed.success) {
+      return null;
+    }
+    const roots = parsed.data.tasks.filter(
+      (task) => task.syncAsReplicaFamily && task.replicaFamilySpec === WORLD_FAMILY && !task.replicaFamilyRootId
+    );
+    if (roots.length !== 1) {
+      return null;
+    }
+    const members2 = parsed.data.tasks.filter(
+      (task) => task.replicaFamilyRootId === roots[0].id && task.replicaFamilyAttrValue === FOCUS_WORLD
+    );
+    return members2.length === 1 ? { taskId: members2[0].id, rootId: roots[0].id } : null;
+  }
+  function worldFingerprint(value) {
+    if (value === void 0) {
+      return null;
+    }
+    const canonical = (item) => {
+      if (Array.isArray(item)) {
+        return item.map(canonical);
+      }
+      if (item && typeof item === "object") {
+        return Object.fromEntries(
+          Object.entries(item).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => [key, canonical(entry)])
+        );
+      }
+      return item;
+    };
+    const text2 = JSON.stringify(canonical(value));
+    let hash2 = 2166136261;
+    let second = 5381;
+    for (let i = 0; i < text2.length; i++) {
+      hash2 = Math.imul(hash2 ^ text2.charCodeAt(i), 16777619);
+      second = Math.imul(second, 33) ^ text2.charCodeAt(i);
+    }
+    return `${text2.length}:${hash2 >>> 0}:${second >>> 0}`;
+  }
+  function parseWorldProposal(raw) {
+    const matches = [...raw.matchAll(/<国策提案\s*>([\s\S]*?)<\/国策提案\s*>/g)];
+    let text2 = (matches.at(-1)?.[1] ?? raw).trim();
+    text2 = text2.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    let value;
+    try {
+      value = JSON.parse(text2);
+    } catch {
+      value = JSON.parse(JSON.parse(`"${text2.replace(/\r/g, "\\r").replace(/\n/g, "\\n")}"`));
+    }
+    if (typeof value === "string") {
+      value = JSON.parse(value);
+    }
+    const envelope = external_exports.object({ nonce: external_exports.string().trim().min(1), proposal: external_exports.unknown() }).parse(value);
+    return { nonce: envelope.nonce, proposal: ProposalSchema.parse(repairReply(envelope.proposal, "update")) };
+  }
+  function worldPath(path) {
+    return typeof path === "string" && [`/${FOCUS_WORLD}`, `/世界/${FOCUS_WORLD}`].some((root) => path === root || path.startsWith(`${root}/`));
+  }
+  function operationPath(op) {
+    if (!op || typeof op !== "object") {
+      return null;
+    }
+    const data = op;
+    return [data.path, data.from, data.to].find(worldPath) ?? null;
+  }
+  function worldEvidence(observation, registration, result) {
+    const log = external_exports.object({
+      messageId: external_exports.number(),
+      timestamp: external_exports.number(),
+      ops: external_exports.array(external_exports.unknown()),
+      issues: external_exports.array(external_exports.object({ kind: external_exports.string(), message: external_exports.string(), op: external_exports.unknown().optional() })),
+      failedFragments: external_exports.array(external_exports.object({ index: external_exports.number(), message: external_exports.string(), snippet: external_exports.string() }))
+    }).safeParse(observation.patchLog);
+    const patch = {
+      known: false,
+      operationCount: null,
+      issues: [],
+      failedFragments: [],
+      unassigned: 0
+    };
+    if (log.success && log.data.messageId === registration.messageId && log.data.timestamp >= registration.registeredAt) {
+      patch.known = true;
+      patch.operationCount = log.data.ops.filter((op) => operationPath(op)).length;
+      for (const issue2 of log.data.issues) {
+        const path = operationPath(issue2.op);
+        if (path) {
+          patch.issues.push({ kind: issue2.kind, message: issue2.message.slice(0, 500), path });
+        } else if (!issue2.op) {
+          patch.unassigned++;
+        }
+      }
+      for (const fragment of log.data.failedFragments) {
+        try {
+          const op = JSON.parse(fragment.snippet);
+          if (operationPath(op)) {
+            patch.failedFragments.push({ index: fragment.index, message: fragment.message.slice(0, 500) });
+          } else {
+            patch.unassigned++;
+          }
+        } catch {
+          patch.unassigned++;
+        }
+      }
+    }
+    return {
+      ...observation.member,
+      at: observation.run.at,
+      success: result.success,
+      skipped: result.skipped === true,
+      skipReason: result.skipReason?.slice(0, 500),
+      changed: registration.world?.fingerprint != null && observation.fingerprint != null ? registration.world.fingerprint !== observation.fingerprint : null,
+      patch
+    };
+  }
+
+  // src/world-schedule.ts
+  var PREDICTION_WAIT_MS = 1e4;
+  var units = {
+    minute: 6e4,
+    hour: 36e5,
+    day: 864e5,
+    week: 6048e5,
+    month: 31 * 864e5,
+    year: 372 * 864e5
+  };
+  var ScheduleSchema = external_exports.object({
+    mode: external_exports.enum(["round", "time"]).optional(),
+    timeInterval: external_exports.object({
+      enabled: external_exports.boolean().optional(),
+      value: external_exports.number().positive(),
+      unit: external_exports.enum(["minute", "hour", "day", "week", "month", "year"]),
+      timeSource: external_exports.unknown()
+    })
+  });
+  function calendarTime(raw) {
+    if (typeof raw !== "string") {
+      return null;
+    }
+    const text2 = raw.split(" @")[0].trim();
+    const match = /^复兴纪元(\d{1,6})年-(\d{1,2})月-(\d{1,2})日-星期[一二三四五六日天]-(\d{1,2}):(\d{2})$/.exec(
+      text2
+    );
+    if (!match) {
+      return null;
+    }
+    const [, year, month, day, hour, minute] = match.map(Number);
+    if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) {
+      return null;
+    }
+    return (((year * 372 + (month - 1) * 31 + day - 1) * 24 + hour) * 60 + minute) * 6e4;
+  }
+  function predictWorldSchedule(settings, chatKey, content) {
+    const member = worldMember(settings);
+    if (!member) {
+      return { status: "unknown", reason: "member_unknown" };
+    }
+    const root = settings;
+    const task = root.tasks.find((entry) => entry.id === member.taskId);
+    if (root.enabled === false || task.enabled === false) {
+      return { status: "not_due", reason: "disabled", member };
+    }
+    const parsed = ScheduleSchema.safeParse(task.schedule);
+    if (task.enabled !== true || !parsed.success || (parsed.data.mode ?? (parsed.data.timeInterval.enabled ? "time" : "round")) !== "time") {
+      return { status: "unknown", reason: "unsupported_schedule", member };
+    }
+    const interval = parsed.data.timeInterval;
+    const source = external_exports.object({
+      type: external_exports.literal("message_tag"),
+      scope: external_exports.literal("current_ai"),
+      tagNames: external_exports.tuple([external_exports.literal("tp")])
+    }).safeParse(interval.timeSource);
+    if (!source.success) {
+      return { status: "unknown", reason: "unsupported_source", member };
+    }
+    const raw = [...content.matchAll(/<tp\s*>([\s\S]*?)<\/tp\s*>/g)].at(-1)?.[1];
+    const now = calendarTime(raw);
+    if (now === null) {
+      return { status: "unknown", reason: "invalid_time", member };
+    }
+    const state = root.scheduleState?.[task.id];
+    if (state === void 0) {
+      return { status: "due", reason: "first_run", member };
+    }
+    const anchor2 = external_exports.object({
+      lastRunChatKey: external_exports.string().optional(),
+      lastRunGameTimeRaw: external_exports.string().optional(),
+      lastRunGameTimeMs: external_exports.number().optional()
+    }).safeParse(state);
+    if (!anchor2.success) {
+      return { status: "unknown", reason: "unknown_anchor", member };
+    }
+    if (chatKey.trim() && anchor2.data.lastRunChatKey?.trim() !== chatKey.trim()) {
+      return { status: "due", reason: "different_chat", member };
+    }
+    const previous2 = calendarTime(anchor2.data.lastRunGameTimeRaw);
+    if (previous2 === null) {
+      if (anchor2.data.lastRunGameTimeRaw || anchor2.data.lastRunGameTimeMs !== void 0) {
+        return { status: "unknown", reason: "unknown_anchor", member };
+      }
+      return { status: "due", reason: "first_run", member };
+    }
+    const elapsed2 = now - previous2;
+    if (elapsed2 < 0) {
+      return { status: "due", reason: "time_regressed", member };
+    }
+    const due = elapsed2 >= interval.value * units[interval.unit];
+    return { status: due ? "due" : "not_due", reason: due ? "interval_due" : "interval_pending", member };
+  }
+
   // src/workflow.ts
   function taskData(snapshot, full) {
     return { now: snapshot.day, state: workingState(snapshot.state, full), context: snapshot.context };
   }
+  function scheduledDue(job, snapshot, kind) {
+    const last = snapshot.state.schedules[kind];
+    return job.schedule === "reply" ? last?.turn !== snapshot.turn : job.schedule === "rounds" ? !last || snapshot.turn - last.turn >= job.interval : job.schedule === "days" ? !last || snapshot.day - last.day >= job.interval : false;
+  }
+  var ProposalBlocked = class extends Error {
+    constructor(reason, detail) {
+      super(reason);
+      this.reason = reason;
+      this.detail = detail;
+    }
+  };
   var FocusController = class {
     constructor(platform) {
       this.platform = platform;
       this.config = ConfigSchema.parse(platform.loadConfig());
+      this.integration = new FocusIntegration(
+        (messageId) => platform.readIntegration?.(messageId, this.config) ?? unavailable("unsupported"),
+        (reason) => {
+          if (this.review && this.integration.current()?.nonce !== this.review.registration.nonce) {
+            this.proposalPeriods?.abort();
+            this.setProposalState({
+              ...this.reception,
+              status: "expired",
+              reason: reason ?? "request_expired"
+            });
+            this.review = null;
+          }
+          this.pollPredictionWait();
+          this.notify();
+        }
+      );
     }
     config;
+    integration;
     state = null;
     candidates = [];
     jobs = [];
@@ -31299,6 +31822,20 @@ ${managed}
     pendingReady = false;
     disposed = false;
     stops = [];
+    reception = { status: "none" };
+    diagnostics = [];
+    review = null;
+    accepting = null;
+    overwriteTicks = 0;
+    proposalPeriods = null;
+    rollback = null;
+    acceptedCheckpoint = null;
+    coordination = { status: "idle" };
+    coordinationEpoch = 0;
+    yieldedSource = "";
+    waitFloor = "";
+    waitedSources = /* @__PURE__ */ new Set();
+    predictionWait = null;
     subscribe(callback) {
       this.listeners.add(callback);
       return () => this.listeners.delete(callback);
@@ -31312,6 +31849,21 @@ ${managed}
       }
     }
     async initialize() {
+      const stopTick = this.platform.onIntegrationTick?.(() => {
+        this.pollPredictionWait();
+        this.refreshProposal();
+      });
+      if (stopTick) {
+        this.stops.push(stopTick);
+      }
+      const unbind = this.platform.bindIntegration?.({
+        version: 1,
+        prepare: (messageId, options) => this.integration.prepare(messageId, options, this.writes),
+        lookup: (nonce) => this.integration.lookup(nonce)
+      });
+      if (unbind) {
+        this.stops.push(unbind);
+      }
       this.stops.push(
         this.platform.onReady(() => {
           this.cancelAll();
@@ -31334,6 +31886,12 @@ ${managed}
       );
       this.stops.push(
         this.platform.onChange(() => {
+          this.dismissRollback();
+          this.waitFloor = "";
+          this.waitedSources.clear();
+          this.yieldedSource = "";
+          this.setCoordination({ status: "idle" });
+          this.integration.invalidate();
           this.cancelAll();
           this.pendingReady = false;
           this.candidates = [];
@@ -31347,6 +31905,7 @@ ${managed}
         return;
       }
       this.disposed = true;
+      this.integration.dispose();
       this.pendingReady = false;
       this.cancelAll();
       for (const stop of this.stops) {
@@ -31390,12 +31949,356 @@ ${managed}
         const snapshot = await this.platform.read(this.config);
         checkCancelled();
         const next = operation(snapshot);
+        if (next === null) {
+          return snapshot.state;
+        }
         await this.platform.commit(snapshot, next);
         return next;
       });
       this.writes = save.catch(() => {
       });
       return save;
+    }
+    /** Commit a parsed update; only the first saved receipt returns work for the next period. */
+    async commitUpdate(proposal, source, signal, verifyExternal) {
+      if (proposal.until !== source.day) {
+        throw new Error("更新终点必须等于来源故事时间");
+      }
+      const periods = [];
+      const state = await this.writeState((current) => {
+        source.signal?.throwIfAborted();
+        verifyExternal?.();
+        if (current.state.receipts.includes(proposal.id)) {
+          return null;
+        }
+        const next = this.proposedState("update", current, proposal);
+        next.schedules.update = { turn: source.turn, day: source.day };
+        for (const transition of proposal.transitions) {
+          const country = next.countries[transition.country];
+          if (!country.enabled || !country.autoPeriod || country.calibration) {
+            continue;
+          }
+          periods.push({
+            candidate: {
+              id: country.id,
+              name: country.name,
+              description: country.description,
+              evidence: country.evidence
+            },
+            work: { transition }
+          });
+        }
+        return next;
+      }, signal ?? source.signal);
+      return { state, periods };
+    }
+    get externalProposal() {
+      return structuredClone(this.reception);
+    }
+    get proposalDiagnostics() {
+      return structuredClone(this.diagnostics);
+    }
+    clearProposalDiagnostics() {
+      this.diagnostics = [];
+      this.notify();
+    }
+    setProposalState(state) {
+      if (sameData(this.reception, state)) {
+        return;
+      }
+      this.reception = structuredClone(state);
+      this.diagnostics.unshift({
+        at: Date.now(),
+        status: state.status,
+        reason: state.reason,
+        detail: state.detail,
+        source: structuredClone(state.source),
+        proposalId: state.proposal?.id,
+        evidence: structuredClone(state.evidence)
+      });
+      this.diagnostics = this.diagnostics.slice(0, 60);
+      this.notify();
+    }
+    proposalCandidate(registration) {
+      const source = this.integration.readSource(registration.messageId);
+      if ("status" in source) {
+        throw new ProposalBlocked(source.reason);
+      }
+      const observation = this.platform.readWorldProposal?.(registration.messageId);
+      if (!observation) {
+        throw new ProposalBlocked("workflow_unknown");
+      }
+      const { world } = registration;
+      if (!world || !observation.member || world.taskId !== observation.member.taskId || world.rootId !== observation.member.rootId) {
+        throw new ProposalBlocked("member_mismatch");
+      }
+      const run = observation.run;
+      if (!run || run.messageId !== registration.messageId || run.at < registration.registeredAt) {
+        throw new ProposalBlocked("waiting_workflow");
+      }
+      const results = run.taskResults.filter((result2) => result2.taskId === world.taskId);
+      if (results.length !== 1) {
+        throw new ProposalBlocked("waiting_workflow");
+      }
+      const result = results[0];
+      const evidence = worldEvidence(observation, registration, result);
+      this.reception.evidence = structuredClone(evidence);
+      if (result.skipped) {
+        throw new ProposalBlocked("world_skipped");
+      }
+      if (!result.success) {
+        throw new ProposalBlocked("world_failed");
+      }
+      if (evidence.patch.issues.some((issue2) => issue2.kind !== "heal") || evidence.patch.failedFragments.length) {
+        throw new ProposalBlocked("world_patch_failed");
+      }
+      const raw = result.extractedTags?.["国策提案"];
+      if (!raw?.trim()) {
+        throw new ProposalBlocked("missing_proposal");
+      }
+      let parsed;
+      try {
+        parsed = parseWorldProposal(raw);
+      } catch (error62) {
+        throw new ProposalBlocked(
+          "invalid_proposal",
+          error62 instanceof Error ? error62.message.slice(0, 1e3) : void 0
+        );
+      }
+      if (parsed.nonce !== registration.nonce) {
+        throw new ProposalBlocked("nonce_mismatch");
+      }
+      if (parsed.proposal.until !== registration.now) {
+        throw new ProposalBlocked("until_mismatch");
+      }
+      const snapshot = {
+        identity: "",
+        messageId: registration.messageId,
+        day: registration.now,
+        turn: 0,
+        state: source.state,
+        context: {}
+      };
+      let preview;
+      try {
+        preview = this.proposedState("update", snapshot, parsed.proposal);
+      } catch (error62) {
+        throw new ProposalBlocked(
+          "invalid_rules",
+          error62 instanceof Error ? error62.message.slice(0, 1e3) : void 0
+        );
+      }
+      return {
+        registration,
+        proposal: parsed.proposal,
+        preview,
+        evidence,
+        evidenceKey: JSON.stringify({ at: run.at, raw, evidence, fingerprint: observation.fingerprint })
+      };
+    }
+    blockProposal(reason, detail) {
+      const waiting = ["waiting_workflow", "mvu_busy", "update_busy"].includes(reason);
+      const expired = [
+        "source_changed",
+        "not_latest",
+        "not_assistant",
+        "request_expired",
+        "preview_changed",
+        "invalid_time"
+      ].includes(reason);
+      const unavailable2 = [
+        "workflow_unknown",
+        "missing_proposal",
+        "invalid_proposal",
+        "read_failed",
+        "mvu_unavailable"
+      ].includes(reason);
+      const state = {
+        ...this.reception,
+        status: waiting ? "waiting" : expired ? "expired" : unavailable2 ? "unavailable" : "rejected",
+        reason,
+        detail
+      };
+      const unpaired = [
+        "workflow_unknown",
+        "nonce_mismatch",
+        "missing_proposal",
+        "invalid_proposal",
+        "world_failed",
+        "world_skipped",
+        "world_patch_failed"
+      ].includes(reason);
+      if (!waiting && !unpaired) {
+        this.proposalPeriods?.abort();
+        this.review = null;
+        this.integration.invalidate();
+      }
+      this.setProposalState(state);
+    }
+    /** Called by the existing platform timer, and available for the review panel's refresh button. */
+    refreshProposal() {
+      if (this.disposed || this.accepting) {
+        return;
+      }
+      this.observeRollback();
+      if (this.reception.status === "accepted" && this.overwriteTicks <= 0) {
+        return;
+      }
+      const registration = this.integration.current();
+      if (!registration) {
+        return;
+      }
+      if (this.reception.status === "accepted") {
+        if (this.overwriteTicks <= 0 || !this.review) {
+          return;
+        }
+        const source2 = this.integration.readSource(registration.messageId);
+        if ("status" in source2) {
+          if (source2.reason !== "mvu_busy") {
+            this.blockProposal(source2.reason);
+          }
+          return;
+        }
+        this.overwriteTicks--;
+        if (source2.chatId !== registration.chatId || source2.swipeId !== registration.swipeId || source2.now !== registration.now) {
+          this.blockProposal("source_changed");
+        } else if (!source2.state.receipts.includes(this.review.proposal.id)) {
+          this.proposalPeriods?.abort();
+          if (sameData(source2.state, registration.state)) {
+            this.setProposalState({ ...this.reception, status: "overwritten", reason: "overwritten" });
+          } else {
+            this.blockProposal("preview_changed");
+          }
+        }
+        return;
+      }
+      if (this.reception.status === "overwritten") {
+        const current = this.integration.readSource(registration.messageId);
+        if ("status" in current && current.reason === "mvu_busy") {
+          return;
+        }
+        if (!this.integration.retry(registration.nonce)) {
+          this.blockProposal("preview_changed");
+        }
+        return;
+      }
+      const source = {
+        chatId: registration.chatId,
+        messageId: registration.messageId,
+        swipeId: registration.swipeId,
+        now: registration.now,
+        nonce: registration.nonce
+      };
+      if (this.reception.source?.nonce !== registration.nonce) {
+        this.setProposalState({ status: "waiting", reason: "waiting_workflow", source });
+      }
+      try {
+        const input2 = this.integration.readSource(registration.messageId);
+        if ("status" in input2) {
+          throw new ProposalBlocked(input2.reason);
+        }
+        if (!this.integration.lookup(registration.nonce)) {
+          throw new ProposalBlocked("source_changed");
+        }
+        const candidate = this.proposalCandidate(registration);
+        if (this.review && candidate.evidenceKey !== this.review.evidenceKey) {
+          throw new ProposalBlocked("preview_changed");
+        }
+        this.review = candidate;
+        this.setProposalState({
+          status: "pending",
+          source,
+          proposal: candidate.proposal,
+          preview: candidate.preview,
+          evidence: candidate.evidence
+        });
+      } catch (error62) {
+        this.blockProposal(
+          error62 instanceof ProposalBlocked ? error62.reason : "read_failed",
+          error62 instanceof ProposalBlocked ? error62.detail : void 0
+        );
+      }
+    }
+    reject() {
+      if (this.accepting || !["pending", "waiting", "overwritten"].includes(this.reception.status)) {
+        return;
+      }
+      this.review = null;
+      this.integration.invalidate();
+      this.setProposalState({ ...this.reception, status: "rejected", reason: "user_rejected" });
+    }
+    accept() {
+      if (this.accepting) {
+        return this.accepting;
+      }
+      if (!this.review || !["pending", "overwritten"].includes(this.reception.status)) {
+        return Promise.resolve(false);
+      }
+      const review = this.review;
+      const retry = this.reception.status === "overwritten";
+      const verify = () => {
+        const source = this.integration.readSource(review.registration.messageId);
+        if ("status" in source) {
+          throw new ProposalBlocked(source.reason);
+        }
+        const registered = retry ? this.integration.retry(review.registration.nonce) : this.integration.lookup(review.registration.nonce);
+        if (!registered) {
+          throw new ProposalBlocked("preview_changed");
+        }
+        const candidate = this.proposalCandidate(registered);
+        if (candidate.evidenceKey !== review.evidenceKey || !sameData(candidate.preview, review.preview)) {
+          throw new ProposalBlocked("preview_changed");
+        }
+      };
+      this.accepting = (async () => {
+        try {
+          verify();
+          const snapshot = await this.platform.read(this.config);
+          verify();
+          const committed = await this.commitUpdate(review.proposal, snapshot, snapshot.signal, verify);
+          if (this.integration.current()?.nonce !== review.registration.nonce) {
+            throw new ProposalBlocked("request_expired");
+          }
+          this.integration.consume(review.registration.nonce);
+          this.acceptedCheckpoint = review.registration.state.receipts.includes(review.proposal.id) ? null : {
+            source: {
+              chatId: review.registration.chatId,
+              messageId: review.registration.messageId,
+              swipeId: review.registration.swipeId
+            },
+            proposalId: review.proposal.id,
+            before: worldFingerprint(review.registration.state)
+          };
+          this.rollback = null;
+          if (this.coordination.status === "proposal_wait") {
+            this.setCoordination({ ...this.coordination, status: "idle" });
+          }
+          this.state = committed.state;
+          this.overwriteTicks = 10;
+          this.setProposalState({ ...this.reception, status: "accepted", reason: void 0 });
+          this.proposalPeriods?.abort();
+          const periods = new AbortController();
+          this.proposalPeriods = periods;
+          for (const period of committed.periods) {
+            void this.run("generate", period.candidate, period.work, {
+              signal: periods.signal,
+              receipt: review.proposal.id
+            });
+          }
+          return true;
+        } catch (error62) {
+          const reason = error62 instanceof ProposalBlocked ? error62.reason : "save_failed";
+          if (retry && ["mvu_busy", "workflow_unknown", "waiting_workflow"].includes(reason)) {
+            this.setProposalState({ ...this.reception, status: "overwritten", reason });
+          } else {
+            this.blockProposal(reason, error62 instanceof ProposalBlocked ? error62.detail : void 0);
+          }
+          return false;
+        }
+      })().finally(() => {
+        this.accepting = null;
+      });
+      return this.accepting;
     }
     async mutate(operation, changesTimeline = false) {
       if (this.disposed) {
@@ -31426,6 +32329,7 @@ ${managed}
         }
       }
       this.platform.saveConfig(parsed);
+      this.integration.invalidate();
       this.cancelAll();
       this.config = parsed;
       this.pools.clear();
@@ -31441,6 +32345,8 @@ ${managed}
       this.aborters.get(id)?.abort();
     }
     cancelAll() {
+      this.coordinationEpoch++;
+      this.finishPredictionWait(false, "cancelled");
       this.runEpoch++;
       this.progress.clear();
       for (const aborter of this.aborters.values()) {
@@ -31449,6 +32355,7 @@ ${managed}
     }
     async runScheduled() {
       const epoch = this.runEpoch;
+      const coordinationEpoch = this.coordinationEpoch;
       for (const kind of ["identify", "update", "reshape"]) {
         if (this.disposed || epoch !== this.runEpoch) {
           return;
@@ -31461,12 +32368,195 @@ ${managed}
         if (this.disposed || epoch !== this.runEpoch) {
           return;
         }
-        const last = snapshot.state.schedules[kind];
-        const due = job.schedule === "reply" ? last?.turn !== snapshot.turn : job.schedule === "rounds" ? !last || snapshot.turn - last.turn >= job.interval : job.schedule === "days" ? !last || snapshot.day - last.day >= job.interval : false;
+        const due = scheduledDue(job, snapshot, kind);
         if (due && (kind === "identify" || Object.values(snapshot.state.countries).some((c) => c.enabled))) {
-          await this.run(kind);
+          if (kind === "update") {
+            await this.scheduledUpdate(snapshot, epoch, coordinationEpoch);
+          } else {
+            await this.run(kind);
+          }
         }
       }
+    }
+    get rollbackNotice() {
+      return structuredClone(this.rollback);
+    }
+    dismissRollback() {
+      this.rollback = null;
+      this.acceptedCheckpoint = null;
+      this.notify();
+    }
+    observeRollback() {
+      const checkpoint = this.acceptedCheckpoint;
+      if (!checkpoint) {
+        return;
+      }
+      const source = this.integration.readSource(checkpoint.source.messageId);
+      if ("status" in source) {
+        if (source.reason === "not_latest" || source.reason === "not_assistant") {
+          this.dismissRollback();
+        }
+        return;
+      }
+      const identity = { chatId: source.chatId, messageId: source.messageId, swipeId: source.swipeId };
+      if (!sameData(identity, checkpoint.source)) {
+        this.dismissRollback();
+        return;
+      }
+      if (this.rollback) {
+        return;
+      }
+      const receiptMissing = !source.state.receipts.includes(checkpoint.proposalId);
+      if (!receiptMissing) {
+        return;
+      }
+      const returnedToBefore = worldFingerprint(source.state) === checkpoint.before;
+      if (receiptMissing || returnedToBefore) {
+        this.rollback = {
+          ...identity,
+          proposalId: checkpoint.proposalId,
+          detectedAt: Date.now(),
+          receiptMissing,
+          returnedToBefore
+        };
+        this.notify();
+      }
+    }
+    get scheduleCoordination() {
+      return structuredClone(this.coordination);
+    }
+    scheduleIdentity(source) {
+      return JSON.stringify([source.chatId, source.messageId, source.swipeId]);
+    }
+    setCoordination(state) {
+      this.coordination = state;
+      this.notify();
+    }
+    finishPredictionWait(proceed, reason) {
+      const wait = this.predictionWait;
+      if (!wait) {
+        return;
+      }
+      clearTimeout(wait.timer);
+      this.predictionWait = null;
+      this.setCoordination({ ...this.coordination, status: proceed ? "idle" : "cancelled", reason });
+      wait.finish(proceed);
+    }
+    pollPredictionWait() {
+      const currentSource = this.platform.readScheduleSource?.();
+      if (currentSource && this.coordination.source && this.scheduleIdentity(currentSource) !== this.scheduleIdentity({ ...this.coordination.source, content: "" })) {
+        this.yieldedSource = "";
+        this.finishPredictionWait(false, "source_changed");
+        this.setCoordination({ status: "idle" });
+      }
+      const wait = this.predictionWait;
+      if (!wait) {
+        return;
+      }
+      if (!sameData(currentSource, wait.source)) {
+        this.finishPredictionWait(false, "source_changed");
+        return;
+      }
+      const registration = this.integration.current();
+      if (registration && this.integration.lookup(registration.nonce)) {
+        this.finishPredictionWait(true, "nonce");
+        return;
+      }
+      const run = this.platform.readWorldProposal?.(wait.source.messageId)?.run;
+      if (run && run.messageId === wait.source.messageId && run.at >= wait.startedAt && run.at > wait.previousAt) {
+        const result = run.taskResults.find((item) => item.taskId === wait.taskId);
+        if (result && (result.skipped || !result.extractedTags?.["国策提案"]?.trim())) {
+          this.finishPredictionWait(true, "result");
+        }
+      }
+    }
+    async scheduledUpdate(snapshot, epoch, coordinationEpoch) {
+      if (this.predictionWait || coordinationEpoch !== this.coordinationEpoch) {
+        return;
+      }
+      const observed = this.platform.readScheduleSource?.();
+      if (this.platform.readScheduleSource && (!observed || observed.messageId !== snapshot.messageId)) {
+        this.setCoordination({ status: "cancelled", reason: "source_changed" });
+        return;
+      }
+      const source = observed ?? {
+        chatId: this.platform.chatId(),
+        messageId: snapshot.messageId,
+        swipeId: 0,
+        content: ""
+      };
+      const floor = this.scheduleIdentity(source);
+      if (this.waitFloor !== floor) {
+        this.waitFloor = floor;
+        this.waitedSources.clear();
+        this.yieldedSource = "";
+      }
+      const yieldToProposal = () => {
+        const registration = this.integration.current();
+        const valid = registration && this.integration.lookup(registration.nonce);
+        if (valid || this.yieldedSource === floor) {
+          this.yieldedSource = floor;
+          const { content: _content2, ...identity2 } = source;
+          this.setCoordination({ status: "proposal_wait", source: identity2, reason: "nonce" });
+          this.refreshProposal();
+          return true;
+        }
+        return false;
+      };
+      if (yieldToProposal()) {
+        return;
+      }
+      const prediction = this.platform.predictWorldSchedule?.(source) ?? {
+        status: "unknown",
+        reason: "unavailable"
+      };
+      const key = JSON.stringify([source, snapshot.day, worldFingerprint(snapshot.state)]);
+      const { content: _content, ...identity } = source;
+      this.setCoordination({ status: "idle", source: identity, prediction });
+      if (prediction.status === "due" && prediction.member && this.platform.readScheduleSource && !this.waitedSources.has(key)) {
+        this.waitedSources.add(key);
+        const startedAt = Date.now();
+        const previousAt = this.platform.readWorldProposal?.(source.messageId)?.run?.at ?? -1;
+        const proceed = await new Promise((finish) => {
+          const timer = setTimeout(() => {
+            this.pollPredictionWait();
+            this.finishPredictionWait(true, "timeout");
+          }, PREDICTION_WAIT_MS);
+          this.predictionWait = {
+            source,
+            startedAt,
+            previousAt,
+            taskId: prediction.member.taskId,
+            timer,
+            finish
+          };
+          this.setCoordination({
+            status: "prediction_wait",
+            source: identity,
+            prediction,
+            startedAt,
+            deadline: startedAt + PREDICTION_WAIT_MS
+          });
+        });
+        if (!proceed || this.disposed || epoch !== this.runEpoch || coordinationEpoch !== this.coordinationEpoch) {
+          return;
+        }
+        if (yieldToProposal()) {
+          return;
+        }
+        const current = await this.platform.read(this.config);
+        if (this.disposed || epoch !== this.runEpoch || coordinationEpoch !== this.coordinationEpoch || current.identity !== snapshot.identity || current.day !== snapshot.day || !sameData(this.platform.readScheduleSource(), source)) {
+          this.setCoordination({ ...this.coordination, status: "cancelled", reason: "source_changed" });
+          return;
+        }
+        const job = this.config.jobs.update;
+        const due = scheduledDue(job, current, "update");
+        if (!due || !Object.values(current.state.countries).some((country) => country.enabled)) {
+          this.setCoordination({ ...this.coordination, status: "idle", reason: "not_due" });
+          return;
+        }
+      }
+      await this.runTask("update", void 0, void 0, void 0, "scheduled");
     }
     /**
      * Delete a country's tree from the current floor. The country goes back to the candidates, so
@@ -31508,7 +32598,16 @@ ${managed}
     async enable(candidates) {
       await Promise.all(candidates.map((candidate) => this.run("generate", candidate)));
     }
-    async run(kind, candidate, periodWork) {
+    async run(kind, candidate, periodWork, externalPeriod) {
+      if (kind === "update") {
+        this.coordinationEpoch++;
+        this.finishPredictionWait(false, "manual");
+        this.yieldedSource = "";
+        this.setCoordination({ ...this.coordination, status: "idle", reason: "manual" });
+      }
+      await this.runTask(kind, candidate, periodWork, externalPeriod, "manual");
+    }
+    async runTask(kind, candidate, periodWork, externalPeriod, mode = "manual") {
       if (this.disposed) {
         return;
       }
@@ -31517,8 +32616,31 @@ ${managed}
       )) {
         return;
       }
+      const access = kind === "update" ? this.integration.beginUpdate(mode) : void 0;
+      if (access && access.status !== "acquired") {
+        if (access.status === "waiting") {
+          this.yieldedSource = this.waitFloor;
+          this.setCoordination({ ...this.coordination, status: "proposal_wait", reason: "nonce" });
+          this.refreshProposal();
+        }
+        return;
+      }
+      if (kind === "update" && mode === "scheduled") {
+        this.setCoordination({ ...this.coordination, status: "running" });
+      }
+      const releaseUpdate = () => {
+        if (access?.status === "acquired") {
+          this.integration.endUpdate(access.token);
+        }
+      };
       const id = requestId("job");
       const aborter = new AbortController();
+      const cancelPeriod = () => aborter.abort();
+      externalPeriod?.signal.addEventListener("abort", cancelPeriod, { once: true });
+      if (externalPeriod?.signal.aborted) {
+        aborter.abort();
+      }
+      aborter.signal.addEventListener("abort", releaseUpdate, { once: true });
       const status = {
         id,
         kind,
@@ -31542,6 +32664,9 @@ ${managed}
         status.message = "正在分析本楼资料";
         this.notify();
         const snapshot = await this.platform.read(this.config, kind);
+        if (externalPeriod && !snapshot.state.receipts.includes(externalPeriod.receipt)) {
+          throw new Error("外部提案的保存记录已失效");
+        }
         sourceSignal = snapshot.signal;
         sourceSignal?.addEventListener("abort", cancelSource, { once: true });
         if (sourceSignal?.aborted) {
@@ -31649,32 +32774,23 @@ ${managed}
           }
         );
         aborter.signal.throwIfAborted();
-        const next = await this.writeState((current) => {
-          const state = periodWork ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result)) : this.proposedState(kind, current, result, candidate);
-          if (structure && state.countries[candidate.id]) {
-            state.countries[candidate.id].shape = structure;
-          }
-          state.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
-          return state;
-        }, aborter.signal);
-        if (kind === "update" && !snapshot.state.receipts.includes(ProposalSchema.parse(result).id)) {
-          for (const transition of ProposalSchema.parse(result).transitions) {
-            const country = next.countries[transition.country];
-            if (!country.enabled || !country.autoPeriod || country.calibration) {
-              continue;
+        let next;
+        if (kind === "update") {
+          const committed = await this.commitUpdate(ProposalSchema.parse(result), snapshot, aborter.signal);
+          next = committed.state;
+          periods.push(...committed.periods);
+        } else {
+          next = await this.writeState((current) => {
+            if (externalPeriod && !current.state.receipts.includes(externalPeriod.receipt)) {
+              throw new Error("外部提案的保存记录已失效");
             }
-            periods.push({
-              candidate: {
-                id: country.id,
-                name: country.name,
-                description: country.description,
-                evidence: country.evidence
-              },
-              work: {
-                transition
-              }
-            });
-          }
+            const state = periodWork ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result)) : this.proposedState(kind, current, result, candidate);
+            if (structure && state.countries[candidate.id]) {
+              state.countries[candidate.id].shape = structure;
+            }
+            state.schedules[kind] = { turn: snapshot.turn, day: snapshot.day };
+            return state;
+          }, aborter.signal);
         }
         if (kind === "identify") {
           this.candidates = candidateKeys(CandidatesSchema.parse(result).countries, next);
@@ -31690,6 +32806,12 @@ ${managed}
         status.state = aborter.signal.aborted || error62 instanceof Error && error62.name === "AbortError" ? "cancelled" : "failed";
         status.message = status.state === "cancelled" ? "已取消，未套用结果" : `未提交：${message.slice(0, 1500)}`;
       } finally {
+        if (kind === "update" && mode === "scheduled" && this.coordination.status === "running") {
+          this.setCoordination({ ...this.coordination, status: "idle" });
+        }
+        externalPeriod?.signal.removeEventListener("abort", cancelPeriod);
+        releaseUpdate();
+        aborter.signal.removeEventListener("abort", releaseUpdate);
         sourceSignal?.removeEventListener("abort", cancelSource);
         status.finished = Date.now();
         this.aborters.delete(id);
@@ -31715,9 +32837,9 @@ ${managed}
       return config2.apis.find((api) => api.name === name)?.segmentMax ?? defaultSegmentMax;
     }
     /** Final messages: the rendered chain with the data item's {{data}} replaced by the payload. */
-    messages(kind, prompts, payload, config2 = this.config) {
+    messages(kind, prompts, payload2, config2 = this.config) {
       const chain = prompts ?? config2.jobs[kind].prompts.filter((item) => item.enabled || item.kind === "data").map((item) => ({ ...item, content: promptText(item, kind) }));
-      const json2 = JSON.stringify(payload);
+      const json2 = JSON.stringify(payload2);
       return chain.map((item) => ({
         role: item.role,
         name: item.name,
@@ -31805,8 +32927,8 @@ ${json2}`
       status.message = stageMessage;
       this.notify();
       const index = chain.indexOf(first);
-      const order = [...chain.slice(index), ...chain.slice(0, index)];
-      for (const [position, route] of order.entries()) {
+      const order2 = [...chain.slice(index), ...chain.slice(0, index)];
+      for (const [position, route] of order2.entries()) {
         const held = position === 0 ? first : await pool.acquire([route], signal);
         try {
           const api = this.config.apis.find((a) => a.name === route);
@@ -32069,8 +33191,8 @@ ${pub}` : auth || pub;
     load() {
       return parseSecrets(this.bucket()?.secrets) ?? parseSecrets(this.mirror);
     }
-    save(payload) {
-      const text2 = JSON.stringify(payload);
+    save(payload2) {
+      const text2 = JSON.stringify(payload2);
       const bucket = this.bucket();
       if (bucket && bucket.secrets !== text2) {
         bucket.secrets = text2;
@@ -32591,6 +33713,7 @@ ${details.join("\n\n")}
           this.mvuBusy = true;
         });
         listen(api.Mvu.events.VARIABLE_UPDATE_ENDED, (after, before) => {
+          this.mvuBusy = false;
           const saved = before?.国策 !== void 0 ? before.国策 : before?.stat_data?.国策;
           if (saved !== void 0) {
             after.国策 = structuredClone(saved);
@@ -32601,8 +33724,8 @@ ${details.join("\n\n")}
           if (this.writing) {
             return;
           }
-          const message = this.current();
-          if (message && (this.generating || this.pending?.received || this.pending?.ended) && context?.message_content === message.swipes[message.swipe_id]) {
+          const message = this.api.getChatMessages(-1)[0];
+          if (message && (this.generating || this.pending?.received || this.pending?.ended) && context?.message_content === (message.message ?? message.swipes[message.swipe_id])) {
             const item = this.pendingForCurrent();
             if (item) {
               item.mvu = true;
@@ -32612,8 +33735,18 @@ ${details.join("\n\n")}
         });
       };
       bindMvu();
+      for (const event of ["MESSAGE_EDITED", "MESSAGE_UPDATED"]) {
+        listen(api.tavern_events[event], () => {
+          for (const callback of this.integrationListeners) {
+            callback();
+          }
+        });
+      }
       this.timer = setInterval(() => {
         bindMvu();
+        for (const callback of this.integrationListeners) {
+          callback();
+        }
         const pending = this.pending;
         if (!pending || this.writing || this.generating || this.mvuBusy || api.Mvu?.isDuringExtraAnalysis()) {
           return;
@@ -32684,6 +33817,7 @@ ${details.join("\n\n")}
     stops = [];
     readyListeners = /* @__PURE__ */ new Set();
     changeListeners = /* @__PURE__ */ new Set();
+    integrationListeners = /* @__PURE__ */ new Set();
     pending = null;
     timer;
     secrets;
@@ -32794,6 +33928,117 @@ ${details.join("\n\n")}
         this.pending = { identity, received: false, ended: false, mvu: false, since: Date.now() };
       }
       return this.pending;
+    }
+    bindIntegration(api) {
+      const parent = this.api.parent;
+      if (!parent) {
+        return () => {
+        };
+      }
+      parent.NationalFocusIntegration = api;
+      const remove = () => {
+        if (parent.NationalFocusIntegration === api) {
+          delete parent.NationalFocusIntegration;
+        }
+      };
+      this.stops.push(remove);
+      return remove;
+    }
+    readIntegration(messageId, config2) {
+      if (this.disposed) {
+        return unavailable("disposed");
+      }
+      try {
+        const lastMessageId = this.api.getLastMessageId();
+        if (!Number.isInteger(messageId) || messageId < 0 || messageId !== lastMessageId) {
+          return unavailable("not_latest");
+        }
+        const message = this.api.getChatMessages(messageId, { include_swipes: true })[0];
+        if (!message || message.role !== "assistant") {
+          return unavailable("not_assistant");
+        }
+        if (message.message_id !== messageId || !this.chatId()) {
+          return unavailable("source_changed");
+        }
+        const mvu = this.api.Mvu;
+        if (!mvu) {
+          return unavailable("mvu_unavailable");
+        }
+        if (this.generating || this.mvuBusy || this.writing || mvu.isDuringExtraAnalysis()) {
+          return unavailable("mvu_busy");
+        }
+        const data = mvu.getMvuData({ type: "message", message_id: messageId });
+        const world = this.readWorldProposal(messageId);
+        return {
+          chatId: this.chatId(),
+          messageId,
+          swipeId: message.swipe_id,
+          lastMessageId,
+          role: message.role,
+          extraAnalysis: false,
+          data,
+          world: world?.member ? { ...world.member, fingerprint: world.fingerprint } : void 0,
+          timePath: config2.sources.timePath,
+          signal: this.sourceRun.signal
+        };
+      } catch {
+        return unavailable("read_failed");
+      }
+    }
+    onIntegrationTick(callback) {
+      this.integrationListeners.add(callback);
+      return () => this.integrationListeners.delete(callback);
+    }
+    readWorldProposal(messageId) {
+      const workflow = this.api.parent?.AcuPostProcessAPI;
+      if (!workflow) {
+        return null;
+      }
+      try {
+        const member = worldMember(workflow.getEffectiveSettings());
+        const status = RunStatusSchema.safeParse(workflow.getRunStatusForFloor(messageId));
+        const data = this.api.Mvu?.getMvuData({ type: "message", message_id: messageId });
+        let patchLog = null;
+        try {
+          patchLog = this.api.parent?.Addon?.getLastPatchLog() ?? null;
+        } catch {
+        }
+        return {
+          member,
+          run: status.success ? status.data : null,
+          fingerprint: worldFingerprint(valueAt(data?.addon_data, `世界.${FOCUS_WORLD}`)),
+          patchLog
+        };
+      } catch {
+        return null;
+      }
+    }
+    readScheduleSource() {
+      try {
+        const message = this.current();
+        if (!message || message.role !== "assistant" || message.message_id !== this.api.getLastMessageId()) {
+          return null;
+        }
+        return {
+          chatId: this.chatId(),
+          messageId: message.message_id,
+          swipeId: message.swipe_id,
+          content: message.swipes[message.swipe_id] ?? message.message ?? ""
+        };
+      } catch {
+        return null;
+      }
+    }
+    predictWorldSchedule(source) {
+      try {
+        const workflow = this.api.parent?.AcuPostProcessAPI;
+        if (workflow) {
+          const chatKey = String(this.api.parent?.SillyTavern?.getContext?.()?.chatId || "").trim() || "unknown_chat";
+          return predictWorldSchedule(workflow.getEffectiveSettings(), chatKey, source.content);
+        }
+      } catch {
+      }
+      return { status: "unknown", reason: "unavailable" };
     }
     async read(config2, job) {
       const signal = this.sourceRun.signal;
@@ -34188,8 +35433,4982 @@ ${message.content.length > 3e4 ? `${message.content.slice(0, 3e4)}
     };
   }
 
+  // src/proposal-view.ts
+  function letterDigest(state, preview, proposal) {
+    const out = [];
+    for (const after of Object.values(preview.countries)) {
+      const before = state.countries[after.id];
+      if (!before || !after.enabled) {
+        continue;
+      }
+      const entries = [];
+      for (const [id, progress] of Object.entries(after.progress)) {
+        const was = before.progress[id];
+        const name = after.nodes[id]?.name ?? id;
+        if (progress.started !== null && (!was || was.started === null)) {
+          entries.push({ day: progress.started, kind: "start", title: `开始「${name}」` });
+        }
+        if (progress.status === "completed" && was?.status !== "completed" && progress.completed !== null) {
+          const by = progress.by;
+          entries.push({
+            day: progress.completed,
+            kind: "complete",
+            title: `完成「${name}」`,
+            note: by ? `${by.mode === "achieved" ? "由事件达成" : "由事件促成"}：${by.title}` : void 0
+          });
+        }
+      }
+      for (const event of Object.values(preview.events)) {
+        if (!event.countries.includes(after.id)) {
+          continue;
+        }
+        const old = state.events[event.id];
+        if (!old) {
+          entries.push({
+            day: event.at,
+            kind: "event",
+            title: event.headline || event.title,
+            note: event.public ? void 0 : "未公开"
+          });
+          continue;
+        }
+        for (const item of event.timeline.slice(old.timeline.length)) {
+          entries.push({ day: item.at, kind: "update", title: `${old.headline || old.title}：${item.text}` });
+        }
+      }
+      for (const step of proposal.steps) {
+        for (const fact of step.facts) {
+          if (fact.country === after.id) {
+            entries.push({ day: step.at, kind: "fact", title: fact.evidence, note: fact.value ? void 0 : "不成立" });
+          }
+        }
+      }
+      for (const transition of proposal.transitions) {
+        if (transition.country === after.id) {
+          entries.push({
+            day: proposal.until,
+            kind: "transition",
+            title: transition.cause === "completed" ? "本期议程完成，进入下一期" : "局势变化，本期议程改换",
+            note: transition.reason
+          });
+        }
+      }
+      entries.sort((a, b) => a.day - b.day || order[a.kind] - order[b.kind]);
+      const capability = (s) => new Map(Object.values(s.capabilities).filter((c) => c.active).map((c) => [c.id, c.name]));
+      const had = capability(before);
+      const has = capability(after);
+      out.push({
+        id: after.id,
+        name: after.name,
+        stability: [before.stability, after.stability],
+        warSupport: [before.warSupport, after.warSupport],
+        focus: [before.nodes[before.current]?.name ?? "", after.nodes[after.current]?.name ?? ""],
+        gained: [...has].filter(([id]) => !had.has(id)).map(([, name]) => name),
+        lost: [...had].filter(([id]) => !has.has(id)).map(([, name]) => name),
+        entries
+      });
+    }
+    return out.sort((a, b) => weight(b) - weight(a));
+  }
+  var order = {
+    complete: 0,
+    start: 1,
+    event: 2,
+    update: 3,
+    fact: 4,
+    transition: 5
+  };
+  function weight(country) {
+    const moved = Number(country.stability[0] !== country.stability[1]) + Number(country.warSupport[0] !== country.warSupport[1]);
+    return country.entries.length + moved + country.gained.length + country.lost.length;
+  }
+  var reasonText = {
+    waiting_workflow: "世界推演还没有结果。工作流完成后，提案会出现在这里。",
+    workflow_unknown: "读不到工作流的执行纪录，无法确认提案来自哪一次推演。",
+    member_mismatch: "找不到唯一的阿斯塔利亚世界任务，无法确认提案来源。",
+    missing_proposal: "这次世界推演没有附上国策提案。",
+    invalid_proposal: "提案的格式无法解读。",
+    nonce_mismatch: "提案不属于目前这一次请求。",
+    invalid_rules: "提案违反国策规则，无法套用。",
+    until_mismatch: "提案推进到的时间与这一楼的故事时间不一致。",
+    world_failed: "世界推演回报失败。",
+    world_skipped: "世界推演本轮被跳过。",
+    world_patch_failed: "世界资料写入时出现问题。",
+    preview_changed: "审阅期间国策或提案已有变动，请重新审阅。",
+    user_rejected: "你已驳回这份提案。",
+    save_failed: "保存国策时失败，提案没有套用。",
+    overwritten: "接收后被其他脚本覆写，国策已回到接收前的状态。可以再接收一次。",
+    update_started: "已改用国策自己的局势更新，这份提案不再适用。",
+    request_expired: "这份提案已被更新的请求取代。",
+    source_changed: "这一楼的来源资料已改变。",
+    not_latest: "已经有更新的一楼，这份提案已过期。",
+    not_assistant: "来源不是有效的 AI 回复。",
+    invalid_time: "读不到这一楼的故事时间。",
+    mvu_busy: "正文或变量仍在更新，请稍候。",
+    update_busy: "国策正在进行自己的局势更新。",
+    mvu_unavailable: "没有检测到 MVU。",
+    missing_stat_data: "这一楼没有 MVU 变量。",
+    missing_state: "这一楼还没有国策存档。",
+    invalid_state: "国策存档的格式无效。",
+    read_failed: "读取这一楼的资料时失败。",
+    unsupported: "目前的环境不支持世界整合。",
+    disposed: "国策面板已关闭。",
+    preview: "这是预览，没有登记请求。",
+    invalid_request: "世界任务没有提供有效的请求编号。"
+  };
+  function letterReason(reception) {
+    return reception.reason ? reasonText[reception.reason] : "";
+  }
+  function evidenceLines(evidence) {
+    if (!evidence) {
+      return [{ text: "没有世界执行纪录", tone: "unknown" }];
+    }
+    const lines = [];
+    lines.push(
+      evidence.skipped ? { text: `世界任务本轮跳过${evidence.skipReason ? `：${evidence.skipReason}` : ""}`, tone: "warn" } : evidence.success ? { text: "世界任务回报执行完成", tone: "ok" } : { text: "世界任务回报失败", tone: "warn" }
+    );
+    lines.push(
+      evidence.changed === null ? { text: "无法比较世界资料是否变动", tone: "unknown" } : evidence.changed ? { text: "世界资料已变动", tone: "ok" } : { text: "世界资料没有变动（若本轮没有世界变化，这是正常的）", tone: "unknown" }
+    );
+    const patch = evidence.patch;
+    if (!patch.known) {
+      lines.push({ text: "读不到写入日志", tone: "unknown" });
+    } else {
+      const repairs = patch.issues.filter((issue2) => issue2.kind === "heal");
+      const problems = patch.issues.length - repairs.length + patch.failedFragments.length;
+      lines.push(
+        problems ? { text: `写入日志有 ${problems} 个问题`, tone: "warn" } : {
+          text: `写入日志没有问题${patch.operationCount !== null ? `（${patch.operationCount} 项写入）` : ""}`,
+          tone: "ok"
+        }
+      );
+      for (const issue2 of patch.issues) {
+        lines.push({
+          text: `${issue2.kind === "heal" ? "已自动修正" : "写入问题"}：${issue2.message}（${issue2.path}）`,
+          tone: issue2.kind === "heal" ? "unknown" : "warn"
+        });
+      }
+      for (const fragment of patch.failedFragments) {
+        lines.push({ text: `第 ${fragment.index} 项无法处理：${fragment.message}`, tone: "warn" });
+      }
+      if (patch.unassigned) {
+        lines.push({ text: `另有 ${patch.unassigned} 个无法归属世界的日志问题`, tone: "unknown" });
+      }
+    }
+    return lines;
+  }
+
   // src/style.css
-  var style_default = "/* 国策档案 v0.4 · 战情档案馆介面\n * Tokens first; every colour below derives from them so states stay consistent. */\n:host {\n  all: initial;\n  --ink: #0d1310;\n  --bg: #131a16;\n  --panel: #19221d;\n  --raised: #212b25;\n  --raised-2: #29352e;\n  --line: rgba(217, 191, 120, 0.14);\n  --line-strong: rgba(217, 191, 120, 0.32);\n  --gold: #dcc27c;\n  --gold-deep: #a88d4c;\n  --text: #ece6d4;\n  --muted: #a8b0a1;\n  --faint: #7d867a;\n  --green: #72c492;\n  --amber: #e6a950;\n  --blue: #8fb0d6;\n  --red: #d9705f;\n  --cross: #7fa6cf;\n  --radius: 10px;\n  --drawer: 392px;\n  /* Simplified Chinese faces first (zh-Hans text), traditional faces only as fallbacks; same as the news card. */\n  --sans:\n    'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans TC',\n    'Microsoft JhengHei', 'PingFang TC', system-ui, sans-serif;\n  --serif:\n    'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'Noto Serif TC', 'Source Han Serif TC', Georgia,\n    var(--sans);\n  font-family: var(--sans);\n  color: var(--text);\n  font-size: 14px;\n  line-height: 1.6;\n  -webkit-font-smoothing: antialiased;\n}\n* {\n  box-sizing: border-box;\n}\nbutton,\ninput,\nselect,\ntextarea {\n  font: inherit;\n  color: inherit;\n}\nbutton {\n  cursor: pointer;\n  border: 1px solid var(--line-strong);\n  background: var(--raised);\n  padding: 7px 12px;\n  border-radius: 7px;\n  line-height: 1.3;\n  transition:\n    background 0.15s,\n    border-color 0.15s,\n    color 0.15s;\n}\nbutton:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: var(--raised-2);\n}\nbutton:disabled {\n  opacity: 0.4;\n  cursor: not-allowed;\n}\nbutton:focus-visible,\ninput:focus-visible,\nselect:focus-visible,\ntextarea:focus-visible,\nsummary:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: 2px;\n}\ninput,\nselect,\ntextarea {\n  color: var(--text);\n  background: var(--ink);\n  border: 1px solid rgba(217, 191, 120, 0.24);\n  border-radius: 7px;\n  padding: 8px 10px;\n  max-width: 100%;\n}\n/* Same line height, so a select and an input side by side are the same height. */\ninput,\nselect {\n  line-height: 1.3;\n}\ninput::placeholder,\ntextarea::placeholder {\n  color: var(--faint);\n}\nselect option {\n  background: var(--panel);\n}\ninput[type='checkbox'] {\n  accent-color: var(--gold);\n  width: 16px;\n  height: 16px;\n}\nsvg {\n  width: 24px;\n  height: 24px;\n  flex-shrink: 0;\n}\na {\n  color: var(--gold);\n}\np {\n  margin: 0 0 12px;\n}\nh1,\nh2,\nh3,\nh4 {\n  font-family: var(--serif);\n  font-weight: 600;\n  margin: 0;\n}\nsmall {\n  color: var(--muted);\n}\ncode {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n}\n.muted {\n  color: var(--muted);\n}\n.gold {\n  color: var(--gold);\n}\n.row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n}\n.between {\n  justify-content: space-between;\n}\n.primary {\n  background: linear-gradient(180deg, #7a6a37, #5b4f28);\n  border-color: var(--gold);\n  color: #fff4d0;\n  font-weight: 600;\n}\n.primary:hover:not(:disabled) {\n  background: linear-gradient(180deg, #8d7b41, #6a5c2f);\n}\n.ghost {\n  background: transparent;\n  border-color: transparent;\n}\n.danger {\n  color: #f0a898;\n}\n.tag {\n  font-size: 11px;\n  letter-spacing: 0.18em;\n  color: var(--gold);\n}\n.pill {\n  display: inline-flex;\n  align-items: center;\n  border: 1px solid var(--line-strong);\n  padding: 2px 8px;\n  font-size: 12px;\n  border-radius: 99px;\n}\n.separator {\n  height: 1px;\n  background: var(--line);\n  margin: 16px 0;\n}\n.sr {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}\n.spinner {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border: 2px solid rgba(220, 194, 124, 0.3);\n  border-top-color: var(--gold);\n  border-radius: 50%;\n  animation: spin 0.9s linear infinite;\n  vertical-align: -2px;\n}\n@keyframes spin {\n  to {\n    transform: rotate(360deg);\n  }\n}\n\n/* ---------- Floating orb ---------- */\n.orb {\n  position: fixed;\n  right: 24px;\n  bottom: 24px;\n  width: 60px;\n  height: 60px;\n  padding: 12px;\n  border-radius: 50%;\n  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);\n  border: 2px solid var(--gold-deep);\n  box-shadow:\n    0 8px 28px rgba(0, 0, 0, 0.55),\n    inset 0 0 0 3px rgba(0, 0, 0, 0.35);\n  color: var(--gold);\n  z-index: 2147482999;\n}\n.orb:hover:not(:disabled) {\n  border-color: var(--gold);\n  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);\n}\n.orb svg {\n  width: 100%;\n  height: 100%;\n}\n.orb .count {\n  position: absolute;\n  top: -3px;\n  right: -3px;\n  min-width: 20px;\n  height: 20px;\n  padding: 0 5px;\n  border-radius: 10px;\n  background: var(--gold);\n  color: #1a1d12;\n  font-size: 11px;\n  font-weight: 700;\n  line-height: 20px;\n}\n\n/* ---------- Shell ---------- */\n.shell {\n  position: fixed;\n  inset: 16px;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: var(--bg);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.shell[hidden],\n.modal-backdrop[hidden],\n.orb[hidden] {\n  display: none;\n}\n\n/* Command bar */\n.command {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-height: 58px;\n  padding: 8px 14px;\n  background: linear-gradient(180deg, #1c2620, #151d18);\n  border-bottom: 1px solid var(--line);\n}\n.brand-mark {\n  width: 38px;\n  height: 38px;\n  display: grid;\n  place-items: center;\n  color: var(--gold);\n  border: 1px solid var(--line-strong);\n  border-radius: 9px;\n  background: rgba(220, 194, 124, 0.07);\n  flex-shrink: 0;\n}\n.brand-mark svg {\n  width: 26px;\n  height: 26px;\n}\n.brand {\n  display: grid;\n  line-height: 1.15;\n  flex-shrink: 0;\n}\n.brand h1 {\n  font-size: 17px;\n  letter-spacing: 0.12em;\n}\n.brand small {\n  font-size: 9.5px;\n  letter-spacing: 0.3em;\n  color: var(--gold-deep);\n}\n.nation-scroller {\n  position: relative;\n  display: flex;\n  min-width: 0;\n  margin-left: 10px;\n}\n.nation-tabs {\n  display: flex;\n  gap: 6px;\n  overflow-x: auto;\n  scrollbar-width: none;\n  min-width: 0;\n}\n/* Arrows only at an edge with more tabs behind it; the fade shows the list goes on. */\n.nation-scroll {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: none;\n  place-items: center;\n  width: 34px;\n  padding: 0;\n  border: 0;\n  border-radius: 0;\n  font-size: 22px;\n  color: var(--gold);\n  background: linear-gradient(90deg, #19221c 45%, rgba(25, 34, 28, 0));\n}\n.nation-scroll.prev {\n  left: 0;\n  justify-content: start;\n  padding-left: 4px;\n}\n.nation-scroll.next {\n  right: 0;\n  justify-content: end;\n  padding-right: 4px;\n  background: linear-gradient(270deg, #19221c 45%, rgba(25, 34, 28, 0));\n}\n.nation-scroll:hover {\n  color: var(--text);\n}\n.nation-scroller.can-left .nation-scroll.prev,\n.nation-scroller.can-right .nation-scroll.next {\n  display: grid;\n}\n.nation-tabs::-webkit-scrollbar {\n  display: none;\n}\n.nation-tab {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 5px 12px 5px 6px;\n  border-radius: 9px;\n  border-color: transparent;\n  background: transparent;\n  white-space: nowrap;\n  flex-shrink: 0;\n}\n.nation-tab.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.tab-crest {\n  width: 30px;\n  height: 30px;\n  display: grid;\n  place-items: center;\n  border-radius: 7px;\n  background: rgba(255, 255, 255, 0.04);\n  color: var(--blue);\n}\n.nation-tab.player .tab-crest {\n  color: var(--gold);\n}\n.tab-crest svg {\n  width: 20px;\n  height: 20px;\n}\n.tab-copy {\n  display: grid;\n  text-align: left;\n  line-height: 1.2;\n}\n.tab-copy strong {\n  font-size: 13.5px;\n  font-weight: 600;\n}\n.tab-copy small {\n  font-size: 11px;\n}\n.nation-tab.add {\n  width: 38px;\n  justify-content: center;\n  padding: 6px;\n  border: 1px dashed var(--line-strong);\n  color: var(--gold);\n}\n.nation-picker {\n  display: none;\n  min-width: 0;\n  flex: 1;\n}\n.nation-picker select {\n  width: 100%;\n}\n.command-spacer {\n  flex: 1;\n}\n.test-label {\n  font-size: 11px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  padding: 3px 8px;\n  border-radius: 6px;\n  white-space: nowrap;\n}\n.date-chip {\n  display: grid;\n  max-width: 250px;\n  overflow-wrap: anywhere;\n  line-height: 1.15;\n  text-align: right;\n  padding: 0 6px;\n}\n.date-chip small {\n  font-size: 10.5px;\n}\n.date-chip strong {\n  font-family: var(--serif);\n  font-size: 17px;\n  color: var(--gold);\n}\n.cmd-btn {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  height: 38px;\n  flex-shrink: 0;\n  white-space: nowrap;\n}\n.date-chip,\n.test-label,\n.nation-tab.add {\n  flex-shrink: 0;\n}\n.cmd-btn.busy {\n  border-color: var(--gold);\n}\n.cmd-btn.close {\n  width: 38px;\n  justify-content: center;\n  font-size: 20px;\n  padding: 0;\n}\n.error-banner {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  justify-content: space-between;\n  padding: 9px 16px;\n  background: rgba(217, 112, 95, 0.14);\n  border-bottom: 1px solid rgba(217, 112, 95, 0.4);\n  color: #f6c6ba;\n  font-size: 13px;\n}\n\n/* Nation bar */\n.nation-bar {\n  display: grid;\n  grid-template-columns: minmax(260px, 1fr) auto auto auto;\n  align-items: center;\n  gap: 20px;\n  padding: 12px 18px;\n  background: var(--panel);\n  border-bottom: 1px solid var(--line);\n}\n.nation-id {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  min-width: 0;\n}\n.nation-crest {\n  width: 48px;\n  height: 48px;\n  display: grid;\n  place-items: center;\n  border-radius: 12px;\n  border: 1px solid var(--line-strong);\n  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));\n  color: var(--gold);\n  flex-shrink: 0;\n}\n.nation-crest svg {\n  width: 32px;\n  height: 32px;\n}\n.nation-copy {\n  min-width: 0;\n}\n.nation-copy h2 {\n  font-size: 22px;\n  line-height: 1.25;\n  letter-spacing: 0.04em;\n}\n.nation-copy p {\n  margin: 2px 0 0;\n  color: var(--muted);\n  font-size: 12.5px;\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}\n.gauges {\n  display: flex;\n  gap: 16px;\n}\n.gauge {\n  width: 132px;\n}\n.gauge-head {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n}\n.gauge-head small {\n  font-size: 12px;\n}\n.gauge-head strong {\n  font-family: var(--serif);\n  font-size: 22px;\n  line-height: 1.1;\n}\n.gauge-track {\n  height: 6px;\n  border-radius: 3px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n  margin-top: 4px;\n}\n.gauge-track i {\n  display: block;\n  height: 100%;\n  border-radius: 3px;\n}\n.gauge.stability .gauge-track i {\n  background: linear-gradient(90deg, #5f9e75, var(--green));\n}\n.gauge.war .gauge-track i {\n  background: linear-gradient(90deg, #b75a49, var(--amber));\n}\n/* The main focus is a third gauge (v0.15.9): label, name, days left and a slim bar, no card.\n   Its width follows the window only, so a status change never moves or resizes it. */\n.focus-gauge {\n  --state: var(--green);\n  --state-deep: #4f9a6b;\n  position: relative;\n  display: block;\n  width: 300px;\n  padding: 4px 8px;\n  margin: -4px 0;\n  border: 0;\n  border-radius: 8px;\n  background: transparent;\n  text-align: left;\n}\n.focus-gauge.waiting {\n  --state: var(--amber);\n  --state-deep: #b67c2f;\n}\n.focus-gauge.paused {\n  --state: var(--blue);\n  --state-deep: #5c7ca3;\n}\n.focus-gauge.empty {\n  --state: var(--faint);\n}\n/* hairline between the national gauges and the focus */\n.focus-gauge::after {\n  content: '';\n  position: absolute;\n  left: -10px;\n  top: 6px;\n  bottom: 6px;\n  width: 1px;\n  background: var(--line);\n}\nbutton.focus-gauge:hover:not(:disabled) {\n  border-color: transparent;\n  background: rgba(255, 255, 255, 0.035);\n}\nbutton.focus-gauge:hover .focus-name {\n  text-decoration: underline;\n  text-decoration-color: var(--line-strong);\n  text-underline-offset: 4px;\n}\n.focus-gauge .gauge-head {\n  justify-content: flex-start;\n  gap: 8px;\n}\n.focus-gauge .gauge-track {\n  display: block;\n}\n.focus-label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  flex-shrink: 0;\n}\n.focus-dot {\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--state);\n}\n.focus-gauge.active .focus-dot {\n  animation: focus-breathe 2.4s ease-out infinite;\n}\n.focus-gauge.empty .focus-dot {\n  background: transparent;\n  border: 1px solid var(--faint);\n}\n.focus-name {\n  flex: 1;\n  min-width: 0;\n  font-family: var(--serif);\n  font-size: 14.5px;\n  font-weight: 600;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.focus-gauge.empty .focus-name {\n  color: var(--faint);\n  font-weight: 400;\n}\n.focus-num {\n  display: inline-flex;\n  align-items: baseline;\n  gap: 3px;\n  flex-shrink: 0;\n}\n.focus-num small {\n  font-size: 11.5px;\n}\n/* invisible strut at the numeral's size: 待成果 and 尚未选定 keep the same line height */\n.focus-num::after {\n  content: '\\200b';\n  font-family: var(--serif);\n  font-size: 22px;\n  line-height: 1.1;\n}\n.focus-word {\n  font-size: 12px;\n  color: var(--state);\n}\n.focus-gauge .gauge-track i {\n  background: linear-gradient(90deg, var(--state-deep), var(--state));\n}\n.focus-gauge.empty .gauge-track {\n  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 6px, transparent 6px 10px);\n}\n/* colour shows up only when something changes: one outline flare (resumed across re-renders) */\n.focus-gauge.flare::before {\n  content: '';\n  position: absolute;\n  inset: -2px;\n  border-radius: 10px;\n  pointer-events: none;\n  opacity: 0;\n  box-shadow:\n    0 0 0 1px var(--state),\n    0 0 22px -2px var(--state);\n  animation: focus-flare 2.2s ease-out var(--flare-at, 0ms) forwards;\n}\n@keyframes focus-flare {\n  0% {\n    opacity: 0;\n  }\n  12% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n  }\n}\n@keyframes focus-breathe {\n  0% {\n    box-shadow: 0 0 0 0 rgba(114, 196, 146, 0.55);\n  }\n  70%,\n  100% {\n    box-shadow: 0 0 0 6px rgba(114, 196, 146, 0);\n  }\n}\n.nation-actions {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.control-select select {\n  height: 36px;\n  padding: 0 8px;\n}\n.toggle {\n  height: 36px;\n  white-space: nowrap;\n}\n.toggle.on {\n  color: var(--gold);\n  border-color: var(--gold-deep);\n  background: rgba(220, 194, 124, 0.1);\n}\n.nation-actions .primary {\n  height: 36px;\n  white-space: nowrap;\n}\n\n/* ---------- Stage ---------- */\n.stage {\n  position: relative;\n  flex: 1;\n  min-height: 0;\n  overflow: hidden;\n  background:\n    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),\n    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\n    var(--ink);\n}\n.canvas {\n  position: absolute;\n  inset: 0;\n  overflow: hidden;\n  cursor: grab;\n  touch-action: none;\n  user-select: none;\n}\n.canvas:active {\n  cursor: grabbing;\n}\n.canvas:focus-visible {\n  outline: 2px solid var(--gold);\n  outline-offset: -4px;\n}\n.tree {\n  position: absolute;\n  left: 0;\n  top: 0;\n  transform-origin: 0 0;\n}\n.connectors {\n  position: absolute;\n  inset: 0;\n  width: auto;\n  height: auto;\n  overflow: visible;\n  pointer-events: none;\n}\n.connector {\n  fill: none;\n  stroke: rgba(220, 194, 124, 0.3);\n  stroke-width: 2.4;\n}\n.connector.done {\n  stroke: var(--gold);\n  stroke-width: 3;\n}\n.connector.alternative {\n  stroke-dasharray: 8 6;\n}\n.connector.cross-branch {\n  stroke: rgba(127, 166, 207, 0.55);\n}\n.connector.cross-branch.done {\n  stroke: var(--cross);\n}\n.connector.mutex {\n  stroke: var(--red);\n  stroke-width: 2;\n  stroke-dasharray: 2 6;\n  stroke-linecap: round;\n}\n.branch-banner {\n  position: absolute;\n  top: 16px;\n  height: 34px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  border-bottom: 1px solid var(--line-strong);\n  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));\n  pointer-events: none;\n}\n.branch-banner span {\n  font-family: var(--serif);\n  font-size: 15px;\n  letter-spacing: 0.3em;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  padding: 0 8px;\n}\n.branch-banner.active {\n  border-bottom-color: var(--gold);\n}\n.branch-summary {\n  position: absolute;\n  height: 66px;\n  display: grid;\n  align-content: center;\n  text-align: left;\n  border: 1px dashed var(--gold-deep);\n  background: rgba(220, 194, 124, 0.06);\n  border-radius: var(--radius);\n  padding: 8px 14px;\n}\n.branch-summary strong {\n  font-family: var(--serif);\n  color: var(--gold);\n}\n.branch-summary span {\n  font-size: 12px;\n  color: var(--muted);\n}\n\n/* Nodes */\n.node {\n  /* Medal focus: the icon medal is the focus, the name plate sits under it, no box around both. */\n  position: absolute;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  padding: 0;\n  border: 0;\n  background: none;\n  color: var(--text);\n  text-align: center;\n  transition: opacity 0.15s;\n}\n.node-medal {\n  position: relative;\n  flex: none;\n  width: 58px;\n  height: 58px;\n  border-radius: 50%;\n  display: grid;\n  place-items: center;\n  color: var(--gold);\n  background: radial-gradient(circle at 36% 30%, #3a4a3f, #18201b 72%);\n  border: 2px solid rgba(220, 194, 124, 0.85);\n  box-shadow:\n    0 0 0 4px var(--bg),\n    0 0 0 5px rgba(220, 194, 124, 0.28),\n    0 8px 18px rgba(0, 0, 0, 0.55);\n  transition:\n    transform 0.15s,\n    box-shadow 0.15s;\n}\n.node-medal svg {\n  width: 30px;\n  height: 30px;\n}\n.node:hover:not(:disabled) .node-medal {\n  transform: translateY(-2px);\n  box-shadow:\n    0 0 0 4px var(--bg),\n    0 0 0 5px var(--gold),\n    0 0 22px rgba(220, 194, 124, 0.35);\n}\n.node-meta {\n  position: absolute;\n  bottom: -9px;\n  left: 50%;\n  transform: translateX(-50%);\n  white-space: nowrap;\n  font-size: 10.5px;\n  line-height: 16px;\n  padding: 0 7px;\n  border-radius: 9px;\n  color: var(--muted);\n  background: #0f1512;\n  border: 1px solid rgba(220, 194, 124, 0.35);\n}\n.node-plate {\n  margin-top: 15px;\n  width: 100%;\n  padding: 5px 8px 6px;\n  background: linear-gradient(180deg, rgba(38, 48, 42, 0.96), rgba(24, 31, 27, 0.96));\n  border: 1px solid rgba(220, 194, 124, 0.2);\n  border-top: 2px solid rgba(220, 194, 124, 0.6);\n  border-radius: 3px 3px 9px 9px;\n}\n.node-name {\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 1.28;\n  color: var(--text);\n}\n.node-pivot {\n  position: absolute;\n  top: -7px;\n  right: -9px;\n  font-size: 13px;\n  color: var(--gold);\n  text-shadow: 0 0 6px rgba(220, 194, 124, 0.7);\n}\n.node-flag {\n  position: absolute;\n  top: -6px;\n  left: -11px;\n  font-size: 12px;\n  color: var(--red);\n}\n/* Progress ring for running, waiting and paused focuses. */\n.node.active .node-medal::before,\n.node.waiting .node-medal::before,\n.node.paused .node-medal::before {\n  content: '';\n  position: absolute;\n  inset: -7px;\n  border-radius: 50%;\n  background: conic-gradient(var(--ring) calc(var(--p) * 1%), rgba(255, 255, 255, 0.08) 0);\n  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));\n  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));\n}\n.node.available .node-medal {\n  box-shadow:\n    0 0 0 4px var(--bg),\n    0 0 0 5px rgba(220, 194, 124, 0.55),\n    0 0 20px rgba(220, 194, 124, 0.28);\n}\n.node.available .node-name {\n  color: #fffaf0;\n}\n.node.locked .node-medal,\n.node.unknown .node-medal {\n  color: var(--faint);\n  background: radial-gradient(circle at 36% 30%, #263029, #141a16 72%);\n  border-color: rgba(168, 176, 161, 0.35);\n  box-shadow:\n    0 0 0 4px var(--bg),\n    0 0 0 5px rgba(168, 176, 161, 0.12);\n}\n.node.unknown .node-medal {\n  background:\n    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 5px, transparent 5px 10px),\n    radial-gradient(circle at 36% 30%, #263029, #141a16 72%);\n}\n.node.locked .node-plate,\n.node.unknown .node-plate {\n  border-top-color: rgba(168, 176, 161, 0.3);\n  background: rgba(22, 29, 25, 0.92);\n}\n.node.locked .node-name,\n.node.unknown .node-name {\n  color: #9aa394;\n}\n.node.completed .node-medal {\n  color: #2c240f;\n  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);\n  border-color: #f6e2a6;\n  box-shadow:\n    0 0 0 4px var(--bg),\n    0 0 0 5px rgba(238, 212, 141, 0.5),\n    0 0 18px rgba(238, 212, 141, 0.3);\n}\n.node.completed .node-meta {\n  color: #f1dfa6;\n  border-color: rgba(238, 212, 141, 0.6);\n}\n.node.completed .node-plate {\n  border-top-color: #eed48d;\n  background: linear-gradient(180deg, rgba(76, 64, 30, 0.95), rgba(40, 34, 18, 0.95));\n}\n.node.completed .node-name {\n  color: #fff2c8;\n}\n.node.active {\n  --ring: var(--green);\n}\n.node.active .node-medal {\n  color: var(--green);\n  border-color: rgba(114, 196, 146, 0.5);\n}\n.node.active .node-meta {\n  color: #a7e3bd;\n  border-color: rgba(114, 196, 146, 0.55);\n}\n.node.active .node-plate {\n  border-top-color: var(--green);\n}\n.node.waiting {\n  --ring: var(--amber);\n}\n.node.waiting .node-medal,\n.node.waiting .node-meta {\n  color: var(--amber);\n}\n.node.waiting .node-medal {\n  border-color: rgba(230, 169, 80, 0.5);\n}\n.node.waiting .node-meta {\n  border-color: rgba(230, 169, 80, 0.55);\n}\n.node.waiting .node-plate {\n  border-top-color: var(--amber);\n}\n.node.paused {\n  --ring: var(--blue);\n}\n.node.paused .node-medal,\n.node.paused .node-meta {\n  color: var(--blue);\n}\n.node.paused .node-medal {\n  border-color: rgba(143, 176, 214, 0.5);\n}\n.node.paused .node-meta {\n  border-color: rgba(143, 176, 214, 0.55);\n}\n.node.paused .node-plate {\n  border-top-color: var(--blue);\n}\n.node.sealed .node-medal,\n.node.terminated .node-medal {\n  color: rgba(217, 112, 95, 0.8);\n  border-color: rgba(217, 112, 95, 0.5);\n  background:\n    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.12) 0 5px, transparent 5px 10px),\n    radial-gradient(circle at 36% 30%, #2e2724, #1a1614 72%);\n  box-shadow:\n    0 0 0 4px var(--bg),\n    0 0 0 5px rgba(217, 112, 95, 0.18);\n}\n.node.sealed .node-meta,\n.node.terminated .node-meta {\n  color: #f0a898;\n  border-color: rgba(217, 112, 95, 0.45);\n}\n.node.sealed .node-plate,\n.node.terminated .node-plate {\n  border-top-color: rgba(217, 112, 95, 0.5);\n  background: rgba(30, 25, 23, 0.92);\n}\n.node.sealed .node-name,\n.node.terminated .node-name {\n  color: #a9928c;\n  text-decoration: line-through;\n  text-decoration-color: rgba(217, 112, 95, 0.55);\n}\n.node.current .node-medal {\n  animation: current-pulse 2.6s ease-in-out infinite;\n}\n@keyframes current-pulse {\n  50% {\n    box-shadow:\n      0 0 0 4px var(--bg),\n      0 0 0 6px rgba(114, 196, 146, 0.35),\n      0 0 30px rgba(114, 196, 146, 0.4);\n  }\n}\n.node.selected .node-medal {\n  outline: 2px solid var(--gold);\n  outline-offset: 8px;\n}\n.node.selected .node-plate {\n  border-color: var(--gold);\n}\n.node:focus-visible {\n  outline: none;\n}\n.node:focus-visible .node-medal {\n  outline: 2px solid var(--gold);\n  outline-offset: 8px;\n}\n.node.dim {\n  opacity: 0.16;\n}\n\n/* Overlays on the stage */\n.routes {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  bottom: 12px;\n  width: 268px;\n  display: none;\n  flex-direction: column;\n  background: rgba(19, 26, 22, 0.94);\n  backdrop-filter: blur(8px);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);\n  z-index: 3;\n  max-height: calc(100% - 24px);\n}\n.routes.open {\n  display: flex;\n}\n.routes-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 8px 6px 14px;\n}\n.routes-head strong {\n  font-family: var(--serif);\n  font-size: 15px;\n  color: var(--gold);\n}\n.routes-head small {\n  flex: 1;\n  font-size: 12px;\n}\n.routes-head button {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  font-size: 18px;\n}\n.search-row {\n  display: flex;\n  gap: 6px;\n  padding: 4px 10px 8px;\n}\n.search-row label {\n  flex: 1;\n  min-width: 0;\n}\n.search-row input {\n  width: 100%;\n  height: 34px;\n}\n.search-row button {\n  height: 34px;\n  white-space: nowrap;\n  font-size: 12.5px;\n}\n.route-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 6px;\n  overflow: auto;\n  flex: 1;\n  border-top: 1px solid var(--line);\n  border-bottom: 1px solid var(--line);\n}\n.route-list li {\n  display: flex;\n  align-items: stretch;\n  gap: 4px;\n  margin: 2px 0;\n}\n.route-jump {\n  flex: 1;\n  display: grid;\n  grid-template-columns: 1fr auto;\n  gap: 2px 8px;\n  text-align: left;\n  padding: 7px 10px;\n  border-color: transparent;\n  background: transparent;\n  min-width: 0;\n}\n.route-list li.active .route-jump {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n}\n.route-list li.folded .route-name {\n  color: var(--faint);\n}\n.route-name {\n  font-size: 13.5px;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\n.route-live {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  box-shadow: 0 0 8px var(--green);\n  flex-shrink: 0;\n}\n.route-count {\n  font-size: 12px;\n  color: var(--muted);\n  font-variant-numeric: tabular-nums;\n}\n.route-bar {\n  grid-column: 1/-1;\n  height: 3px;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.07);\n  overflow: hidden;\n}\n.route-bar i {\n  display: block;\n  height: 100%;\n  background: var(--gold);\n}\n.route-fold {\n  width: 30px;\n  padding: 0;\n  border-color: transparent;\n  background: transparent;\n  color: var(--muted);\n}\n.route-actions {\n  display: flex;\n  gap: 6px;\n  padding: 8px 10px 10px;\n}\n.route-actions button {\n  flex: 1;\n  font-size: 12.5px;\n}\n.routes-tab {\n  position: absolute;\n  top: 12px;\n  left: 12px;\n  z-index: 3;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);\n}\n.routes-tab small {\n  color: var(--gold);\n}\n.stage-hint {\n  position: absolute;\n  left: 50%;\n  bottom: 12px;\n  transform: translateX(-50%);\n  font-size: 12px;\n  color: var(--faint);\n  pointer-events: none;\n  white-space: nowrap;\n}\n.stage-tools {\n  position: absolute;\n  right: 12px;\n  bottom: 12px;\n  display: flex;\n  align-items: flex-end;\n  gap: 8px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage-tools > button,\n.zoom-controls,\n.legend-pop > summary {\n  height: 36px;\n  background: rgba(19, 26, 22, 0.94);\n  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);\n}\n.zoom-controls {\n  display: flex;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n  overflow: hidden;\n}\n.zoom-controls button {\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  min-width: 36px;\n}\n.zoom-controls button + button {\n  border-left: 1px solid var(--line);\n}\n.zoom-value {\n  font-variant-numeric: tabular-nums;\n  font-size: 12.5px;\n}\n.legend-pop {\n  position: relative;\n}\n.legend-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  padding: 0 12px;\n  border: 1px solid var(--line-strong);\n  border-radius: 7px;\n}\n.legend-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.legend-list {\n  position: absolute;\n  right: 0;\n  bottom: 44px;\n  width: 210px;\n  margin: 0;\n  padding: 10px 14px;\n  list-style: none;\n  display: grid;\n  gap: 6px;\n  font-size: 12.5px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);\n}\n.legend-list li {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n}\n.sw {\n  width: 22px;\n  height: 14px;\n  border-radius: 4px;\n  border: 1px solid rgba(236, 230, 212, 0.34);\n  background: #232d27;\n  flex-shrink: 0;\n}\n.sw.completed {\n  background: linear-gradient(160deg, #8a7438, #57491f);\n  border-color: #eed48d;\n}\n.sw.active {\n  border: 2px solid var(--green);\n}\n.sw.waiting {\n  border: 2px solid var(--amber);\n}\n.sw.paused {\n  border: 2px solid var(--blue);\n}\n.sw.locked {\n  border-style: dashed;\n  opacity: 0.6;\n}\n.sw.terminated {\n  border-color: var(--red);\n  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);\n}\n.sw.unknown {\n  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);\n}\n.ln {\n  width: 22px;\n  height: 0;\n  border-top: 2.5px solid rgba(220, 194, 124, 0.6);\n  flex-shrink: 0;\n}\n.ln.dashed {\n  border-top-style: dashed;\n}\n.ln.cross {\n  border-top-color: var(--cross);\n}\n.ln.mutex {\n  border-top: 2.5px dotted var(--red);\n}\n.minimap {\n  position: absolute;\n  right: 12px;\n  bottom: 58px;\n  width: 190px;\n  height: 120px;\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n  background: rgba(13, 19, 16, 0.92);\n  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\n  z-index: 2;\n  padding: 6px;\n  cursor: crosshair;\n  touch-action: none;\n  transition: right 0.22s ease;\n}\n.minimap-svg {\n  width: 100%;\n  height: 100%;\n}\n.mm {\n  fill: rgba(236, 230, 212, 0.28);\n}\n.mm.completed {\n  fill: var(--gold);\n}\n.mm.active,\n.mm.current {\n  fill: var(--green);\n}\n.mm.waiting {\n  fill: var(--amber);\n}\n.mm.paused {\n  fill: var(--blue);\n}\n.mm.locked,\n.mm.unknown {\n  fill: rgba(236, 230, 212, 0.12);\n}\n.mm.sealed,\n.mm.terminated {\n  fill: rgba(217, 112, 95, 0.55);\n}\n.mm.folded {\n  fill: rgba(220, 194, 124, 0.25);\n}\n.mm-view {\n  fill: rgba(220, 194, 124, 0.08);\n  stroke: var(--gold);\n  stroke-width: 1.5;\n  vector-effect: non-scaling-stroke;\n}\n.stage.with-drawer .stage-tools {\n  right: calc(var(--drawer) + 12px);\n}\n/* The drawer already covers part of the tree; the minimap would cover more. */\n.stage.with-drawer .minimap {\n  display: none;\n}\n.demo-pop {\n  position: absolute;\n  top: 12px;\n  right: 12px;\n  z-index: 2;\n  transition: right 0.22s ease;\n}\n.stage.with-drawer .demo-pop {\n  right: calc(var(--drawer) + 12px);\n}\n.demo-pop > summary {\n  list-style: none;\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--gold);\n  border: 1px dashed var(--gold-deep);\n  background: rgba(19, 26, 22, 0.94);\n  padding: 6px 10px;\n  border-radius: 7px;\n}\n.demo-pop > summary::-webkit-details-marker {\n  display: none;\n}\n.demo-pop[open] {\n  display: grid;\n  gap: 6px;\n  width: 200px;\n  padding: 10px;\n  background: rgba(19, 26, 22, 0.97);\n  border: 1px solid var(--line-strong);\n  border-radius: 10px;\n}\n.demo-pop[open] > summary {\n  border: 0;\n  padding: 0;\n  background: none;\n}\n\n/* Drawer */\n.drawer {\n  position: absolute;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  width: var(--drawer);\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border-left: 1px solid var(--line-strong);\n  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);\n  transform: translateX(100%);\n  transition: transform 0.22s ease;\n  z-index: 4;\n}\n.drawer.open {\n  transform: none;\n}\n.drawer-head {\n  position: relative;\n  display: grid;\n  grid-template-columns: 58px 1fr;\n  gap: 14px;\n  align-items: center;\n  padding: 18px 44px 16px 18px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n  box-shadow: inset 4px 0 0 var(--line-strong);\n}\n.drawer-head.completed {\n  box-shadow: inset 4px 0 0 var(--gold);\n}\n.drawer-head.active {\n  box-shadow: inset 4px 0 0 var(--green);\n}\n.drawer-head.waiting {\n  box-shadow: inset 4px 0 0 var(--amber);\n}\n.drawer-head.paused {\n  box-shadow: inset 4px 0 0 var(--blue);\n}\n.drawer-head.sealed,\n.drawer-head.terminated {\n  box-shadow: inset 4px 0 0 var(--red);\n}\n.drawer-close {\n  position: absolute;\n  top: 10px;\n  right: 10px;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n  font-size: 20px;\n}\n.drawer-emblem {\n  width: 58px;\n  height: 58px;\n  display: grid;\n  place-items: center;\n  border-radius: 13px;\n  background: rgba(220, 194, 124, 0.1);\n  border: 1px solid var(--line-strong);\n  color: var(--gold);\n}\n.drawer-emblem svg {\n  width: 34px;\n  height: 34px;\n}\n.drawer-branch {\n  display: block;\n  font-size: 11.5px;\n  letter-spacing: 0.2em;\n  color: var(--gold);\n}\n.drawer-head h3 {\n  font-size: 20px;\n  line-height: 1.3;\n  margin: 2px 0 6px;\n}\n.state-pill,\n.days-pill {\n  display: inline-block;\n  font-size: 12px;\n  padding: 1px 9px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  margin-right: 6px;\n}\n.state-pill.completed {\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.22);\n  border-color: var(--gold);\n}\n.state-pill.active {\n  color: #a7e3bd;\n  border-color: var(--green);\n}\n.state-pill.waiting {\n  color: var(--amber);\n  border-color: var(--amber);\n}\n.state-pill.paused {\n  color: var(--blue);\n  border-color: var(--blue);\n}\n.state-pill.available {\n  color: #fffaf0;\n  border-color: rgba(236, 230, 212, 0.6);\n}\n.state-pill.locked,\n.state-pill.unknown {\n  color: var(--muted);\n}\n.state-pill.sealed,\n.state-pill.terminated {\n  color: #f0a898;\n  border-color: var(--red);\n}\n.days-pill {\n  color: var(--muted);\n}\n.drawer-body {\n  flex: 1;\n  overflow: auto;\n  padding: 16px 18px 24px;\n}\n.drawer-progress {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 14px;\n}\n.drawer-progress strong {\n  font-variant-numeric: tabular-nums;\n  color: var(--gold);\n}\n.bar {\n  height: 8px;\n  border-radius: 4px;\n  background: rgba(255, 255, 255, 0.08);\n  overflow: hidden;\n}\n.bar i {\n  display: block;\n  height: 100%;\n  background: linear-gradient(90deg, #4f9a6b, var(--green));\n}\n.drawer-action {\n  display: grid;\n  gap: 8px;\n  padding: 12px;\n  margin-bottom: 16px;\n  border-radius: var(--radius);\n  background: var(--raised);\n  border: 1px solid var(--line);\n}\n.drawer-action .primary {\n  height: 40px;\n  font-size: 14.5px;\n}\n.blockers {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: #f0c49a;\n}\n.description {\n  font-size: 14px;\n  line-height: 1.8;\n}\n.detail-section {\n  padding: 14px 0;\n  border-top: 1px solid var(--line);\n}\n.detail-section h4 {\n  font-size: 13px;\n  letter-spacing: 0.12em;\n  color: var(--gold);\n  margin-bottom: 8px;\n}\n.detail-section ul {\n  margin: 0;\n  padding-left: 18px;\n  display: grid;\n  gap: 4px;\n  font-size: 13.5px;\n}\n.detail-section p {\n  font-size: 13.5px;\n}\n.reason {\n  color: var(--muted);\n  font-size: 13px;\n  margin: 8px 0 0;\n}\n.prereqs {\n  display: grid;\n  gap: 6px;\n}\n.prereq-group {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n}\n.chip {\n  font-size: 12.5px;\n  padding: 3px 10px;\n  border-radius: 99px;\n}\n.chip.done {\n  border-color: var(--gold);\n  color: #fff3c9;\n  background: rgba(220, 194, 124, 0.15);\n}\n.or,\n.and {\n  font-size: 11.5px;\n  color: var(--faint);\n}\n.and {\n  display: block;\n  padding-left: 4px;\n}\n.conditions {\n  list-style: none;\n  padding: 0 !important;\n}\n.conditions li {\n  display: flex;\n  gap: 8px;\n  align-items: baseline;\n}\n.cond-kind {\n  flex-shrink: 0;\n  font-size: 11px;\n  padding: 0 7px;\n  border-radius: 4px;\n  background: rgba(220, 194, 124, 0.12);\n  color: var(--gold);\n}\n.mutex-note {\n  border-left: 3px solid var(--red);\n  padding-left: 12px;\n}\n.route-facts {\n  display: grid;\n  grid-template-columns: auto 1fr;\n  gap: 6px 12px;\n  margin: 8px 0 0;\n  font-size: 13px;\n}\n.route-facts dt {\n  color: var(--muted);\n}\n.route-facts dd {\n  margin: 0;\n}\n\n/* Status line and empty state */\n.statusline {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  min-height: 32px;\n  padding: 4px 16px;\n  border-top: 1px solid var(--line);\n  background: #111814;\n  font-size: 12px;\n  color: var(--muted);\n}\n.status-dot {\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--green);\n  margin-right: 8px;\n  vertical-align: 1px;\n}\n.status-dot.busy {\n  background: var(--gold);\n  box-shadow: 0 0 8px var(--gold);\n}\n.linkish {\n  border: 0;\n  background: none;\n  padding: 2px 4px;\n  color: var(--gold);\n  font-size: 12px;\n}\n.empty {\n  flex: 1;\n  display: grid;\n  place-items: center;\n  padding: 24px;\n  background: var(--ink);\n}\n.empty-card {\n  max-width: 440px;\n  text-align: center;\n  display: grid;\n  justify-items: center;\n  gap: 12px;\n}\n.empty-card svg {\n  width: 72px;\n  height: 72px;\n  color: var(--gold);\n}\n.empty-card p {\n  color: var(--muted);\n}\n\n/* ---------- Modals and settings ---------- */\n.modal-backdrop {\n  position: fixed;\n  inset: 0;\n  z-index: 2147483001;\n  background: rgba(5, 9, 7, 0.78);\n  backdrop-filter: blur(3px);\n  display: grid;\n  place-items: center;\n  padding: 24px;\n}\n.modal {\n  width: min(880px, 100%);\n  max-height: 90vh;\n  display: flex;\n  flex-direction: column;\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 14px;\n  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);\n  overflow: hidden;\n}\n.modal-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 16px 20px;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);\n}\n.modal-header h2 {\n  font-size: 20px;\n  letter-spacing: 0.06em;\n}\n.modal-header button {\n  width: 34px;\n  height: 34px;\n  padding: 0;\n  font-size: 19px;\n}\n.modal-body {\n  padding: 18px 22px;\n  overflow: auto;\n}\n.modal-footer {\n  display: flex;\n  justify-content: flex-end;\n  gap: 10px;\n  padding: 12px 20px;\n  border-top: 1px solid var(--line);\n  background: #161e1a;\n}\n.modal-error {\n  color: #f6b3a4;\n  font-size: 13px;\n  white-space: pre-wrap;\n}\n.modal-body h3 {\n  font-size: 17px;\n  color: var(--gold);\n  margin-bottom: 6px;\n}\n.modal-body h4 {\n  font-size: 14px;\n  margin: 14px 0 6px;\n}\n.tabs {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-bottom: 18px;\n  padding-bottom: 10px;\n  border-bottom: 1px solid var(--line);\n}\n.tabs button {\n  border-color: transparent;\n  background: transparent;\n}\n.tabs button.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  color: var(--gold);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.settings-section[hidden] {\n  display: none;\n}\n.form-grid {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 14px 18px;\n}\n.form-grid > .wide {\n  grid-column: 1/-1;\n  min-width: 0;\n}\n.field {\n  display: grid;\n  /* A field stretched to a taller neighbor in its row keeps its own control height. */\n  align-content: start;\n  gap: 6px;\n  font-size: 13px;\n  color: #d5d0bf;\n  min-width: 0;\n}\n.field.wide {\n  grid-column: 1/-1;\n}\n.field small {\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.field textarea {\n  min-height: 80px;\n  resize: vertical;\n}\n.check {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  color: #d5d0bf;\n}\n.check.wide,\n.check:has(> small) {\n  flex-wrap: wrap;\n}\n.check small {\n  flex-basis: 100%;\n  font-size: 11.5px;\n  line-height: 1.7;\n  padding-left: 24px;\n}\n.api-row,\n.candidate,\n.event-card {\n  padding: 14px 16px;\n  border: 1px solid var(--line);\n  background: var(--raised);\n  border-radius: var(--radius);\n  margin-bottom: 12px;\n}\n.candidate {\n  display: flex;\n  gap: 12px;\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n.candidate strong {\n  display: block;\n  margin-bottom: 2px;\n}\n.candidate p {\n  font-size: 13px;\n  color: var(--muted);\n  margin: 0;\n}\n.event-card h3 {\n  margin: 6px 0;\n}\n.event-card p {\n  font-size: 13.5px;\n}\n.api-actions {\n  display: flex;\n  align-items: end;\n  flex-wrap: wrap;\n  gap: 10px;\n  margin: 12px 0;\n}\n.segment-max {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: end;\n  gap: 8px 12px;\n}\n.segment-max .field {\n  flex: 0 1 220px;\n}\n.segment-max-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  padding-bottom: 4px;\n}\n.segment-max small {\n  flex-basis: 100%;\n}\n.api-picker {\n  flex: 1;\n  min-width: 180px;\n}\n.api-editor {\n  margin-top: 16px;\n}\n.api-status {\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--gold);\n  font-size: 13px;\n}\n#source-panel fieldset {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  margin: 16px 0;\n  padding: 14px;\n  min-width: 0;\n}\n#source-panel legend {\n  color: var(--gold);\n  padding: 0 6px;\n  font-size: 13.5px;\n}\n#source-panel fieldset:disabled {\n  opacity: 0.55;\n}\n.source-list {\n  max-height: 300px;\n  overflow: auto;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 6px 12px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.source-group {\n  position: sticky;\n  top: -6px;\n  margin: 8px -12px 4px;\n  padding: 6px 12px;\n  font-size: 12.5px;\n  color: var(--gold);\n  background: var(--ink);\n  border-bottom: 1px solid var(--line);\n}\n.source-entry {\n  display: flex;\n  align-items: start;\n  gap: 10px;\n  padding: 6px 0;\n  font-size: 13px;\n}\n.source-entry small {\n  display: block;\n  font-size: 11.5px;\n}\n.source-disabled span {\n  opacity: 0.65;\n}\n.source-book[hidden],\n.source-entry[hidden] {\n  display: none;\n}\n.source-rule {\n  display: grid;\n  grid-template-columns: 1fr 1fr auto;\n  gap: 8px;\n  margin: 8px 0;\n}\n.source-rule input {\n  min-width: 0;\n}\n.source-toggles {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px 18px;\n}\n.segment {\n  display: grid;\n  gap: 8px;\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  padding: 10px;\n  margin: 8px 0;\n  background: var(--ink);\n}\n.segment-head {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.segment-head input[data-seg='name'] {\n  flex: 1;\n  min-width: 120px;\n}\n.segment textarea {\n  min-height: 70px;\n  resize: vertical;\n  width: 100%;\n}\n.legend {\n  margin-bottom: 14px;\n  font-size: 13px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend code {\n  color: var(--gold);\n}\n\n/* ---------- Responsive ---------- */\n/* the focus gauge gives way in steps, by window width only */\n@media (max-width: 1499px) {\n  .focus-gauge {\n    width: 260px;\n  }\n}\n@media (max-width: 1279px) {\n  .nation-copy p {\n    -webkit-line-clamp: 1;\n  }\n}\n@media (max-width: 1180px) {\n  .nation-bar {\n    grid-template-columns: minmax(180px, 1fr) auto auto;\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: flex-end;\n    margin-top: -4px;\n  }\n}\n@media (max-width: 1100px) {\n  .brand,\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n}\n@media (max-width: 1000px) {\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    gap: 12px 16px;\n  }\n  /* the focus shares the second row with the actions */\n  .focus-gauge {\n    order: 3;\n    width: auto;\n  }\n  .focus-gauge::after {\n    display: none;\n  }\n  .nation-actions {\n    grid-column: auto;\n    margin-top: 0;\n    order: 4;\n  }\n  :host {\n    --drawer: 340px;\n  }\n}\n@media (max-width: 760px) {\n  .shell {\n    inset: 0;\n    border-radius: 0;\n    border: 0;\n  }\n  .command {\n    gap: 8px;\n    padding: 6px 8px;\n    min-height: 52px;\n  }\n  .brand-mark {\n    width: 34px;\n    height: 34px;\n  }\n  .nation-scroller,\n  .date-chip,\n  .test-label {\n    display: none;\n  }\n  .nation-picker {\n    display: block;\n  }\n  .command-spacer {\n    display: none;\n  }\n  .cmd-text {\n    display: none;\n  }\n  .cmd-btn {\n    width: 38px;\n    justify-content: center;\n    padding: 0;\n  }\n  .cmd-btn.busy {\n    width: auto;\n    padding: 0 8px;\n  }\n  .cmd-btn.busy .cmd-text {\n    display: inline;\n  }\n  .nation-bar {\n    grid-template-columns: 1fr auto;\n    padding: 10px 12px;\n    gap: 10px;\n  }\n  .nation-crest {\n    width: 38px;\n    height: 38px;\n  }\n  .nation-copy h2 {\n    font-size: 18px;\n  }\n  .nation-copy p {\n    display: none;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: 72px;\n  }\n  .gauge-head {\n    display: grid;\n  }\n  .gauge-head small {\n    font-size: 10.5px;\n    white-space: nowrap;\n  }\n  .gauge-head strong {\n    font-size: 18px;\n  }\n  .nation-actions {\n    grid-column: 1/-1;\n    justify-content: stretch;\n    margin: 0;\n  }\n  .nation-actions > * {\n    flex: 1;\n  }\n  .control-select select {\n    width: 100%;\n  }\n  .routes {\n    top: 0;\n    left: 0;\n    bottom: 0;\n    width: min(320px, 86%);\n    max-height: none;\n    border-radius: 0 12px 12px 0;\n  }\n  .minimap,\n  .stage-hint {\n    display: none;\n  }\n  .stage.with-drawer .demo-pop {\n    right: 12px;\n  }\n  .drawer {\n    top: auto;\n    left: 0;\n    width: auto;\n    height: 72%;\n    border-left: 0;\n    border-top: 1px solid var(--line-strong);\n    border-radius: 16px 16px 0 0;\n    transform: translateY(100%);\n    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);\n  }\n  .drawer::before {\n    content: '';\n    display: block;\n    width: 44px;\n    height: 4px;\n    border-radius: 2px;\n    background: var(--line-strong);\n    margin: 8px auto 0;\n  }\n  .drawer.open {\n    transform: none;\n  }\n  .stage.with-drawer .stage-tools {\n    right: 12px;\n  }\n  .statusline .status-mid {\n    display: none;\n  }\n  .modal-backdrop {\n    padding: 0;\n    place-items: end stretch;\n  }\n  .modal {\n    max-height: 94dvh;\n    border-radius: 16px 16px 0 0;\n  }\n  .modal-body {\n    padding: 14px;\n  }\n  .form-grid,\n  .source-toggles {\n    grid-template-columns: 1fr;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  *,\n  *::before {\n    animation: none !important;\n    transition: none !important;\n  }\n}\n@media (max-width: 1200px) {\n  .stage.with-drawer .minimap {\n    display: none;\n  }\n}\n.demo-pop[open] button {\n  width: 100%;\n  text-align: left;\n}\n\n/* ---------- Tasks tab (任务) ---------- */\n.preset-bar {\n  padding: 14px 16px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));\n  margin-bottom: 14px;\n}\n.preset-title {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.preset-title h3 {\n  margin: 0;\n}\n.preset-title small {\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n}\n.preset-row {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.preset-row select {\n  flex: 1 1 200px;\n  min-width: 0;\n}\n.preset-row input[data-preset-name] {\n  flex: 1 1 160px;\n  min-width: 0;\n}\n.preset-bar .api-status:empty {\n  display: none;\n}\n.preset-bar .api-status {\n  margin: 8px 0 0;\n}\n.task-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 8px;\n  margin-bottom: 14px;\n}\n.task-tab {\n  display: grid;\n  gap: 3px;\n  text-align: left;\n  padding: 10px 12px;\n  background: var(--raised);\n  border-color: var(--line);\n  min-width: 0;\n}\n.task-tab strong {\n  font-family: var(--serif);\n  font-size: 14.5px;\n  font-weight: 600;\n}\n.task-tab small {\n  color: var(--faint);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.task-tab.active {\n  border-color: var(--gold);\n  background: var(--raised-2);\n  box-shadow: inset 0 -2px 0 var(--gold);\n}\n.task-tab.active strong {\n  color: var(--gold);\n}\n.task-editor[hidden] {\n  display: none;\n}\n.task-head {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: baseline;\n  gap: 4px 12px;\n  margin-bottom: 10px;\n}\n.task-head h3 {\n  margin: 0;\n}\n.task-head small {\n  color: var(--muted);\n  font-size: 12.5px;\n}\n.task-block {\n  border: 1px solid var(--line);\n  border-radius: var(--radius);\n  background: var(--raised);\n  padding: 0 14px;\n  margin-bottom: 12px;\n}\n.task-block > summary {\n  cursor: pointer;\n  padding: 11px 0;\n  font-weight: 600;\n  color: var(--gold);\n  list-style: none;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.task-block > summary::-webkit-details-marker {\n  display: none;\n}\n.task-block > summary::before {\n  content: '▸';\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.task-block[open] > summary::before {\n  transform: rotate(90deg);\n}\n.task-block[open] {\n  padding-bottom: 14px;\n}\n.task-block .summary-note {\n  margin-left: auto;\n  font-weight: 400;\n  font-size: 12px;\n  color: var(--muted);\n}\n.block-note {\n  display: block;\n  margin-top: 8px;\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.route-row {\n  display: grid;\n  grid-template-columns: 1fr 120px auto;\n  gap: 10px;\n  align-items: end;\n  margin-bottom: 10px;\n}\n.route-row > .field:first-child:last-of-type {\n  grid-column: 1/3;\n}\n.route-row button {\n  height: 36px;\n}\n.prompt-toolbar {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n  margin-bottom: 10px;\n}\n.prompt-toolbar .spacer {\n  flex: 1;\n}\n.prompt-toolbar small {\n  color: var(--muted);\n  font-size: 12px;\n}\n.prompt-list {\n  display: grid;\n  gap: 6px;\n  margin-bottom: 10px;\n}\n.prompt-card {\n  border: 1px solid var(--line);\n  border-radius: 8px;\n  background: #1b2420;\n  transition:\n    border-color 0.15s,\n    opacity 0.15s;\n}\n.prompt-card.open {\n  border-color: var(--line-strong);\n}\n.prompt-card[data-kind='data'] {\n  border-left: 3px solid var(--blue);\n}\n.prompt-card[data-kind='guide'],\n.prompt-card[data-kind='task'] {\n  border-left: 3px solid var(--gold-deep);\n}\n.prompt-card[data-kind='custom'] {\n  border-left: 3px solid var(--green);\n}\n.prompt-card.off {\n  opacity: 0.55;\n}\n.prompt-card.off .pname {\n  text-decoration: line-through;\n  text-decoration-color: var(--faint);\n}\n.prompt-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 4px 6px 4px 4px;\n}\n.prompt-toggle {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 0;\n  background: transparent;\n  padding: 6px 8px;\n  text-align: left;\n}\n.prompt-toggle:hover:not(:disabled) {\n  background: rgba(255, 255, 255, 0.03);\n}\n.prompt-toggle .chev {\n  color: var(--faint);\n  transition: transform 0.15s;\n}\n.prompt-card.open .chev {\n  transform: rotate(90deg);\n}\n.pname {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-weight: 600;\n}\n.role-tag,\n.kind-tag {\n  flex: none;\n  font-size: 10.5px;\n  padding: 1px 7px;\n  border-radius: 99px;\n  border: 1px solid var(--line-strong);\n  color: var(--muted);\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n}\n.kind-tag {\n  font-family: inherit;\n}\n.kind-tag.data {\n  color: var(--blue);\n  border-color: rgba(143, 176, 214, 0.4);\n}\n.kind-tag.custom {\n  color: var(--green);\n  border-color: rgba(114, 196, 146, 0.4);\n}\n.kind-tag.modified {\n  color: var(--amber);\n  border-color: rgba(230, 169, 80, 0.45);\n}\n.pchars {\n  flex: none;\n  margin-left: auto;\n  font-size: 11px;\n  color: var(--faint);\n}\n.switch {\n  flex: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 12px;\n  color: var(--muted);\n  cursor: pointer;\n}\n.switch input {\n  appearance: none;\n  width: 30px;\n  height: 17px;\n  border-radius: 99px;\n  background: #0f1512;\n  border: 1px solid var(--line-strong);\n  position: relative;\n  margin: 0;\n  padding: 0;\n  cursor: pointer;\n  transition: background 0.15s;\n}\n.switch input::after {\n  content: '';\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 11px;\n  height: 11px;\n  border-radius: 50%;\n  background: var(--faint);\n  transition:\n    transform 0.15s,\n    background 0.15s;\n}\n.switch input:checked {\n  background: rgba(114, 196, 146, 0.25);\n  border-color: var(--green);\n}\n.switch input:checked::after {\n  transform: translateX(13px);\n  background: var(--green);\n}\n.switch input:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.switch span {\n  display: none;\n}\nbutton.icon {\n  width: 30px;\n  height: 30px;\n  padding: 0;\n  display: inline-grid;\n  place-items: center;\n  flex: none;\n}\n.prompt-body {\n  padding: 4px 12px 12px;\n  display: grid;\n  gap: 8px;\n}\n.prompt-body[hidden] {\n  display: none;\n}\n.prompt-fields {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n.prompt-fields input {\n  flex: 1 1 180px;\n  min-width: 0;\n}\n.prompt-fields select {\n  flex: 0 0 120px;\n}\n.prompt-body textarea {\n  width: 100%;\n  resize: vertical;\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12.5px;\n  line-height: 1.6;\n}\n.prompt-body small {\n  color: var(--muted);\n  font-size: 11.5px;\n  line-height: 1.7;\n}\n.prompt-preview {\n  margin-top: 12px;\n}\n.prompt-preview textarea {\n  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.55;\n  min-height: 260px;\n}\n.legend {\n  font-size: 12.5px;\n  color: var(--muted);\n  margin-bottom: 10px;\n}\n.legend summary {\n  cursor: pointer;\n  color: var(--gold);\n}\n.legend ul {\n  margin: 8px 0 0;\n  padding-left: 18px;\n  line-height: 1.8;\n}\n.legend code {\n  color: var(--text);\n}\n\n/* ---------- Progress window above the orb ---------- */\n.hud {\n  position: fixed;\n  z-index: 2147483000;\n  display: flex;\n  flex-direction: column;\n  background: rgba(22, 30, 26, 0.96);\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  box-shadow:\n    0 14px 40px rgba(0, 0, 0, 0.55),\n    inset 0 1px 0 rgba(220, 194, 124, 0.08);\n  backdrop-filter: blur(6px);\n  color: var(--text);\n  font-size: 13px;\n  overflow: hidden;\n}\n.hud[hidden] {\n  display: none;\n}\n.hud.enter {\n  animation: hud-in 0.18s ease-out;\n}\n@keyframes hud-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n}\n.hud[data-side='below'].enter {\n  animation-name: hud-in-below;\n}\n@keyframes hud-in-below {\n  from {\n    opacity: 0;\n    transform: translateY(-6px);\n  }\n}\n.hud-head {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 7px 8px 7px 12px;\n  cursor: grab;\n  user-select: none;\n  border-bottom: 1px solid var(--line);\n  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\n}\n.hud-head:active {\n  cursor: grabbing;\n}\n.hud-head .status-dot {\n  margin-right: 2px;\n  flex: none;\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.hud-head strong {\n  font-family: var(--serif);\n  color: var(--gold);\n  letter-spacing: 0.06em;\n  flex: none;\n}\n.hud-count {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--muted);\n  font-size: 12px;\n}\n.hud-actions {\n  margin-left: auto;\n  display: flex;\n  gap: 4px;\n  flex: none;\n}\n.hud-actions button {\n  padding: 3px 8px;\n  font-size: 12px;\n}\n.hud-actions button.icon {\n  width: 26px;\n  height: 26px;\n  padding: 0;\n}\n.hud-actions button[hidden] {\n  display: none;\n}\n.hud-bar {\n  height: 3px;\n  background: rgba(220, 194, 124, 0.12);\n  position: relative;\n  overflow: hidden;\n  flex: none;\n}\n.hud-bar i {\n  position: absolute;\n  inset: 0 auto 0 0;\n  background: var(--gold);\n  transition: width 0.3s;\n}\n/* v0.15.4: no moving bar; it only shows how much of a batch is done. */\n.hud-bar[hidden] {\n  display: none;\n}\n.hud-list {\n  list-style: none;\n  margin: 0;\n  padding: 4px 0;\n  overflow: auto;\n  min-height: 0;\n}\n.hud-list[hidden] {\n  display: none;\n}\n.hud-item {\n  display: grid;\n  grid-template-columns: 18px minmax(0, 1fr) auto auto;\n  gap: 8px;\n  align-items: center;\n  padding: 6px 8px 6px 12px;\n}\n.hud-item.enter {\n  animation: hud-in 0.18s ease-out;\n}\n.hud-item + .hud-item {\n  border-top: 1px solid rgba(217, 191, 120, 0.07);\n}\n.hud-sym.run {\n  color: var(--gold);\n  font-size: 9px;\n}\n.hud-sym {\n  font-style: normal;\n  font-weight: 700;\n  text-align: center;\n  width: 16px;\n  height: 16px;\n  line-height: 16px;\n  border-radius: 50%;\n  font-size: 11px;\n}\n.hud-sym.ok {\n  color: #0f1512;\n  background: var(--green);\n}\n.hud-sym.bad {\n  color: #0f1512;\n  background: var(--red);\n}\n.hud-sym.wait,\n.hud-sym.off {\n  color: var(--muted);\n  border: 1px solid var(--line-strong);\n  line-height: 14px;\n}\n.hud-text {\n  min-width: 0;\n  display: grid;\n}\n.hud-text b {\n  font-weight: 600;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-text small {\n  color: var(--muted);\n  font-size: 11.5px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.hud-item.failed .hud-text small {\n  color: #f0a898;\n  white-space: normal;\n  display: -webkit-box;\n  -webkit-line-clamp: 3;\n  -webkit-box-orient: vertical;\n}\n.hud-item.success .hud-text b {\n  color: var(--green);\n}\n.hud-item.cancelled {\n  opacity: 0.7;\n}\n.hud-item time {\n  font-variant-numeric: tabular-nums;\n  color: var(--faint);\n  font-size: 11.5px;\n}\n.hud-item button.icon {\n  width: 22px;\n  height: 22px;\n  border-color: transparent;\n  background: transparent;\n  color: var(--faint);\n}\n.hud.collapsed .hud-head {\n  border-bottom: 0;\n}\n\n@media (max-width: 760px) {\n  .task-tabs {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n  .route-row {\n    grid-template-columns: 1fr 90px;\n  }\n  .route-row > button {\n    grid-column: 1/-1;\n  }\n  .route-row > .field:first-child:last-of-type {\n    grid-column: 1/-1;\n  }\n  .pchars,\n  .role-tag {\n    display: none;\n  }\n  .hud-actions button[data-hud='log'] {\n    display: none;\n  }\n}\n.task-block.prompts-block {\n  padding: 12px 14px 14px;\n}\n.prompt-toolbar h4 {\n  margin: 0;\n  color: var(--gold);\n  font-size: 14px;\n}\n.prompts-block > .muted {\n  font-size: 12.5px;\n  margin: 0 0 8px;\n}\n.task-editor input:not([type='checkbox']),\n.task-editor select,\n.preset-row input,\n.preset-row select,\n.preset-row button,\n.route-row button {\n  height: 38px;\n}\n.task-editor .prompt-body input {\n  height: 36px;\n}\n\n/* ---------- Country manager: delete tree ---------- */\n.country-row {\n  align-items: center;\n}\n.country-row .row-spacer {\n  flex: 1;\n}\n.remove-confirm {\n  flex-basis: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px;\n  padding: 10px 12px;\n  border: 1px solid rgba(217, 112, 95, 0.45);\n  border-radius: 8px;\n  background: rgba(217, 112, 95, 0.08);\n}\n.remove-confirm small {\n  flex: 1 1 260px;\n  color: #f0c2b8;\n  line-height: 1.6;\n}\n\n/* ---------- Country manager: tree files ---------- */\n.tree-io h3 {\n  margin-bottom: 4px;\n}\n.tree-io > small {\n  display: block;\n  color: var(--muted);\n  font-size: 12px;\n  line-height: 1.6;\n  margin-bottom: 10px;\n}\n.tree-io-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n.tree-io .api-status {\n  margin: 8px 0 0;\n}\n.import-panel {\n  margin-top: 12px;\n  padding: 12px 14px;\n  border: 1px solid var(--line-strong);\n  border-radius: var(--radius);\n  background: var(--raised);\n  display: grid;\n  gap: 10px;\n}\n.import-panel h4 {\n  margin: 0;\n  color: var(--gold);\n}\n.import-panel ul {\n  margin: 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.8;\n}\n.import-panel code {\n  font-size: 11.5px;\n  color: var(--muted);\n}\n.import-panel .warn {\n  color: var(--amber);\n}\n.tree-io {\n  margin-bottom: 18px;\n}\n\n/* ---------- News window (国际快讯) ---------- */\n.event-timeline {\n  margin: 6px 0;\n  padding-left: 18px;\n  font-size: 13px;\n  line-height: 1.7;\n  color: var(--muted);\n}\n.event-timeline b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-current {\n  font-size: 13px;\n}\n.event-current b {\n  color: var(--gold);\n  margin-right: 6px;\n}\n.event-steps {\n  list-style: none;\n  margin: 6px 0;\n  padding: 0;\n  font-size: 13px;\n  line-height: 1.7;\n}\n.event-steps li::before {\n  display: inline-block;\n  width: 1.4em;\n  color: var(--muted);\n}\n.event-steps li.done {\n  color: var(--muted);\n  text-decoration: line-through;\n}\n.event-steps li.done::before {\n  content: '✓';\n}\n.event-steps li.active {\n  color: var(--gold);\n  font-weight: 700;\n}\n.event-steps li.active::before {\n  content: '▶';\n}\n.event-steps li.pending::before {\n  content: '○';\n}\n.event-steps li.planned {\n  font-style: italic;\n}\n.event-steps li.planned::before {\n  content: '◷';\n}\n.event-effects {\n  display: block;\n  color: var(--gold);\n}\n.pivotal-note {\n  border-left: 3px solid var(--gold);\n  padding-left: 10px;\n}\n.rel-core {\n  border: 1px solid var(--gold);\n  border-radius: 10px;\n  padding: 10px 14px;\n  margin: 10px 0 14px;\n  background: rgba(220, 194, 124, 0.08);\n}\n.rel-core h3,\n.rel-independent h3 {\n  margin: 0 0 6px;\n  font-size: 15px;\n}\n.rel-list {\n  list-style: none;\n  padding: 0;\n  margin: 0;\n  display: grid;\n  gap: 10px;\n}\n.rel-card {\n  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));\n  border-radius: 10px;\n  padding: 10px 12px;\n}\n.rel-card p {\n  margin: 6px 0;\n}\n.rel-pair {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-top: 6px;\n}\n.rel-branch {\n  color: var(--muted);\n}\n.rel-arrow {\n  color: var(--gold);\n}\n.rel-via {\n  margin: 4px 0 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  color: var(--muted);\n}\n.rel-independent {\n  margin-top: 14px;\n}\n.rel-independent dt {\n  font-weight: 600;\n}\n.rel-independent dd {\n  margin: 0 0 8px;\n  color: var(--muted);\n}\n\n/* v0.13.1 UI review */\n.status-jobs {\n  color: var(--muted);\n  display: inline-flex;\n  align-items: center;\n}\n.status-jobs.failed {\n  color: var(--red);\n}\n.status-jobs.busy {\n  color: var(--gold);\n}\n.status-dot.failed {\n  background: var(--red);\n}\n.cmd-btn {\n  position: relative;\n}\n.alert-dot {\n  position: absolute;\n  top: 4px;\n  right: 4px;\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  background: var(--red);\n  box-shadow: 0 0 0 2px var(--bg);\n}\n.lock-confirm {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 10px 12px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.lock-confirm p {\n  margin: 0 0 8px;\n  font-size: 13px;\n}\n.lock-confirm strong {\n  color: var(--amber);\n}\n.lock-confirm .row {\n  display: flex;\n  gap: 8px;\n}\n.job-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  padding-bottom: 12px;\n  margin-bottom: 8px;\n  border-bottom: 1px solid var(--line);\n}\n.job-buttons {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  justify-content: flex-end;\n}\n.event-filters {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n  margin-bottom: 12px;\n}\n.event-filters select {\n  width: auto;\n  min-width: 140px;\n}\n.event-filters small {\n  margin-left: auto;\n  color: var(--muted);\n}\n.chip.active {\n  border-color: var(--gold);\n  color: var(--gold);\n  background: rgba(220, 194, 124, 0.1);\n}\n.country-row {\n  flex-wrap: wrap;\n  gap: 10px 14px;\n}\n.country-name {\n  min-width: 7em;\n}\n.switch-label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13px;\n}\n.tree-io > summary {\n  cursor: pointer;\n  color: var(--gold);\n  font-weight: 700;\n  margin-bottom: 8px;\n}\n.task-head {\n  flex-wrap: wrap;\n}\n.task-head .spacer {\n  flex: 1;\n}\n.last-run {\n  color: var(--muted);\n}\n.field .static {\n  margin: 6px 0 0;\n  font-size: 13px;\n  color: var(--muted);\n}\n.unsaved {\n  margin-right: auto;\n  color: var(--amber);\n  font-size: 13px;\n}\n.field[hidden] {\n  display: none;\n}\n.modal-task-status {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  margin: 0 12px 0 auto;\n  min-width: 0;\n  max-width: 55%;\n  font-size: 12px;\n  color: var(--gold);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.modal-task-status[hidden] {\n  display: none;\n}\n.modal-task-status.failed {\n  color: var(--red);\n}\n.modal-task-status .spinner {\n  flex: none;\n  width: 12px;\n  height: 12px;\n}\n.modal-task-status .status-dot {\n  margin-right: 0;\n}\n.status-jobs {\n  max-width: 60vw;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;\n   the control select and 更新局势 open from ⋯ (the top picker lists names only). */\n.nation-more-btn,\n.control-tag {\n  display: none;\n}\n@media (max-width: 760px) {\n  .nation-bar {\n    grid-template-columns: minmax(0, 1fr) auto auto;\n    padding: 6px 10px 8px;\n    gap: 6px 10px;\n  }\n  .nation-crest {\n    display: none;\n  }\n  .nation-copy h2 {\n    font-size: 16px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .control-tag {\n    display: block;\n    font-size: 11px;\n    color: var(--muted);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n  }\n  .gauges {\n    gap: 10px;\n  }\n  .gauge {\n    width: auto;\n    min-width: 44px;\n  }\n  .gauge-head {\n    display: grid;\n    line-height: 1.1;\n  }\n  .gauge-head small {\n    font-size: 10px;\n  }\n  .gauge-head strong {\n    font-size: 16px;\n  }\n  .gauge-track {\n    height: 3px;\n    margin-top: 2px;\n  }\n  .nation-more-btn {\n    display: grid;\n    place-items: center;\n    width: 34px;\n    height: 34px;\n    padding: 0;\n    font-size: 18px;\n  }\n  .nation-more-btn[aria-expanded='true'] {\n    border-color: var(--gold);\n    color: var(--gold);\n  }\n  /* the main focus as one slim full-width row: dot, name, days left, bar */\n  .focus-gauge {\n    grid-column: 1/-1;\n    width: auto;\n    padding: 2px 0;\n    margin: 0;\n  }\n  .focus-gauge .gauge-head {\n    display: flex;\n    gap: 8px;\n  }\n  .focus-name {\n    font-size: 14px;\n  }\n  .focus-num::after {\n    font-size: 16px;\n  }\n  .nation-actions {\n    display: none;\n  }\n  .nation-bar.more-open .nation-actions {\n    display: flex;\n  }\n}\n\n/* v0.13.3: settings and details additions */\n.notice {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 12px;\n  background: rgba(230, 169, 80, 0.08);\n  color: #f0c49a;\n  font-size: 13px;\n}\n.api-actions.confirm-row {\n  border: 1px solid var(--amber);\n  border-radius: 8px;\n  padding: 8px 10px;\n  background: rgba(230, 169, 80, 0.08);\n}\n.block-note.model-hint {\n  color: #f0c49a;\n}\n.source-scope {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px 12px;\n  padding: 8px 12px;\n  margin: 4px 0 6px;\n  border: 1px solid var(--line-strong);\n  border-radius: 8px;\n  background: var(--raised);\n}\n.source-scope.custom {\n  border-color: var(--gold);\n}\n.source-scope b {\n  color: var(--gold);\n}\n.source-scope label {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\ndetails.fold > summary {\n  cursor: pointer;\n  color: var(--muted);\n  font-size: 12.5px;\n  list-style: none;\n}\ndetails.fold > summary::before {\n  content: '▸ ';\n}\ndetails.fold[open] > summary::before {\n  content: '▾ ';\n}\ndetails.detail-section.fold > summary h4 {\n  display: inline;\n  margin: 0;\n}\ndetails.detail-section.fold > summary::before {\n  color: var(--gold);\n}\n.source-modes {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;\n  gap: 10px;\n  align-items: end;\n}\n@media (max-width: 760px) {\n  .source-modes {\n    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n  }\n  .source-modes > button {\n    grid-column: 1/-1;\n  }\n}\n.api-actions.api-save {\n  align-items: center;\n  position: sticky;\n  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */\n  bottom: -18px;\n  margin-bottom: -18px;\n  padding-bottom: 18px !important;\n  z-index: 2;\n  padding: 10px 0;\n  background: var(--panel);\n  border-top: 1px solid var(--line);\n}\n.api-actions.api-save .api-status {\n  margin: 0;\n  flex: 1 1 200px;\n}\n@media (max-width: 760px) {\n  .api-actions.api-save {\n    bottom: -14px;\n    margin-bottom: -14px;\n    padding-bottom: 14px !important;\n  }\n}\n\n/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */\n.period-anchor-note {\n  display: flex;\n  flex-direction: column;\n  gap: 5px;\n  margin-bottom: 14px;\n  border-left: 2px solid var(--blue);\n  padding: 10px 12px;\n  background: var(--raised);\n  font-size: 12px;\n}\n.period-anchor-note strong {\n  color: var(--blue);\n}\n.event-card.flash {\n  border-color: var(--gold);\n  box-shadow: 0 0 0 1px var(--gold) inset;\n}\n.period-shape {\n  margin-left: 10px;\n  padding: 1px 8px;\n  border-radius: 10px;\n  font-size: 11.5px;\n  font-weight: 400;\n  color: #e5d3a0;\n  background: rgba(220, 194, 124, 0.08);\n  border: 1px solid rgba(220, 194, 124, 0.28);\n  cursor: help;\n}\n.period-anchor-badge {\n  position: absolute;\n  top: -18px;\n  right: 0;\n  font-size: 10px;\n  line-height: 16px;\n  padding: 0 5px;\n  color: var(--blue);\n  background: var(--panel);\n  border: 1px solid var(--line-strong);\n  border-radius: 3px;\n}\n.period-history {\n  margin: 14px 0;\n  border-left: 2px solid var(--gold-deep);\n  padding: 4px 16px;\n}\n.period-history time {\n  color: var(--gold);\n  font-size: 12px;\n}\n.period-history p {\n  line-height: 1.95;\n}\n\n/* ---------- v0.15.0 · the period joins the nation bar; one tool cluster; drawer status ---------- */\n.period-line {\n  display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  gap: 2px 12px;\n  margin-top: 3px;\n  font-size: 12.5px;\n}\n.period-line strong {\n  color: var(--gold);\n  font-weight: 600;\n}\n.period-line .period-shape {\n  margin-left: 0;\n}\n.period-line .switch-label {\n  gap: 5px;\n  font-size: 12px;\n  color: var(--muted);\n}\n.period-history-btn {\n  font-size: 12px;\n  color: var(--muted);\n}\n.nation-copy p.period-note {\n  margin: 1px 0 0;\n  font-size: 12px;\n  color: var(--faint);\n  display: block;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.tag-day {\n  display: none;\n}\n@media (min-width: 761px) {\n  .nation-bar {\n    padding: 9px 18px;\n  }\n  .nation-copy h2 {\n    display: flex;\n    align-items: baseline;\n    gap: 10px;\n    font-size: 21px;\n  }\n  .nation-copy h2 .control-tag {\n    display: inline;\n    font-family: var(--sans);\n    font-size: 12px;\n    font-weight: 400;\n    letter-spacing: 0;\n    color: var(--muted);\n  }\n  .routes {\n    width: 244px;\n    bottom: auto;\n  }\n}\n@media (max-width: 760px) {\n  .nation-id {\n    grid-column: 1 / -1;\n  }\n  .gauges {\n    justify-self: start;\n  }\n  .tag-day {\n    display: inline;\n  }\n  .period-line {\n    font-size: 12px;\n  }\n  .stage-tools {\n    left: 8px;\n    right: 8px;\n    flex-wrap: wrap;\n    justify-content: flex-end;\n  }\n  .stage-tools [data-action='overview'] {\n    display: none;\n  }\n  .nation-copy p.period-note {\n    display: none;\n  }\n}\n.stage-tools {\n  align-items: center;\n  gap: 6px;\n  padding: 6px;\n  border-radius: 12px;\n  background: rgba(13, 19, 16, 0.82);\n  border: 1px solid var(--line);\n  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);\n  backdrop-filter: blur(6px);\n}\n.stage-tools > button,\n.stage-tools .zoom-controls,\n.stage-tools .legend-pop > summary {\n  height: 32px;\n  box-shadow: none;\n  font-size: 12.5px;\n  white-space: nowrap;\n}\n.minimap {\n  bottom: 66px;\n}\n.legend-list {\n  bottom: 46px;\n}\n/* Readable small type on the tree. */\n.node-meta {\n  font-size: 11px;\n  color: #c3c9b9;\n  border-color: rgba(220, 194, 124, 0.45);\n}\n.node.locked .node-name,\n.node.unknown .node-name {\n  color: #b9bfae;\n}\n/* Drawer: a completed focus leads with how and when it was completed. */\n.drawer-status {\n  display: grid;\n  grid-template-columns: 36px 1fr;\n  gap: 12px;\n  align-items: start;\n  padding: 12px 14px;\n  margin-bottom: 14px;\n  border-radius: var(--radius);\n  border: 1px solid rgba(238, 212, 141, 0.35);\n  background: linear-gradient(180deg, rgba(76, 64, 30, 0.35), rgba(40, 34, 18, 0.18));\n}\n.status-medal {\n  width: 36px;\n  height: 36px;\n  border-radius: 50%;\n  display: grid;\n  place-items: center;\n  font-weight: 700;\n  color: #2c240f;\n  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);\n}\n.drawer-status strong {\n  display: block;\n  color: #fff2c8;\n  font-size: 14px;\n}\n.drawer-status small {\n  display: block;\n  color: var(--muted);\n  font-size: 12px;\n}\n.drawer-status .done-cause {\n  margin: 6px 0;\n  font-size: 12.5px;\n}\n.drawer-status.bypassed {\n  border-color: rgba(143, 176, 214, 0.35);\n  background: rgba(143, 176, 214, 0.06);\n}\n.drawer-status.bypassed .status-medal {\n  color: var(--blue);\n  background: #1f2832;\n  border: 1px solid var(--blue);\n}\n.chip.static {\n  cursor: default;\n}\n.detail-section.gained {\n  border-top: 0;\n  padding-top: 0;\n}\n.blockers-title {\n  font-size: 12px;\n  color: var(--amber);\n}\n/* Motion; turned off with the system's reduced-motion setting (see above). */\n.tree.entering {\n  animation: tree-in 0.28s ease-out;\n}\n@keyframes tree-in {\n  from {\n    opacity: 0;\n    transform-origin: top center;\n  }\n}\n.node.just-done .node-medal {\n  animation: medal-shine 1.4s ease-out 0.15s;\n}\n@keyframes medal-shine {\n  0% {\n    box-shadow:\n      0 0 0 4px var(--bg),\n      0 0 0 5px rgba(238, 212, 141, 0.5);\n  }\n  35% {\n    box-shadow:\n      0 0 0 4px var(--bg),\n      0 0 0 7px #f6e2a6,\n      0 0 36px rgba(246, 226, 166, 0.85);\n  }\n}\n\n/* ---------- v0.15.1 · settings: preset list and card, flat task page, short hints ---------- */\n.modal:focus {\n  outline: none;\n}\n.footer-dirty {\n  margin-right: auto;\n  font-size: 12.5px;\n  color: var(--amber);\n}\n.footer-dirty:not(:empty)::before {\n  content: '';\n  display: inline-block;\n  width: 7px;\n  height: 7px;\n  margin-right: 8px;\n  border-radius: 50%;\n  background: var(--amber);\n  vertical-align: 1px;\n}\n.hint-fold > summary {\n  display: inline;\n  list-style: none;\n  cursor: pointer;\n}\n.hint-fold > summary::-webkit-details-marker {\n  display: none;\n}\n.hint-more {\n  margin-left: 6px;\n  color: var(--faint);\n  text-decoration: underline;\n  text-decoration-color: rgba(220, 194, 124, 0.35);\n  text-underline-offset: 3px;\n}\n.hint-fold[open] .hint-more,\n.hint-fold[open] .hint-cut {\n  display: none;\n}\n/* API presets: list on the left, the edited preset as a card with its own save. */\n.api-layout {\n  display: grid;\n  grid-template-columns: 210px minmax(0, 1fr);\n  gap: 16px;\n  align-items: start;\n}\n.api-list {\n  position: sticky;\n  top: 0;\n  display: flex;\n  flex-direction: column;\n  max-height: min(62vh, 560px);\n}\n.api-list-head {\n  padding: 0 4px 6px;\n  font-size: 12px;\n  color: var(--faint);\n}\n.api-search {\n  margin-bottom: 6px;\n}\n.api-list-scroll {\n  display: grid;\n  gap: 4px;\n  align-content: start;\n  min-height: 0;\n  overflow: auto;\n}\n.api-item {\n  display: grid;\n  gap: 1px;\n  text-align: left;\n  padding: 8px 12px;\n  border-color: transparent;\n  background: transparent;\n  min-width: 0;\n}\n.api-item[hidden] {\n  display: none;\n}\n.api-item b {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13.5px;\n  font-weight: 600;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.api-item small {\n  font-size: 11.5px;\n  color: var(--faint);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.api-item.on {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  box-shadow: inset 2px 0 0 var(--gold);\n}\n.dirty-dot {\n  flex: none;\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--amber);\n}\n.api-add {\n  margin-top: 6px;\n  border-style: dashed;\n  color: var(--gold);\n}\n.api-card {\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  background: var(--raised);\n  min-width: 0;\n}\n.api-card-head {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px 10px;\n  padding: 10px 14px;\n  border-bottom: 1px solid var(--line);\n}\n.api-card-head small {\n  font-size: 12px;\n  color: var(--faint);\n}\n.api-card-head b {\n  font-size: 15px;\n}\n.api-card-tools {\n  display: flex;\n  gap: 6px;\n  margin-left: auto;\n}\n.api-card-tools button {\n  padding: 4px 10px;\n  font-size: 12.5px;\n}\n.api-card > .confirm-row {\n  margin: 10px 14px 0;\n}\n.api-card-body {\n  padding: 4px 14px 6px;\n}\n.inline-field {\n  display: flex;\n  gap: 8px;\n}\n.inline-field input {\n  flex: 1;\n  min-width: 0;\n}\n.inline-field button {\n  white-space: nowrap;\n}\n.api-advanced {\n  border-top: 1px solid var(--line);\n}\n.api-advanced > summary {\n  cursor: pointer;\n  padding: 10px 0;\n  color: var(--gold);\n  font-weight: 600;\n  font-size: 13.5px;\n}\n.api-advanced > summary small {\n  margin-left: 10px;\n  font-weight: 400;\n  font-size: 12px;\n  color: var(--faint);\n}\n.api-card-foot {\n  position: sticky;\n  bottom: 0;\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 8px;\n  padding: 10px 14px;\n  border-top: 1px solid var(--line);\n  border-radius: 0 0 12px 12px;\n  background: #1d2621;\n}\n.api-card-foot .api-status {\n  margin: 0 auto 0 0;\n  font-size: 12.5px;\n  color: var(--green);\n}\n/* Tasks: the four tasks on the left, one flat page on the right. */\n.preset-bar {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 8px 12px;\n  padding: 8px 12px;\n}\n.preset-bar .preset-title {\n  margin: 0;\n  cursor: help;\n}\n.preset-bar .preset-title h3 {\n  margin: 0;\n  font-size: 14px;\n  white-space: nowrap;\n}\n.preset-bar .preset-row {\n  flex: 1;\n  margin: 0;\n}\n.preset-bar .api-status {\n  flex-basis: 100%;\n}\n.task-layout {\n  display: grid;\n  grid-template-columns: 196px minmax(0, 1fr);\n  gap: 18px;\n  align-items: start;\n}\n.task-layout .task-tabs {\n  position: sticky;\n  top: 0;\n  grid-template-columns: 1fr;\n  gap: 4px;\n  margin: 0;\n}\n.task-layout .task-tab {\n  padding: 9px 12px;\n  border-color: transparent;\n  background: transparent;\n}\n.task-layout .task-tab small {\n  white-space: normal;\n}\n.task-layout .task-tab.active {\n  background: var(--raised-2);\n  border-color: var(--line-strong);\n  box-shadow: inset 2px 0 0 var(--gold);\n}\n.task-editors {\n  min-width: 0;\n}\n.task-editors .task-block {\n  border: 0;\n  border-top: 1px solid var(--line);\n  border-radius: 0;\n  background: none;\n  padding: 0;\n  margin: 0;\n}\n.task-editors .task-block.prompts-block {\n  padding-top: 12px;\n}\n@media (max-width: 760px) {\n  .api-layout,\n  .task-layout {\n    grid-template-columns: minmax(0, 1fr);\n  }\n  .api-list,\n  .task-layout .task-tabs {\n    position: static;\n    max-height: none;\n  }\n  .api-list-scroll {\n    grid-auto-flow: column;\n    grid-auto-columns: minmax(140px, max-content);\n    overflow-x: auto;\n  }\n  .task-layout .task-tabs {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n/* ---------- v0.15.2 · task cards and request log ---------- */\n.job-list {\n  display: grid;\n  gap: 10px;\n  margin-top: 14px;\n}\n.job-card2 {\n  display: grid;\n  grid-template-columns: 32px minmax(0, 1fr) auto;\n  gap: 12px;\n  align-items: start;\n  padding: 12px 14px;\n  border-radius: 10px;\n  background: var(--raised);\n  border: 1px solid var(--line);\n}\n.job-card2.running {\n  border-color: rgba(220, 194, 124, 0.45);\n}\n.job-card2.failed {\n  border-color: rgba(217, 112, 95, 0.45);\n  background: linear-gradient(180deg, rgba(217, 112, 95, 0.08), rgba(217, 112, 95, 0.02));\n}\n.job-icon {\n  width: 30px;\n  height: 30px;\n  border-radius: 50%;\n  display: grid;\n  place-items: center;\n  font-weight: 700;\n  font-size: 14px;\n  color: var(--muted);\n  border: 1px solid var(--line-strong);\n}\n.job-card2.success .job-icon {\n  color: #0e1a12;\n  background: var(--green);\n  border-color: var(--green);\n}\n.job-card2.failed .job-icon {\n  color: #1a0f0c;\n  background: var(--red);\n  border-color: var(--red);\n}\n.job-card2.running .job-icon {\n  border-color: var(--gold);\n}\n.job-main {\n  min-width: 0;\n}\n.job-name {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 4px 8px;\n  font-weight: 600;\n}\n.job-chip {\n  font-size: 11px;\n  font-weight: 400;\n  padding: 0 7px;\n  line-height: 18px;\n  border-radius: 9px;\n  color: var(--muted);\n  border: 1px solid var(--line-strong);\n}\n.job-sub {\n  margin-top: 3px;\n  font-size: 12.5px;\n  color: var(--muted);\n}\n.job-sub b {\n  color: var(--text);\n  font-weight: 600;\n}\n.job-card2.failed .job-sub b {\n  color: #f0a898;\n}\n.job-problems {\n  margin: 6px 0 0;\n  padding-left: 18px;\n  font-size: 12.5px;\n  line-height: 1.7;\n  color: #e4cfc9;\n}\n.job-problems code,\n.log-code {\n  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;\n}\n.job-problems code {\n  font-size: 12px;\n  color: #f2d79a;\n}\n.job-more > summary {\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--faint);\n  margin-top: 2px;\n}\n.job-note {\n  margin-top: 14px;\n  font-size: 12px;\n}\n.log-entry {\n  margin-top: 12px;\n  border: 1px solid var(--line-strong);\n  border-radius: 12px;\n  background: var(--raised);\n  overflow: hidden;\n}\n.log-entry > summary {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px 10px;\n  padding: 12px 16px;\n  cursor: pointer;\n  list-style: none;\n}\n.log-entry > summary::-webkit-details-marker {\n  display: none;\n}\n.log-entry[open] > summary {\n  border-bottom: 1px solid var(--line);\n}\n.log-result {\n  font-weight: 600;\n  font-size: 13px;\n}\n.log-result.ok {\n  color: var(--green);\n}\n.log-result.failed {\n  color: var(--red);\n}\n.log-title {\n  font-weight: 600;\n}\n.log-chips {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  flex-basis: 100%;\n}\n.log-error {\n  margin: 10px 16px 0;\n}\n.log-part2 {\n  border-bottom: 1px solid var(--line);\n}\n.log-part2:last-child {\n  border-bottom: 0;\n}\n.log-part2 > summary {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 8px 16px;\n  font-size: 13px;\n  cursor: pointer;\n  list-style: none;\n}\n.log-part2 > summary::-webkit-details-marker {\n  display: none;\n}\n.log-part2 > summary::before {\n  content: '▸';\n  width: 10px;\n  color: var(--faint);\n}\n.log-part2[open] > summary::before {\n  content: '▾';\n}\n.log-role {\n  font-family: Consolas, monospace;\n  font-size: 10.5px;\n  letter-spacing: 0.06em;\n  padding: 1px 6px;\n  border-radius: 4px;\n  background: #0f1512;\n  border: 1px solid var(--line-strong);\n  color: var(--blue);\n}\n.log-role.user {\n  color: var(--green);\n}\n.log-role.output,\n.log-role.assistant {\n  color: var(--gold);\n}\n.log-role.think {\n  color: var(--faint);\n}\n.log-count {\n  font-size: 12px;\n  color: var(--faint);\n}\n.log-copy {\n  margin-left: auto;\n  padding: 3px 10px;\n  font-size: 12px;\n}\n.log-code {\n  margin: 0 16px 12px;\n  padding: 12px 14px;\n  max-height: 340px;\n  overflow: auto;\n  border-radius: 8px;\n  background: #0b100d;\n  border: 1px solid var(--line);\n  font-size: 12.5px;\n  line-height: 1.6;\n  color: #cfd5c6;\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n.log-code .k {\n  color: #e6c97e;\n}\n.log-code .s {\n  color: #9fd3ae;\n}\n.log-code .n {\n  color: #8fb0d6;\n}\n.log-code .b {\n  color: #d9a0c8;\n}\n@media (max-width: 760px) {\n  .job-card2 {\n    grid-template-columns: 28px minmax(0, 1fr);\n  }\n  .job-card2 .job-buttons {\n    grid-column: 1 / -1;\n    justify-content: flex-start;\n  }\n}\n.api-card-foot button,\n.modal-footer button {\n  white-space: nowrap;\n}\n@media (max-width: 760px) {\n  .api-card-foot,\n  .modal-footer {\n    flex-wrap: wrap;\n  }\n  .api-card-foot .api-status,\n  .footer-dirty:not(:empty) {\n    flex-basis: 100%;\n  }\n}\n\n/* ---------- v0.15.3 · one size for the settings window; windows open with a short rise ---------- */\n.modal.modal-settings {\n  height: 90vh;\n}\n.modal.modal-settings .modal-body {\n  flex: 1;\n}\n@media (max-width: 760px) {\n  .modal.modal-settings {\n    height: 94dvh;\n  }\n}\n.modal {\n  animation: modal-in 0.2s ease-out;\n}\n.modal-backdrop:not([hidden]) {\n  animation: backdrop-in 0.2s ease-out;\n}\n@keyframes modal-in {\n  from {\n    opacity: 0;\n    transform: translateY(10px) scale(0.985);\n  }\n}\n@keyframes backdrop-in {\n  from {\n    opacity: 0;\n  }\n}\n";
+  var style_default = `/* 国策档案 v0.4 · 战情档案馆介面
+ * Tokens first; every colour below derives from them so states stay consistent. */
+:host {
+  all: initial;
+  --ink: #0d1310;
+  --bg: #131a16;
+  --panel: #19221d;
+  --raised: #212b25;
+  --raised-2: #29352e;
+  --line: rgba(217, 191, 120, 0.14);
+  --line-strong: rgba(217, 191, 120, 0.32);
+  --gold: #dcc27c;
+  --gold-deep: #a88d4c;
+  --text: #ece6d4;
+  --muted: #a8b0a1;
+  --faint: #7d867a;
+  --green: #72c492;
+  --amber: #e6a950;
+  --blue: #8fb0d6;
+  --red: #d9705f;
+  --cross: #7fa6cf;
+  /* Cinnabar seal ink: used only for the world letter's seal, so ratifying a proposal reads as one act. */
+  --seal: #b4432f;
+  --seal-ink: #f3dccb;
+  --radius: 10px;
+  --drawer: 392px;
+  /* Simplified Chinese faces first (zh-Hans text), traditional faces only as fallbacks; same as the news card. */
+  --sans:
+    'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans TC',
+    'Microsoft JhengHei', 'PingFang TC', system-ui, sans-serif;
+  --serif:
+    'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'Noto Serif TC', 'Source Han Serif TC', Georgia,
+    var(--sans);
+  font-family: var(--sans);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  padding: 7px 12px;
+  border-radius: 7px;
+  line-height: 1.3;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+button:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--raised-2);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+input,
+select,
+textarea {
+  color: var(--text);
+  background: var(--ink);
+  border: 1px solid rgba(217, 191, 120, 0.24);
+  border-radius: 7px;
+  padding: 8px 10px;
+  max-width: 100%;
+}
+/* Same line height, so a select and an input side by side are the same height. */
+input,
+select {
+  line-height: 1.3;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--faint);
+}
+select option {
+  background: var(--panel);
+}
+input[type='checkbox'] {
+  accent-color: var(--gold);
+  width: 16px;
+  height: 16px;
+}
+svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+a {
+  color: var(--gold);
+}
+p {
+  margin: 0 0 12px;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--serif);
+  font-weight: 600;
+  margin: 0;
+}
+small {
+  color: var(--muted);
+}
+code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+}
+.muted {
+  color: var(--muted);
+}
+.gold {
+  color: var(--gold);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.between {
+  justify-content: space-between;
+}
+.primary {
+  background: linear-gradient(180deg, #7a6a37, #5b4f28);
+  border-color: var(--gold);
+  color: #fff4d0;
+  font-weight: 600;
+}
+.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #8d7b41, #6a5c2f);
+}
+.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.danger {
+  color: #f0a898;
+}
+.tag {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 99px;
+}
+.separator {
+  height: 1px;
+  background: var(--line);
+  margin: 16px 0;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(220, 194, 124, 0.3);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  vertical-align: -2px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Floating orb ---------- */
+.orb {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 60px;
+  height: 60px;
+  padding: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);
+  border: 2px solid var(--gold-deep);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.35);
+  color: var(--gold);
+  z-index: 2147482999;
+}
+.orb:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);
+}
+.orb svg {
+  width: 100%;
+  height: 100%;
+}
+.orb .count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--gold);
+  color: #1a1d12;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+/* ---------- Shell ---------- */
+.shell {
+  position: fixed;
+  inset: 16px;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.shell[hidden],
+.modal-backdrop[hidden],
+.orb[hidden] {
+  display: none;
+}
+
+/* Command bar */
+.command {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #1c2620, #151d18);
+  border-bottom: 1px solid var(--line);
+}
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: rgba(220, 194, 124, 0.07);
+  flex-shrink: 0;
+}
+.brand-mark svg {
+  width: 26px;
+  height: 26px;
+}
+.brand {
+  display: grid;
+  line-height: 1.15;
+  flex-shrink: 0;
+}
+.brand h1 {
+  font-size: 17px;
+  letter-spacing: 0.12em;
+}
+.brand small {
+  font-size: 9.5px;
+  letter-spacing: 0.3em;
+  color: var(--gold-deep);
+}
+.nation-scroller {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  margin-left: 10px;
+}
+.nation-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+}
+/* Arrows only at an edge with more tabs behind it; the fade shows the list goes on. */
+.nation-scroll {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: none;
+  place-items: center;
+  width: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 22px;
+  color: var(--gold);
+  background: linear-gradient(90deg, #19221c 45%, rgba(25, 34, 28, 0));
+}
+.nation-scroll.prev {
+  left: 0;
+  justify-content: start;
+  padding-left: 4px;
+}
+.nation-scroll.next {
+  right: 0;
+  justify-content: end;
+  padding-right: 4px;
+  background: linear-gradient(270deg, #19221c 45%, rgba(25, 34, 28, 0));
+}
+.nation-scroll:hover {
+  color: var(--text);
+}
+.nation-scroller.can-left .nation-scroll.prev,
+.nation-scroller.can-right .nation-scroll.next {
+  display: grid;
+}
+.nation-tabs::-webkit-scrollbar {
+  display: none;
+}
+.nation-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 9px;
+  border-color: transparent;
+  background: transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nation-tab.active {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.tab-crest {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--blue);
+}
+.nation-tab.player .tab-crest {
+  color: var(--gold);
+}
+.tab-crest svg {
+  width: 20px;
+  height: 20px;
+}
+.tab-copy {
+  display: grid;
+  text-align: left;
+  line-height: 1.2;
+}
+.tab-copy strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.tab-copy small {
+  font-size: 11px;
+}
+.nation-tab.add {
+  width: 38px;
+  justify-content: center;
+  padding: 6px;
+  border: 1px dashed var(--line-strong);
+  color: var(--gold);
+}
+.nation-picker {
+  display: none;
+  min-width: 0;
+  flex: 1;
+}
+.nation-picker select {
+  width: 100%;
+}
+.command-spacer {
+  flex: 1;
+}
+.test-label {
+  font-size: 11px;
+  color: var(--gold);
+  border: 1px dashed var(--gold-deep);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.date-chip {
+  display: grid;
+  max-width: 250px;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+  text-align: right;
+  padding: 0 6px;
+}
+.date-chip small {
+  font-size: 10.5px;
+}
+.date-chip strong {
+  font-family: var(--serif);
+  font-size: 17px;
+  color: var(--gold);
+}
+.cmd-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.date-chip,
+.test-label,
+.nation-tab.add {
+  flex-shrink: 0;
+}
+.cmd-btn.busy {
+  border-color: var(--gold);
+}
+.cmd-btn.close {
+  width: 38px;
+  justify-content: center;
+  font-size: 20px;
+  padding: 0;
+}
+.error-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 16px;
+  background: rgba(217, 112, 95, 0.14);
+  border-bottom: 1px solid rgba(217, 112, 95, 0.4);
+  color: #f6c6ba;
+  font-size: 13px;
+}
+
+/* Nation bar */
+.nation-bar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.nation-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.nation-crest {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.nation-crest svg {
+  width: 32px;
+  height: 32px;
+}
+.nation-copy {
+  min-width: 0;
+}
+.nation-copy h2 {
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+}
+.nation-copy p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gauges {
+  display: flex;
+  gap: 16px;
+}
+.gauge {
+  width: 132px;
+}
+.gauge-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.gauge-head small {
+  font-size: 12px;
+}
+.gauge-head strong {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+}
+.gauge-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.gauge-track i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+.gauge.stability .gauge-track i {
+  background: linear-gradient(90deg, #5f9e75, var(--green));
+}
+.gauge.war .gauge-track i {
+  background: linear-gradient(90deg, #b75a49, var(--amber));
+}
+/* The main focus is a third gauge (v0.15.9): label, name, days left and a slim bar, no card.
+   Its width follows the window only, so a status change never moves or resizes it. */
+.focus-gauge {
+  --state: var(--green);
+  --state-deep: #4f9a6b;
+  position: relative;
+  display: block;
+  width: 300px;
+  padding: 4px 8px;
+  margin: -4px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+.focus-gauge.waiting {
+  --state: var(--amber);
+  --state-deep: #b67c2f;
+}
+.focus-gauge.paused {
+  --state: var(--blue);
+  --state-deep: #5c7ca3;
+}
+.focus-gauge.empty {
+  --state: var(--faint);
+}
+/* hairline between the national gauges and the focus */
+.focus-gauge::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line);
+}
+button.focus-gauge:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.035);
+}
+button.focus-gauge:hover .focus-name {
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+}
+.focus-gauge .gauge-head {
+  justify-content: flex-start;
+  gap: 8px;
+}
+.focus-gauge .gauge-track {
+  display: block;
+}
+.focus-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.focus-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state);
+}
+.focus-gauge.active .focus-dot {
+  animation: focus-breathe 2.4s ease-out infinite;
+}
+.focus-gauge.empty .focus-dot {
+  background: transparent;
+  border: 1px solid var(--faint);
+}
+.focus-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-gauge.empty .focus-name {
+  color: var(--faint);
+  font-weight: 400;
+}
+.focus-num {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.focus-num small {
+  font-size: 11.5px;
+}
+/* invisible strut at the numeral's size: 待成果 and 尚未选定 keep the same line height */
+.focus-num::after {
+  content: '\\200b';
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+}
+.focus-word {
+  font-size: 12px;
+  color: var(--state);
+}
+.focus-gauge .gauge-track i {
+  background: linear-gradient(90deg, var(--state-deep), var(--state));
+}
+.focus-gauge.empty .gauge-track {
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 6px, transparent 6px 10px);
+}
+/* colour shows up only when something changes: one outline flare (resumed across re-renders) */
+.focus-gauge.flare::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 10px;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 0 0 1px var(--state),
+    0 0 22px -2px var(--state);
+  animation: focus-flare 2.2s ease-out var(--flare-at, 0ms) forwards;
+}
+@keyframes focus-flare {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes focus-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgba(114, 196, 146, 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px rgba(114, 196, 146, 0);
+  }
+}
+.nation-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.control-select select {
+  height: 36px;
+  padding: 0 8px;
+}
+.toggle {
+  height: 36px;
+  white-space: nowrap;
+}
+.toggle.on {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+  background: rgba(220, 194, 124, 0.1);
+}
+.nation-actions .primary {
+  height: 36px;
+  white-space: nowrap;
+}
+
+/* ---------- Stage ---------- */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),
+    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,
+    var(--ink);
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.canvas:active {
+  cursor: grabbing;
+}
+.canvas:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+.tree {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.connectors {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
+}
+.connector {
+  fill: none;
+  stroke: rgba(220, 194, 124, 0.3);
+  stroke-width: 2.4;
+}
+.connector.done {
+  stroke: var(--gold);
+  stroke-width: 3;
+}
+.connector.alternative {
+  stroke-dasharray: 8 6;
+}
+.connector.cross-branch {
+  stroke: rgba(127, 166, 207, 0.55);
+}
+.connector.cross-branch.done {
+  stroke: var(--cross);
+}
+.connector.mutex {
+  stroke: var(--red);
+  stroke-width: 2;
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+.branch-banner {
+  position: absolute;
+  top: 16px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));
+  pointer-events: none;
+}
+.branch-banner span {
+  font-family: var(--serif);
+  font-size: 15px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+.branch-banner.active {
+  border-bottom-color: var(--gold);
+}
+.branch-summary {
+  position: absolute;
+  height: 66px;
+  display: grid;
+  align-content: center;
+  text-align: left;
+  border: 1px dashed var(--gold-deep);
+  background: rgba(220, 194, 124, 0.06);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+}
+.branch-summary strong {
+  font-family: var(--serif);
+  color: var(--gold);
+}
+.branch-summary span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Nodes */
+.node {
+  /* Medal focus: the icon medal is the focus, the name plate sits under it, no box around both. */
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: center;
+  transition: opacity 0.15s;
+}
+.node-medal {
+  position: relative;
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  background: radial-gradient(circle at 36% 30%, #3a4a3f, #18201b 72%);
+  border: 2px solid rgba(220, 194, 124, 0.85);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(220, 194, 124, 0.28),
+    0 8px 18px rgba(0, 0, 0, 0.55);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.node-medal svg {
+  width: 30px;
+  height: 30px;
+}
+.node:hover:not(:disabled) .node-medal {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px var(--gold),
+    0 0 22px rgba(220, 194, 124, 0.35);
+}
+.node-meta {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10.5px;
+  line-height: 16px;
+  padding: 0 7px;
+  border-radius: 9px;
+  color: var(--muted);
+  background: #0f1512;
+  border: 1px solid rgba(220, 194, 124, 0.35);
+}
+.node-plate {
+  margin-top: 15px;
+  width: 100%;
+  padding: 5px 8px 6px;
+  background: linear-gradient(180deg, rgba(38, 48, 42, 0.96), rgba(24, 31, 27, 0.96));
+  border: 1px solid rgba(220, 194, 124, 0.2);
+  border-top: 2px solid rgba(220, 194, 124, 0.6);
+  border-radius: 3px 3px 9px 9px;
+}
+.node-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.28;
+  color: var(--text);
+}
+.node-pivot {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  font-size: 13px;
+  color: var(--gold);
+  text-shadow: 0 0 6px rgba(220, 194, 124, 0.7);
+}
+.node-flag {
+  position: absolute;
+  top: -6px;
+  left: -11px;
+  font-size: 12px;
+  color: var(--red);
+}
+/* Progress ring for running, waiting and paused focuses. */
+.node.active .node-medal::before,
+.node.waiting .node-medal::before,
+.node.paused .node-medal::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring) calc(var(--p) * 1%), rgba(255, 255, 255, 0.08) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+}
+.node.available .node-medal {
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(220, 194, 124, 0.55),
+    0 0 20px rgba(220, 194, 124, 0.28);
+}
+.node.available .node-name {
+  color: #fffaf0;
+}
+.node.locked .node-medal,
+.node.unknown .node-medal {
+  color: var(--faint);
+  background: radial-gradient(circle at 36% 30%, #263029, #141a16 72%);
+  border-color: rgba(168, 176, 161, 0.35);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(168, 176, 161, 0.12);
+}
+.node.unknown .node-medal {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 5px, transparent 5px 10px),
+    radial-gradient(circle at 36% 30%, #263029, #141a16 72%);
+}
+.node.locked .node-plate,
+.node.unknown .node-plate {
+  border-top-color: rgba(168, 176, 161, 0.3);
+  background: rgba(22, 29, 25, 0.92);
+}
+.node.locked .node-name,
+.node.unknown .node-name {
+  color: #9aa394;
+}
+.node.completed .node-medal {
+  color: #2c240f;
+  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);
+  border-color: #f6e2a6;
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(238, 212, 141, 0.5),
+    0 0 18px rgba(238, 212, 141, 0.3);
+}
+.node.completed .node-meta {
+  color: #f1dfa6;
+  border-color: rgba(238, 212, 141, 0.6);
+}
+.node.completed .node-plate {
+  border-top-color: #eed48d;
+  background: linear-gradient(180deg, rgba(76, 64, 30, 0.95), rgba(40, 34, 18, 0.95));
+}
+.node.completed .node-name {
+  color: #fff2c8;
+}
+.node.active {
+  --ring: var(--green);
+}
+.node.active .node-medal {
+  color: var(--green);
+  border-color: rgba(114, 196, 146, 0.5);
+}
+.node.active .node-meta {
+  color: #a7e3bd;
+  border-color: rgba(114, 196, 146, 0.55);
+}
+.node.active .node-plate {
+  border-top-color: var(--green);
+}
+.node.waiting {
+  --ring: var(--amber);
+}
+.node.waiting .node-medal,
+.node.waiting .node-meta {
+  color: var(--amber);
+}
+.node.waiting .node-medal {
+  border-color: rgba(230, 169, 80, 0.5);
+}
+.node.waiting .node-meta {
+  border-color: rgba(230, 169, 80, 0.55);
+}
+.node.waiting .node-plate {
+  border-top-color: var(--amber);
+}
+.node.paused {
+  --ring: var(--blue);
+}
+.node.paused .node-medal,
+.node.paused .node-meta {
+  color: var(--blue);
+}
+.node.paused .node-medal {
+  border-color: rgba(143, 176, 214, 0.5);
+}
+.node.paused .node-meta {
+  border-color: rgba(143, 176, 214, 0.55);
+}
+.node.paused .node-plate {
+  border-top-color: var(--blue);
+}
+.node.sealed .node-medal,
+.node.terminated .node-medal {
+  color: rgba(217, 112, 95, 0.8);
+  border-color: rgba(217, 112, 95, 0.5);
+  background:
+    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.12) 0 5px, transparent 5px 10px),
+    radial-gradient(circle at 36% 30%, #2e2724, #1a1614 72%);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(217, 112, 95, 0.18);
+}
+.node.sealed .node-meta,
+.node.terminated .node-meta {
+  color: #f0a898;
+  border-color: rgba(217, 112, 95, 0.45);
+}
+.node.sealed .node-plate,
+.node.terminated .node-plate {
+  border-top-color: rgba(217, 112, 95, 0.5);
+  background: rgba(30, 25, 23, 0.92);
+}
+.node.sealed .node-name,
+.node.terminated .node-name {
+  color: #a9928c;
+  text-decoration: line-through;
+  text-decoration-color: rgba(217, 112, 95, 0.55);
+}
+.node.current .node-medal {
+  animation: current-pulse 2.6s ease-in-out infinite;
+}
+@keyframes current-pulse {
+  50% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 6px rgba(114, 196, 146, 0.35),
+      0 0 30px rgba(114, 196, 146, 0.4);
+  }
+}
+.node.selected .node-medal {
+  outline: 2px solid var(--gold);
+  outline-offset: 8px;
+}
+.node.selected .node-plate {
+  border-color: var(--gold);
+}
+.node:focus-visible {
+  outline: none;
+}
+.node:focus-visible .node-medal {
+  outline: 2px solid var(--gold);
+  outline-offset: 8px;
+}
+.node.dim {
+  opacity: 0.16;
+}
+
+/* Overlays on the stage */
+.routes {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  bottom: 12px;
+  width: 268px;
+  display: none;
+  flex-direction: column;
+  background: rgba(19, 26, 22, 0.94);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  z-index: 3;
+  max-height: calc(100% - 24px);
+}
+.routes.open {
+  display: flex;
+}
+.routes-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 6px 14px;
+}
+.routes-head strong {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--gold);
+}
+.routes-head small {
+  flex: 1;
+  font-size: 12px;
+}
+.routes-head button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 18px;
+}
+.search-row {
+  display: flex;
+  gap: 6px;
+  padding: 4px 10px 8px;
+}
+.search-row label {
+  flex: 1;
+  min-width: 0;
+}
+.search-row input {
+  width: 100%;
+  height: 34px;
+}
+.search-row button {
+  height: 34px;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.route-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 6px;
+  overflow: auto;
+  flex: 1;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.route-list li {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  margin: 2px 0;
+}
+.route-jump {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  text-align: left;
+  padding: 7px 10px;
+  border-color: transparent;
+  background: transparent;
+  min-width: 0;
+}
+.route-list li.active .route-jump {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+}
+.route-list li.folded .route-name {
+  color: var(--faint);
+}
+.route-name {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.route-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  flex-shrink: 0;
+}
+.route-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.route-bar {
+  grid-column: 1/-1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.route-bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+.route-fold {
+  width: 30px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.route-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 10px;
+}
+.route-actions button {
+  flex: 1;
+  font-size: 12.5px;
+}
+.routes-tab {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  background: rgba(19, 26, 22, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.routes-tab small {
+  color: var(--gold);
+}
+.stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--faint);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.stage-tools {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 2;
+  transition: right 0.22s ease;
+}
+.stage-tools > button,
+.zoom-controls,
+.legend-pop > summary {
+  height: 36px;
+  background: rgba(19, 26, 22, 0.94);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.zoom-controls {
+  display: flex;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.zoom-controls button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  min-width: 36px;
+}
+.zoom-controls button + button {
+  border-left: 1px solid var(--line);
+}
+.zoom-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+.legend-pop {
+  position: relative;
+}
+.legend-pop > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+}
+.legend-pop > summary::-webkit-details-marker {
+  display: none;
+}
+.legend-list {
+  position: absolute;
+  right: 0;
+  bottom: 44px;
+  width: 210px;
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  background: rgba(19, 26, 22, 0.97);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sw {
+  width: 22px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(236, 230, 212, 0.34);
+  background: #232d27;
+  flex-shrink: 0;
+}
+.sw.completed {
+  background: linear-gradient(160deg, #8a7438, #57491f);
+  border-color: #eed48d;
+}
+.sw.active {
+  border: 2px solid var(--green);
+}
+.sw.waiting {
+  border: 2px solid var(--amber);
+}
+.sw.paused {
+  border: 2px solid var(--blue);
+}
+.sw.locked {
+  border-style: dashed;
+  opacity: 0.6;
+}
+.sw.terminated {
+  border-color: var(--red);
+  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);
+}
+.sw.unknown {
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);
+}
+.ln {
+  width: 22px;
+  height: 0;
+  border-top: 2.5px solid rgba(220, 194, 124, 0.6);
+  flex-shrink: 0;
+}
+.ln.dashed {
+  border-top-style: dashed;
+}
+.ln.cross {
+  border-top-color: var(--cross);
+}
+.ln.mutex {
+  border-top: 2.5px dotted var(--red);
+}
+.minimap {
+  position: absolute;
+  right: 12px;
+  bottom: 58px;
+  width: 190px;
+  height: 120px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: rgba(13, 19, 16, 0.92);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  padding: 6px;
+  cursor: crosshair;
+  touch-action: none;
+  transition: right 0.22s ease;
+}
+.minimap-svg {
+  width: 100%;
+  height: 100%;
+}
+.mm {
+  fill: rgba(236, 230, 212, 0.28);
+}
+.mm.completed {
+  fill: var(--gold);
+}
+.mm.active,
+.mm.current {
+  fill: var(--green);
+}
+.mm.waiting {
+  fill: var(--amber);
+}
+.mm.paused {
+  fill: var(--blue);
+}
+.mm.locked,
+.mm.unknown {
+  fill: rgba(236, 230, 212, 0.12);
+}
+.mm.sealed,
+.mm.terminated {
+  fill: rgba(217, 112, 95, 0.55);
+}
+.mm.folded {
+  fill: rgba(220, 194, 124, 0.25);
+}
+.mm-view {
+  fill: rgba(220, 194, 124, 0.08);
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.stage.with-drawer .stage-tools {
+  right: calc(var(--drawer) + 12px);
+}
+/* The drawer already covers part of the tree; the minimap would cover more. */
+.stage.with-drawer .minimap {
+  display: none;
+}
+.demo-pop {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  transition: right 0.22s ease;
+}
+.stage.with-drawer .demo-pop {
+  right: calc(var(--drawer) + 12px);
+}
+.demo-pop > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--gold);
+  border: 1px dashed var(--gold-deep);
+  background: rgba(19, 26, 22, 0.94);
+  padding: 6px 10px;
+  border-radius: 7px;
+}
+.demo-pop > summary::-webkit-details-marker {
+  display: none;
+}
+.demo-pop[open] {
+  display: grid;
+  gap: 6px;
+  width: 200px;
+  padding: 10px;
+  background: rgba(19, 26, 22, 0.97);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+.demo-pop[open] > summary {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+/* Drawer */
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--drawer);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-left: 1px solid var(--line-strong);
+  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+  z-index: 4;
+}
+.drawer.open {
+  transform: none;
+}
+.drawer-head {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 44px 16px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);
+  box-shadow: inset 4px 0 0 var(--line-strong);
+}
+.drawer-head.completed {
+  box-shadow: inset 4px 0 0 var(--gold);
+}
+.drawer-head.active {
+  box-shadow: inset 4px 0 0 var(--green);
+}
+.drawer-head.waiting {
+  box-shadow: inset 4px 0 0 var(--amber);
+}
+.drawer-head.paused {
+  box-shadow: inset 4px 0 0 var(--blue);
+}
+.drawer-head.sealed,
+.drawer-head.terminated {
+  box-shadow: inset 4px 0 0 var(--red);
+}
+.drawer-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 20px;
+}
+.drawer-emblem {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(220, 194, 124, 0.1);
+  border: 1px solid var(--line-strong);
+  color: var(--gold);
+}
+.drawer-emblem svg {
+  width: 34px;
+  height: 34px;
+}
+.drawer-branch {
+  display: block;
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+.drawer-head h3 {
+  font-size: 20px;
+  line-height: 1.3;
+  margin: 2px 0 6px;
+}
+.state-pill,
+.days-pill {
+  display: inline-block;
+  font-size: 12px;
+  padding: 1px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  margin-right: 6px;
+}
+.state-pill.completed {
+  color: #fff3c9;
+  background: rgba(220, 194, 124, 0.22);
+  border-color: var(--gold);
+}
+.state-pill.active {
+  color: #a7e3bd;
+  border-color: var(--green);
+}
+.state-pill.waiting {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.state-pill.paused {
+  color: var(--blue);
+  border-color: var(--blue);
+}
+.state-pill.available {
+  color: #fffaf0;
+  border-color: rgba(236, 230, 212, 0.6);
+}
+.state-pill.locked,
+.state-pill.unknown {
+  color: var(--muted);
+}
+.state-pill.sealed,
+.state-pill.terminated {
+  color: #f0a898;
+  border-color: var(--red);
+}
+.days-pill {
+  color: var(--muted);
+}
+.drawer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 18px 24px;
+}
+.drawer-progress {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.drawer-progress strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4f9a6b, var(--green));
+}
+.drawer-action {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+.drawer-action .primary {
+  height: 40px;
+  font-size: 14.5px;
+}
+.blockers {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: #f0c49a;
+}
+.description {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.detail-section {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.detail-section h4 {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.detail-section ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13.5px;
+}
+.detail-section p {
+  font-size: 13.5px;
+}
+.reason {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+.prereqs {
+  display: grid;
+  gap: 6px;
+}
+.prereq-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.chip {
+  font-size: 12.5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+.chip.done {
+  border-color: var(--gold);
+  color: #fff3c9;
+  background: rgba(220, 194, 124, 0.15);
+}
+.or,
+.and {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.and {
+  display: block;
+  padding-left: 4px;
+}
+.conditions {
+  list-style: none;
+  padding: 0 !important;
+}
+.conditions li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.cond-kind {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: rgba(220, 194, 124, 0.12);
+  color: var(--gold);
+}
+.mutex-note {
+  border-left: 3px solid var(--red);
+  padding-left: 12px;
+}
+.route-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.route-facts dt {
+  color: var(--muted);
+}
+.route-facts dd {
+  margin: 0;
+}
+
+/* Status line and empty state */
+.statusline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  padding: 4px 16px;
+  border-top: 1px solid var(--line);
+  background: #111814;
+  font-size: 12px;
+  color: var(--muted);
+}
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+.status-dot.busy {
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+}
+.linkish {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  color: var(--gold);
+  font-size: 12px;
+}
+.empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--ink);
+}
+.empty-card {
+  max-width: 440px;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+.empty-card svg {
+  width: 72px;
+  height: 72px;
+  color: var(--gold);
+}
+.empty-card p {
+  color: var(--muted);
+}
+
+/* ---------- Modals and settings ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  background: rgba(5, 9, 7, 0.78);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.modal {
+  width: min(880px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);
+}
+.modal-header h2 {
+  font-size: 20px;
+  letter-spacing: 0.06em;
+}
+.modal-header button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 19px;
+}
+.modal-body {
+  padding: 18px 22px;
+  overflow: auto;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  background: #161e1a;
+}
+.modal-error {
+  color: #f6b3a4;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.modal-body h3 {
+  font-size: 17px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.modal-body h4 {
+  font-size: 14px;
+  margin: 14px 0 6px;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.tabs button {
+  border-color: transparent;
+  background: transparent;
+}
+.tabs button.active {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  color: var(--gold);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.settings-section[hidden] {
+  display: none;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+.form-grid > .wide {
+  grid-column: 1/-1;
+  min-width: 0;
+}
+.field {
+  display: grid;
+  /* A field stretched to a taller neighbor in its row keeps its own control height. */
+  align-content: start;
+  gap: 6px;
+  font-size: 13px;
+  color: #d5d0bf;
+  min-width: 0;
+}
+.field.wide {
+  grid-column: 1/-1;
+}
+.field small {
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #d5d0bf;
+}
+.check.wide,
+.check:has(> small) {
+  flex-wrap: wrap;
+}
+.check small {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  line-height: 1.7;
+  padding-left: 24px;
+}
+.api-row,
+.candidate,
+.event-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+.candidate {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.candidate strong {
+  display: block;
+  margin-bottom: 2px;
+}
+.candidate p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.event-card h3 {
+  margin: 6px 0;
+}
+.event-card p {
+  font-size: 13.5px;
+}
+.api-actions {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.segment-max {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+}
+.segment-max .field {
+  flex: 0 1 220px;
+}
+.segment-max-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+.segment-max small {
+  flex-basis: 100%;
+}
+.api-picker {
+  flex: 1;
+  min-width: 180px;
+}
+.api-editor {
+  margin-top: 16px;
+}
+.api-status {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--gold);
+  font-size: 13px;
+}
+#source-panel fieldset {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin: 16px 0;
+  padding: 14px;
+  min-width: 0;
+}
+#source-panel legend {
+  color: var(--gold);
+  padding: 0 6px;
+  font-size: 13.5px;
+}
+#source-panel fieldset:disabled {
+  opacity: 0.55;
+}
+.source-list {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 8px 0;
+  background: var(--ink);
+}
+.source-group {
+  position: sticky;
+  top: -6px;
+  margin: 8px -12px 4px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: var(--gold);
+  background: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.source-entry {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.source-entry small {
+  display: block;
+  font-size: 11.5px;
+}
+.source-disabled span {
+  opacity: 0.65;
+}
+.source-book[hidden],
+.source-entry[hidden] {
+  display: none;
+}
+.source-rule {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin: 8px 0;
+}
+.source-rule input {
+  min-width: 0;
+}
+.source-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 18px;
+}
+.segment {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 8px 0;
+  background: var(--ink);
+}
+.segment-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.segment-head input[data-seg='name'] {
+  flex: 1;
+  min-width: 120px;
+}
+.segment textarea {
+  min-height: 70px;
+  resize: vertical;
+  width: 100%;
+}
+.legend {
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.legend summary {
+  cursor: pointer;
+  color: var(--gold);
+}
+.legend code {
+  color: var(--gold);
+}
+
+/* ---------- Responsive ---------- */
+/* the focus gauge gives way in steps, by window width only */
+@media (max-width: 1499px) {
+  .focus-gauge {
+    width: 260px;
+  }
+}
+@media (max-width: 1279px) {
+  .nation-copy p {
+    -webkit-line-clamp: 1;
+  }
+}
+@media (max-width: 1180px) {
+  .nation-bar {
+    grid-template-columns: minmax(180px, 1fr) auto auto;
+  }
+  .nation-actions {
+    grid-column: 1/-1;
+    justify-content: flex-end;
+    margin-top: -4px;
+  }
+}
+@media (max-width: 1100px) {
+  .brand,
+  .cmd-text {
+    display: none;
+  }
+  .cmd-btn {
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+}
+@media (max-width: 1000px) {
+  .nation-bar {
+    grid-template-columns: 1fr auto;
+    gap: 12px 16px;
+  }
+  /* the focus shares the second row with the actions */
+  .focus-gauge {
+    order: 3;
+    width: auto;
+  }
+  .focus-gauge::after {
+    display: none;
+  }
+  .nation-actions {
+    grid-column: auto;
+    margin-top: 0;
+    order: 4;
+  }
+  :host {
+    --drawer: 340px;
+  }
+}
+@media (max-width: 760px) {
+  .shell {
+    inset: 0;
+    border-radius: 0;
+    border: 0;
+  }
+  .command {
+    gap: 8px;
+    padding: 6px 8px;
+    min-height: 52px;
+  }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .nation-scroller,
+  .date-chip,
+  .test-label {
+    display: none;
+  }
+  .nation-picker {
+    display: block;
+  }
+  .command-spacer {
+    display: none;
+  }
+  .cmd-text {
+    display: none;
+  }
+  .cmd-btn {
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+  .cmd-btn.busy {
+    width: auto;
+    padding: 0 8px;
+  }
+  .cmd-btn.busy .cmd-text {
+    display: inline;
+  }
+  .nation-bar {
+    grid-template-columns: 1fr auto;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .nation-crest {
+    width: 38px;
+    height: 38px;
+  }
+  .nation-copy h2 {
+    font-size: 18px;
+  }
+  .nation-copy p {
+    display: none;
+  }
+  .gauges {
+    gap: 10px;
+  }
+  .gauge {
+    width: 72px;
+  }
+  .gauge-head {
+    display: grid;
+  }
+  .gauge-head small {
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+  .gauge-head strong {
+    font-size: 18px;
+  }
+  .nation-actions {
+    grid-column: 1/-1;
+    justify-content: stretch;
+    margin: 0;
+  }
+  .nation-actions > * {
+    flex: 1;
+  }
+  .control-select select {
+    width: 100%;
+  }
+  .routes {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(320px, 86%);
+    max-height: none;
+    border-radius: 0 12px 12px 0;
+  }
+  .minimap,
+  .stage-hint {
+    display: none;
+  }
+  .stage.with-drawer .demo-pop {
+    right: 12px;
+  }
+  .drawer {
+    top: auto;
+    left: 0;
+    width: auto;
+    height: 72%;
+    border-left: 0;
+    border-top: 1px solid var(--line-strong);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);
+  }
+  .drawer::before {
+    content: '';
+    display: block;
+    width: 44px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line-strong);
+    margin: 8px auto 0;
+  }
+  .drawer.open {
+    transform: none;
+  }
+  .stage.with-drawer .stage-tools {
+    right: 12px;
+  }
+  .statusline .status-mid {
+    display: none;
+  }
+  .modal-backdrop {
+    padding: 0;
+    place-items: end stretch;
+  }
+  .modal {
+    max-height: 94dvh;
+    border-radius: 16px 16px 0 0;
+  }
+  .modal-body {
+    padding: 14px;
+  }
+  .form-grid,
+  .source-toggles {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (max-width: 1200px) {
+  .stage.with-drawer .minimap {
+    display: none;
+  }
+}
+.demo-pop[open] button {
+  width: 100%;
+  text-align: left;
+}
+
+/* ---------- Tasks tab (任务) ---------- */
+.preset-bar {
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));
+  margin-bottom: 14px;
+}
+.preset-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+.preset-title h3 {
+  margin: 0;
+}
+.preset-title small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.preset-row select {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.preset-row input[data-preset-name] {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.preset-bar .api-status:empty {
+  display: none;
+}
+.preset-bar .api-status {
+  margin: 8px 0 0;
+}
+.task-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.task-tab {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--raised);
+  border-color: var(--line);
+  min-width: 0;
+}
+.task-tab strong {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.task-tab small {
+  color: var(--faint);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-tab.active {
+  border-color: var(--gold);
+  background: var(--raised-2);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.task-tab.active strong {
+  color: var(--gold);
+}
+.task-editor[hidden] {
+  display: none;
+}
+.task-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+.task-head h3 {
+  margin: 0;
+}
+.task-head small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.task-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 0 14px;
+  margin-bottom: 12px;
+}
+.task-block > summary {
+  cursor: pointer;
+  padding: 11px 0;
+  font-weight: 600;
+  color: var(--gold);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-block > summary::-webkit-details-marker {
+  display: none;
+}
+.task-block > summary::before {
+  content: '▸';
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+.task-block[open] > summary::before {
+  transform: rotate(90deg);
+}
+.task-block[open] {
+  padding-bottom: 14px;
+}
+.task-block .summary-note {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+.block-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.route-row {
+  display: grid;
+  grid-template-columns: 1fr 120px auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+.route-row > .field:first-child:last-of-type {
+  grid-column: 1/3;
+}
+.route-row button {
+  height: 36px;
+}
+.prompt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.prompt-toolbar .spacer {
+  flex: 1;
+}
+.prompt-toolbar small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.prompt-list {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.prompt-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #1b2420;
+  transition:
+    border-color 0.15s,
+    opacity 0.15s;
+}
+.prompt-card.open {
+  border-color: var(--line-strong);
+}
+.prompt-card[data-kind='data'] {
+  border-left: 3px solid var(--blue);
+}
+.prompt-card[data-kind='guide'],
+.prompt-card[data-kind='task'] {
+  border-left: 3px solid var(--gold-deep);
+}
+.prompt-card[data-kind='custom'] {
+  border-left: 3px solid var(--green);
+}
+.prompt-card.off {
+  opacity: 0.55;
+}
+.prompt-card.off .pname {
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+.prompt-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 4px;
+}
+.prompt-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  text-align: left;
+}
+.prompt-toggle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.03);
+}
+.prompt-toggle .chev {
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+.prompt-card.open .chev {
+  transform: rotate(90deg);
+}
+.pname {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.role-tag,
+.kind-tag {
+  flex: none;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+.kind-tag {
+  font-family: inherit;
+}
+.kind-tag.data {
+  color: var(--blue);
+  border-color: rgba(143, 176, 214, 0.4);
+}
+.kind-tag.custom {
+  color: var(--green);
+  border-color: rgba(114, 196, 146, 0.4);
+}
+.kind-tag.modified {
+  color: var(--amber);
+  border-color: rgba(230, 169, 80, 0.45);
+}
+.pchars {
+  flex: none;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--faint);
+}
+.switch {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.switch input {
+  appearance: none;
+  width: 30px;
+  height: 17px;
+  border-radius: 99px;
+  background: #0f1512;
+  border: 1px solid var(--line-strong);
+  position: relative;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.switch input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.switch input:checked {
+  background: rgba(114, 196, 146, 0.25);
+  border-color: var(--green);
+}
+.switch input:checked::after {
+  transform: translateX(13px);
+  background: var(--green);
+}
+.switch input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.switch span {
+  display: none;
+}
+button.icon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.prompt-body {
+  padding: 4px 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+.prompt-body[hidden] {
+  display: none;
+}
+.prompt-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prompt-fields input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.prompt-fields select {
+  flex: 0 0 120px;
+}
+.prompt-body textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.prompt-body small {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.prompt-preview {
+  margin-top: 12px;
+}
+.prompt-preview textarea {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  min-height: 260px;
+}
+.legend {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.legend summary {
+  cursor: pointer;
+  color: var(--gold);
+}
+.legend ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.8;
+}
+.legend code {
+  color: var(--text);
+}
+
+/* ---------- Progress window above the orb ---------- */
+.hud {
+  position: fixed;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(22, 30, 26, 0.96);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(220, 194, 124, 0.08);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+  font-size: 13px;
+  overflow: hidden;
+}
+.hud[hidden] {
+  display: none;
+}
+.hud.enter {
+  animation: hud-in 0.18s ease-out;
+}
+@keyframes hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.hud[data-side='below'].enter {
+  animation-name: hud-in-below;
+}
+@keyframes hud-in-below {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.hud-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px 7px 12px;
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);
+}
+.hud-head:active {
+  cursor: grabbing;
+}
+.hud-head .status-dot {
+  margin-right: 2px;
+  flex: none;
+}
+.status-dot.failed {
+  background: var(--red);
+}
+.hud-head strong {
+  font-family: var(--serif);
+  color: var(--gold);
+  letter-spacing: 0.06em;
+  flex: none;
+}
+.hud-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+.hud-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.hud-actions button {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.hud-actions button.icon {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+.hud-actions button[hidden] {
+  display: none;
+}
+.hud-bar {
+  height: 3px;
+  background: rgba(220, 194, 124, 0.12);
+  position: relative;
+  overflow: hidden;
+  flex: none;
+}
+.hud-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--gold);
+  transition: width 0.3s;
+}
+/* v0.15.4: no moving bar; it only shows how much of a batch is done. */
+.hud-bar[hidden] {
+  display: none;
+}
+.hud-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow: auto;
+  min-height: 0;
+}
+.hud-list[hidden] {
+  display: none;
+}
+.hud-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px 6px 12px;
+}
+.hud-item.enter {
+  animation: hud-in 0.18s ease-out;
+}
+.hud-item + .hud-item {
+  border-top: 1px solid rgba(217, 191, 120, 0.07);
+}
+.hud-sym.run {
+  color: var(--gold);
+  font-size: 9px;
+}
+.hud-sym {
+  font-style: normal;
+  font-weight: 700;
+  text-align: center;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 50%;
+  font-size: 11px;
+}
+.hud-sym.ok {
+  color: #0f1512;
+  background: var(--green);
+}
+.hud-sym.bad {
+  color: #0f1512;
+  background: var(--red);
+}
+.hud-sym.wait,
+.hud-sym.off {
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  line-height: 14px;
+}
+.hud-text {
+  min-width: 0;
+  display: grid;
+}
+.hud-text b {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-text small {
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-item.failed .hud-text small {
+  color: #f0a898;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.hud-item.success .hud-text b {
+  color: var(--green);
+}
+.hud-item.cancelled {
+  opacity: 0.7;
+}
+.hud-item time {
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+.hud-item button.icon {
+  width: 22px;
+  height: 22px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--faint);
+}
+.hud.collapsed .hud-head {
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .task-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .route-row {
+    grid-template-columns: 1fr 90px;
+  }
+  .route-row > button {
+    grid-column: 1/-1;
+  }
+  .route-row > .field:first-child:last-of-type {
+    grid-column: 1/-1;
+  }
+  .pchars,
+  .role-tag {
+    display: none;
+  }
+  .hud-actions button[data-hud='log'] {
+    display: none;
+  }
+}
+.task-block.prompts-block {
+  padding: 12px 14px 14px;
+}
+.prompt-toolbar h4 {
+  margin: 0;
+  color: var(--gold);
+  font-size: 14px;
+}
+.prompts-block > .muted {
+  font-size: 12.5px;
+  margin: 0 0 8px;
+}
+.task-editor input:not([type='checkbox']),
+.task-editor select,
+.preset-row input,
+.preset-row select,
+.preset-row button,
+.route-row button {
+  height: 38px;
+}
+.task-editor .prompt-body input {
+  height: 36px;
+}
+
+/* ---------- Country manager: delete tree ---------- */
+.country-row {
+  align-items: center;
+}
+.country-row .row-spacer {
+  flex: 1;
+}
+.remove-confirm {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(217, 112, 95, 0.45);
+  border-radius: 8px;
+  background: rgba(217, 112, 95, 0.08);
+}
+.remove-confirm small {
+  flex: 1 1 260px;
+  color: #f0c2b8;
+  line-height: 1.6;
+}
+
+/* ---------- Country manager: tree files ---------- */
+.tree-io h3 {
+  margin-bottom: 4px;
+}
+.tree-io > small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.tree-io-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.tree-io .api-status {
+  margin: 8px 0 0;
+}
+.import-panel {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--raised);
+  display: grid;
+  gap: 10px;
+}
+.import-panel h4 {
+  margin: 0;
+  color: var(--gold);
+}
+.import-panel ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.import-panel code {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.import-panel .warn {
+  color: var(--amber);
+}
+.tree-io {
+  margin-bottom: 18px;
+}
+
+/* ---------- News window (国际快讯) ---------- */
+.event-timeline {
+  margin: 6px 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.event-timeline b {
+  color: var(--gold);
+  margin-right: 6px;
+}
+.event-current {
+  font-size: 13px;
+}
+.event-current b {
+  color: var(--gold);
+  margin-right: 6px;
+}
+.event-steps {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.event-steps li::before {
+  display: inline-block;
+  width: 1.4em;
+  color: var(--muted);
+}
+.event-steps li.done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.event-steps li.done::before {
+  content: '✓';
+}
+.event-steps li.active {
+  color: var(--gold);
+  font-weight: 700;
+}
+.event-steps li.active::before {
+  content: '▶';
+}
+.event-steps li.pending::before {
+  content: '○';
+}
+.event-steps li.planned {
+  font-style: italic;
+}
+.event-steps li.planned::before {
+  content: '◷';
+}
+.event-effects {
+  display: block;
+  color: var(--gold);
+}
+.pivotal-note {
+  border-left: 3px solid var(--gold);
+  padding-left: 10px;
+}
+.rel-core {
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 10px 0 14px;
+  background: rgba(220, 194, 124, 0.08);
+}
+.rel-core h3,
+.rel-independent h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.rel-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.rel-card {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.rel-card p {
+  margin: 6px 0;
+}
+.rel-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.rel-branch {
+  color: var(--muted);
+}
+.rel-arrow {
+  color: var(--gold);
+}
+.rel-via {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.rel-independent {
+  margin-top: 14px;
+}
+.rel-independent dt {
+  font-weight: 600;
+}
+.rel-independent dd {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+/* v0.13.1 UI review */
+.status-jobs {
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+}
+.status-jobs.failed {
+  color: var(--red);
+}
+.status-jobs.busy {
+  color: var(--gold);
+}
+.status-dot.failed {
+  background: var(--red);
+}
+.cmd-btn {
+  position: relative;
+}
+.alert-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.lock-confirm {
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(230, 169, 80, 0.08);
+}
+.lock-confirm p {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.lock-confirm strong {
+  color: var(--amber);
+}
+.lock-confirm .row {
+  display: flex;
+  gap: 8px;
+}
+.job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.job-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.event-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.event-filters select {
+  width: auto;
+  min-width: 140px;
+}
+.event-filters small {
+  margin-left: auto;
+  color: var(--muted);
+}
+.chip.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(220, 194, 124, 0.1);
+}
+.country-row {
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+.country-name {
+  min-width: 7em;
+}
+.switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.tree-io > summary {
+  cursor: pointer;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.task-head {
+  flex-wrap: wrap;
+}
+.task-head .spacer {
+  flex: 1;
+}
+.last-run {
+  color: var(--muted);
+}
+.field .static {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.unsaved {
+  margin-right: auto;
+  color: var(--amber);
+  font-size: 13px;
+}
+.field[hidden] {
+  display: none;
+}
+.modal-task-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 0 auto;
+  min-width: 0;
+  max-width: 55%;
+  font-size: 12px;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.modal-task-status[hidden] {
+  display: none;
+}
+.modal-task-status.failed {
+  color: var(--red);
+}
+.modal-task-status .spinner {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.modal-task-status .status-dot {
+  margin-right: 0;
+}
+.status-jobs {
+  max-width: 60vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;
+   the control select and 更新局势 open from ⋯ (the top picker lists names only). */
+.nation-more-btn,
+.control-tag {
+  display: none;
+}
+@media (max-width: 760px) {
+  .nation-bar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    padding: 6px 10px 8px;
+    gap: 6px 10px;
+  }
+  .nation-crest {
+    display: none;
+  }
+  .nation-copy h2 {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .control-tag {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gauges {
+    gap: 10px;
+  }
+  .gauge {
+    width: auto;
+    min-width: 44px;
+  }
+  .gauge-head {
+    display: grid;
+    line-height: 1.1;
+  }
+  .gauge-head small {
+    font-size: 10px;
+  }
+  .gauge-head strong {
+    font-size: 16px;
+  }
+  .gauge-track {
+    height: 3px;
+    margin-top: 2px;
+  }
+  .nation-more-btn {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    font-size: 18px;
+  }
+  .nation-more-btn[aria-expanded='true'] {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  /* the main focus as one slim full-width row: dot, name, days left, bar */
+  .focus-gauge {
+    grid-column: 1/-1;
+    width: auto;
+    padding: 2px 0;
+    margin: 0;
+  }
+  .focus-gauge .gauge-head {
+    display: flex;
+    gap: 8px;
+  }
+  .focus-name {
+    font-size: 14px;
+  }
+  .focus-num::after {
+    font-size: 16px;
+  }
+  .nation-actions {
+    display: none;
+  }
+  .nation-bar.more-open .nation-actions {
+    display: flex;
+  }
+}
+
+/* v0.13.3: settings and details additions */
+.notice {
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: rgba(230, 169, 80, 0.08);
+  color: #f0c49a;
+  font-size: 13px;
+}
+.api-actions.confirm-row {
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(230, 169, 80, 0.08);
+}
+.block-note.model-hint {
+  color: #f0c49a;
+}
+.source-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  margin: 4px 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+}
+.source-scope.custom {
+  border-color: var(--gold);
+}
+.source-scope b {
+  color: var(--gold);
+}
+.source-scope label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+details.fold > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12.5px;
+  list-style: none;
+}
+details.fold > summary::before {
+  content: '▸ ';
+}
+details.fold[open] > summary::before {
+  content: '▾ ';
+}
+details.detail-section.fold > summary h4 {
+  display: inline;
+  margin: 0;
+}
+details.detail-section.fold > summary::before {
+  color: var(--gold);
+}
+.source-modes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+@media (max-width: 760px) {
+  .source-modes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .source-modes > button {
+    grid-column: 1/-1;
+  }
+}
+.api-actions.api-save {
+  align-items: center;
+  position: sticky;
+  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */
+  bottom: -18px;
+  margin-bottom: -18px;
+  padding-bottom: 18px !important;
+  z-index: 2;
+  padding: 10px 0;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.api-actions.api-save .api-status {
+  margin: 0;
+  flex: 1 1 200px;
+}
+@media (max-width: 760px) {
+  .api-actions.api-save {
+    bottom: -14px;
+    margin-bottom: -14px;
+    padding-bottom: 14px !important;
+  }
+}
+
+/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */
+.period-anchor-note {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+  border-left: 2px solid var(--blue);
+  padding: 10px 12px;
+  background: var(--raised);
+  font-size: 12px;
+}
+.period-anchor-note strong {
+  color: var(--blue);
+}
+.event-card.flash {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold) inset;
+}
+.period-shape {
+  margin-left: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #e5d3a0;
+  background: rgba(220, 194, 124, 0.08);
+  border: 1px solid rgba(220, 194, 124, 0.28);
+  cursor: help;
+}
+.period-anchor-badge {
+  position: absolute;
+  top: -18px;
+  right: 0;
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 5px;
+  color: var(--blue);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+}
+.period-history {
+  margin: 14px 0;
+  border-left: 2px solid var(--gold-deep);
+  padding: 4px 16px;
+}
+.period-history time {
+  color: var(--gold);
+  font-size: 12px;
+}
+.period-history p {
+  line-height: 1.95;
+}
+
+/* ---------- v0.15.0 · the period joins the nation bar; one tool cluster; drawer status ---------- */
+.period-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 3px;
+  font-size: 12.5px;
+}
+.period-line strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+.period-line .period-shape {
+  margin-left: 0;
+}
+.period-line .switch-label {
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.period-history-btn {
+  font-size: 12px;
+  color: var(--muted);
+}
+.nation-copy p.period-note {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tag-day {
+  display: none;
+}
+@media (min-width: 761px) {
+  .nation-bar {
+    padding: 9px 18px;
+  }
+  .nation-copy h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 21px;
+  }
+  .nation-copy h2 .control-tag {
+    display: inline;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .routes {
+    width: 244px;
+    bottom: auto;
+  }
+}
+@media (max-width: 760px) {
+  .nation-id {
+    grid-column: 1 / -1;
+  }
+  .gauges {
+    justify-self: start;
+  }
+  .tag-day {
+    display: inline;
+  }
+  .period-line {
+    font-size: 12px;
+  }
+  .stage-tools {
+    left: 8px;
+    right: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .stage-tools [data-action='overview'] {
+    display: none;
+  }
+  .nation-copy p.period-note {
+    display: none;
+  }
+}
+.stage-tools {
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(13, 19, 16, 0.82);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+.stage-tools > button,
+.stage-tools .zoom-controls,
+.stage-tools .legend-pop > summary {
+  height: 32px;
+  box-shadow: none;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.minimap {
+  bottom: 66px;
+}
+.legend-list {
+  bottom: 46px;
+}
+/* Readable small type on the tree. */
+.node-meta {
+  font-size: 11px;
+  color: #c3c9b9;
+  border-color: rgba(220, 194, 124, 0.45);
+}
+.node.locked .node-name,
+.node.unknown .node-name {
+  color: #b9bfae;
+}
+/* Drawer: a completed focus leads with how and when it was completed. */
+.drawer-status {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(238, 212, 141, 0.35);
+  background: linear-gradient(180deg, rgba(76, 64, 30, 0.35), rgba(40, 34, 18, 0.18));
+}
+.status-medal {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #2c240f;
+  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);
+}
+.drawer-status strong {
+  display: block;
+  color: #fff2c8;
+  font-size: 14px;
+}
+.drawer-status small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.drawer-status .done-cause {
+  margin: 6px 0;
+  font-size: 12.5px;
+}
+.drawer-status.bypassed {
+  border-color: rgba(143, 176, 214, 0.35);
+  background: rgba(143, 176, 214, 0.06);
+}
+.drawer-status.bypassed .status-medal {
+  color: var(--blue);
+  background: #1f2832;
+  border: 1px solid var(--blue);
+}
+.chip.static {
+  cursor: default;
+}
+.detail-section.gained {
+  border-top: 0;
+  padding-top: 0;
+}
+.blockers-title {
+  font-size: 12px;
+  color: var(--amber);
+}
+/* Motion; turned off with the system's reduced-motion setting (see above). */
+.tree.entering {
+  animation: tree-in 0.28s ease-out;
+}
+@keyframes tree-in {
+  from {
+    opacity: 0;
+    transform-origin: top center;
+  }
+}
+.node.just-done .node-medal {
+  animation: medal-shine 1.4s ease-out 0.15s;
+}
+@keyframes medal-shine {
+  0% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 5px rgba(238, 212, 141, 0.5);
+  }
+  35% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 7px #f6e2a6,
+      0 0 36px rgba(246, 226, 166, 0.85);
+  }
+}
+
+/* ---------- v0.15.1 · settings: preset list and card, flat task page, short hints ---------- */
+.modal:focus {
+  outline: none;
+}
+.footer-dirty {
+  margin-right: auto;
+  font-size: 12.5px;
+  color: var(--amber);
+}
+.footer-dirty:not(:empty)::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  vertical-align: 1px;
+}
+.hint-fold > summary {
+  display: inline;
+  list-style: none;
+  cursor: pointer;
+}
+.hint-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.hint-more {
+  margin-left: 6px;
+  color: var(--faint);
+  text-decoration: underline;
+  text-decoration-color: rgba(220, 194, 124, 0.35);
+  text-underline-offset: 3px;
+}
+.hint-fold[open] .hint-more,
+.hint-fold[open] .hint-cut {
+  display: none;
+}
+/* API presets: list on the left, the edited preset as a card with its own save. */
+.api-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.api-list {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(62vh, 560px);
+}
+.api-list-head {
+  padding: 0 4px 6px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-search {
+  margin-bottom: 6px;
+}
+.api-list-scroll {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+}
+.api-item {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  padding: 8px 12px;
+  border-color: transparent;
+  background: transparent;
+  min-width: 0;
+}
+.api-item[hidden] {
+  display: none;
+}
+.api-item b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.api-item small {
+  font-size: 11.5px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.api-item.on {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+.dirty-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+.api-add {
+  margin-top: 6px;
+  border-style: dashed;
+  color: var(--gold);
+}
+.api-card {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  min-width: 0;
+}
+.api-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.api-card-head small {
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-card-head b {
+  font-size: 15px;
+}
+.api-card-tools {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.api-card-tools button {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+.api-card > .confirm-row {
+  margin: 10px 14px 0;
+}
+.api-card-body {
+  padding: 4px 14px 6px;
+}
+.inline-field {
+  display: flex;
+  gap: 8px;
+}
+.inline-field input {
+  flex: 1;
+  min-width: 0;
+}
+.inline-field button {
+  white-space: nowrap;
+}
+.api-advanced {
+  border-top: 1px solid var(--line);
+}
+.api-advanced > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.api-advanced > summary small {
+  margin-left: 10px;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-card-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 12px 12px;
+  background: #1d2621;
+}
+.api-card-foot .api-status {
+  margin: 0 auto 0 0;
+  font-size: 12.5px;
+  color: var(--green);
+}
+/* Tasks: the four tasks on the left, one flat page on the right. */
+.preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+}
+.preset-bar .preset-title {
+  margin: 0;
+  cursor: help;
+}
+.preset-bar .preset-title h3 {
+  margin: 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.preset-bar .preset-row {
+  flex: 1;
+  margin: 0;
+}
+.preset-bar .api-status {
+  flex-basis: 100%;
+}
+.task-layout {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.task-layout .task-tabs {
+  position: sticky;
+  top: 0;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin: 0;
+}
+.task-layout .task-tab {
+  padding: 9px 12px;
+  border-color: transparent;
+  background: transparent;
+}
+.task-layout .task-tab small {
+  white-space: normal;
+}
+.task-layout .task-tab.active {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+.task-editors {
+  min-width: 0;
+}
+.task-editors .task-block {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+.task-editors .task-block.prompts-block {
+  padding-top: 12px;
+}
+@media (max-width: 760px) {
+  .api-layout,
+  .task-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .api-list,
+  .task-layout .task-tabs {
+    position: static;
+    max-height: none;
+  }
+  .api-list-scroll {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(140px, max-content);
+    overflow-x: auto;
+  }
+  .task-layout .task-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- v0.15.2 · task cards and request log ---------- */
+.job-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.job-card2 {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+.job-card2.running {
+  border-color: rgba(220, 194, 124, 0.45);
+}
+.job-card2.failed {
+  border-color: rgba(217, 112, 95, 0.45);
+  background: linear-gradient(180deg, rgba(217, 112, 95, 0.08), rgba(217, 112, 95, 0.02));
+}
+.job-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+}
+.job-card2.success .job-icon {
+  color: #0e1a12;
+  background: var(--green);
+  border-color: var(--green);
+}
+.job-card2.failed .job-icon {
+  color: #1a0f0c;
+  background: var(--red);
+  border-color: var(--red);
+}
+.job-card2.running .job-icon {
+  border-color: var(--gold);
+}
+.job-main {
+  min-width: 0;
+}
+.job-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-weight: 600;
+}
+.job-chip {
+  font-size: 11px;
+  font-weight: 400;
+  padding: 0 7px;
+  line-height: 18px;
+  border-radius: 9px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+}
+.job-sub {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.job-sub b {
+  color: var(--text);
+  font-weight: 600;
+}
+.job-card2.failed .job-sub b {
+  color: #f0a898;
+}
+.job-problems {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #e4cfc9;
+}
+.job-problems code,
+.log-code {
+  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+}
+.job-problems code {
+  font-size: 12px;
+  color: #f2d79a;
+}
+.job-more > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+.job-note {
+  margin-top: 14px;
+  font-size: 12px;
+}
+.log-entry {
+  margin-top: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.log-entry > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.log-entry > summary::-webkit-details-marker {
+  display: none;
+}
+.log-entry[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.log-result {
+  font-weight: 600;
+  font-size: 13px;
+}
+.log-result.ok {
+  color: var(--green);
+}
+.log-result.failed {
+  color: var(--red);
+}
+.log-title {
+  font-weight: 600;
+}
+.log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-basis: 100%;
+}
+.log-error {
+  margin: 10px 16px 0;
+}
+.log-part2 {
+  border-bottom: 1px solid var(--line);
+}
+.log-part2:last-child {
+  border-bottom: 0;
+}
+.log-part2 > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+.log-part2 > summary::-webkit-details-marker {
+  display: none;
+}
+.log-part2 > summary::before {
+  content: '▸';
+  width: 10px;
+  color: var(--faint);
+}
+.log-part2[open] > summary::before {
+  content: '▾';
+}
+.log-role {
+  font-family: Consolas, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #0f1512;
+  border: 1px solid var(--line-strong);
+  color: var(--blue);
+}
+.log-role.user {
+  color: var(--green);
+}
+.log-role.output,
+.log-role.assistant {
+  color: var(--gold);
+}
+.log-role.think {
+  color: var(--faint);
+}
+.log-count {
+  font-size: 12px;
+  color: var(--faint);
+}
+.log-copy {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 12px;
+}
+.log-code {
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  max-height: 340px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #0b100d;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #cfd5c6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-code .k {
+  color: #e6c97e;
+}
+.log-code .s {
+  color: #9fd3ae;
+}
+.log-code .n {
+  color: #8fb0d6;
+}
+.log-code .b {
+  color: #d9a0c8;
+}
+@media (max-width: 760px) {
+  .job-card2 {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .job-card2 .job-buttons {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+.api-card-foot button,
+.modal-footer button {
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .api-card-foot,
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+  .api-card-foot .api-status,
+  .footer-dirty:not(:empty) {
+    flex-basis: 100%;
+  }
+}
+
+/* ---------- v0.15.3 · one size for the settings window; windows open with a short rise ---------- */
+.modal.modal-settings {
+  height: 90vh;
+}
+.modal.modal-settings .modal-body {
+  flex: 1;
+}
+@media (max-width: 760px) {
+  .modal.modal-settings {
+    height: 94dvh;
+  }
+}
+.modal {
+  animation: modal-in 0.2s ease-out;
+}
+.modal-backdrop:not([hidden]) {
+  animation: backdrop-in 0.2s ease-out;
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* v0.16 世界来函 · the world task's national-focus proposal, reviewed before it is saved.
+ * The cinnabar seal is the one loud element: it marks a letter waiting for review and stamps 准 on
+ * acceptance. Everything else follows the archive's ledger look: hairlines, serif names, quiet text. */
+.letter-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(-4deg);
+}
+.cmd-btn.letter-quiet {
+  color: var(--muted);
+  border-style: dashed;
+}
+.cmd-btn.letter-muted {
+  color: var(--faint);
+}
+.cmd-btn.letter-pending {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.cmd-btn.letter-pending .letter-seal {
+  background: var(--seal);
+  border-color: var(--seal);
+  color: var(--seal-ink);
+  animation: seal-arrive 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+.cmd-btn.letter-alert {
+  border-color: var(--red);
+  color: #f2b3a6;
+}
+@keyframes seal-arrive {
+  from {
+    transform: rotate(-14deg) scale(1.7);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-4deg) scale(1);
+    opacity: 1;
+  }
+}
+.orb-letter {
+  position: absolute;
+  bottom: -2px;
+  left: -4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--seal);
+  color: var(--seal-ink);
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  transform: rotate(-6deg);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.orb-letter[hidden] {
+  display: none;
+}
+.status-jobs.letter {
+  color: var(--gold);
+}
+.status-dot.letter {
+  background: var(--seal);
+  border-radius: 2px;
+  transform: rotate(-6deg);
+}
+
+.modal.modal-letter {
+  width: min(1000px, 100%);
+}
+.letter-sheet {
+  display: grid;
+  gap: 18px;
+}
+.letter-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.letter-seal-big {
+  position: relative;
+  flex: none;
+  width: 62px;
+  height: 62px;
+}
+.letter-seal-big .seal-mark,
+.letter-seal-big .seal-stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-family: var(--serif);
+  font-weight: 700;
+}
+.letter-seal-big .seal-mark {
+  border: 2px solid var(--gold-deep);
+  color: var(--gold);
+  font-size: 30px;
+  transform: rotate(-3deg);
+  box-shadow:
+    inset 0 0 0 3px var(--panel),
+    inset 0 0 0 4px rgba(220, 194, 124, 0.25);
+}
+.letter-seal-big .seal-stamp {
+  background: var(--seal);
+  color: var(--seal-ink);
+  font-size: 32px;
+  transform: rotate(-9deg);
+  box-shadow:
+    inset 0 0 0 3px var(--seal),
+    inset 0 0 0 4px rgba(243, 220, 203, 0.55);
+  opacity: 0;
+}
+.letter-seal-big.sealed .seal-stamp {
+  opacity: 1;
+}
+.letter-seal-big.sealed .seal-mark {
+  opacity: 0.25;
+}
+.letter-seal-big.fresh .seal-stamp {
+  animation: seal-press 0.55s cubic-bezier(0.25, 1.1, 0.35, 1) both;
+}
+@keyframes seal-press {
+  0% {
+    transform: rotate(-16deg) scale(1.9);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(-9deg) scale(0.93);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-9deg) scale(1);
+    opacity: 1;
+  }
+}
+.letter-from {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.letter-meta {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.letter-state {
+  padding: 9px 14px;
+  border-left: 2px solid var(--gold-deep);
+  background: rgba(220, 194, 124, 0.05);
+  color: var(--text);
+}
+.letter-state.muted {
+  border-left-color: var(--faint);
+  color: var(--muted);
+}
+.letter-state.alert {
+  border-left-color: var(--red);
+  background: rgba(217, 112, 95, 0.08);
+}
+.letter-state.done {
+  border-left-color: var(--seal);
+}
+.letter-checks {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.letter-check {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.letter-check dt {
+  font-family: var(--serif);
+  color: var(--gold);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.letter-check dt::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  transform: translateY(-1px);
+}
+.letter-check.ok dt::before {
+  background: var(--green);
+}
+.letter-check.unknown dt::before {
+  border: 1.5px solid var(--amber);
+  background: linear-gradient(90deg, var(--amber) 50%, transparent 50%);
+}
+.letter-check dd {
+  margin: 0;
+  color: var(--muted);
+}
+.letter-check ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.letter-check li {
+  font-size: 13px;
+}
+.letter-check li::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 2px;
+  background: var(--faint);
+}
+.letter-check li.ok::before {
+  background: var(--green);
+}
+.letter-check li.warn {
+  color: #f2b3a6;
+}
+.letter-check li.warn::before {
+  background: var(--red);
+}
+.letter-review {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  min-height: 260px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.letter-nations {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  background: var(--ink);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.letter-nation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px 9px 16px;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  color: var(--muted);
+}
+.letter-nation:hover:not(:disabled) {
+  background: var(--raised);
+  color: var(--text);
+}
+.letter-nation.active {
+  border-left-color: var(--gold);
+  background: var(--panel);
+  color: var(--text);
+}
+.letter-nation-name {
+  flex: 1;
+  font-family: var(--serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.letter-nation-count {
+  min-width: 22px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.letter-nation.active .letter-nation-count {
+  color: var(--gold);
+}
+.letter-detail {
+  padding: 16px 22px 20px;
+  overflow: auto;
+  max-height: 46vh;
+}
+.modal-body .letter-detail h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.letter-shifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 0 0 16px;
+  padding: 0 0 14px;
+  list-style: none;
+  border-bottom: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+}
+.letter-shifts .shift {
+  margin-left: 8px;
+  color: var(--text);
+}
+.letter-shifts b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.letter-shifts i {
+  margin: 0 6px;
+  font-style: normal;
+  color: var(--gold);
+}
+.letter-still {
+  margin-bottom: 14px;
+  color: var(--faint);
+  font-size: 13px;
+}
+.letter-timeline {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.letter-timeline::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 103px;
+  width: 1px;
+  background: var(--line-strong);
+}
+.letter-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 26px;
+  padding: 6px 0;
+}
+.letter-timeline li::before {
+  content: "";
+  position: absolute;
+  left: 99px;
+  top: 12px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold-deep);
+  background: var(--panel);
+}
+.letter-timeline .entry-complete::before {
+  border: 0;
+  border-radius: 1px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+.letter-timeline .entry-event::before {
+  border-color: var(--blue);
+  border-radius: 2px;
+}
+.letter-timeline .entry-update::before {
+  left: 101px;
+  top: 14px;
+  width: 5px;
+  height: 5px;
+  border: 0;
+  background: var(--faint);
+}
+.letter-timeline .entry-fact::before {
+  top: 15px;
+  height: 3px;
+  border: 0;
+  border-radius: 0;
+  background: var(--muted);
+}
+.letter-timeline .entry-transition::before {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 3px var(--gold-deep);
+}
+.letter-timeline time {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.letter-timeline p {
+  line-height: 1.55;
+}
+.letter-timeline small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.letter-timeline .entry-complete p {
+  color: var(--gold);
+}
+.entry-kind {
+  margin-right: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.modal-letter .modal-footer {
+  align-items: center;
+}
+.footer-gap {
+  flex: 1;
+}
+.modal-footer .letter-reject {
+  background: none;
+  border-color: transparent;
+  color: #e9a090;
+}
+.modal-footer .letter-reject:hover:not(:disabled) {
+  background: rgba(217, 112, 95, 0.1);
+  border-color: rgba(217, 112, 95, 0.4);
+}
+@media (max-width: 760px) {
+  .cmd-btn.letter-slot .cmd-text {
+    display: none;
+  }
+  .letter-head {
+    gap: 14px;
+  }
+  .letter-seal-big {
+    width: 50px;
+    height: 50px;
+  }
+  .letter-from {
+    font-size: 16px;
+  }
+  .letter-check {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .letter-review {
+    grid-template-columns: 1fr;
+  }
+  .letter-nations {
+    flex-direction: row;
+    padding: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .letter-nation {
+    width: auto;
+    flex: none;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+    padding: 10px 14px;
+  }
+  .letter-nation.active {
+    border-bottom-color: var(--gold);
+  }
+  .letter-detail {
+    max-height: none;
+    padding: 14px 16px 18px;
+  }
+  .letter-timeline::before {
+    left: 79px;
+  }
+  .letter-timeline li {
+    grid-template-columns: 70px 1fr;
+    gap: 22px;
+  }
+  .letter-timeline li::before {
+    left: 75px;
+  }
+  .letter-timeline .entry-update::before {
+    left: 77px;
+  }
+  .modal-letter .modal-footer {
+    flex-wrap: wrap;
+  }
+  .modal-letter .footer-gap {
+    display: none;
+  }
+}
+
+/* v0.16: national focus went back after a proposal was accepted (usually a workflow re-run). */
+.rollback-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  background: rgba(217, 112, 95, 0.1);
+  border-bottom: 1px solid rgba(217, 112, 95, 0.36);
+  color: #f6c6ba;
+  font-size: 13px;
+}
+.rollback-banner .letter-seal {
+  flex: none;
+  color: var(--red);
+}
+.rollback-banner p {
+  flex: 1;
+}
+.rollback-slot[hidden] {
+  display: none;
+}
+`;
 
   // src/api-panel.ts
   var escape4 = (value) => String(value ?? "").replace(
@@ -34931,7 +41150,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
     host.id = "national-focus-root";
     doc2.body.append(host);
     const root = host.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>${style_default}</style><button class="orb" title="开启国策树" aria-label="开启国策树">${icon("eagle")}<span class="count" hidden></span></button><section class="shell" aria-label="国策树面板" hidden></section><div class="modal-backdrop" hidden></div>`;
+    root.innerHTML = `<style>${style_default}</style><button class="orb" title="开启国策树" aria-label="开启国策树">${icon("eagle")}<span class="count" hidden></span><span class="orb-letter" hidden aria-hidden="true">函</span></button><section class="shell" aria-label="国策树面板" hidden></section><div class="modal-backdrop" hidden></div>`;
     const shell = root.querySelector(".shell");
     const orb = root.querySelector(".orb");
     const backdrop = root.querySelector(".modal-backdrop");
@@ -34966,6 +41185,11 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
     let lockConfirm = "";
     let eventFilter = "all";
     let eventCountry = "";
+    let letterNation = "";
+    let demoLetter = null;
+    let demoRollback = null;
+    let letterSealedAt = 0;
+    let letterKey = "";
     let unsub = () => {
     };
     let treeSize = { width: 1600, height: 1e3 };
@@ -35132,6 +41356,8 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
       const badge = root.querySelector(".count");
       badge.hidden = busy === 0;
       badge.textContent = String(busy);
+      const letter = letterLook(reception());
+      root.querySelector(".orb-letter").hidden = !letter || letter.tone !== "pending";
       hud.suppress(open2);
       hud.update();
       if (!open2) {
@@ -35148,6 +41374,15 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
         if (status) {
           status.outerHTML = renderTaskSummary();
         }
+        const seal = shell.querySelector(".letter-slot");
+        if (seal) {
+          seal.outerHTML = renderLetterButton();
+        }
+        const rollback = shell.querySelector(".rollback-slot");
+        if (rollback) {
+          rollback.outerHTML = renderRollback();
+        }
+        refreshLetter();
         const note = shell.querySelector(".period-note");
         if (country && note) {
           const text2 = periodNote(country, controller.jobs);
@@ -35170,7 +41405,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
       const tabs = countries.map(
         (c) => `<button class="nation-tab ${c.id === countryId ? "active" : ""} ${c.control}" data-country="${escape6(c.id)}" title="${escape6(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === "player" ? "eagle" : "crown")}</span><span class="tab-copy"><strong>${escape6(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`
       ).join("");
-      const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape6(c.id)}" ${selected(c.id === countryId)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>' : ""}${dateChip(state)}${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
+      const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape6(c.id)}" ${selected(c.id === countryId)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>' : ""}${dateChip(state)}${renderLetterButton()}${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
       const error62 = controller.error ? `<div class="error-banner" role="alert"><span>${escape6(controller.error)}</span><button data-action="refresh">重新读取</button></div>` : "";
       let body;
       if (country && state) {
@@ -35206,12 +41441,12 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
           ""
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
         body = `<section class="nation-bar ${nationMore ? "more-open" : ""}"><div class="nation-id"><span class="nation-crest">${icon(country.control === "player" ? "eagle" : "crown")}</span><div class="nation-copy"><h2 title="${escape6(country.description)}">${escape6(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape6(stateTime(state, false))}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge("稳定度", country.stability, "stability")}${gauge("战争支持度", country.warSupport, "war")}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === "player")}>玩家选策</option><option value="ai" ${selected(country.control === "ai")}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
-<section class="stage ${detailsOpen ? "with-drawer" : ""}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? "" : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has("legend") ? "open" : ""}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? "" : "disabled"} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ""}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has("demo") ? "open" : ""}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ""}<button data-action="demo-reset">重设示范</button></details>` : ""}<aside class="drawer ${drawerDrawn ? "open" : ""}" aria-label="国策详情" ${detailsOpen ? "" : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ""}</aside></section>`;
+<section class="stage ${detailsOpen ? "with-drawer" : ""}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? "" : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has("legend") ? "open" : ""}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? "" : "disabled"} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ""}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has("demo") ? "open" : ""}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-letter">世界来函：待审</button><button data-action="demo-letter-wait">世界来函：推演中</button><button data-action="demo-letter-over">世界来函：被覆写</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ""}<button data-action="demo-reset">重设示范</button></details>` : ""}<aside class="drawer ${drawerDrawn ? "open" : ""}" aria-label="国策详情" ${detailsOpen ? "" : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ""}</aside></section>`;
       } else {
         body = `<section class="empty"><div class="empty-card">${icon("eagle")}<h2>${state ? "为这个世界选择方向" : "连接你的故事"}</h2><p>${state ? "先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。" : "国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。"}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;
       }
       const tabsScroll = shell.querySelector(".nation-tabs")?.scrollLeft ?? 0;
-      shell.innerHTML = `${command}${error62}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ""}</span><button class="linkish" data-action="events">事件记录</button></footer>`;
+      shell.innerHTML = `${command}${error62}${renderRollback()}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ""}</span><button class="linkish" data-action="events">事件记录</button></footer>`;
       bindNationTabs(tabsScroll);
       const drawer = shell.querySelector(".drawer");
       if (drawer && detailsOpen !== drawerDrawn) {
@@ -35263,7 +41498,43 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
     }
     function renderTaskSummary() {
       const summary = taskSummary();
-      return `<button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape6(summary.text)}</button>`;
+      return `<button class="linkish status-jobs ${summary.state}" data-action="${summary.state === "letter" ? "letter" : "jobs"}"><i class="status-dot ${summary.state}"></i>${escape6(summary.text)}</button>`;
+    }
+    function renderRollback() {
+      const notice = controller.platform.demo && demoRollback ? demoRollback : controller.rollbackNotice;
+      if (!notice) {
+        return '<div class="rollback-slot" hidden></div>';
+      }
+      return `<div class="rollback-slot rollback-banner" role="alert"><span class="letter-seal" aria-hidden="true">函</span><p>侦测到国策状态回退，可能由工作流重跑造成；第 ${notice.messageId} 楼接收提案后的修改可能已被覆盖。</p><button data-action="rollback-dismiss">知道了</button></div>`;
+    }
+    function reception() {
+      return controller.platform.demo && demoLetter ? demoLetter : controller.externalProposal;
+    }
+    function letterLook(r) {
+      switch (r.status) {
+        case "waiting":
+          return { tone: "quiet", label: "世界推演中" };
+        case "pending":
+          return { tone: "pending", label: "国策提案待审" };
+        case "overwritten":
+          return { tone: "alert", label: "提案需重新接收" };
+        case "expired":
+        case "unavailable":
+          return { tone: "muted", label: "提案未能接收" };
+        case "rejected":
+          return r.reason === "user_rejected" ? null : { tone: "muted", label: "提案未能接收" };
+        default:
+          return null;
+      }
+    }
+    function renderLetterButton() {
+      const r = reception();
+      const look = letterLook(r);
+      if (!look) {
+        return '<span class="letter-slot" hidden></span>';
+      }
+      const why = letterReason(r) || look.label;
+      return `<button class="cmd-btn letter-slot letter-${look.tone}" data-action="letter" title="${escape6(why)}" aria-label="世界来函：${escape6(look.label)}"><span class="letter-seal" aria-hidden="true">函</span><span class="cmd-text">${escape6(look.label)}</span></button>`;
     }
     function unseenFailures() {
       return controller.jobs.filter((job) => job.state === "failed" && !failuresSeen.has(job.id));
@@ -35280,6 +41551,17 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
       const failed = unseenFailures().length;
       if (failed) {
         return { text: `${failed} 项任务失败，点此查看`, state: "failed" };
+      }
+      const letter = reception().status;
+      if (letter === "pending" || letter === "overwritten") {
+        return { text: letter === "pending" ? "世界来函附上国策提案，点此审阅" : "提案接收后被覆写，点此重新接收", state: "letter" };
+      }
+      const wait = controller.scheduleCoordination.status;
+      if (wait === "prediction_wait") {
+        return { text: "预期世界排程到期，暂候国策资料登记", state: "busy" };
+      }
+      if (wait === "proposal_wait") {
+        return { text: "已让给世界推演，等待国策提案", state: "busy" };
       }
       const last = controller.jobs.find((job) => job.state === "success");
       return last ? { text: `上次完成：${jobNames[last.kind] ?? last.kind} · ${last.time}`, state: "" } : { text: "任务待命", state: "" };
@@ -35810,7 +42092,7 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
         return;
       }
       const summary = taskSummary();
-      pill.hidden = !summary.state || modal === "jobs";
+      pill.hidden = !summary.state || modal === "jobs" || summary.state === "letter";
       pill.className = `modal-task-status ${summary.state}`;
       const html = `<i class="status-dot ${summary.state === "busy" ? "busy" : "failed"}"></i>${escape6(summary.text.replace("，点此查看", ""))}`;
       if (pill.innerHTML !== html) {
@@ -36029,6 +42311,163 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
       ${independent.length ? `<section class="rel-independent"><h3>独立推进的分支</h3><dl>${independent.map((b) => `<dt>${escape6(b.name)}</dt><dd>${escape6(b.independent ?? "")}</dd>`).join("")}</dl></section>` : ""}`,
         '<button data-modal="close">返回</button>'
       );
+    }
+    function letterState(r) {
+      return JSON.stringify([r.status, r.reason, r.detail, r.proposal?.id, r.source?.nonce, r.evidence, letterNation]);
+    }
+    function letterView(r) {
+      const state = controller.state;
+      const digest = state && r.preview && r.proposal ? letterDigest(state, r.preview, r.proposal) : [];
+      if (digest.length && !digest.some((c) => c.id === letterNation)) {
+        letterNation = digest[0].id;
+      }
+      const sealed = r.status === "accepted";
+      const fresh = sealed && Date.now() - letterSealedAt < 1400;
+      const reviewable = r.status === "pending" || r.status === "overwritten" || sealed;
+      const intro = r.status === "waiting" ? "阿斯塔利亚的世界正在推演" : reviewable ? "阿斯塔利亚的世界推演附上一份国策提案" : "这一次没有可接收的国策提案";
+      const meta3 = [
+        r.source ? `推演至 ${storyTime(r.source.now, true)}` : "",
+        digest.length ? `涉及 ${digest.length} 国` : "",
+        r.source ? `第 ${r.source.messageId} 楼` : ""
+      ].filter(Boolean).join("，");
+      const head = `<div class="letter-head"><div class="letter-seal-big${sealed ? " sealed" : ""}${fresh ? " fresh" : ""}" aria-hidden="true"><span class="seal-mark">函</span><span class="seal-stamp">准</span></div><div class="letter-intro"><p class="letter-from">${intro}</p>${meta3 ? `<p class="letter-meta">${escape6(meta3)}</p>` : ""}</div></div>`;
+      const note = sealed ? '<p class="letter-state done">提案已接收，国策已保存到这一楼。</p>' : letterReason(r) ? `<p class="letter-state ${r.status === "overwritten" ? "alert" : r.status === "waiting" ? "" : "muted"}">${escape6(letterReason(r))}</p>` : "";
+      let review = "";
+      if (reviewable && r.proposal) {
+        const lines = evidenceLines(r.evidence).map((line) => `<li class="${line.tone}">${escape6(line.text)}</li>`).join("");
+        const checks = `<dl class="letter-checks"><div class="letter-check ok"><dt>国策规则</dt><dd>提案已通过国策引擎的验证，可以套用。</dd></div><div class="letter-check unknown"><dt>世界写入</dt><dd>程序无法确认世界资料是否完整写入，请参考这次的执行纪录：<ul>${lines}</ul></dd></div></dl>`;
+        const nation = digest.find((c) => c.id === letterNation);
+        const tabs = digest.map(
+          (c) => `<button role="tab" class="letter-nation${c.id === letterNation ? " active" : ""}" aria-selected="${c.id === letterNation}" data-letter-nation="${escape6(c.id)}"><span class="letter-nation-name">${escape6(c.name)}</span><span class="letter-nation-count" aria-label="${c.entries.length} 项变化">${c.entries.length}</span></button>`
+        ).join("");
+        let detail = '<p class="muted">这份提案没有改变任何国家。</p>';
+        if (nation) {
+          const shift = (label2, [from, to]) => from === to ? "" : `<li>${label2}<span class="shift"><b>${from}</b><i aria-label="变为">→</i><b>${to}</b></span></li>`;
+          const named = (label2, [from, to]) => from === to ? "" : `<li>${label2}<span class="shift"><b>${escape6(from || "暂无")}</b><i aria-label="变为">→</i><b>${escape6(to || "暂无")}</b></span></li>`;
+          const shifts = shift("稳定度", nation.stability) + shift("战争支持度", nation.warSupport) + named("主国策", nation.focus) + (nation.gained.length ? `<li>新增能力<span class="shift">${escape6(nation.gained.join("、"))}</span></li>` : "") + (nation.lost.length ? `<li>失去能力<span class="shift">${escape6(nation.lost.join("、"))}</span></li>` : "");
+          const kinds = {
+            start: "",
+            complete: "",
+            event: "事件",
+            update: "进展",
+            fact: "事实",
+            transition: "换期"
+          };
+          const entries = nation.entries.map(
+            (entry) => `<li class="entry-${entry.kind}"><time>${escape6(storyTime(entry.day))}</time><p>${kinds[entry.kind] ? `<span class="entry-kind">${kinds[entry.kind]}</span>` : ""}${escape6(entry.title)}${entry.note ? `<small>${escape6(entry.note)}</small>` : ""}</p></li>`
+          ).join("");
+          detail = `<h3>${escape6(nation.name)}</h3>${shifts ? `<ul class="letter-shifts">${shifts}</ul>` : '<p class="letter-still">数值、主国策与能力都不变。</p>'}${entries ? `<ol class="letter-timeline">${entries}</ol>` : '<p class="muted">这段时间没有新的进展。</p>'}`;
+        }
+        review = `${checks}<div class="letter-review"><div class="letter-nations" role="tablist" aria-label="涉及的国家">${tabs}</div><section class="letter-detail" role="tabpanel">${detail}</section></div>`;
+      }
+      if (!reviewable && r.evidence) {
+        const lines = evidenceLines(r.evidence).map((line) => `<li class="${line.tone}">${escape6(line.text)}</li>`).join("");
+        review = `<dl class="letter-checks"><div class="letter-check unknown"><dt>世界写入纪录</dt><dd><ul>${lines}</ul></dd></div></dl>`;
+      }
+      const diagnostic = r.detail ? `<p class="letter-state muted">${escape6(r.detail)}</p>` : "";
+      const remedy = '<button data-action="update" title="放弃这份提案，改由国策自己推进到这一楼">改用局势更新</button>';
+      const footer = r.status === "pending" || r.status === "overwritten" ? `<button class="letter-reject" data-action="letter-reject">驳回</button><span class="footer-gap"></span>${remedy}<button class="primary" data-action="letter-accept">${r.status === "overwritten" ? "重新接收" : "接收提案"}</button>` : sealed ? '<button class="primary" data-modal="close">完成</button>' : r.status === "waiting" ? '<button data-modal="close">返回</button>' : `${remedy}<button data-modal="close">返回</button>`;
+      return { body: `<div class="letter-sheet">${head}${note}${diagnostic}${review}</div>`, footer };
+    }
+    function showLetter() {
+      const r = reception();
+      const { body, footer } = letterView(r);
+      letterKey = letterState(r);
+      if (modal === "letter") {
+        const content = backdrop.querySelector(".modal-body");
+        const actions = backdrop.querySelector(".modal-footer");
+        if (content && actions) {
+          content.innerHTML = `${body}<div class="modal-error" role="alert"></div>`;
+          actions.innerHTML = footer;
+          return;
+        }
+      }
+      openModal("letter", "世界来函", body, footer);
+    }
+    function refreshLetter() {
+      if (modal === "letter" && letterState(reception()) !== letterKey) {
+        showLetter();
+      }
+    }
+    function demoLetterSample(status) {
+      const state = controller.state;
+      if (!state) {
+        return null;
+      }
+      const now = state.day + 21;
+      const source = { chatId: "demo", messageId: 128, swipeId: 0, now, nonce: "focus_demo" };
+      if (status === "waiting") {
+        return { status, reason: "waiting_workflow", source };
+      }
+      const preview2 = structuredClone(state);
+      const countries = Object.values(preview2.countries).filter((c) => c.enabled);
+      countries.forEach((c, i) => {
+        c.stability = Math.max(0, Math.min(100, c.stability + (i % 2 ? -4 : 3)));
+        c.warSupport = Math.max(0, Math.min(100, c.warSupport + (i === 0 ? 5 : 0)));
+        if (c.current && c.progress[c.current]) {
+          Object.assign(c.progress[c.current], {
+            status: "completed",
+            completed: state.day + 9,
+            days: c.nodes[c.current].days
+          });
+        }
+        const next = Object.values(c.nodes).find((n) => c.progress[n.id]?.status === "idle");
+        if (next) {
+          Object.assign(c.progress[next.id], { status: "active", started: state.day + 9 });
+          c.current = next.id;
+        }
+      });
+      const first = countries[0];
+      if (first) {
+        preview2.events.demo_letter_event = EventSchema.parse({
+          id: "demo_letter_event",
+          at: state.day + 14,
+          countries: [first.id],
+          title: "边境关卡重开",
+          description: "商队恢复通行。",
+          evidence: "世界局势：边境商路重新开放",
+          origin: "background",
+          public: true,
+          changes: [],
+          headline: "边境关卡重开，商队恢复通行"
+        });
+      }
+      const proposal = ProposalSchema.parse({
+        id: "demo_letter",
+        until: now,
+        reason: "离线示范",
+        steps: first ? [
+          {
+            at: state.day + 4,
+            facts: [
+              { country: first.id, id: "demo_fact", value: true, evidence: "边境商队回报关卡已重开", origin: "background" }
+            ],
+            events: [],
+            selections: [],
+            publications: [],
+            eventUpdates: []
+          }
+        ] : [],
+        edits: [],
+        calibrations: [],
+        transitions: []
+      });
+      return {
+        status,
+        reason: status === "overwritten" ? "overwritten" : void 0,
+        source,
+        proposal,
+        preview: preview2,
+        evidence: {
+          taskId: "demo",
+          rootId: "demo",
+          at: Date.now(),
+          success: true,
+          skipped: false,
+          changed: true,
+          patch: { known: true, operationCount: 14, issues: [], failedFragments: [], unassigned: 0 }
+        }
+      };
     }
     function showEvents() {
       const state = controller.state;
@@ -36292,6 +42731,12 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
         render();
         return;
       }
+      if (target.dataset.letterNation) {
+        letterNation = target.dataset.letterNation;
+        showLetter();
+        backdrop.querySelector(`[data-letter-nation="${CSS.escape(letterNation)}"]`)?.focus();
+        return;
+      }
       const name = target.dataset.action;
       if (name) {
         void action(async () => {
@@ -36343,6 +42788,65 @@ ${message.content.slice(0, 2e4)}${message.content.length > 2e4 ? "\n【仅显示
               break;
             case "jobs":
               showJobs();
+              break;
+            case "letter":
+              showLetter();
+              break;
+            case "rollback-dismiss":
+              if (controller.platform.demo && demoRollback) {
+                demoRollback = null;
+              } else {
+                controller.dismissRollback();
+              }
+              render(true);
+              break;
+            case "letter-accept": {
+              target.disabled = true;
+              target.textContent = "接收中…";
+              let accepted;
+              if (controller.platform.demo && demoLetter) {
+                demoLetter = { ...demoLetter, status: "accepted", reason: void 0 };
+                accepted = true;
+              } else {
+                accepted = await controller.accept();
+              }
+              if (accepted) {
+                letterSealedAt = Date.now();
+              }
+              showLetter();
+              render(true);
+              break;
+            }
+            case "letter-reject":
+              if (controller.platform.demo && demoLetter) {
+                demoLetter = { ...demoLetter, status: "rejected", reason: "user_rejected" };
+              } else {
+                controller.reject();
+              }
+              closeModal();
+              render();
+              break;
+            case "demo-rollback":
+              demoRollback = {
+                chatId: "demo",
+                messageId: 128,
+                swipeId: 0,
+                proposalId: "demo_letter",
+                detectedAt: Date.now(),
+                receiptMissing: true,
+                returnedToBefore: true
+              };
+              render();
+              break;
+            case "demo-letter":
+            case "demo-letter-wait":
+            case "demo-letter-over":
+              demoLetter = demoLetterSample(
+                name === "demo-letter" ? "pending" : name === "demo-letter-wait" ? "waiting" : "overwritten"
+              );
+              letterNation = "";
+              render();
+              showLetter();
               break;
             case "events":
               showEvents();

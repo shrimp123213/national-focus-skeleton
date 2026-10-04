@@ -19,6 +19,9 @@
   --blue: #8fb0d6;
   --red: #d9705f;
   --cross: #7fa6cf;
+  /* Cinnabar seal ink: used only for the world letter's seal, so ratifying a proposal reads as one act. */
+  --seal: #b4432f;
+  --seal-ink: #f3dccb;
   --radius: 10px;
   --drawer: 392px;
   /* Simplified Chinese faces first (zh-Hans text), traditional faces only as fallbacks; same as the news card. */
@@ -4277,4 +4280,530 @@ details.detail-section.fold > summary::before {
   from {
     opacity: 0;
   }
+}
+
+/* v0.16 世界来函 · the world task's national-focus proposal, reviewed before it is saved.
+ * The cinnabar seal is the one loud element: it marks a letter waiting for review and stamps 准 on
+ * acceptance. Everything else follows the archive's ledger look: hairlines, serif names, quiet text. */
+.letter-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(-4deg);
+}
+.cmd-btn.letter-quiet {
+  color: var(--muted);
+  border-style: dashed;
+}
+.cmd-btn.letter-muted {
+  color: var(--faint);
+}
+.cmd-btn.letter-pending {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.cmd-btn.letter-pending .letter-seal {
+  background: var(--seal);
+  border-color: var(--seal);
+  color: var(--seal-ink);
+  animation: seal-arrive 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+.cmd-btn.letter-alert {
+  border-color: var(--red);
+  color: #f2b3a6;
+}
+@keyframes seal-arrive {
+  from {
+    transform: rotate(-14deg) scale(1.7);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-4deg) scale(1);
+    opacity: 1;
+  }
+}
+.orb-letter {
+  position: absolute;
+  bottom: -2px;
+  left: -4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--seal);
+  color: var(--seal-ink);
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  transform: rotate(-6deg);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.orb-letter[hidden] {
+  display: none;
+}
+.status-jobs.letter {
+  color: var(--gold);
+}
+.status-dot.letter {
+  background: var(--seal);
+  border-radius: 2px;
+  transform: rotate(-6deg);
+}
+
+.modal.modal-letter {
+  width: min(1000px, 100%);
+}
+.letter-sheet {
+  display: grid;
+  gap: 18px;
+}
+.letter-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.letter-seal-big {
+  position: relative;
+  flex: none;
+  width: 62px;
+  height: 62px;
+}
+.letter-seal-big .seal-mark,
+.letter-seal-big .seal-stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-family: var(--serif);
+  font-weight: 700;
+}
+.letter-seal-big .seal-mark {
+  border: 2px solid var(--gold-deep);
+  color: var(--gold);
+  font-size: 30px;
+  transform: rotate(-3deg);
+  box-shadow:
+    inset 0 0 0 3px var(--panel),
+    inset 0 0 0 4px rgba(220, 194, 124, 0.25);
+}
+.letter-seal-big .seal-stamp {
+  background: var(--seal);
+  color: var(--seal-ink);
+  font-size: 32px;
+  transform: rotate(-9deg);
+  box-shadow:
+    inset 0 0 0 3px var(--seal),
+    inset 0 0 0 4px rgba(243, 220, 203, 0.55);
+  opacity: 0;
+}
+.letter-seal-big.sealed .seal-stamp {
+  opacity: 1;
+}
+.letter-seal-big.sealed .seal-mark {
+  opacity: 0.25;
+}
+.letter-seal-big.fresh .seal-stamp {
+  animation: seal-press 0.55s cubic-bezier(0.25, 1.1, 0.35, 1) both;
+}
+@keyframes seal-press {
+  0% {
+    transform: rotate(-16deg) scale(1.9);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(-9deg) scale(0.93);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-9deg) scale(1);
+    opacity: 1;
+  }
+}
+.letter-from {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.letter-meta {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.letter-state {
+  padding: 9px 14px;
+  border-left: 2px solid var(--gold-deep);
+  background: rgba(220, 194, 124, 0.05);
+  color: var(--text);
+}
+.letter-state.muted {
+  border-left-color: var(--faint);
+  color: var(--muted);
+}
+.letter-state.alert {
+  border-left-color: var(--red);
+  background: rgba(217, 112, 95, 0.08);
+}
+.letter-state.done {
+  border-left-color: var(--seal);
+}
+.letter-checks {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.letter-check {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.letter-check dt {
+  font-family: var(--serif);
+  color: var(--gold);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.letter-check dt::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  transform: translateY(-1px);
+}
+.letter-check.ok dt::before {
+  background: var(--green);
+}
+.letter-check.unknown dt::before {
+  border: 1.5px solid var(--amber);
+  background: linear-gradient(90deg, var(--amber) 50%, transparent 50%);
+}
+.letter-check dd {
+  margin: 0;
+  color: var(--muted);
+}
+.letter-check ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.letter-check li {
+  font-size: 13px;
+}
+.letter-check li::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 2px;
+  background: var(--faint);
+}
+.letter-check li.ok::before {
+  background: var(--green);
+}
+.letter-check li.warn {
+  color: #f2b3a6;
+}
+.letter-check li.warn::before {
+  background: var(--red);
+}
+.letter-review {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  min-height: 260px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.letter-nations {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  background: var(--ink);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.letter-nation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px 9px 16px;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  color: var(--muted);
+}
+.letter-nation:hover:not(:disabled) {
+  background: var(--raised);
+  color: var(--text);
+}
+.letter-nation.active {
+  border-left-color: var(--gold);
+  background: var(--panel);
+  color: var(--text);
+}
+.letter-nation-name {
+  flex: 1;
+  font-family: var(--serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.letter-nation-count {
+  min-width: 22px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.letter-nation.active .letter-nation-count {
+  color: var(--gold);
+}
+.letter-detail {
+  padding: 16px 22px 20px;
+  overflow: auto;
+  max-height: 46vh;
+}
+.modal-body .letter-detail h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.letter-shifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 0 0 16px;
+  padding: 0 0 14px;
+  list-style: none;
+  border-bottom: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+}
+.letter-shifts .shift {
+  margin-left: 8px;
+  color: var(--text);
+}
+.letter-shifts b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.letter-shifts i {
+  margin: 0 6px;
+  font-style: normal;
+  color: var(--gold);
+}
+.letter-still {
+  margin-bottom: 14px;
+  color: var(--faint);
+  font-size: 13px;
+}
+.letter-timeline {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.letter-timeline::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 103px;
+  width: 1px;
+  background: var(--line-strong);
+}
+.letter-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 26px;
+  padding: 6px 0;
+}
+.letter-timeline li::before {
+  content: "";
+  position: absolute;
+  left: 99px;
+  top: 12px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold-deep);
+  background: var(--panel);
+}
+.letter-timeline .entry-complete::before {
+  border: 0;
+  border-radius: 1px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+.letter-timeline .entry-event::before {
+  border-color: var(--blue);
+  border-radius: 2px;
+}
+.letter-timeline .entry-update::before {
+  left: 101px;
+  top: 14px;
+  width: 5px;
+  height: 5px;
+  border: 0;
+  background: var(--faint);
+}
+.letter-timeline .entry-fact::before {
+  top: 15px;
+  height: 3px;
+  border: 0;
+  border-radius: 0;
+  background: var(--muted);
+}
+.letter-timeline .entry-transition::before {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 3px var(--gold-deep);
+}
+.letter-timeline time {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.letter-timeline p {
+  line-height: 1.55;
+}
+.letter-timeline small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.letter-timeline .entry-complete p {
+  color: var(--gold);
+}
+.entry-kind {
+  margin-right: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.modal-letter .modal-footer {
+  align-items: center;
+}
+.footer-gap {
+  flex: 1;
+}
+.modal-footer .letter-reject {
+  background: none;
+  border-color: transparent;
+  color: #e9a090;
+}
+.modal-footer .letter-reject:hover:not(:disabled) {
+  background: rgba(217, 112, 95, 0.1);
+  border-color: rgba(217, 112, 95, 0.4);
+}
+@media (max-width: 760px) {
+  .cmd-btn.letter-slot .cmd-text {
+    display: none;
+  }
+  .letter-head {
+    gap: 14px;
+  }
+  .letter-seal-big {
+    width: 50px;
+    height: 50px;
+  }
+  .letter-from {
+    font-size: 16px;
+  }
+  .letter-check {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .letter-review {
+    grid-template-columns: 1fr;
+  }
+  .letter-nations {
+    flex-direction: row;
+    padding: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .letter-nation {
+    width: auto;
+    flex: none;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+    padding: 10px 14px;
+  }
+  .letter-nation.active {
+    border-bottom-color: var(--gold);
+  }
+  .letter-detail {
+    max-height: none;
+    padding: 14px 16px 18px;
+  }
+  .letter-timeline::before {
+    left: 79px;
+  }
+  .letter-timeline li {
+    grid-template-columns: 70px 1fr;
+    gap: 22px;
+  }
+  .letter-timeline li::before {
+    left: 75px;
+  }
+  .letter-timeline .entry-update::before {
+    left: 77px;
+  }
+  .modal-letter .modal-footer {
+    flex-wrap: wrap;
+  }
+  .modal-letter .footer-gap {
+    display: none;
+  }
+}
+
+/* v0.16: national focus went back after a proposal was accepted (usually a workflow re-run). */
+.rollback-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  background: rgba(217, 112, 95, 0.1);
+  border-bottom: 1px solid rgba(217, 112, 95, 0.36);
+  color: #f6c6ba;
+  font-size: 13px;
+}
+.rollback-banner .letter-seal {
+  flex: none;
+  color: var(--red);
+}
+.rollback-banner p {
+  flex: 1;
+}
+.rollback-slot[hidden] {
+  display: none;
 }

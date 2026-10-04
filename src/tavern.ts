@@ -18,6 +18,15 @@ import {
   type WorldbookSource,
 } from './model';
 import { buildNewsBar, insiders, timeText, type NewsBar } from './newsbar';
+import { unavailable, type IntegrationApi, type IntegrationRead } from './integration';
+import { predictWorldSchedule, type ScheduleSource, type WorldSchedulePrediction } from './world-schedule';
+import {
+  FOCUS_WORLD,
+  RunStatusSchema,
+  worldFingerprint,
+  worldMember,
+  type WorldObservation,
+} from './world-proposal';
 import { bookEntries, promptText, promptView, reconcileBook, type WorldbookEntryLike } from './prompt-view';
 import {
   buildSourceContext,
@@ -54,6 +63,7 @@ type ChatCompletionService = {
   ): Promise<unknown>;
 };
 export type TavernContext = {
+  chatId?: string;
   ChatCompletionService?: ChatCompletionService;
   extensionSettings?: Record<string, unknown>;
   saveSettingsDebounced?: () => unknown;
@@ -86,7 +96,16 @@ export type TavernApi = {
   getCharacter?(name: 'current'): Promise<{ description?: string }>;
   getPersona?(id: 'current'): { description?: string } | null;
   /** Database plugin (shujuku) snapshot for $5 and protagonist names. */
-  parent?: { AutoCardUpdaterAPI?: { exportTableAsJson?(): unknown } };
+  parent?: {
+    SillyTavern?: { getContext?(): { chatId?: string } };
+    AutoCardUpdaterAPI?: { exportTableAsJson?(): unknown };
+    NationalFocusIntegration?: IntegrationApi;
+    AcuPostProcessAPI?: {
+      getEffectiveSettings(): unknown;
+      getRunStatusForFloor(messageId: number): unknown;
+    };
+    Addon?: { getLastPatchLog(): unknown };
+  };
   indexedDB?: IDBFactory;
   substitudeMacros?(text: string): string;
   formatAsTavernRegexedString?(
@@ -183,6 +202,7 @@ export class TavernPlatform implements Platform {
   private stops: (() => void)[] = [];
   private readyListeners = new Set<() => void>();
   private changeListeners = new Set<() => void>();
+  private integrationListeners = new Set<() => void>();
   private pending: {
     identity: string;
     received: boolean;
@@ -278,6 +298,7 @@ export class TavernPlatform implements Platform {
         this.mvuBusy = true;
       });
       listen(api.Mvu.events.VARIABLE_UPDATE_ENDED, (after: MvuData, before: MvuData) => {
+        this.mvuBusy = false;
         // General variable generation does not own this namespace.
         const saved = before?.国策 !== undefined ? before.国策 : before?.stat_data?.国策;
         if (saved !== undefined) {
@@ -289,11 +310,12 @@ export class TavernPlatform implements Platform {
         if (this.writing) {
           return;
         }
-        const message = this.current();
+        // MVU reads message.mes; include_swipes only returns the separately updated swipe cache.
+        const message = this.api.getChatMessages(-1)[0];
         if (
           message &&
           (this.generating || this.pending?.received || this.pending?.ended) &&
-          context?.message_content === message.swipes[message.swipe_id]
+          context?.message_content === (message.message ?? message.swipes[message.swipe_id])
         ) {
           const item = this.pendingForCurrent();
           if (item) {
@@ -304,8 +326,18 @@ export class TavernPlatform implements Platform {
       });
     };
     bindMvu();
+    for (const event of ['MESSAGE_EDITED', 'MESSAGE_UPDATED']) {
+      listen(api.tavern_events[event], () => {
+        for (const callback of this.integrationListeners) {
+          callback();
+        }
+      });
+    }
     this.timer = setInterval(() => {
       bindMvu();
+      for (const callback of this.integrationListeners) {
+        callback();
+      }
       const pending = this.pending;
       if (!pending || this.writing || this.generating || this.mvuBusy || api.Mvu?.isDuringExtraAnalysis()) {
         return;
@@ -454,6 +486,120 @@ export class TavernPlatform implements Platform {
       this.pending = { identity, received: false, ended: false, mvu: false, since: Date.now() };
     }
     return this.pending;
+  }
+  bindIntegration(api: IntegrationApi): () => void {
+    const parent = this.api.parent;
+    if (!parent) {
+      return () => {};
+    }
+    parent.NationalFocusIntegration = api;
+    const remove = () => {
+      if (parent.NationalFocusIntegration === api) {
+        delete parent.NationalFocusIntegration;
+      }
+    };
+    this.stops.push(remove);
+    return remove;
+  }
+  readIntegration(messageId: number, config: Config): IntegrationRead {
+    if (this.disposed) {
+      return unavailable('disposed');
+    }
+    try {
+      const lastMessageId = this.api.getLastMessageId();
+      if (!Number.isInteger(messageId) || messageId < 0 || messageId !== lastMessageId) {
+        return unavailable('not_latest');
+      }
+      const message = this.api.getChatMessages(messageId, { include_swipes: true })[0];
+      if (!message || message.role !== 'assistant') {
+        return unavailable('not_assistant');
+      }
+      if (message.message_id !== messageId || !this.chatId()) {
+        return unavailable('source_changed');
+      }
+      const mvu = this.api.Mvu;
+      if (!mvu) {
+        return unavailable('mvu_unavailable');
+      }
+      if (this.generating || this.mvuBusy || this.writing || mvu.isDuringExtraAnalysis()) {
+        return unavailable('mvu_busy');
+      }
+      const data = mvu.getMvuData({ type: 'message', message_id: messageId });
+      const world = this.readWorldProposal(messageId);
+      return {
+        chatId: this.chatId(),
+        messageId,
+        swipeId: message.swipe_id,
+        lastMessageId,
+        role: message.role,
+        extraAnalysis: false,
+        data,
+        world: world?.member ? { ...world.member, fingerprint: world.fingerprint } : undefined,
+        timePath: config.sources.timePath,
+        signal: this.sourceRun.signal,
+      };
+    } catch {
+      return unavailable('read_failed');
+    }
+  }
+  onIntegrationTick(callback: () => void): () => void {
+    this.integrationListeners.add(callback);
+    return () => this.integrationListeners.delete(callback);
+  }
+  readWorldProposal(messageId: number): WorldObservation | null {
+    const workflow = this.api.parent?.AcuPostProcessAPI;
+    if (!workflow) {
+      return null;
+    }
+    try {
+      const member = worldMember(workflow.getEffectiveSettings());
+      const status = RunStatusSchema.safeParse(workflow.getRunStatusForFloor(messageId));
+      const data = this.api.Mvu?.getMvuData({ type: 'message', message_id: messageId });
+      let patchLog: unknown = null;
+      try {
+        patchLog = this.api.parent?.Addon?.getLastPatchLog() ?? null;
+      } catch {
+        // Missing review evidence does not establish either success or failure.
+      }
+      return {
+        member,
+        run: status.success ? status.data : null,
+        fingerprint: worldFingerprint(valueAt(data?.addon_data, `世界.${FOCUS_WORLD}`)),
+        patchLog,
+      };
+    } catch {
+      return null;
+    }
+  }
+  readScheduleSource(): ScheduleSource | null {
+    try {
+      const message = this.current();
+      if (!message || message.role !== 'assistant' || message.message_id !== this.api.getLastMessageId()) {
+        return null;
+      }
+      return {
+        chatId: this.chatId(),
+        messageId: message.message_id,
+        swipeId: message.swipe_id,
+        content: message.swipes[message.swipe_id] ?? message.message ?? '',
+      };
+    } catch {
+      return null;
+    }
+  }
+  predictWorldSchedule(source: ScheduleSource): WorldSchedulePrediction {
+    try {
+      const workflow = this.api.parent?.AcuPostProcessAPI;
+      if (workflow) {
+        // Match the third party's chat-key.ts, including its unknown-chat fallback.
+        const chatKey =
+          String(this.api.parent?.SillyTavern?.getContext?.()?.chatId || '').trim() || 'unknown_chat';
+        return predictWorldSchedule(workflow.getEffectiveSettings(), chatKey, source.content);
+      }
+    } catch {
+      // Prediction is optional; uncertainty never grants permission to accept a proposal.
+    }
+    return { status: 'unknown', reason: 'unavailable' };
   }
   async read(config: Config, job?: JobKind): Promise<Snapshot> {
     const signal = this.sourceRun.signal;

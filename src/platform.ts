@@ -1,6 +1,9 @@
 import type { Config, JobKind, PromptItem, PromptRole, State, WorldbookSource } from './model';
 import type { SourceReport } from './sources';
 import type { Transition } from './periods';
+import type { IntegrationApi, IntegrationRead } from './integration';
+import type { WorldObservation } from './world-proposal';
+import type { ScheduleSource, WorldSchedulePrediction } from './world-schedule';
 
 export type PeriodWork = {
   transition: Transition;
@@ -81,6 +84,12 @@ export interface Platform {
   chatId(): string;
   models(api: Config['apis'][number]): Promise<string[]>;
   read(config: Config, job?: JobKind): Promise<Snapshot>;
+  readIntegration?(messageId: number, config: Config): IntegrationRead;
+  bindIntegration?(api: IntegrationApi): () => void;
+  readWorldProposal?(messageId: number): WorldObservation | null;
+  onIntegrationTick?(callback: () => void): () => void;
+  readScheduleSource?(): ScheduleSource | null;
+  predictWorldSchedule?(source: ScheduleSource): WorldSchedulePrediction;
   commit(snapshot: Snapshot, state: State): Promise<void>;
   generate(
     messages: PromptMessage[],
