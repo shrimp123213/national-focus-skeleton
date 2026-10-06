@@ -534,6 +534,8 @@ export type SourceInput = {
   /** Character-bound books for $2 and $U. */
   characterEntries?: SourceEntry[];
   variables: Record<string, unknown>;
+  /** Integration world data is not part of MVU stat_data. */
+  world?: unknown;
   tables?: Record<string, unknown> | null;
   persona?: string;
   character?: string;
@@ -768,6 +770,15 @@ export async function buildSourceContext(input: SourceInput) {
       .map((path) => [path, valueAt(input.variables, path)]),
   );
   context.requirements = settings.extra;
+  if (input.job === 'update' && input.world !== undefined) {
+    context.world = structuredClone(input.world);
+    blocks.push({
+      name: 'world（世界任务结果）',
+      placeholder: '',
+      placement: 'json',
+      characters: JSON.stringify(context.world).length,
+    });
+  }
   if (used.size) {
     context.segmentSources = [...used].map((key) => contextKeys[key]);
   }

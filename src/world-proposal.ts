@@ -30,6 +30,8 @@ export type WorldObservation = {
   run: z.infer<typeof RunStatusSchema> | null;
   fingerprint: string | null;
   patchLog: unknown;
+  /** Current Addon world result, separate from stat_data. */
+  world?: unknown;
 };
 export type WorldEvidence = {
   taskId: string;
@@ -80,6 +82,7 @@ export type ProposalReceptionState = {
   proposal?: Proposal;
   preview?: State;
   evidence?: WorldEvidence;
+  origin?: 'repair';
 };
 export type ProposalDiagnostic = {
   at: number;
@@ -138,7 +141,8 @@ export function worldFingerprint(value: unknown): string | null {
   return `${text.length}:${hash >>> 0}:${second >>> 0}`;
 }
 
-export function parseWorldProposal(raw: string): { nonce: string; proposal: Proposal } {
+/** Decode the handoff before validating its proposal, so repairs can check known provenance. */
+export function parseWorldProposalEnvelope(raw: string): { nonce: string; proposal: unknown } {
   const matches = [...raw.matchAll(/<国策提案\s*>([\s\S]*?)<\/国策提案\s*>/g)];
   let text = (matches.at(-1)?.[1] ?? raw).trim();
   text = text
@@ -155,7 +159,11 @@ export function parseWorldProposal(raw: string): { nonce: string; proposal: Prop
   if (typeof value === 'string') {
     value = JSON.parse(value);
   }
-  const envelope = z.object({ nonce: z.string().trim().min(1), proposal: z.unknown() }).parse(value);
+  return z.object({ nonce: z.string().trim().min(1), proposal: z.unknown() }).parse(value);
+}
+
+export function parseWorldProposal(raw: string): { nonce: string; proposal: Proposal } {
+  const envelope = parseWorldProposalEnvelope(raw);
   return { nonce: envelope.nonce, proposal: ProposalSchema.parse(repairReply(envelope.proposal, 'update')) };
 }
 

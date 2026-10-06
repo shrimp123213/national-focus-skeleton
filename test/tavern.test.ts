@@ -7,11 +7,149 @@ import { countryKey, migrateCountryKeys } from '../src/engine';
 import { storyDay } from '../src/platform';
 import { applyDeepSeek } from '../src/api-config';
 import { parse } from 'yaml';
+import { FocusController } from '../src/workflow';
+import { FOCUS_WORLD, WORLD_FAMILY } from '../src/world-proposal';
+import { ProposalRepairSchema } from '../src/proposal-repair';
 
 const prompt = [
   { role: 'system' as const, content: 'system' },
   { role: 'user' as const, content: 'prompt' },
 ];
+
+for (const available of [true, false]) {
+  test(`本地局势更新${available ? '读取 Addon 世界结果并计入来源' : '缺少世界结果仍正常执行'}`, async () => {
+    const env = environment();
+    const controller = new FocusController(env.platform);
+    try {
+      env.getData().国策 = { ...demoState(), day: 114 };
+      env.getData().stat_data.世界.时间 = 130;
+      const world = { 局势: '关税已经取消', 协议: ['新航线'] };
+      if (available) {
+        env.getData().addon_data = { 世界: { [FOCUS_WORLD]: world, 别的世界: { secret: '不要读取' } } };
+      }
+      env.api.parent = {
+        AcuPostProcessAPI: {
+          getEffectiveSettings: () => ({
+            tasks: [
+              { id: 'root', syncAsReplicaFamily: true, replicaFamilySpec: WORLD_FAMILY },
+              { id: 'world-a', replicaFamilyRootId: 'root', replicaFamilyAttrValue: FOCUS_WORLD },
+            ],
+          }),
+          getRunStatusForFloor: () => null,
+        },
+      };
+      const beforeWorld = structuredClone(env.getData().addon_data);
+      controller.config.jobs.update.retries = 0;
+      assert.deepEqual(controller.config.sources.variables, []);
+      const snapshot = await env.platform.read(controller.config, 'update');
+      assert.deepEqual((snapshot.context as { world?: unknown }).world, available ? world : undefined);
+      const block = snapshot.sourceReport!.blocks.find((item) => item.name.startsWith('world（'));
+      assert.equal(block?.characters, available ? JSON.stringify(world).length : undefined);
+      assert.equal(snapshot.sourceReport!.characters, JSON.stringify(snapshot.context).length);
+      let calls = 0;
+      env.api.generateRaw = async (input) => {
+        calls++;
+        const messages = input.ordered_prompts as { content: string }[];
+        const dataMessage = messages.find((m) => m.content.includes('"stage":"update"'))!.content;
+        const payload = JSON.parse(dataMessage.slice(dataMessage.indexOf('{')));
+        assert.deepEqual(payload.context.world, available ? world : undefined);
+        assert.equal(JSON.stringify(payload).includes('不要读取'), false);
+        return JSON.stringify({ id: 'local-update', until: 130, reason: '依据世界结果', steps: [] });
+      };
+      await controller.run('update');
+      assert.equal(calls, 1);
+      assert.equal(controller.jobs[0].state, 'success');
+      assert.ok(env.getData().国策.receipts.includes('local-update'));
+      assert.deepEqual(env.getData().addon_data, beforeWorld);
+    } finally {
+      controller.dispose();
+      env.platform.dispose();
+    }
+  });
+}
+
+test('世界结果计入完整请求上限，过大不呼叫 API 也不截断资料', async () => {
+  const env = environment();
+  const controller = new FocusController(env.platform);
+  try {
+    env.getData().国策 = demoState();
+    env.getData().stat_data.世界.时间 = 130;
+    env.getData().addon_data = { 世界: { [FOCUS_WORLD]: { 长文: '界'.repeat(130000) } } };
+    env.api.parent = {
+      AcuPostProcessAPI: {
+        getEffectiveSettings: () => ({ tasks: [] }),
+        getRunStatusForFloor: () => null,
+      },
+    };
+    let calls = 0;
+    env.api.generateRaw = async () => {
+      calls++;
+      return '{}';
+    };
+    await controller.run('update');
+    assert.equal(calls, 0);
+    assert.equal(controller.jobs[0].state, 'failed');
+    assert.match(controller.jobs[0].message, /输入过大/);
+    assert.equal(env.getData().addon_data.世界[FOCUS_WORLD].长文.length, 130000);
+  } finally {
+    controller.dispose();
+    env.platform.dispose();
+  }
+});
+
+test('修复材料独立保存于本机并按聊天隔离，不修改 MVU；重载可读取原始材料', async () => {
+  const env = environment();
+  const controller = new FocusController(env.platform);
+  try {
+    env.getData().国策 = demoState();
+    env.getData().stat_data.世界.时间 = 130;
+    env.getData().addon_data = { 世界: { [FOCUS_WORLD]: { 局势: '贸易恢复' } } };
+    const before = structuredClone(env.getData());
+    let run: unknown = null;
+    env.api.parent = {
+      AcuPostProcessAPI: {
+        getEffectiveSettings: () => ({
+          tasks: [
+            { id: 'root', syncAsReplicaFamily: true, replicaFamilySpec: WORLD_FAMILY },
+            { id: 'world-a', replicaFamilyRootId: 'root', replicaFamilyAttrValue: FOCUS_WORLD },
+          ],
+        }),
+        getRunStatusForFloor: () => run,
+      },
+    };
+    const ready = await controller.integration.prepare(3, { mode: 'request', requestId: 'world-run' });
+    assert.equal(ready.status, 'ready');
+    const registration = controller.integration.lookup(ready.nonce)!;
+    run = {
+      messageId: 3,
+      at: registration.registeredAt + 1,
+      taskResults: [{ taskId: 'world-a', success: true, extractedTags: { 国策提案: '{broken' } }],
+    };
+    controller.refreshProposal();
+    const saved = ProposalRepairSchema.parse(env.platform.loadProposalRepair());
+    assert.equal(saved.raw, '{broken');
+    assert.deepEqual(saved.world, before.addon_data.世界[FOCUS_WORLD]);
+    assert.deepEqual(env.getData(), before);
+    controller.dispose();
+    const reloaded = new FocusController(env.platform);
+    try {
+      await reloaded.initialize();
+      assert.equal(reloaded.proposalRepair?.status, 'available');
+      assert.equal(reloaded.integration.lookup(ready.nonce), null);
+      env.chat();
+      assert.equal(env.platform.loadProposalRepair(), null);
+      // Clearing the old chat must not target the currently selected chat's storage.
+      env.platform.saveProposalRepair(saved, 'chat-b');
+      env.platform.saveProposalRepair(null, 'chat-a');
+      assert.deepEqual(env.platform.loadProposalRepair(), saved);
+    } finally {
+      reloaded.dispose();
+    }
+  } finally {
+    controller.dispose();
+    env.platform.dispose();
+  }
+});
 
 test('模型清单使用指定端点与金钥，去重排序且不触发生成', async () => {
   const env = environment();

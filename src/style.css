@@ -4463,7 +4463,7 @@ details.detail-section.fold > summary::before {
 }
 .letter-check {
   display: grid;
-  grid-template-columns: 96px 1fr;
+  grid-template-columns: 112px 1fr;
   gap: 16px;
   padding: 11px 0;
   border-bottom: 1px solid var(--line);
@@ -4708,6 +4708,178 @@ details.detail-section.fold > summary::before {
   border-radius: 4px;
   font-size: 12px;
   color: var(--muted);
+}
+/*
+ * v0.17 local repair: a marginal slip under the letter's reason. Its rule colour carries the state
+ * (amber can be mended, blue mending, red not passed, faint expired); the seal red stays reserved.
+ */
+.letter-mend {
+  --mend: var(--amber);
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px 14px 18px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--mend);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--mend) 9%, transparent), transparent 62%),
+    var(--raised);
+  overflow: hidden;
+}
+.letter-mend.running {
+  --mend: var(--blue);
+}
+.letter-mend.failed {
+  --mend: var(--red);
+}
+.letter-mend.expired {
+  --mend: var(--faint);
+  background: var(--panel);
+}
+.letter-mend header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.modal-body .letter-mend h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+.letter-mend-state {
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--mend) 55%, transparent);
+  border-radius: 999px;
+  color: var(--mend);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+.letter-mend > p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.65;
+}
+.letter-mend.expired > p {
+  color: var(--muted);
+}
+/* Mending: a hairline sweeps along the top edge instead of a spinner competing with the seal. */
+.letter-mend.running::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 38%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+  animation: mend-sweep 1.6s ease-in-out infinite;
+}
+@keyframes mend-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(280%);
+  }
+}
+.letter-mend .letter-mend-error {
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: rgba(217, 112, 95, 0.1);
+  color: #f2b3a6;
+  font-size: 13px;
+}
+.letter-mend .letter-mend-caution {
+  color: var(--faint);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.letter-mend .letter-mend-caution::before {
+  content: "※";
+  margin-right: 6px;
+  color: var(--gold-deep);
+}
+.letter-error {
+  font-size: 13px;
+}
+.letter-error > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+  list-style: none;
+}
+.letter-error > summary::-webkit-details-marker {
+  display: none;
+}
+.letter-error > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1em;
+  color: var(--gold-deep);
+  transition: transform 0.15s ease;
+}
+.letter-error[open] > summary::before {
+  transform: rotate(90deg);
+}
+.letter-error > summary:hover {
+  color: var(--text);
+}
+.letter-error pre {
+  margin: 8px 0 0;
+  max-height: 168px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--muted);
+  font: 12px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.letter-check.repaired dt::before {
+  border: 1.5px solid var(--blue);
+  border-radius: 2px;
+  transform: translateY(-1px) rotate(45deg) scale(0.85);
+}
+.repair-notes {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: mend;
+  display: grid;
+  gap: 5px;
+}
+.repair-notes li {
+  counter-increment: mend;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.letter-check .repair-notes li::before {
+  content: counter(mend);
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  vertical-align: baseline;
+  color: var(--blue);
+  font-family: var(--serif);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .letter-mend.running::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
+  }
 }
 .modal-letter .modal-footer {
   align-items: center;

@@ -18,6 +18,8 @@ export const DEFAULT_GUIDE = `你是命定之诗国策系统的背景规划者�
 停用国家不得更新；calibration=true 的国家只承接实际现况，列入 calibrations，不补算停用期间。初始历史节点须提供正文/世界书依据，不重发效果；既有成果直接列 capabilities。成果毁坏只改 capability.active，保留完成历史。edits 只能修改尚未开始节点，started/completed 不可修改。
 非 reshape 任务 edits 必须空。公众可知事件才 public=true。国策完成且已公开时，填入该步骤的 publications 及公开依据；未公开的国策与事件会在正文资料中标示「未公开」，由正文依角色的可知范围处理。不同国家私人资料不能出现在公开事件中。`;
 
+export const WORLD_CONTEXT_TASK = `data.context.world 若存在，是世界任务最近一次写入的世界状态。国策推演应与之一致：世界状态已写明的发展视为已发生；与正文冲突时以正文为准，并在 reason 说明。`;
+
 export const DEFAULT_TASK: Record<JobKind, string> = {
   identify: `任务：辨识国家。
 依资料中的 context（世界书、正文、纪要）列出本局实际存在、能自主决定长期方向的国家或政权，作为候选。只列有正文或世界书依据者，evidence 写出依据；不列已在 state.countries 中的国家，也不虚构势力。
@@ -48,7 +50,8 @@ stage=period 时只输出 summary 与 tree。摘要最多 1200 字，写本期�
 - achieved：本国自己做成，且事件没有给过同样效果；套用国策效果，国策在尚未选定的互斥路线上时该路线随之锁定。
 - bypassed：结果由他方、意外或局势造成，或事件 changes 已给过同样效果；只标记完成，只用于没有 mutex 或本国已走上该路线的国策。
 - 不完成：仍在进行、部分达成、谈判中（用事件 steps；推进中的国策让工期继续）；只是条件变好（写 facts）；他方造成的结果落在本国尚未选定或已放弃的路线上（只写事件与事实，不替本国选路线）；本国做成的是已放弃路线的事（以 transitions 换期，cause=incompatible）；玩家国正文尚未写出的结果。
-- 系统不另发这些国策的新闻，导致完成的事件就是新闻。`,
+- 系统不另发这些国策的新闻，导致完成的事件就是新闻。
+${WORLD_CONTEXT_TASK}`,
   reshape: `任务：重大改树。
 剧情已大幅改变局势时，在 edits 中修改受直接影响、尚未开始的节点，每次最多 30 个；改写的国策工期 days 只用 7、14、21、28、35，name 是 4–12 字的短语；保留其他分支、已开始与已完成的国策及其历史。
 until 必须等于 now；同时可在 steps 中承接到 now 为止的局势变化。修改后的节点仍须符合前置、互斥与能力来源规则。`,
@@ -56,6 +59,16 @@ until 必须等于 now；同时可在 steps 中承接到 now 为止的局势变�
 
 export const DEFAULT_DATA = `以下是本次任务的完整资料（JSON）：
 ${DATA_TOKEN}`;
+
+export const REPAIR_TASK = `任务：修复世界任务的国策提案。
+世界任务已经推演完毕，并把世界资料写入了 data.world；它附带的国策提案（data.failed.raw）没能通过检查，错误列在 data.failed.errors。你的工作是把同一次推演的结果改写成合法的提案，不是重新推演。
+- 方向以 data.world 与 data.failed.raw 为准：保留其中的选策、完成、事件、事实与换期意图。不得改走另一条路线，不得加入世界资料与原提案都没有依据的事。
+- 只修正错误指出的问题，以及因此必须连带调整的部分；其余内容照原提案保留。
+- 格式错误：依 schema 重写同一内容。国策或事件 ID 不存在时，在 state 中找同国同名者；找不到就删除该操作。
+- 选策违反前置、互斥或 requirements：删除该选策，不补造前置或事实；世界资料中确实发生的事改写成事件或事实保留。
+- 原提案以事件完成国策时，只有事件确实做成该国策描述的事才保留，用 completions 表示（不检查前置与工期）；否则删除，事件本身保留。
+- 换期只在原提案已提出、且仍符合换期规则时保留。
+- 修不了的部分宁可删除，也不要猜。reason 逐条写出改了什么、删了什么、为什么。`;
 
 const builtinMeta: Record<BuiltinKind, { name: string; role: PromptRole }> = {
   guide: { name: '系统规则', role: 'system' },
@@ -79,7 +92,12 @@ export function defaultPromptText(kind: PromptItem['kind'], job: JobKind): strin
 }
 /** Text actually sent: built-in items with empty content use the current default. */
 export function promptText(item: PromptItem, job: JobKind): string {
-  return item.kind !== 'custom' && !item.content.trim() ? defaultPromptText(item.kind, job) : item.content;
+  const text =
+    item.kind !== 'custom' && !item.content.trim() ? defaultPromptText(item.kind, job) : item.content;
+  if (item.kind === 'task' && job === 'update' && !text.includes(WORLD_CONTEXT_TASK)) {
+    return `${text}\n${WORLD_CONTEXT_TASK}`;
+  }
+  return text;
 }
 export function isModified(item: PromptItem): boolean {
   return item.kind !== 'custom' && Boolean(item.content.trim());

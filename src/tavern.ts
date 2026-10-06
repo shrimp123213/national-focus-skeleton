@@ -19,6 +19,7 @@ import {
 } from './model';
 import { buildNewsBar, insiders, timeText, type NewsBar } from './newsbar';
 import { unavailable, type IntegrationApi, type IntegrationRead } from './integration';
+import type { ProposalRepairMaterial } from './proposal-repair';
 import { predictWorldSchedule, type ScheduleSource, type WorldSchedulePrediction } from './world-schedule';
 import {
   FOCUS_WORLD,
@@ -566,9 +567,22 @@ export class TavernPlatform implements Platform {
         run: status.success ? status.data : null,
         fingerprint: worldFingerprint(valueAt(data?.addon_data, `世界.${FOCUS_WORLD}`)),
         patchLog,
+        world: structuredClone(valueAt(data?.addon_data, `世界.${FOCUS_WORLD}`)),
       };
     } catch {
       return null;
+    }
+  }
+  loadProposalRepair(): unknown {
+    const saved = this.storage.getItem(`national-focus-skeleton.repair.v1.${this.chatId()}`);
+    return saved ? JSON.parse(saved) : null;
+  }
+  saveProposalRepair(material: ProposalRepairMaterial | null, chatId: string): void {
+    const key = `national-focus-skeleton.repair.v1.${chatId}`;
+    if (material) {
+      this.storage.setItem(key, JSON.stringify(material));
+    } else {
+      this.storage.removeItem(key);
     }
   }
   readScheduleSource(): ScheduleSource | null {
@@ -674,6 +688,10 @@ export class TavernPlatform implements Platform {
         memoryEntries: memoryBooks,
         characterEntries: characterBooks,
         variables: data.stat_data,
+        world:
+          job === 'update' && this.api.parent?.AcuPostProcessAPI
+            ? valueAt(data.addon_data, `世界.${FOCUS_WORLD}`)
+            : undefined,
         tables: this.tables(),
         persona: settings.persona || uses('$U') ? this.persona() : '',
         character,

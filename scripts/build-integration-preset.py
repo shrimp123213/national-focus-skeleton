@@ -32,10 +32,12 @@ def builtin_law():
     update = re.search(r'\n  update: `(.*?)`,\n  reshape:', source, re.S)
     if not guide or not update:
         raise SystemExit('src/prompts.ts 中找不到 DEFAULT_GUIDE 或局势更新任务指示')
-    for text in (guide.group(1), update.group(1)):
+    # The local-update note about data.context.world means nothing to the world task itself.
+    update_text = update.group(1).replace('\n${WORLD_CONTEXT_TASK}', '')
+    for text in (guide.group(1), update_text):
         if '${' in text or '`' in text:
             raise SystemExit('规则文字含模板插值或反引号，需要更新本脚本的读取方式')
-    return guide.group(1).strip(), update.group(1).strip()
+    return guide.group(1).strip(), update_text.strip()
 
 
 def gate(world, body):

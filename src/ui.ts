@@ -22,6 +22,7 @@ import { exportTrees, parseTreeFile, treeTemplate, type TreeImport } from './tre
 import type { FocusController } from './workflow';
 import { evidenceLines, letterDigest, letterReason } from './proposal-view';
 import type { ProposalReceptionState } from './world-proposal';
+import type { ProposalRepairStatus } from './proposal-repair';
 import css from './style.css';
 import { mountApiPanel } from './api-panel';
 import { mountSourcePanel } from './source-panel';
@@ -147,6 +148,7 @@ export function mountUI(
   let letterNation = '';
   let demoLetter: ProposalReceptionState | null = null;
   let demoRollback: FocusController['rollbackNotice'] = null;
+  let demoRepair: ProposalRepairStatus | null = null;
   let letterSealedAt = 0;
   let letterKey = '';
   let unsub = () => {};
@@ -439,7 +441,7 @@ export function mountUI(
           '',
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
       body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2 title="${escape(country.description)}">${escape(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape(stateTime(state, false))}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
-<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-letter">世界来函：待审</button><button data-action="demo-letter-wait">世界来函：推演中</button><button data-action="demo-letter-over">世界来函：被覆写</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
+<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-letter">世界来函：待审</button><button data-action="demo-letter-wait">世界来函：推演中</button><button data-action="demo-letter-over">世界来函：被覆写</button><button data-action="demo-letter-broken">世界来函：可修复</button><button data-action="demo-letter-mend-failed">世界来函：修复未通过</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
     } else {
       body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '为这个世界选择方向' : '连接你的故事'}</h2><p>${state ? '先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。' : '国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。'}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;
     }
@@ -513,6 +515,9 @@ export function mountUI(
   /** The world letter shown here; the offline page can load a sample instead of the controller's. */
   function reception(): ProposalReceptionState {
     return controller.platform.demo && demoLetter ? demoLetter : controller.externalProposal;
+  }
+  function repairState(): ProposalRepairStatus | null {
+    return controller.platform.demo && demoLetter ? demoRepair : controller.proposalRepair;
   }
   /** How the header seal reads in each state; null hides it (nothing to review or act on). */
   function letterLook(r: ProposalReceptionState): { tone: string; label: string } | null {
@@ -1544,7 +1549,13 @@ export function mountUI(
   }
   /** Review state that changes the window; the seal timestamp stays out so the stamp plays once. */
   function letterState(r: ProposalReceptionState): string {
-    return JSON.stringify([r.status, r.reason, r.detail, r.proposal?.id, r.source?.nonce, r.evidence, letterNation]);
+    return JSON.stringify([r.status, r.reason, r.detail, r.proposal?.id, r.source?.nonce, r.evidence, letterNation, repairState()]);
+  }
+  /** The repair task writes its changes one per line or clause; show them as a short list. */
+  function repairNotes(reason: string): string[] {
+    const lines = reason.split(/\n+/).map((line) => line.replace(/^\s*(?:[-*•]|\d+[.、)）])\s*/, '').trim());
+    const notes = lines.length > 1 ? lines : reason.split(/[；;]\s*/).map((line) => line.trim());
+    return notes.filter(Boolean).slice(0, 12);
   }
   /** The world letter: what the world task proposes for each nation, reviewed before it is saved. */
   function letterView(r: ProposalReceptionState): { body: string; footer: string } {
@@ -1556,12 +1567,17 @@ export function mountUI(
     const sealed = r.status === 'accepted';
     const fresh = sealed && Date.now() - letterSealedAt < 1400;
     const reviewable = r.status === 'pending' || r.status === 'overwritten' || sealed;
+    const mendable = !reviewable && repairState() && repairState()!.status !== 'expired';
     const intro =
-      r.status === 'waiting'
-        ? '阿斯塔利亚的世界正在推演'
-        : reviewable
-          ? '阿斯塔利亚的世界推演附上一份国策提案'
-          : '这一次没有可接收的国策提案';
+      r.origin === 'repair'
+        ? '这份国策提案由本地修复产生，世界资料保持原样'
+        : mendable
+          ? '世界推演已经写入，附带的国策提案没通过检查'
+          : r.status === 'waiting'
+          ? '阿斯塔利亚的世界正在推演'
+          : reviewable
+            ? '阿斯塔利亚的世界推演附上一份国策提案'
+            : '这一次没有可接收的国策提案';
     const meta = [
       r.source ? `推演至 ${storyTime(r.source.now, true)}` : '',
       digest.length ? `涉及 ${digest.length} 国` : '',
@@ -1580,7 +1596,12 @@ export function mountUI(
       const lines = evidenceLines(r.evidence)
         .map((line) => `<li class="${line.tone}">${escape(line.text)}</li>`)
         .join('');
-      const checks = `<dl class="letter-checks"><div class="letter-check ok"><dt>国策规则</dt><dd>提案已通过国策引擎的验证，可以套用。</dd></div><div class="letter-check unknown"><dt>世界写入</dt><dd>程序无法确认世界资料是否完整写入，请参考这次的执行纪录：<ul>${lines}</ul></dd></div></dl>`;
+      // A repaired letter says what the repair changed before anything else, so it is read first.
+      const notes = r.origin === 'repair' ? repairNotes(r.proposal.reason) : [];
+      const repaired = notes.length
+        ? `<div class="letter-check repaired"><dt>本地修复</dt><dd>依同一次世界结果改写，世界资料没有改动。<ol class="repair-notes">${notes.map((n) => `<li>${escape(n)}</li>`).join('')}</ol></dd></div>`
+        : '';
+      const checks = `<dl class="letter-checks">${repaired}<div class="letter-check ok"><dt>国策规则</dt><dd>提案已通过国策引擎的验证，可以套用。</dd></div><div class="letter-check unknown"><dt>世界写入</dt><dd>程序无法确认世界资料是否完整写入，请参考这次的执行纪录：<ul>${lines}</ul></dd></div></dl>`;
       const nation = digest.find((c) => c.id === letterNation);
       const tabs = digest
         .map(
@@ -1630,9 +1651,36 @@ export function mountUI(
         .join('');
       review = `<dl class="letter-checks"><div class="letter-check unknown"><dt>世界写入纪录</dt><dd><ul>${lines}</ul></dd></div></dl>`;
     }
-    const diagnostic = r.detail ? `<p class="letter-state muted">${escape(r.detail)}</p>` : '';
-    const remedy =
-      '<button data-action="update" title="放弃这份提案，改由国策自己推进到这一楼">改用局势更新</button>';
+    const repair = reviewable ? null : repairState();
+    // Long engine and schema messages fold away; the reason line above already says what failed.
+    const detail = r.detail
+      ? `<details class="letter-error"><summary>检查错误</summary><pre>${escape(r.detail)}</pre></details>`
+      : '';
+    let mend = '';
+    if (repair) {
+      const look = {
+        available: ['可修复', '可以依这次的世界结果在本地修复提案，不必重跑工作流；修复结果仍要你审阅接收。'],
+        running: ['修复中', '正在用局势更新的 API 依这次世界结果改写提案，世界资料不会改动。'],
+        failed: ['未通过', '修复结果仍不合法，材料还在，可以再试一次。'],
+        expired: ['已过期', '楼层、分支或国策资料已经变动，这份材料不能再使用。'],
+      }[repair.status];
+      const failure =
+        repair.status === 'failed' && repair.error
+          ? `<p class="letter-mend-error">${escape(repair.error)}</p>`
+          : '';
+      const caution =
+        repair.status === 'expired' || repair.status === 'running'
+          ? ''
+          : '<p class="letter-mend-caution">改用局势更新会放弃这份材料，由国策从正文重新推演，方向可能与世界不同。</p>';
+      const stored = repair.storageError ? `<p class="letter-mend-caution">${escape(repair.storageError)}</p>` : '';
+      mend = `<section class="letter-mend ${repair.status}" aria-live="polite"><header><h3>本地修复</h3><span class="letter-mend-state">${look[0]}</span></header><p>${look[1]}</p>${failure}${caution}${stored}${detail}</section>`;
+    }
+    const diagnostic = repair ? '' : detail;
+    const mendButton =
+      repair && repair.status !== 'expired'
+        ? `<button class="primary" data-action="letter-repair" ${repair.status === 'running' ? 'disabled aria-busy="true"' : ''}>${repair.status === 'running' ? '修复中…' : repair.status === 'failed' ? '重试修复' : '本地修复提案'}</button>`
+        : '';
+    const remedy = `<button data-action="update" title="放弃这份提案，改由国策自己推进到这一楼"${repair?.status === 'running' ? ' disabled' : ''}>改用局势更新</button>`;
     const footer =
       r.status === 'pending' || r.status === 'overwritten'
         ? `<button class="letter-reject" data-action="letter-reject">驳回</button><span class="footer-gap"></span>${remedy}<button class="primary" data-action="letter-accept">${r.status === 'overwritten' ? '重新接收' : '接收提案'}</button>`
@@ -1640,8 +1688,10 @@ export function mountUI(
           ? '<button class="primary" data-modal="close">完成</button>'
           : r.status === 'waiting'
             ? '<button data-modal="close">返回</button>'
-            : `${remedy}<button data-modal="close">返回</button>`;
-    return { body: `<div class="letter-sheet">${head}${note}${diagnostic}${review}</div>`, footer };
+            : mendButton
+              ? `<button data-modal="close">返回</button><span class="footer-gap"></span>${remedy}${mendButton}`
+              : `${remedy}<button data-modal="close">返回</button>`;
+    return { body: `<div class="letter-sheet">${head}${note}${mend}${diagnostic}${review}</div>`, footer };
   }
   function showLetter(): void {
     const r = reception();
@@ -2119,6 +2169,27 @@ export function mountUI(
           case 'letter':
             showLetter();
             break;
+          case 'letter-repair':
+            (target as HTMLButtonElement).disabled = true;
+            if (controller.platform.demo && demoLetter) {
+              // Offline: show the running state, then hand back the sample as a repaired proposal.
+              demoRepair = { status: 'running' };
+              showLetter();
+              await new Promise((done) => setTimeout(done, 1400));
+              const repaired = demoLetterSample('pending');
+              if (repaired) {
+                repaired.origin = 'repair';
+                repaired.proposal!.reason =
+                  '保留原提案的事实与选策，只修正错误指出的问题。\n删除北境王国「对南方施压」的选策：前置「整编边军」尚未完成，世界资料中的施压行动改记为事件。\n事件 ev_border_tariff 已结束，原提案对它的推进改为新事件。';
+              }
+              demoLetter = repaired;
+              demoRepair = null;
+            } else {
+              await controller.repairProposal();
+            }
+            showLetter();
+            render(true);
+            break;
           case 'rollback-dismiss':
             if (controller.platform.demo && demoRollback) {
               demoRollback = null;
@@ -2171,10 +2242,31 @@ export function mountUI(
             demoLetter = demoLetterSample(
               name === 'demo-letter' ? 'pending' : name === 'demo-letter-wait' ? 'waiting' : 'overwritten',
             );
+            demoRepair = null;
             letterNation = '';
             render();
             showLetter();
             break;
+          case 'demo-letter-broken':
+          case 'demo-letter-mend-failed': {
+            const sample = demoLetterSample('pending');
+            demoLetter = sample && {
+              status: 'rejected',
+              reason: 'invalid_rules',
+              detail:
+                '选策国家不可用：北境王国「对南方施压」的前置「整编边军」尚未完成\n  at steps[1].selections[0]\n事件 ev_border_tariff 已结束，不能再推进',
+              source: sample.source,
+              evidence: sample.evidence,
+            };
+            demoRepair =
+              name === 'demo-letter-broken'
+                ? { status: 'available' }
+                : { status: 'failed', error: '修复结果仍违反国策规则：互斥路线「南进」已被锁定' };
+            letterNation = '';
+            render();
+            showLetter();
+            break;
+          }
           case 'events':
             showEvents();
             break;
@@ -2555,7 +2647,12 @@ export function mountUI(
         if (target.dataset.retry) {
           const job = controller.jobs.find((j) => j.id === target.dataset.retry);
           if (job) {
-            await controller.run(job.kind as JobKind, job.candidate, job.periodWork);
+            if (job.kind === 'repair') {
+              await controller.repairProposal();
+              showLetter();
+            } else {
+              await controller.run(job.kind as JobKind, job.candidate, job.periodWork);
+            }
           }
           return;
         }

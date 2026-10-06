@@ -1,6 +1,23 @@
-# 國策檔案 v0.16.0 骨架版 · 命定之詩國策樹
+# 國策檔案 v0.17.0 骨架版 · 命定之詩國策樹
 
 > **這是骨架版，和 v0.11.1 分開保存。** v0.11.1 在 `F:\命一串\national-focus`，本版在 `F:\命一串\national-focus-skeleton`。兩者的腳本名稱與 id 不同，匯入不會互相覆蓋；但兩者都讀寫同一個 `国策` 變量，**同一時間只啟用其中一個**。設計見交接文件第 28–31 節。
+
+## v0.17.0：世界提案本地修復與世界資料接入（2026-10-06）
+
+本版新增手動修復流程及資料來源，因此升 minor。只實作分階段方案的階段 1、2；仍使用 Proposal JSON、完整引擎驗證與人工接收，沒有時間線轉換、逐項降級、自動套用或撤銷。
+
+- 世界提案因 `invalid_proposal`、`invalid_rules` 或 `until_mismatch` 被擋下時，在作廢登記前保留原始標籤、完整錯誤、來源 chat/message/swipe/now、國策基底、世界證據與世界結果。每個聊天只留一份，存於本機瀏覽器儲存空間，不寫 MVU；重載可恢復材料，但不恢復 nonce 或待審結果。儲存失敗時介面會提示材料僅存於本次頁面。
+- 打開「世界来函」按 `本地修复提案`。修復沿用局勢更新的 API 路由、備援、重試與輸入上限，將 task 段替換為 Claude 提供的修復指示。修復不呼叫工作流、不修改世界；通過後仍須按 `接收提案`。修復說明直接顯示模型的 `reason`，供檢查刪除或調整的內容。
+- 修復失敗保留材料並顯示錯誤，可再按 `重试本地修复`。每次手動修復由程式產生新的 proposal ID，同次 API 重試沿用它；`until` 一律由程式填入保存的 `now`。原提案已存在 receipt 時不允許用新 ID 修復重算。
+- 產生修復與接受前都重新核對來源及國策基底；世界結果／執行紀錄變更也會使舊修復失效。來源過期後不因資料改回而復活。新世界登記、駁回、手動「局势更新」都會作廢相應材料；手動更新失敗也不恢復。修復待處理時，自動局勢更新讓位。
+- `missing_proposal` 沒有原文可保留推演意圖，`nonce_mismatch` 有來源配對疑義，這兩種不提供修復；世界任務失敗、跳過或已知 patch 寫入失敗仍阻止接收。無法解碼的原文只根據已配對的工作流任務紀錄保留；若能解碼出不符的 nonce，仍禁止修復。
+- 在可讀取工作流整合介面的環境，本地局勢更新自動加入目前楼層 `addon_data.世界.阿斯塔利亚`，不依賴 `sources.variables`。讀不到時照常更新。來源預覽新增 `world（世界任务结果）` 字符數，完整 JSON 計入來源報告與實際請求上限；過大會在呼叫 API 前拒絕，不截斷世界結果。
+
+**模型欄位與提示詞**：修復使用 `data.world`、`data.failed.raw`、`data.failed.errors`、`state`、`now`，另保留當前 `context`；修復時不重複放入 `context.world`。一般更新使用 `data.context.world`。兩段 Claude 提示詞原文保留在 `src/prompts.ts`；輸出的 `id/until` 由程式補上，提供給修復模型的 schema 省略這兩個欄位，補齊後仍以完整 `ProposalSchema` 驗證。自訂 update task 在送出時同樣追加世界指示，已包含者不重複追加，不改寫保存的自訂文字；原本停用的 update task 維持停用。修復請求則一律提供專用 task。
+
+**介面交接**：沿用 `src/ui.ts` 的 `letterView()`／`letterState()` 與現有 class，新增 `data-action="letter-repair"`，接收仍走 `letter-accept`。`controller.proposalRepair` 提供 available/running/failed/expired、錯誤與保存問題；`externalProposal.origin="repair"` 區分本地修復。尚待 Claude 視覺打磨與人工驗收，未使用 computer use。
+
+更新主腳本並重新載入聊天即可。工作流整合協定未改版，無須重建工作流預設；本機修復材料不會跨瀏覽器同步。驗證與人工案例見 [VALIDATION.md](VALIDATION.md)。
 
 ## v0.16.0：世界後台與國策整合（2026-10-05）
 

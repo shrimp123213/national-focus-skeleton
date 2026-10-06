@@ -3,6 +3,7 @@ import type { SourceReport } from './sources';
 import type { Transition } from './periods';
 import type { IntegrationApi, IntegrationRead } from './integration';
 import type { WorldObservation } from './world-proposal';
+import type { ProposalRepairMaterial } from './proposal-repair';
 import type { ScheduleSource, WorldSchedulePrediction } from './world-schedule';
 
 export type PeriodWork = {
@@ -87,6 +88,8 @@ export interface Platform {
   readIntegration?(messageId: number, config: Config): IntegrationRead;
   bindIntegration?(api: IntegrationApi): () => void;
   readWorldProposal?(messageId: number): WorldObservation | null;
+  loadProposalRepair?(): unknown;
+  saveProposalRepair?(material: ProposalRepairMaterial | null, chatId: string): void;
   onIntegrationTick?(callback: () => void): () => void;
   readScheduleSource?(): ScheduleSource | null;
   predictWorldSchedule?(source: ScheduleSource): WorldSchedulePrediction;
