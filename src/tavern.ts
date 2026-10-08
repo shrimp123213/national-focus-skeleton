@@ -334,10 +334,14 @@ export class TavernPlatform implements Platform {
         }
       });
     }
+    let ticks = 0;
     this.timer = setInterval(() => {
       bindMvu();
-      for (const callback of this.integrationListeners) {
-        callback();
+      // Integration checks parse the whole national state; once a second is enough for them.
+      if (++ticks % 5 === 0) {
+        for (const callback of this.integrationListeners) {
+          callback();
+        }
       }
       const pending = this.pending;
       if (!pending || this.writing || this.generating || this.mvuBusy || api.Mvu?.isDuringExtraAnalysis()) {

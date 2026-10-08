@@ -46,6 +46,7 @@ import {
   type ProposalReason,
   type ProposalReceptionState,
   type WorldEvidence,
+  type WorldObservation,
 } from './world-proposal';
 import {
   PREDICTION_WAIT_MS,
@@ -128,6 +129,7 @@ export class FocusController {
   private repairAborter: AbortController | null = null;
   private accepting: Promise<boolean> | null = null;
   private overwriteTicks = 0;
+  private worldCache: Map<number, WorldObservation | null> | null = null;
   private proposalPeriods: AbortController | null = null;
   private rollback: RollbackNotice | null = null;
   private acceptedCheckpoint: {
@@ -190,8 +192,10 @@ export class FocusController {
   }
   async initialize(): Promise<void> {
     const stopTick = this.platform.onIntegrationTick?.(() => {
-      this.pollPredictionWait();
-      this.refreshProposal();
+      this.checked(() => {
+        this.pollPredictionWait();
+        this.refreshProposal();
+      });
     });
     if (stopTick) {
       this.stops.push(stopTick);
@@ -426,7 +430,7 @@ export class FocusController {
     if (!sameData(source, expected)) {
       throw new ProposalBlocked('source_changed');
     }
-    const observation = this.platform.readWorldProposal?.(source.messageId);
+    const observation = this.readWorld(source.messageId);
     if (!observation?.run) {
       throw new ProposalBlocked('workflow_unknown');
     }
@@ -502,7 +506,7 @@ export class FocusController {
     if ('status' in source) {
       throw new ProposalBlocked(source.reason);
     }
-    const observation = this.platform.readWorldProposal?.(registration.messageId);
+    const observation = this.readWorld(registration.messageId);
     if (!observation) {
       throw new ProposalBlocked('workflow_unknown');
     }
@@ -655,6 +659,32 @@ export class FocusController {
   }
   /** Called by the existing platform timer, and available for the review panel's refresh button. */
   refreshProposal(): void {
+    this.checked(() => this.checkProposal());
+  }
+  /** One integration check reads each floor and its world run once. */
+  private checked<T>(check: () => T): T {
+    if (this.worldCache) {
+      return check();
+    }
+    this.worldCache = new Map();
+    try {
+      return this.integration.cached(check);
+    } finally {
+      this.worldCache = null;
+    }
+  }
+  /** Inside a check, callers share the observation; they only read it. */
+  private readWorld(messageId: number): WorldObservation | null | undefined {
+    const cache = this.worldCache;
+    if (!cache) {
+      return this.platform.readWorldProposal?.(messageId);
+    }
+    if (!cache.has(messageId)) {
+      cache.set(messageId, this.platform.readWorldProposal?.(messageId) ?? null);
+    }
+    return cache.get(messageId);
+  }
+  private checkProposal(): void {
     if (this.disposed || this.accepting) {
       return;
     }
@@ -970,7 +1000,8 @@ export class FocusController {
           this.setCoordination({ ...this.coordination, status: 'idle' });
         }
         this.state = committed.state;
-        this.overwriteTicks = 10;
+        // Integration ticks run once a second: watch for an overwrite for about two seconds.
+        this.overwriteTicks = 2;
         this.setProposalState({ ...this.reception, status: 'accepted', reason: undefined });
         this.proposalPeriods?.abort();
         const periods = new AbortController();
@@ -1173,7 +1204,7 @@ export class FocusController {
       this.finishPredictionWait(true, 'nonce');
       return;
     }
-    const run = this.platform.readWorldProposal?.(wait.source.messageId)?.run;
+    const run = this.readWorld(wait.source.messageId)?.run;
     if (
       run &&
       run.messageId === wait.source.messageId &&

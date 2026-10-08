@@ -201,6 +201,7 @@ export class FocusIntegration {
   private sourceKey = '';
   private seenRequests = new Set<string>();
   private disposed = false;
+  private sourceCache: Map<number, IntegrationSource | IntegrationUnavailable> | null = null;
 
   constructor(
     private readonly read: (messageId: number) => IntegrationRead,
@@ -211,7 +212,26 @@ export class FocusIntegration {
     return structuredClone(this.registration ?? this.consumed);
   }
   readSource(messageId: number): IntegrationSource | IntegrationUnavailable {
-    return integrationSource(this.read(messageId));
+    const cache = this.sourceCache;
+    if (!cache) {
+      return integrationSource(this.read(messageId));
+    }
+    if (!cache.has(messageId)) {
+      cache.set(messageId, integrationSource(this.read(messageId)));
+    }
+    return structuredClone(cache.get(messageId)!);
+  }
+  /** Parse each floor once during one synchronous check; every caller gets its own copy. */
+  cached<T>(check: () => T): T {
+    if (this.sourceCache) {
+      return check();
+    }
+    this.sourceCache = new Map();
+    try {
+      return check();
+    } finally {
+      this.sourceCache = null;
+    }
   }
   /** Accepted nonces are hidden from ordinary lookup, but retain a revocable retry checkpoint. */
   consume(nonce: string): void {

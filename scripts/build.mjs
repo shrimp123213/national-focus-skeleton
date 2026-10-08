@@ -6,14 +6,33 @@ import { join } from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = join(root, 'dist');
 await mkdir(output, { recursive: true });
+// The `z` namespace re-exports every zod locale; only the default English messages are used.
+const zodLocales = {
+  name: 'zod-english-only',
+  setup(build) {
+    build.onResolve({ filter: /\/locales\/index\.js$/ }, (args) =>
+      args.importer.includes(join('node_modules', 'zod'))
+        ? { path: 'zod-locales', namespace: 'zod-locales' }
+        : undefined,
+    );
+    build.onLoad({ filter: /.*/, namespace: 'zod-locales' }, () => ({
+      contents: `export { default as en } from ${JSON.stringify(join(root, 'node_modules/zod/v4/locales/en.js'))};`,
+      resolveDir: root,
+    }));
+  },
+};
 const options = {
   bundle: true,
   format: 'iife',
   target: ['es2022'],
   loader: { '.css': 'text' },
   charset: 'utf8',
+  // Keep identifiers so stack traces from players stay readable.
   minify: false,
+  minifyWhitespace: true,
+  minifySyntax: true,
   legalComments: 'eof',
+  plugins: [zodLocales],
 };
 await build({
   ...options,
@@ -35,7 +54,7 @@ await writeFile(join(output, 'THIRD_PARTY_NOTICES.txt'), notices.join('\n\n'), '
 const exported = {
   type: 'script',
   enabled: true,
-  name: '【命定之诗】国策档案 v0.17.0 骨架版',
+  name: '【命定之诗】国策档案 v0.17.1 骨架版',
   id: '3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13',
   content: script,
   info: '正文完成后于背景演化的国策树。需酒馆助手与 MVU。从悬浮球开启；请先设定可靠故事时间栏位与 API。',
