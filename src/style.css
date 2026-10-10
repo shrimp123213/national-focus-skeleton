@@ -1988,6 +1988,10 @@ button.focus-gauge:hover .focus-name {
   color: var(--gold);
   font-size: 13px;
 }
+/* The panel re-renders on every toggle and hints fold afterwards; scroll anchoring would then drift the modal. */
+#source-panel {
+  overflow-anchor: none;
+}
 #source-panel fieldset {
   border: 1px solid var(--line);
   border-radius: var(--radius);
