@@ -4,6 +4,7 @@ import { FocusController } from '../src/workflow';
 import { DemoPlatform } from '../src/demo';
 import { pauseFocus } from '../src/engine';
 import type { Config } from '../src/model';
+import { FloorNotReady } from '../src/platform';
 
 class ControlledPlatform extends DemoPlatform {
   ready: () => void = () => {};
@@ -343,6 +344,47 @@ test('旧总并行上限被忽略，不同任务并行后依序保存且保留�
     const saved = (await platform.read()).state;
     assert.ok(saved.receipts.includes('parallel_a'));
     assert.ok(saved.receipts.includes('parallel_b'));
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('最新楼层未就绪时唯读显示前一个 AI 楼层，不写入；楼层就绪后恢复', async () => {
+  class WaitingPlatform extends ControlledPlatform {
+    failure: Error | null = new FloorNotReady('请在一则已完成且具有 MVU 变数的 AI 回复后使用');
+    override async read() {
+      if (this.failure) {
+        throw this.failure;
+      }
+      return super.read();
+    }
+    async peek() {
+      return { state: (await super.read()).state, messageId: 7 };
+    }
+  }
+  const platform = new WaitingPlatform();
+  const controller = new FocusController(platform);
+  try {
+    await controller.initialize();
+    assert.deepEqual(controller.readOnly, {
+      messageId: 7,
+      reason: '请在一则已完成且具有 MVU 变数的 AI 回复后使用',
+    });
+    assert.ok(controller.state?.countries.augustium);
+    assert.equal(controller.error, '');
+    await assert.rejects(
+      controller.mutate((state) => pauseFocus(state, 'augustium'), true),
+      FloorNotReady,
+    );
+    platform.failure = null;
+    await controller.refresh();
+    assert.equal(controller.readOnly, null);
+    assert.equal(controller.state?.countries.augustium.current, 'focus_1_1');
+    platform.failure = new Error('读不到故事时间');
+    await controller.refresh();
+    assert.equal(controller.state, null);
+    assert.equal(controller.readOnly, null);
+    assert.match(controller.error, /读不到故事时间/);
   } finally {
     controller.dispose();
   }

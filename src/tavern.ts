@@ -43,6 +43,7 @@ import {
   stamp,
   storyDay,
   valueAt,
+  FloorNotReady,
   type NewsAction,
   type Platform,
   type Snapshot,
@@ -629,14 +630,14 @@ export class TavernPlatform implements Platform {
       throw new Error('尚未检测到 MVU，请先启用 MVU 变数框架');
     }
     if (this.generating || this.mvuBusy || mvu.isDuringExtraAnalysis()) {
-      throw new Error('正文或一般 MVU 更新尚未完成，请稍后重试');
+      throw new FloorNotReady('正文或一般 MVU 更新尚未完成，请稍后重试');
     }
     if (this.pending && !this.readyIdentity) {
-      throw new Error('等待本楼正文完成及 MVU 写入事件；若已等待过久，请检查 MVU 工作状态后重新加载脚本');
+      throw new FloorNotReady('等待本楼正文完成及 MVU 写入事件；若已等待过久，请检查 MVU 工作状态后重新加载脚本');
     }
     const message = this.current();
     if (!message || message.role !== 'assistant') {
-      throw new Error('请在一则已完成且具有 MVU 变数的 AI 回复后使用');
+      throw new FloorNotReady('请在一则已完成且具有 MVU 变数的 AI 回复后使用');
     }
     const identity = this.identity();
     const data = mvu.getMvuData({ type: 'message', message_id: message.message_id });
@@ -825,6 +826,41 @@ export class TavernPlatform implements Platform {
     return parsed.success
       ? { state: parsed.data, events: floorNews(parsed.data, messageId, seen ?? undefined) }
       : null;
+  }
+  async peek(config: Config) {
+    const mvu = this.api.Mvu;
+    const last = this.api.getLastMessageId();
+    if (!mvu || last < 0) {
+      return null;
+    }
+    // Only read: no busy checks and no source context, because nothing is written from this state.
+    for (const message of this.api.getChatMessages(`0-${last}`).reverse()) {
+      if (message.role !== 'assistant') {
+        continue;
+      }
+      const data = mvu.getMvuData({ type: 'message', message_id: message.message_id });
+      const saved = data?.国策 !== undefined ? data.国策 : data?.stat_data?.国策;
+      if (saved === undefined) {
+        continue;
+      }
+      const parsed = StateSchema.safeParse(saved);
+      if (!parsed.success) {
+        return null;
+      }
+      // Same as read(): inject() hands over to the worldbook only when this floor saved the prompt.
+      this.config = config;
+      this.promptSaved = Boolean((data.国策 as { prompt?: unknown } | undefined)?.prompt);
+      const state = migrateCountryKeys(parsed.data);
+      const rawTime = valueAt(data.stat_data, config.sources.timePath);
+      try {
+        storyDay(rawTime);
+        state.time = timeText(rawTime);
+      } catch {
+        // Keep the saved time; this view does not count days.
+      }
+      return { state, messageId: message.message_id };
+    }
+    return null;
   }
   onNewsRequest(callback: (messageId: number, action: NewsAction) => void): () => void {
     const listener = this.api.eventOn(NEWS_EVENT, (messageId: unknown, action: unknown) => {

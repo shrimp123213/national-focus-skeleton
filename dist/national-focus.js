@@ -244,7 +244,7 @@ ${end.comment}`:end.comment}this.doc.range[2]=end.offset;break}default:this.erro
 `)+1;for(;nl!==0;)this.onNewLine(this.offset+nl),nl=this.source.indexOf(`
 `,nl)+1}yield*this.pop();break;default:yield*this.pop(),yield*this.step()}}*blockMap(map3){let it=map3.items[map3.items.length-1];switch(this.type){case"newline":if(this.onKeyLine=!1,it.value){let end="end"in it.value?it.value.end:void 0;(Array.isArray(end)?end[end.length-1]:void 0)?.type==="comment"?end?.push(this.sourceToken):map3.items.push({start:[this.sourceToken]})}else it.sep?it.sep.push(this.sourceToken):it.start.push(this.sourceToken);return;case"space":case"comment":if(it.value)map3.items.push({start:[this.sourceToken]});else if(it.sep)it.sep.push(this.sourceToken);else{if(this.atIndentedComment(it.start,map3.indent)){let end=map3.items[map3.items.length-2]?.value?.end;if(Array.isArray(end)){arrayPushArray(end,it.start),end.push(this.sourceToken),map3.items.pop();return}}it.start.push(this.sourceToken)}return}if(this.indent>=map3.indent){let atMapIndent=!this.onKeyLine&&this.indent===map3.indent,atNextItem=atMapIndent&&(it.sep||it.explicitKey)&&this.type!=="seq-item-ind",start=[];if(atNextItem&&it.sep&&!it.value){let nl=[];for(let i=0;i<it.sep.length;++i){let st=it.sep[i];switch(st.type){case"newline":nl.push(i);break;case"space":break;case"comment":st.indent>map3.indent&&(nl.length=0);break;default:nl.length=0}}nl.length>=2&&(start=it.sep.splice(nl[1]))}switch(this.type){case"anchor":case"tag":atNextItem||it.value?(start.push(this.sourceToken),map3.items.push({start}),this.onKeyLine=!0):it.sep?it.sep.push(this.sourceToken):it.start.push(this.sourceToken);return;case"explicit-key-ind":!it.sep&&!it.explicitKey?(it.start.push(this.sourceToken),it.explicitKey=!0):atNextItem||it.value?(start.push(this.sourceToken),map3.items.push({start,explicitKey:!0})):this.stack.push({type:"block-map",offset:this.offset,indent:this.indent,items:[{start:[this.sourceToken],explicitKey:!0}]}),this.onKeyLine=!0;return;case"map-value-ind":if(it.explicitKey)if(it.sep)if(it.value)map3.items.push({start:[],key:null,sep:[this.sourceToken]});else if(includesToken(it.sep,"map-value-ind"))this.stack.push({type:"block-map",offset:this.offset,indent:this.indent,items:[{start,key:null,sep:[this.sourceToken]}]});else if(isFlowToken(it.key)&&!includesToken(it.sep,"newline")){let start2=getFirstKeyStartProps(it.start),key=it.key,sep=it.sep;sep.push(this.sourceToken),delete it.key,delete it.sep,this.stack.push({type:"block-map",offset:this.offset,indent:this.indent,items:[{start:start2,key,sep}]})}else start.length>0?it.sep=it.sep.concat(start,this.sourceToken):it.sep.push(this.sourceToken);else if(includesToken(it.start,"newline"))Object.assign(it,{key:null,sep:[this.sourceToken]});else{let start2=getFirstKeyStartProps(it.start);this.stack.push({type:"block-map",offset:this.offset,indent:this.indent,items:[{start:start2,key:null,sep:[this.sourceToken]}]})}else it.sep?it.value||atNextItem?map3.items.push({start,key:null,sep:[this.sourceToken]}):includesToken(it.sep,"map-value-ind")?this.stack.push({type:"block-map",offset:this.offset,indent:this.indent,items:[{start:[],key:null,sep:[this.sourceToken]}]}):it.sep.push(this.sourceToken):Object.assign(it,{key:null,sep:[this.sourceToken]});this.onKeyLine=!0;return;case"alias":case"scalar":case"single-quoted-scalar":case"double-quoted-scalar":{let fs=this.flowScalar(this.type);atNextItem||it.value?(map3.items.push({start,key:fs,sep:[]}),this.onKeyLine=!0):it.sep?this.stack.push(fs):(Object.assign(it,{key:fs,sep:[]}),this.onKeyLine=!0);return}default:{let bv=this.startBlockValue(map3);if(bv){if(bv.type==="block-seq"){if(!it.explicitKey&&it.sep&&!includesToken(it.sep,"newline")){yield*this.pop({type:"error",offset:this.offset,message:"Unexpected block-seq-ind on same line with key",source:this.source});return}}else atMapIndent&&map3.items.push({start});this.stack.push(bv);return}}}}yield*this.pop(),yield*this.step()}*blockSequence(seq2){let it=seq2.items[seq2.items.length-1];switch(this.type){case"newline":if(it.value){let end="end"in it.value?it.value.end:void 0;(Array.isArray(end)?end[end.length-1]:void 0)?.type==="comment"?end?.push(this.sourceToken):seq2.items.push({start:[this.sourceToken]})}else it.start.push(this.sourceToken);return;case"space":case"comment":if(it.value)seq2.items.push({start:[this.sourceToken]});else{if(this.atIndentedComment(it.start,seq2.indent)){let end=seq2.items[seq2.items.length-2]?.value?.end;if(Array.isArray(end)){arrayPushArray(end,it.start),end.push(this.sourceToken),seq2.items.pop();return}}it.start.push(this.sourceToken)}return;case"anchor":case"tag":if(it.value||this.indent<=seq2.indent)break;it.start.push(this.sourceToken);return;case"seq-item-ind":if(this.indent!==seq2.indent)break;it.value||includesToken(it.start,"seq-item-ind")?seq2.items.push({start:[this.sourceToken]}):it.start.push(this.sourceToken);return}if(this.indent>seq2.indent){let bv=this.startBlockValue(seq2);if(bv){this.stack.push(bv);return}}yield*this.pop(),yield*this.step()}*flowCollection(fc){let it=fc.items[fc.items.length-1];if(this.type==="flow-error-end"){let top;do yield*this.pop(),top=this.peek(1);while(top?.type==="flow-collection")}else if(fc.end.length===0){switch(this.type){case"comma":case"explicit-key-ind":!it||it.sep?fc.items.push({start:[this.sourceToken]}):it.start.push(this.sourceToken);return;case"map-value-ind":!it||it.value?fc.items.push({start:[],key:null,sep:[this.sourceToken]}):it.sep?it.sep.push(this.sourceToken):Object.assign(it,{key:null,sep:[this.sourceToken]});return;case"space":case"comment":case"newline":case"anchor":case"tag":!it||it.value?fc.items.push({start:[this.sourceToken]}):it.sep?it.sep.push(this.sourceToken):it.start.push(this.sourceToken);return;case"alias":case"scalar":case"single-quoted-scalar":case"double-quoted-scalar":{let fs=this.flowScalar(this.type);!it||it.value?fc.items.push({start:[],key:fs,sep:[]}):it.sep?this.stack.push(fs):Object.assign(it,{key:fs,sep:[]});return}case"flow-map-end":case"flow-seq-end":fc.end.push(this.sourceToken);return}let bv=this.startBlockValue(fc);bv?this.stack.push(bv):(yield*this.pop(),yield*this.step())}else{let parent=this.peek(2);if(parent.type==="block-map"&&(this.type==="map-value-ind"&&parent.indent===fc.indent||this.type==="newline"&&!parent.items[parent.items.length-1].sep))yield*this.pop(),yield*this.step();else if(this.type==="map-value-ind"&&parent.type!=="flow-collection"){let prev=getPrevProps(parent),start=getFirstKeyStartProps(prev);fixFlowSeqItems(fc);let sep=fc.end.splice(1,fc.end.length);sep.push(this.sourceToken);let map3={type:"block-map",offset:fc.offset,indent:fc.indent,items:[{start,key:fc,sep}]};this.onKeyLine=!0,this.stack[this.stack.length-1]=map3}else yield*this.lineEnd(fc)}}flowScalar(type){if(this.onNewLine){let nl=this.source.indexOf(`
 `)+1;for(;nl!==0;)this.onNewLine(this.offset+nl),nl=this.source.indexOf(`
-`,nl)+1}return{type,offset:this.offset,indent:this.indent,source:this.source}}startBlockValue(parent){switch(this.type){case"alias":case"scalar":case"single-quoted-scalar":case"double-quoted-scalar":return this.flowScalar(this.type);case"block-scalar-header":return{type:"block-scalar",offset:this.offset,indent:this.indent,props:[this.sourceToken],source:""};case"flow-map-start":case"flow-seq-start":return{type:"flow-collection",offset:this.offset,indent:this.indent,start:this.sourceToken,items:[],end:[]};case"seq-item-ind":return{type:"block-seq",offset:this.offset,indent:this.indent,items:[{start:[this.sourceToken]}]};case"explicit-key-ind":{this.onKeyLine=!0;let prev=getPrevProps(parent),start=getFirstKeyStartProps(prev);return start.push(this.sourceToken),{type:"block-map",offset:this.offset,indent:this.indent,items:[{start,explicitKey:!0}]}}case"map-value-ind":{this.onKeyLine=!0;let prev=getPrevProps(parent),start=getFirstKeyStartProps(prev);return{type:"block-map",offset:this.offset,indent:this.indent,items:[{start,key:null,sep:[this.sourceToken]}]}}}return null}atIndentedComment(start,indent){return this.type!=="comment"||this.indent<=indent?!1:start.every(st=>st.type==="newline"||st.type==="space")}*documentEnd(docEnd){this.type!=="doc-mode"&&(docEnd.end?docEnd.end.push(this.sourceToken):docEnd.end=[this.sourceToken],this.type==="newline"&&(yield*this.pop()))}*lineEnd(token){switch(this.type){case"comma":case"doc-start":case"doc-end":case"flow-seq-end":case"flow-map-end":case"map-value-ind":yield*this.pop(),yield*this.step();break;case"newline":this.onKeyLine=!1;case"space":case"comment":default:token.end?token.end.push(this.sourceToken):token.end=[this.sourceToken],this.type==="newline"&&(yield*this.pop())}}};function parseOptions(options){let prettyErrors=options.prettyErrors!==!1;return{lineCounter:options.lineCounter||prettyErrors&&new LineCounter||null,prettyErrors}}function parseDocument(source,options={}){let{lineCounter,prettyErrors}=parseOptions(options),parser=new Parser(lineCounter?.addNewLine),composer=new Composer(options),doc2=null;for(let _doc of composer.compose(parser.parse(source),!0,source.length))if(!doc2)doc2=_doc;else if(doc2.options.logLevel!=="silent"){doc2.errors.push(new YAMLParseError(_doc.range.slice(0,2),"MULTIPLE_DOCS","Source contains multiple documents; please use YAML.parseAllDocuments()"));break}return prettyErrors&&lineCounter&&(doc2.errors.forEach(prettifyError2(source,lineCounter)),doc2.warnings.forEach(prettifyError2(source,lineCounter))),doc2}function parse3(src,reviver,options){let _reviver;typeof reviver=="function"?_reviver=reviver:options===void 0&&reviver&&typeof reviver=="object"&&(options=reviver);let doc2=parseDocument(src,options);if(!doc2)return null;if(doc2.warnings.forEach(warning=>warn(doc2.options.logLevel,warning)),doc2.errors.length>0){if(doc2.options.logLevel!=="silent")throw doc2.errors[0];doc2.errors=[]}return doc2.toJS(Object.assign({reviver:_reviver},options))}function stringify3(value,replacer,options){let _replacer=null;if(typeof replacer=="function"||Array.isArray(replacer)?_replacer=replacer:options===void 0&&replacer&&(options=replacer),typeof options=="string"&&(options=options.length),typeof options=="number"){let indent=Math.round(options);options=indent<1?void 0:indent>8?{indent:8}:{indent}}if(value===void 0){let{keepUndefined}=options??replacer??{};if(!keepUndefined)return}return isDocument(value)&&!_replacer?value.toString(options):new Document(value,_replacer,options).toString(options)}function yamlObject(text2,label2){if(!text2.trim())return{};let value;try{value=parse3(text2)}catch{throw new Error(`${label2}必须是有效的 YAML object`)}if(!value||typeof value!="object"||Array.isArray(value))throw new Error(`${label2}必须是 YAML object`);return value}function excludedParams(text2){if(!text2.trim())return[];let value=text2.trim().startsWith("[")||text2.trim().startsWith("- ")?parse3(text2):text2.split(/[,\n]/).map(v=>v.trim()).filter(Boolean);if(!Array.isArray(value)||!value.every(v=>typeof v=="string"&&v.trim()))throw new Error("排除主体参数须为栏位名称列表");return[...new Set(value.map(v=>v.trim()))]}function validateApi(input2){let api=ApiSchema.parse(input2);if(api.name=api.name.trim(),api.url=api.url.trim(),api.model=api.model.trim(),api.proxy=api.proxy.trim(),!api.name)throw new Error("预设名称不可空白");if(api.url){let url2;try{url2=new URL(api.url)}catch{throw new Error("API URL 必须是完整的 http 或 https 网址")}if(!["http:","https:"].includes(url2.protocol))throw new Error("API URL 必须使用 http 或 https");if(!api.model)throw new Error("自定义 API 请填写模型名称，或加载模型后选择")}if(yamlObject(api.bodyParams,"附加主体参数"),yamlObject(api.requestHeaders,"附加请求标头"),excludedParams(api.excludeBodyParams),hasAdvancedApi(api)&&(!api.url||api.proxy))throw new Error("进阶参数请使用明确的 API URL 与模型，并清空酒馆代理预设名称");return api}function hasAdvancedApi(api){return!!(api.bodyParams.trim()||api.excludeBodyParams.trim()||api.requestHeaders.trim()||api.customPromptPostProcessing!=="none"||api.includeReasoning||api.reasoningEffort!=="medium")}function currentApiName(config2,chatId){let bound=config2.apiBindings[chatId];return config2.apis.some(api=>api.name===bound)?bound:config2.apis.find(api=>api.name===config2.defaultApi)?.name??config2.apis[0].name}function saveApiPreset(config2,original,input2,chatId){let api=validateApi(input2),next=structuredClone(config2);if(next.apis.some(item=>item.name===api.name&&item.name!==original))throw new Error("API 名称不可重复");let index=next.apis.findIndex(item=>item.name===original);if(original!==null&&index<0)throw new Error("原 API 预设已不存在，请重新开启设置");if(index<0)next.apis.push(api);else{next.apis[index]=api;for(let job of Object.values(next.jobs))job.api===original&&(job.api=api.name),job.fallback=job.fallback.map(name=>name===original?api.name:name);for(let id of Object.keys(next.apiBindings))next.apiBindings[id]===original&&(next.apiBindings[id]=api.name)}return(!next.defaultApi||next.defaultApi===original)&&(next.defaultApi=api.name),next.apiBindings[chatId]=api.name,next}function deleteApiPreset(config2,name){if(config2.apis.length===1)throw new Error("至少保留一个 API 预设");let next=structuredClone(config2);next.apis=next.apis.filter(api=>api.name!==name),next.defaultApi===name&&(next.defaultApi=next.apis[0].name);for(let id of Object.keys(next.apiBindings))next.apiBindings[id]===name&&delete next.apiBindings[id];for(let job of Object.values(next.jobs))job.api===name&&(job.api=""),job.fallback=job.fallback.filter(item=>item!==name);return next}function deepSeekOptions(api){let body=yamlObject(api.bodyParams,"附加主体参数");return{strict:body.response_format?.type==="json_object",cot:body.thinking?.type==="enabled"}}function applyDeepSeek(api,strict,cot){let next=structuredClone(api),body=yamlObject(api.bodyParams,"附加主体参数");return body.thinking={type:cot?"enabled":"disabled"},strict?(body.response_format={type:"json_object"},next.excludeBodyParams=[...new Set([...excludedParams(api.excludeBodyParams),"top_p","reasoning_effort"])].join(", "),next.customPromptPostProcessing="strict"):delete body.response_format,next.bodyParams=stringify3(body),next.includeReasoning=cot,next.reasoningEffort="medium",next}function customRequest(api,messages,secret){let headers=yamlObject(api.requestHeaders,"附加请求标头");return secret&&!Object.keys(headers).some(key=>key.toLowerCase()==="authorization")&&(headers.Authorization=`Bearer ${secret}`),{messages:messages.map(({role,content})=>({role,content})),model:api.model.replace(/^models\//,""),max_tokens:api.maxTokens,temperature:api.temperature,top_p:.95,stream:api.stream,chat_completion_source:"custom",include_reasoning:api.includeReasoning,reasoning_effort:api.reasoningEffort,enable_web_search:!1,request_images:!1,custom_prompt_post_processing:api.customPromptPostProcessing,reverse_proxy:api.url,proxy_password:"",custom_url:api.url,custom_include_headers:stringify3(headers),custom_include_body:api.bodyParams,custom_exclude_body:stringify3(excludedParams(api.excludeBodyParams))}}function redactApiError(error2,apis){let text2=error2 instanceof Error?error2.message:String(error2);for(let api of apis){let secrets=[api.apiKey,api.requestHeaders];try{secrets.push(...Object.values(yamlObject(api.requestHeaders,"标头")).map(String))}catch{}for(let secret of secrets.filter(Boolean).sort((a,b)=>b.length-a.length))text2=text2.replaceAll(secret,"[隐藏凭证]")}return text2}function setStrictJson(api,strict){let next=structuredClone(api),body=yamlObject(api.bodyParams,"附加主体参数");return strict?(body.response_format={type:"json_object"},next.excludeBodyParams=[...new Set([...excludedParams(api.excludeBodyParams),"top_p","reasoning_effort"])].join(", "),next.customPromptPostProcessing="strict"):delete body.response_format,next.bodyParams=Object.keys(body).length?stringify3(body):"",next}var text=value=>typeof value=="string"&&value.trim()?value.trim():void 0;async function readStream(result){let source=typeof result=="function"?result():result&&typeof result=="object"&&Symbol.asyncIterator in result?result:null;if(!source||typeof source!="object"||!(Symbol.asyncIterator in source))return null;let content="",reasoning="";for await(let chunk of source){if(typeof chunk=="string"){content+=chunk;continue}let value=chunk??{};typeof value.text=="string"&&(content=value.text.startsWith(content)?value.text:content+value.text),typeof value.state?.reasoning=="string"&&value.state.reasoning&&(reasoning=value.state.reasoning)}return content=content.trim(),reasoning&&reasoning!==content?{content,reasoning}:{content}}function extractApiResult(result){if(typeof result=="string")return{content:result.trim()};if(!result||typeof result!="object")return{content:""};let value=result,first=value.choices?.[0],content=text(value.content)??text(value.text)??text(first?.message?.content)??text(first?.text)??"",reasoning=text(value.reasoning)??text(value.reasoning_content)??text(value.message?.reasoning_content)??text(value.message?.reasoning)??text(first?.message?.reasoning_content)??text(first?.message?.reasoning);return reasoning&&reasoning!==content?{content,reasoning}:{content}}function balancedObject(source,start){let depth=0,quoted=!1,escaped=!1;for(let i=start;i<source.length;i++){let char=source[i];if(quoted){escaped?escaped=!1:char==="\\"?escaped=!0:char==='"'&&(quoted=!1);continue}if(char==='"')quoted=!0;else if(char==="{")depth++;else if(char==="}"&&--depth===0)return source.slice(start,i+1)}}function parseJsonReply(output2){let cleaned=String(output2??"").trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();try{return JSON.parse(cleaned)}catch(error2){let withoutThinking=cleaned.replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/gi,""),start=withoutThinking.indexOf("{");for(;start>=0;){let slice=balancedObject(withoutThinking,start);if(!slice)break;try{return JSON.parse(slice)}catch{}start=withoutThinking.indexOf("{",start+slice.length)}throw error2}}function valueAt(value,path){return path.split(".").reduce((current,key)=>{if(current&&typeof current=="object"&&Object.hasOwn(current,key))return current[key]},value)}function storyDay(raw){if(typeof raw=="number"&&Number.isFinite(raw)&&raw>=0)return raw;if(typeof raw=="string"){let text2=raw.trim(),match=text2.match(/^(?:复兴纪元|復興紀元)(\d{1,6})年-(\d{1,2})月-(\d{1,2})日-星期[一二三四五六日天]-(\d{1,2}):(\d{2})$/)??text2.match(/^(\d{1,6})[-年/](\d{1,2})[-月/](\d{1,2})日?(?:[ T](\d{1,2}):(\d{2}))?$/);if(match){let[,y,m,d,h="0",minute="0"]=match,date5=new Date(0);if(date5.setUTCFullYear(Number(y),Number(m)-1,Number(d)),date5.setUTCHours(Number(h),Number(minute),0,0),date5.getUTCFullYear()===Number(y)&&date5.getUTCMonth()===Number(m)-1&&date5.getUTCDate()===Number(d)&&Number(h)<24&&Number(minute)<60)return date5.getTime()/864e5+719528}}throw new Error("无法辨识故事时间。支持「复兴纪元490年-10月-15日-星期三-14:25」、YYYY-MM-DD HH:mm、YYYY年M月D日或非负数值日序；请确认设置的来源路径与日期有效，不会以现实时间代算。")}function stamp(value){return JSON.stringify(value)}function requestId(prefix){let bytes=crypto.getRandomValues(new Uint8Array(16));return`${prefix}_${[...bytes].map(byte=>byte.toString(16).padStart(2,"0")).join("")}`}var InputSizeError=class extends Error{},placeholders={$1:"剧情世界书",$2:"工作流托管条目",$5:"纪要索引",$6:"记忆回溯",$7:"AI 上下文",$8:"使用者输入",$U:"使用者设定与主角资料",$C:"角色描述"},placeholderPattern=/\$(?:[125678]|U|C)/g,contextKeys={$1:"worldbook",$2:"managedWorldbook",$5:"summaryIndex",$6:"memory",$7:"history",$8:"user",$U:"persona",$C:"character"};function effectiveSources(settings,job){return{context:settings.taskContextOverridesEnabled?settings.overrides[job]?.context??settings.context:settings.context,worldbook:settings.taskWorldbookOverridesEnabled?settings.overrides[job]?.worldbook??settings.worldbook:settings.worldbook}}function rules(values){let unique=new Map;for(let value of values){let start=String(value.start??"").trim(),end=String(value.end??"").trim();start&&end&&unique.set(`${start}\0${end}`,{start,end})}return[...unique.values()]}function validPrefixMatch(text2,index,length){if(index>0&&text2[index-1]==="/")return!1;let next=text2[index+length];return next===void 0||next===">"||next==="="||/\s/.test(next)?!0:!/[A-Za-z0-9_-]/.test(next)}function lastBoundary(text2,rule){let lower=text2.toLowerCase(),end=lower.lastIndexOf(rule.end.toLowerCase());if(end<0)return;let start=rule.start.toLowerCase(),prefix=rule.start.startsWith("<")&&!rule.start.endsWith(">"),index=lower.lastIndexOf(start,Math.max(0,end-1));for(;index>=0&&prefix&&!validPrefixMatch(text2,index,start.length);)index=index===0?-1:lower.lastIndexOf(start,index-1);if(!(index<0||end+rule.end.length<=index))return[index,end+rule.end.length]}function excludeContext(text2,values){let result=String(text2??""),list=rules(values);if(!result||!list.length)return result;for(let rule of list){let range=lastBoundary(result,rule);range&&(result=result.slice(0,range[0])+result.slice(range[1]))}return result.replace(/\n{3,}/g,`
+`,nl)+1}return{type,offset:this.offset,indent:this.indent,source:this.source}}startBlockValue(parent){switch(this.type){case"alias":case"scalar":case"single-quoted-scalar":case"double-quoted-scalar":return this.flowScalar(this.type);case"block-scalar-header":return{type:"block-scalar",offset:this.offset,indent:this.indent,props:[this.sourceToken],source:""};case"flow-map-start":case"flow-seq-start":return{type:"flow-collection",offset:this.offset,indent:this.indent,start:this.sourceToken,items:[],end:[]};case"seq-item-ind":return{type:"block-seq",offset:this.offset,indent:this.indent,items:[{start:[this.sourceToken]}]};case"explicit-key-ind":{this.onKeyLine=!0;let prev=getPrevProps(parent),start=getFirstKeyStartProps(prev);return start.push(this.sourceToken),{type:"block-map",offset:this.offset,indent:this.indent,items:[{start,explicitKey:!0}]}}case"map-value-ind":{this.onKeyLine=!0;let prev=getPrevProps(parent),start=getFirstKeyStartProps(prev);return{type:"block-map",offset:this.offset,indent:this.indent,items:[{start,key:null,sep:[this.sourceToken]}]}}}return null}atIndentedComment(start,indent){return this.type!=="comment"||this.indent<=indent?!1:start.every(st=>st.type==="newline"||st.type==="space")}*documentEnd(docEnd){this.type!=="doc-mode"&&(docEnd.end?docEnd.end.push(this.sourceToken):docEnd.end=[this.sourceToken],this.type==="newline"&&(yield*this.pop()))}*lineEnd(token){switch(this.type){case"comma":case"doc-start":case"doc-end":case"flow-seq-end":case"flow-map-end":case"map-value-ind":yield*this.pop(),yield*this.step();break;case"newline":this.onKeyLine=!1;case"space":case"comment":default:token.end?token.end.push(this.sourceToken):token.end=[this.sourceToken],this.type==="newline"&&(yield*this.pop())}}};function parseOptions(options){let prettyErrors=options.prettyErrors!==!1;return{lineCounter:options.lineCounter||prettyErrors&&new LineCounter||null,prettyErrors}}function parseDocument(source,options={}){let{lineCounter,prettyErrors}=parseOptions(options),parser=new Parser(lineCounter?.addNewLine),composer=new Composer(options),doc2=null;for(let _doc of composer.compose(parser.parse(source),!0,source.length))if(!doc2)doc2=_doc;else if(doc2.options.logLevel!=="silent"){doc2.errors.push(new YAMLParseError(_doc.range.slice(0,2),"MULTIPLE_DOCS","Source contains multiple documents; please use YAML.parseAllDocuments()"));break}return prettyErrors&&lineCounter&&(doc2.errors.forEach(prettifyError2(source,lineCounter)),doc2.warnings.forEach(prettifyError2(source,lineCounter))),doc2}function parse3(src,reviver,options){let _reviver;typeof reviver=="function"?_reviver=reviver:options===void 0&&reviver&&typeof reviver=="object"&&(options=reviver);let doc2=parseDocument(src,options);if(!doc2)return null;if(doc2.warnings.forEach(warning=>warn(doc2.options.logLevel,warning)),doc2.errors.length>0){if(doc2.options.logLevel!=="silent")throw doc2.errors[0];doc2.errors=[]}return doc2.toJS(Object.assign({reviver:_reviver},options))}function stringify3(value,replacer,options){let _replacer=null;if(typeof replacer=="function"||Array.isArray(replacer)?_replacer=replacer:options===void 0&&replacer&&(options=replacer),typeof options=="string"&&(options=options.length),typeof options=="number"){let indent=Math.round(options);options=indent<1?void 0:indent>8?{indent:8}:{indent}}if(value===void 0){let{keepUndefined}=options??replacer??{};if(!keepUndefined)return}return isDocument(value)&&!_replacer?value.toString(options):new Document(value,_replacer,options).toString(options)}function yamlObject(text2,label2){if(!text2.trim())return{};let value;try{value=parse3(text2)}catch{throw new Error(`${label2}必须是有效的 YAML object`)}if(!value||typeof value!="object"||Array.isArray(value))throw new Error(`${label2}必须是 YAML object`);return value}function excludedParams(text2){if(!text2.trim())return[];let value=text2.trim().startsWith("[")||text2.trim().startsWith("- ")?parse3(text2):text2.split(/[,\n]/).map(v=>v.trim()).filter(Boolean);if(!Array.isArray(value)||!value.every(v=>typeof v=="string"&&v.trim()))throw new Error("排除主体参数须为栏位名称列表");return[...new Set(value.map(v=>v.trim()))]}function validateApi(input2){let api=ApiSchema.parse(input2);if(api.name=api.name.trim(),api.url=api.url.trim(),api.model=api.model.trim(),api.proxy=api.proxy.trim(),!api.name)throw new Error("预设名称不可空白");if(api.url){let url2;try{url2=new URL(api.url)}catch{throw new Error("API URL 必须是完整的 http 或 https 网址")}if(!["http:","https:"].includes(url2.protocol))throw new Error("API URL 必须使用 http 或 https");if(!api.model)throw new Error("自定义 API 请填写模型名称，或加载模型后选择")}if(yamlObject(api.bodyParams,"附加主体参数"),yamlObject(api.requestHeaders,"附加请求标头"),excludedParams(api.excludeBodyParams),hasAdvancedApi(api)&&(!api.url||api.proxy))throw new Error("进阶参数请使用明确的 API URL 与模型，并清空酒馆代理预设名称");return api}function hasAdvancedApi(api){return!!(api.bodyParams.trim()||api.excludeBodyParams.trim()||api.requestHeaders.trim()||api.customPromptPostProcessing!=="none"||api.includeReasoning||api.reasoningEffort!=="medium")}function currentApiName(config2,chatId){let bound=config2.apiBindings[chatId];return config2.apis.some(api=>api.name===bound)?bound:config2.apis.find(api=>api.name===config2.defaultApi)?.name??config2.apis[0].name}function saveApiPreset(config2,original,input2,chatId){let api=validateApi(input2),next=structuredClone(config2);if(next.apis.some(item=>item.name===api.name&&item.name!==original))throw new Error("API 名称不可重复");let index=next.apis.findIndex(item=>item.name===original);if(original!==null&&index<0)throw new Error("原 API 预设已不存在，请重新开启设置");if(index<0)next.apis.push(api);else{next.apis[index]=api;for(let job of Object.values(next.jobs))job.api===original&&(job.api=api.name),job.fallback=job.fallback.map(name=>name===original?api.name:name);for(let id of Object.keys(next.apiBindings))next.apiBindings[id]===original&&(next.apiBindings[id]=api.name)}return(!next.defaultApi||next.defaultApi===original)&&(next.defaultApi=api.name),next.apiBindings[chatId]=api.name,next}function deleteApiPreset(config2,name){if(config2.apis.length===1)throw new Error("至少保留一个 API 预设");let next=structuredClone(config2);next.apis=next.apis.filter(api=>api.name!==name),next.defaultApi===name&&(next.defaultApi=next.apis[0].name);for(let id of Object.keys(next.apiBindings))next.apiBindings[id]===name&&delete next.apiBindings[id];for(let job of Object.values(next.jobs))job.api===name&&(job.api=""),job.fallback=job.fallback.filter(item=>item!==name);return next}function deepSeekOptions(api){let body=yamlObject(api.bodyParams,"附加主体参数");return{strict:body.response_format?.type==="json_object",cot:body.thinking?.type==="enabled"}}function applyDeepSeek(api,strict,cot){let next=structuredClone(api),body=yamlObject(api.bodyParams,"附加主体参数");return body.thinking={type:cot?"enabled":"disabled"},strict?(body.response_format={type:"json_object"},next.excludeBodyParams=[...new Set([...excludedParams(api.excludeBodyParams),"top_p","reasoning_effort"])].join(", "),next.customPromptPostProcessing="strict"):delete body.response_format,next.bodyParams=stringify3(body),next.includeReasoning=cot,next.reasoningEffort="medium",next}function customRequest(api,messages,secret){let headers=yamlObject(api.requestHeaders,"附加请求标头");return secret&&!Object.keys(headers).some(key=>key.toLowerCase()==="authorization")&&(headers.Authorization=`Bearer ${secret}`),{messages:messages.map(({role,content})=>({role,content})),model:api.model.replace(/^models\//,""),max_tokens:api.maxTokens,temperature:api.temperature,top_p:.95,stream:api.stream,chat_completion_source:"custom",include_reasoning:api.includeReasoning,reasoning_effort:api.reasoningEffort,enable_web_search:!1,request_images:!1,custom_prompt_post_processing:api.customPromptPostProcessing,reverse_proxy:api.url,proxy_password:"",custom_url:api.url,custom_include_headers:stringify3(headers),custom_include_body:api.bodyParams,custom_exclude_body:stringify3(excludedParams(api.excludeBodyParams))}}function redactApiError(error2,apis){let text2=error2 instanceof Error?error2.message:String(error2);for(let api of apis){let secrets=[api.apiKey,api.requestHeaders];try{secrets.push(...Object.values(yamlObject(api.requestHeaders,"标头")).map(String))}catch{}for(let secret of secrets.filter(Boolean).sort((a,b)=>b.length-a.length))text2=text2.replaceAll(secret,"[隐藏凭证]")}return text2}function setStrictJson(api,strict){let next=structuredClone(api),body=yamlObject(api.bodyParams,"附加主体参数");return strict?(body.response_format={type:"json_object"},next.excludeBodyParams=[...new Set([...excludedParams(api.excludeBodyParams),"top_p","reasoning_effort"])].join(", "),next.customPromptPostProcessing="strict"):delete body.response_format,next.bodyParams=Object.keys(body).length?stringify3(body):"",next}var text=value=>typeof value=="string"&&value.trim()?value.trim():void 0;async function readStream(result){let source=typeof result=="function"?result():result&&typeof result=="object"&&Symbol.asyncIterator in result?result:null;if(!source||typeof source!="object"||!(Symbol.asyncIterator in source))return null;let content="",reasoning="";for await(let chunk of source){if(typeof chunk=="string"){content+=chunk;continue}let value=chunk??{};typeof value.text=="string"&&(content=value.text.startsWith(content)?value.text:content+value.text),typeof value.state?.reasoning=="string"&&value.state.reasoning&&(reasoning=value.state.reasoning)}return content=content.trim(),reasoning&&reasoning!==content?{content,reasoning}:{content}}function extractApiResult(result){if(typeof result=="string")return{content:result.trim()};if(!result||typeof result!="object")return{content:""};let value=result,first=value.choices?.[0],content=text(value.content)??text(value.text)??text(first?.message?.content)??text(first?.text)??"",reasoning=text(value.reasoning)??text(value.reasoning_content)??text(value.message?.reasoning_content)??text(value.message?.reasoning)??text(first?.message?.reasoning_content)??text(first?.message?.reasoning);return reasoning&&reasoning!==content?{content,reasoning}:{content}}function balancedObject(source,start){let depth=0,quoted=!1,escaped=!1;for(let i=start;i<source.length;i++){let char=source[i];if(quoted){escaped?escaped=!1:char==="\\"?escaped=!0:char==='"'&&(quoted=!1);continue}if(char==='"')quoted=!0;else if(char==="{")depth++;else if(char==="}"&&--depth===0)return source.slice(start,i+1)}}function parseJsonReply(output2){let cleaned=String(output2??"").trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();try{return JSON.parse(cleaned)}catch(error2){let withoutThinking=cleaned.replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/gi,""),start=withoutThinking.indexOf("{");for(;start>=0;){let slice=balancedObject(withoutThinking,start);if(!slice)break;try{return JSON.parse(slice)}catch{}start=withoutThinking.indexOf("{",start+slice.length)}throw error2}}var FloorNotReady=class extends Error{name="FloorNotReady"};function valueAt(value,path){return path.split(".").reduce((current,key)=>{if(current&&typeof current=="object"&&Object.hasOwn(current,key))return current[key]},value)}function storyDay(raw){if(typeof raw=="number"&&Number.isFinite(raw)&&raw>=0)return raw;if(typeof raw=="string"){let text2=raw.trim(),match=text2.match(/^(?:复兴纪元|復興紀元)(\d{1,6})年-(\d{1,2})月-(\d{1,2})日-星期[一二三四五六日天]-(\d{1,2}):(\d{2})$/)??text2.match(/^(\d{1,6})[-年/](\d{1,2})[-月/](\d{1,2})日?(?:[ T](\d{1,2}):(\d{2}))?$/);if(match){let[,y,m,d,h="0",minute="0"]=match,date5=new Date(0);if(date5.setUTCFullYear(Number(y),Number(m)-1,Number(d)),date5.setUTCHours(Number(h),Number(minute),0,0),date5.getUTCFullYear()===Number(y)&&date5.getUTCMonth()===Number(m)-1&&date5.getUTCDate()===Number(d)&&Number(h)<24&&Number(minute)<60)return date5.getTime()/864e5+719528}}throw new Error("无法辨识故事时间。支持「复兴纪元490年-10月-15日-星期三-14:25」、YYYY-MM-DD HH:mm、YYYY年M月D日或非负数值日序；请确认设置的来源路径与日期有效，不会以现实时间代算。")}function stamp(value){return JSON.stringify(value)}function requestId(prefix){let bytes=crypto.getRandomValues(new Uint8Array(16));return`${prefix}_${[...bytes].map(byte=>byte.toString(16).padStart(2,"0")).join("")}`}var InputSizeError=class extends Error{},placeholders={$1:"剧情世界书",$2:"工作流托管条目",$5:"纪要索引",$6:"记忆回溯",$7:"AI 上下文",$8:"使用者输入",$U:"使用者设定与主角资料",$C:"角色描述"},placeholderPattern=/\$(?:[125678]|U|C)/g,contextKeys={$1:"worldbook",$2:"managedWorldbook",$5:"summaryIndex",$6:"memory",$7:"history",$8:"user",$U:"persona",$C:"character"};function effectiveSources(settings,job){return{context:settings.taskContextOverridesEnabled?settings.overrides[job]?.context??settings.context:settings.context,worldbook:settings.taskWorldbookOverridesEnabled?settings.overrides[job]?.worldbook??settings.worldbook:settings.worldbook}}function rules(values){let unique=new Map;for(let value of values){let start=String(value.start??"").trim(),end=String(value.end??"").trim();start&&end&&unique.set(`${start}\0${end}`,{start,end})}return[...unique.values()]}function validPrefixMatch(text2,index,length){if(index>0&&text2[index-1]==="/")return!1;let next=text2[index+length];return next===void 0||next===">"||next==="="||/\s/.test(next)?!0:!/[A-Za-z0-9_-]/.test(next)}function lastBoundary(text2,rule){let lower=text2.toLowerCase(),end=lower.lastIndexOf(rule.end.toLowerCase());if(end<0)return;let start=rule.start.toLowerCase(),prefix=rule.start.startsWith("<")&&!rule.start.endsWith(">"),index=lower.lastIndexOf(start,Math.max(0,end-1));for(;index>=0&&prefix&&!validPrefixMatch(text2,index,start.length);)index=index===0?-1:lower.lastIndexOf(start,index-1);if(!(index<0||end+rule.end.length<=index))return[index,end+rule.end.length]}function excludeContext(text2,values){let result=String(text2??""),list=rules(values);if(!result||!list.length)return result;for(let rule of list){let range=lastBoundary(result,rule);range&&(result=result.slice(0,range[0])+result.slice(range[1]))}return result.replace(/\n{3,}/g,`
 
 `).trim()}function extractContext(text2,config2){let extracts=rules(config2.contextExtractRules),parts=extracts.flatMap(rule=>{let range=lastBoundary(text2,rule);return range?[text2.slice(...range)]:[]});return{text:excludeContext(parts.length?parts.join(`
 
@@ -284,8 +284,8 @@ ${managed}
 </worldbook_extra>
 `:"",$5:summaryIndex,$6:memory,$7:history.map(message=>message.content).join(`
 
-`),$8:user,$U:persona,$C:character},enabled={$1:!0,$2:settings.managedEntries,$5:settings.summaryIndex,$6:settings.memoryRecallRecentCount>0,$7:!0,$8:settings.includeLatestUser,$U:settings.persona,$C:settings.characterDescription},jsonValues={$1:worldbook,$2:managed,$5:summaryIndex,$6:memory,$7:history,$8:user,$U:persona,$C:character},context={},blocks=[];for(let key of Object.keys(placeholders)){let placement=used.has(key)?"segment":enabled[key]?"json":"off",value=jsonValues[key],empty=Array.isArray(value)?!1:!value;placement==="json"&&(!empty||key==="$1"||key==="$7"||key==="$6")&&(context[contextKeys[key]]=value),blocks.push({name:contextKeys[key],placeholder:key,placement,characters:placement==="segment"?values[key].length:placement==="json"?JSON.stringify(value).length:0})}context.variables=Object.fromEntries(settings.variables.filter(path=>path&&path!=="国策"&&!path.startsWith("国策.")).map(path=>[path,valueAt(input2.variables,path)])),context.requirements=settings.extra,input2.job==="update"&&input2.world!==void 0&&(context.world=structuredClone(input2.world),blocks.push({name:"world（世界任务结果）",placeholder:"",placement:"json",characters:JSON.stringify(context.world).length})),used.size&&(context.segmentSources=[...used].map(key=>contextKeys[key])),blocks.push({name:"variables",placeholder:"",placement:"json",characters:JSON.stringify(context.variables).length},{name:"requirements",placeholder:"",placement:"json",characters:JSON.stringify(settings.extra).length});let prompts=[],segmentReports=[];for(let item of chain){let text2=promptText(item,input2.job),content=item.kind==="data"?text2:(await render(replacePlaceholders(text2,values),"slash_command")).trim();segmentReports.push({name:item.name||"未命名段",role:item.role,kind:item.kind,characters:content.length}),content&&prompts.push({id:item.id,kind:item.kind,name:item.name,role:item.role,content})}let written=new Set(chain.filter(item=>item.kind==="custom"||isModified(item)).map(item=>item.id)),segmentCharacters=prompts.filter(prompt=>prompt.kind!=="data"&&written.has(prompt.id)).reduce((sum,prompt)=>sum+prompt.content.length,0),report={history:historyReport,entries:entryReports,blocks,segments:segmentReports,notes,characters:JSON.stringify(context).length+segmentCharacters,limit:settings.maxInputCharacters};return{context,prompts,report}}function memoryRows(entries,count){if(count<=0)return[];let enabled=entries.filter(entry=>entry.enabled),rows=enabled.flatMap(entry=>{let name=normalizedEntryName(entry.name);if(!memoryRow(name))return[];let code=[...(entry.strategy?.keys??[]).map(String),entry.name].map(value=>/\bAM(\d{4})\b/i.exec(value)?.[1]).find(Boolean);return code?[{entry,code:Number(code)}]:[]}).sort((a,b)=>b.code-a.code||a.entry.uid-b.entry.uid).slice(0,count).sort((a,b)=>a.code-b.code||a.entry.uid-b.entry.uid);if(!rows.length)return[];let before=enabled.find(entry=>/CustomExport-纪要-包裹-上$/.test(normalizedEntryName(entry.name))),after=enabled.find(entry=>/CustomExport-纪要-包裹-下$/.test(normalizedEntryName(entry.name)));return[...before?[before]:[],...rows.map(row=>row.entry),...after?[after]:[]]}function messageCharacters(messages){return messages.reduce((sum,message)=>sum+message.content.length,0)}function assertInputSize(messages,limit){let count=messageCharacters(messages);if(count>limit)throw new InputSizeError(`输入过大：${count.toLocaleString()} 字元，超过上限 ${limit.toLocaleString()}。未呼叫 API；请在「世界书与上下文」预览并调整条目、提取／排除规则、提示词段或上限。字元数不是 Token 数。`)}var RoutePool=class{constructor(limits2){this.limits=limits2}active=new Map;waiters=[];free(route){let cap=this.limits.get(route)??0;return cap<=0||(this.active.get(route)??0)<cap}occupy(route){return this.active.set(route,(this.active.get(route)??0)+1),route}count(route){return this.active.get(route)??0}acquire(routes,signal){signal?.throwIfAborted();let route=routes.find(name=>this.free(name));return route?Promise.resolve(this.occupy(route)):new Promise((resolve,reject)=>{let waiter={routes,resolve:name=>{signal?.removeEventListener("abort",cancel),resolve(name)}},cancel=()=>{this.waiters=this.waiters.filter(item=>item!==waiter),reject(signal?.reason??new Error("任务已取消"))};signal?.addEventListener("abort",cancel,{once:!0}),this.waiters.push(waiter)})}release(route){this.active.set(route,Math.max(0,(this.active.get(route)??0)-1));for(let waiter of[...this.waiters]){let next=waiter.routes.find(name=>this.free(name));next&&(this.waiters=this.waiters.filter(item=>item!==waiter),waiter.resolve(this.occupy(next)))}}};function routeLimits(chain,primary,fallback){let limits2=new Map;return chain.forEach((route,index)=>{limits2.has(route)||limits2.set(route,Math.max(0,Math.floor((index===0?primary:fallback[index-1])??0)))}),limits2}function unavailable(reason){return{version:1,status:"unavailable",reason}}function integrationSource(input2){if("status"in input2)return input2;if(input2.signal?.aborted)return unavailable("source_changed");if(input2.messageId!==input2.lastMessageId)return unavailable("not_latest");if(input2.role!=="assistant")return unavailable("not_assistant");if(input2.extraAnalysis)return unavailable("mvu_busy");if(!input2.data.stat_data)return unavailable("missing_stat_data");let now;try{now=storyDay(valueAt(input2.data.stat_data,input2.timePath))}catch{return unavailable("invalid_time")}let saved=input2.data.国策!==void 0?input2.data.国策:input2.data.stat_data.国策;if(saved===void 0)return unavailable("missing_state");let parsed=StateSchema.safeParse(saved);if(!parsed.success)return unavailable("invalid_state");let state=migrateCountryKeys(parsed.data);return{chatId:input2.chatId,messageId:input2.messageId,swipeId:input2.swipeId,timePath:input2.timePath,now,cursors:Object.fromEntries(Object.values(state.countries).map(country=>[country.id,country.cursor])),state}}function sameData(left,right){if(left===right)return!0;if(!left||!right||typeof left!="object"||typeof right!="object")return!1;let a=Object.entries(left),b=right;return a.length===Object.keys(b).length&&a.every(([key,value])=>Object.hasOwn(b,key)&&sameData(value,b[key]))}function payload(registration){let{state,now,cursors,nonce}=registration,working=workingState(state,!0);delete working.instructions;for(let event of working.events.ongoing)delete event.review;return structuredClone({version:1,status:"ready",nonce,now,cursors,state:working,schema:external_exports.toJSONSchema(ProposalSchema,{io:"input"}),history:{complete:!1,since:null,countries:Object.fromEntries(Object.values(state.countries).map(country=>[country.id,{progress:country.progress,periods:country.period.history}])),events:state.events}})}var FocusIntegration=class{constructor(read,changed=()=>{}){this.read=read;this.changed=changed}registration=null;consumed=null;sourceSignal;owner=null;epoch=0;pendingRequest="";sourceKey="";seenRequests=new Set;disposed=!1;sourceCache=null;current(){return structuredClone(this.registration??this.consumed)}readSource(messageId){let cache=this.sourceCache;return cache?(cache.has(messageId)||cache.set(messageId,integrationSource(this.read(messageId))),structuredClone(cache.get(messageId))):integrationSource(this.read(messageId))}cached(check2){if(this.sourceCache)return check2();this.sourceCache=new Map;try{return check2()}finally{this.sourceCache=null}}consume(nonce){this.registration?.nonce===nonce&&(this.consumed=this.registration,this.registration=null)}retry(nonce){return this.consumed?.nonce!==nonce||this.owner||this.disposed?null:this.validate(this.consumed)}invalidate(reason="request_expired"){this.epoch++,this.registration=null,this.consumed=null,this.sourceSignal=void 0,this.pendingRequest="",this.changed(reason)}dispose(){this.disposed=!0,this.invalidate(),this.owner=null,this.seenRequests.clear()}lookup(nonce){let registered=this.registration;return this.disposed||!registered||registered.nonce!==nonce?null:this.validate(registered)}validate(registered){let source=this.readSource(registered.messageId);if("status"in source&&source.reason==="mvu_busy")return null;let{nonce:_nonce,requestId:_requestId,registeredAt:_at,world:_world,...expected}=registered;return this.sourceSignal?.aborted||"status"in source||!sameData(source,expected)?(this.invalidate(),null):structuredClone(registered)}beginUpdate(mode){if(this.disposed)return{status:"unavailable",reason:"disposed"};if(this.owner)return{status:"unavailable",reason:"update_busy"};let registered=this.registration&&this.lookup(this.registration.nonce);return mode==="scheduled"&&registered?{status:"waiting",nonce:registered.nonce}:(this.invalidate("update_started"),this.owner=Symbol("focus-update"),{status:"acquired",token:this.owner})}endUpdate(token){this.owner===token&&(this.owner=null)}async prepare(messageId,options={},writes=Promise.resolve()){if(this.disposed)return unavailable("disposed");if(options.mode!=="request")return unavailable("preview");let id=typeof options.requestId=="string"?options.requestId.trim():"";if(!id)return unavailable("invalid_request");if(this.owner)return unavailable("update_busy");let input2=this.read(messageId),signal="signal"in input2?input2.signal:void 0,initial=integrationSource(input2);if("status"in initial)return initial;let key=JSON.stringify([initial.chatId,initial.messageId,initial.swipeId]);key!==this.sourceKey&&(this.invalidate(),this.sourceKey=key,this.seenRequests.clear());let registered=this.registration&&this.lookup(this.registration.nonce);if(registered?.requestId===id)return payload(registered);if(this.pendingRequest!==id){if(this.seenRequests.has(id))return unavailable("request_expired");this.invalidate(),this.pendingRequest=id,this.seenRequests.add(id)}let epoch=this.epoch;if(await writes,this.disposed)return unavailable("disposed");if(this.owner)return unavailable("update_busy");if(epoch!==this.epoch)return unavailable("request_expired");let latestInput=this.read(messageId),current=integrationSource(latestInput);if("status"in current)return this.invalidate(),current;if(signal?.aborted||!sameData(initial,current))return this.invalidate(),unavailable("source_changed");if(this.registration?.requestId===id)return payload(this.registration);let next={...current,nonce:requestId("focus"),requestId:id,registeredAt:Date.now(),world:"world"in latestInput?structuredClone(latestInput.world):void 0},result=payload(next);return this.registration=next,this.sourceSignal=signal,this.pendingRequest="",this.changed(),result}};var FOCUS_WORLD="阿斯塔利亚",WORLD_FAMILY="世界状态摘要@world",TaskSchema=external_exports.object({id:external_exports.string(),syncAsReplicaFamily:external_exports.boolean().optional(),replicaFamilySpec:external_exports.string().optional(),replicaFamilyRootId:external_exports.string().optional(),replicaFamilyAttrValue:external_exports.string().optional()}),ResultSchema=external_exports.object({taskId:external_exports.string(),success:external_exports.boolean(),skipped:external_exports.boolean().optional(),skipReason:external_exports.string().optional(),extractedTags:external_exports.record(external_exports.string(),external_exports.string()).optional()}),RunStatusSchema=external_exports.object({messageId:external_exports.number(),at:external_exports.number(),taskResults:external_exports.array(ResultSchema)});function worldMember(settings){let parsed=external_exports.object({tasks:external_exports.array(TaskSchema)}).safeParse(settings);if(!parsed.success)return null;let roots=parsed.data.tasks.filter(task=>task.syncAsReplicaFamily&&task.replicaFamilySpec===WORLD_FAMILY&&!task.replicaFamilyRootId);if(roots.length!==1)return null;let members2=parsed.data.tasks.filter(task=>task.replicaFamilyRootId===roots[0].id&&task.replicaFamilyAttrValue===FOCUS_WORLD);return members2.length===1?{taskId:members2[0].id,rootId:roots[0].id}:null}function worldFingerprint(value){if(value===void 0)return null;let canonical=item=>Array.isArray(item)?item.map(canonical):item&&typeof item=="object"?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a.localeCompare(b)).map(([key,entry])=>[key,canonical(entry)])):item,text2=JSON.stringify(canonical(value)),hash2=2166136261,second=5381;for(let i=0;i<text2.length;i++)hash2=Math.imul(hash2^text2.charCodeAt(i),16777619),second=Math.imul(second,33)^text2.charCodeAt(i);return`${text2.length}:${hash2>>>0}:${second>>>0}`}function parseWorldProposalEnvelope(raw){let text2=([...raw.matchAll(/<国策提案\s*>([\s\S]*?)<\/国策提案\s*>/g)].at(-1)?.[1]??raw).trim();text2=text2.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();let value;try{value=JSON.parse(text2)}catch{value=JSON.parse(JSON.parse(`"${text2.replace(/\r/g,"\\r").replace(/\n/g,"\\n")}"`))}return typeof value=="string"&&(value=JSON.parse(value)),external_exports.object({nonce:external_exports.string().trim().min(1),proposal:external_exports.unknown()}).parse(value)}function parseWorldProposal(raw){let envelope=parseWorldProposalEnvelope(raw);return{nonce:envelope.nonce,proposal:ProposalSchema.parse(repairReply(envelope.proposal,"update"))}}function worldPath(path){return typeof path=="string"&&[`/${FOCUS_WORLD}`,`/世界/${FOCUS_WORLD}`].some(root=>path===root||path.startsWith(`${root}/`))}function operationPath(op){if(!op||typeof op!="object")return null;let data=op;return[data.path,data.from,data.to].find(worldPath)??null}function worldEvidence(observation,registration,result){let log=external_exports.object({messageId:external_exports.number(),timestamp:external_exports.number(),ops:external_exports.array(external_exports.unknown()),issues:external_exports.array(external_exports.object({kind:external_exports.string(),message:external_exports.string(),op:external_exports.unknown().optional()})),failedFragments:external_exports.array(external_exports.object({index:external_exports.number(),message:external_exports.string(),snippet:external_exports.string()}))}).safeParse(observation.patchLog),patch={known:!1,operationCount:null,issues:[],failedFragments:[],unassigned:0};if(log.success&&log.data.messageId===registration.messageId&&log.data.timestamp>=registration.registeredAt){patch.known=!0,patch.operationCount=log.data.ops.filter(op=>operationPath(op)).length;for(let issue2 of log.data.issues){let path=operationPath(issue2.op);path?patch.issues.push({kind:issue2.kind,message:issue2.message.slice(0,500),path}):issue2.op||patch.unassigned++}for(let fragment of log.data.failedFragments)try{let op=JSON.parse(fragment.snippet);operationPath(op)?patch.failedFragments.push({index:fragment.index,message:fragment.message.slice(0,500)}):patch.unassigned++}catch{patch.unassigned++}}return{...observation.member,at:observation.run.at,success:result.success,skipped:result.skipped===!0,skipReason:result.skipReason?.slice(0,500),changed:registration.world?.fingerprint!=null&&observation.fingerprint!=null?registration.world.fingerprint!==observation.fingerprint:null,patch}}var PREDICTION_WAIT_MS=1e4,units={minute:6e4,hour:36e5,day:864e5,week:6048e5,month:31*864e5,year:372*864e5},ScheduleSchema=external_exports.object({mode:external_exports.enum(["round","time"]).optional(),timeInterval:external_exports.object({enabled:external_exports.boolean().optional(),value:external_exports.number().positive(),unit:external_exports.enum(["minute","hour","day","week","month","year"]),timeSource:external_exports.unknown()})});function calendarTime(raw){if(typeof raw!="string")return null;let text2=raw.split(" @")[0].trim(),match=/^复兴纪元(\d{1,6})年-(\d{1,2})月-(\d{1,2})日-星期[一二三四五六日天]-(\d{1,2}):(\d{2})$/.exec(text2);if(!match)return null;let[,year,month,day,hour,minute]=match.map(Number);return month<1||month>12||day<1||day>31||hour>23||minute>59?null:(((year*372+(month-1)*31+day-1)*24+hour)*60+minute)*6e4}function predictWorldSchedule(settings,chatKey,content){let member=worldMember(settings);if(!member)return{status:"unknown",reason:"member_unknown"};let root=settings,task=root.tasks.find(entry=>entry.id===member.taskId);if(root.enabled===!1||task.enabled===!1)return{status:"not_due",reason:"disabled",member};let parsed=ScheduleSchema.safeParse(task.schedule);if(task.enabled!==!0||!parsed.success||(parsed.data.mode??(parsed.data.timeInterval.enabled?"time":"round"))!=="time")return{status:"unknown",reason:"unsupported_schedule",member};let interval=parsed.data.timeInterval;if(!external_exports.object({type:external_exports.literal("message_tag"),scope:external_exports.literal("current_ai"),tagNames:external_exports.tuple([external_exports.literal("tp")])}).safeParse(interval.timeSource).success)return{status:"unknown",reason:"unsupported_source",member};let raw=[...content.matchAll(/<tp\s*>([\s\S]*?)<\/tp\s*>/g)].at(-1)?.[1],now=calendarTime(raw);if(now===null)return{status:"unknown",reason:"invalid_time",member};let state=root.scheduleState?.[task.id];if(state===void 0)return{status:"due",reason:"first_run",member};let anchor2=external_exports.object({lastRunChatKey:external_exports.string().optional(),lastRunGameTimeRaw:external_exports.string().optional(),lastRunGameTimeMs:external_exports.number().optional()}).safeParse(state);if(!anchor2.success)return{status:"unknown",reason:"unknown_anchor",member};if(chatKey.trim()&&anchor2.data.lastRunChatKey?.trim()!==chatKey.trim())return{status:"due",reason:"different_chat",member};let previous2=calendarTime(anchor2.data.lastRunGameTimeRaw);if(previous2===null)return anchor2.data.lastRunGameTimeRaw||anchor2.data.lastRunGameTimeMs!==void 0?{status:"unknown",reason:"unknown_anchor",member}:{status:"due",reason:"first_run",member};let elapsed2=now-previous2;if(elapsed2<0)return{status:"due",reason:"time_regressed",member};let due=elapsed2>=interval.value*units[interval.unit];return{status:due?"due":"not_due",reason:due?"interval_due":"interval_pending",member}}function taskData(snapshot,full){return{now:snapshot.day,state:workingState(snapshot.state,full),context:snapshot.context}}function scheduledDue(job,snapshot,kind){let last=snapshot.state.schedules[kind];return job.schedule==="reply"?last?.turn!==snapshot.turn:job.schedule==="rounds"?!last||snapshot.turn-last.turn>=job.interval:job.schedule==="days"?!last||snapshot.day-last.day>=job.interval:!1}var ProposalBlocked=class extends Error{constructor(reason,detail){super(reason);this.reason=reason;this.detail=detail}},FocusController=class{constructor(platform){this.platform=platform;this.config=ConfigSchema.parse(platform.loadConfig()),this.integration=new FocusIntegration(messageId=>platform.readIntegration?.(messageId,this.config)??unavailable("unsupported"),reason=>{let current=this.integration.current(),material=this.repairMaterial??this.review?.repair;(reason==="update_started"||current&&material&&current.nonce!==material.registration.nonce)&&this.invalidateRepair(reason??"request_expired"),this.review&&!this.review.repair&&current?.nonce!==this.review.registration.nonce&&(this.proposalPeriods?.abort(),this.setProposalState({...this.reception,status:"expired",reason:reason??"request_expired"}),this.review=null),this.pollPredictionWait(),this.notify()})}config;integration;state=null;candidates=[];jobs=[];logs=[];error="";pools=new Map;progress=new Map;listeners=new Set;aborters=new Map;runEpoch=0;writes=Promise.resolve();automatic=null;pendingReady=!1;disposed=!1;stops=[];reception={status:"none"};diagnostics=[];review=null;repairMaterial=null;repairStatus=null;repairing=null;repairAborter=null;accepting=null;overwriteTicks=0;worldCache=null;proposalPeriods=null;rollback=null;acceptedCheckpoint=null;coordination={status:"idle"};coordinationEpoch=0;yieldedSource="";waitFloor="";waitedSources=new Set;predictionWait=null;subscribe(callback){return this.listeners.add(callback),()=>this.listeners.delete(callback)}notify(){if(!this.disposed)for(let listener of this.listeners)listener()}async initialize(){let stopTick=this.platform.onIntegrationTick?.(()=>{this.checked(()=>{this.pollPredictionWait(),this.refreshProposal()})});stopTick&&this.stops.push(stopTick);let unbind=this.platform.bindIntegration?.({version:1,prepare:(messageId,options)=>this.integration.prepare(messageId,options,this.writes),lookup:nonce=>this.integration.lookup(nonce)});unbind&&this.stops.push(unbind),this.stops.push(this.platform.onReady(()=>{this.cancelAll(),this.pendingReady=!0,this.automatic||(this.automatic=(async()=>{for(;this.pendingReady&&!this.disposed;){this.pendingReady=!1;try{await this.runScheduled()}catch(error2){this.report(error2)}}})().finally(()=>{this.automatic=null}))})),this.stops.push(this.platform.onChange(()=>{this.repairSourceFailed(new ProposalBlocked("source_changed")),this.dismissRollback(),this.waitFloor="",this.waitedSources.clear(),this.yieldedSource="",this.setCoordination({status:"idle"}),this.integration.invalidate(),this.cancelAll(),this.pendingReady=!1,this.candidates=[],this.repairMaterial=null,this.repairStatus=null,this.review=null,this.reception={status:"none"},this.restoreRepair(),this.refresh()})),await this.refresh(),this.restoreRepair()}dispose(){if(!this.disposed){this.disposed=!0,this.integration.dispose(),this.pendingReady=!1,this.cancelAll();for(let stop of this.stops)stop();this.listeners.clear()}}report(error2){this.error=redactApiError(error2,this.config.apis),this.notify()}async refresh(){if(!this.disposed){try{let snapshot=await this.platform.read(this.config);if(this.disposed)return;this.state=snapshot.state,this.platform.inject(snapshot.state,this.config.newsPrompt),this.error=""}catch(error2){this.state=null,this.report(error2)}this.notify()}}writeState(operation,signal){let epoch=this.runEpoch,save=this.writes.then(async()=>{let checkCancelled=()=>{if(signal?.throwIfAborted(),this.disposed||epoch!==this.runEpoch)throw new DOMException("任务已取消","AbortError")};checkCancelled();let snapshot=await this.platform.read(this.config);checkCancelled();let next=operation(snapshot);return next===null?snapshot.state:(await this.platform.commit(snapshot,next),next)});return this.writes=save.catch(()=>{}),save}async commitUpdate(proposal,source,signal,verifyExternal){if(proposal.until!==source.day)throw new Error("更新终点必须等于来源故事时间");let periods=[];return{state:await this.writeState(current=>{if(source.signal?.throwIfAborted(),verifyExternal?.(),current.state.receipts.includes(proposal.id))return null;let next=this.proposedState("update",current,proposal);next.schedules.update={turn:source.turn,day:source.day};for(let transition of proposal.transitions){let country=next.countries[transition.country];!country.enabled||!country.autoPeriod||country.calibration||periods.push({candidate:{id:country.id,name:country.name,description:country.description,evidence:country.evidence},work:{transition}})}return next},signal??source.signal),periods}}get externalProposal(){return structuredClone(this.reception)}get proposalRepair(){return structuredClone(this.repairStatus)}storeRepair(chatId=this.repairMaterial?.registration.chatId??this.platform.chatId()){try{this.platform.saveProposalRepair?.(this.repairMaterial,chatId)}catch(error2){this.repairStatus?this.repairStatus.storageError=`修复材料仅保留在本次页面：${redactApiError(error2,this.config.apis)}`:this.report(error2)}}restoreRepair(){try{let raw=this.platform.loadProposalRepair?.();if(!raw)return;let material=ProposalRepairSchema.parse(raw);if(material.registration.chatId!==this.platform.chatId())return;this.repairMaterial=material,this.repairStatus={status:"available"};let{chatId,messageId,swipeId,now,nonce}=material.registration;this.setProposalState({status:"rejected",reason:material.reason,detail:material.errors.join(`
-`),source:{chatId,messageId,swipeId,now,nonce},evidence:material.evidence}),this.checkRepairSource(material)}catch(error2){this.repairMaterial?this.repairSourceFailed(error2):this.report(error2)}}invalidateRepair(reason){this.repairAborter?.abort(),(this.review?.repair||this.repairMaterial)&&(this.proposalPeriods?.abort(),this.review?.repair&&(this.review=null),this.setProposalState({...this.reception,status:"expired",reason}));let chatId=this.repairMaterial?.registration.chatId;this.repairMaterial=null,this.repairStatus=null,chatId!==void 0&&this.storeRepair(chatId)}checkRepairSource(material){if(this.disposed)throw new ProposalBlocked("disposed");if(material.expired)throw new ProposalBlocked("request_expired");let{nonce:_nonce,requestId:_requestId,registeredAt:_at,world:_world,...expected}=material.registration,source=this.integration.readSource(expected.messageId);if("status"in source)throw new ProposalBlocked(source.reason);if(!sameData(source,expected))throw new ProposalBlocked("source_changed");let observation=this.readWorld(source.messageId);if(!observation?.run)throw new ProposalBlocked("workflow_unknown");let result=observation.run.taskResults.filter(item=>item.taskId===material.evidence.taskId);if(observation.run.messageId!==source.messageId||result.length!==1||observation.member?.taskId!==material.evidence.taskId||observation.member.rootId!==material.evidence.rootId)throw new ProposalBlocked("source_changed");let evidence=worldEvidence(observation,material.registration,result[0]);if(JSON.stringify({at:observation.run.at,raw:result[0].extractedTags?.国策提案,evidence,fingerprint:observation.fingerprint})!==material.evidenceKey||!sameData(observation.world,material.world))throw new ProposalBlocked("source_changed")}repairSourceFailed(error2){if(!this.repairMaterial&&!this.review?.repair)return;let reason=error2 instanceof ProposalBlocked?error2.reason:"read_failed";["mvu_busy","workflow_unknown","read_failed"].includes(reason)||(this.repairAborter?.abort(),this.repairStatus&&(this.repairStatus={...this.repairStatus,status:"expired",error:"修复来源已改变，请使用当前楼层重新更新局势。"}),this.repairMaterial&&(this.repairMaterial.expired=!0,this.storeRepair()),this.review=null,this.setProposalState({...this.reception,status:"expired",reason}))}get proposalDiagnostics(){return structuredClone(this.diagnostics)}clearProposalDiagnostics(){this.diagnostics=[],this.notify()}setProposalState(state){sameData(this.reception,state)||(this.reception=structuredClone(state),this.diagnostics.unshift({at:Date.now(),status:state.status,reason:state.reason,detail:state.detail,source:structuredClone(state.source),proposalId:state.proposal?.id,evidence:structuredClone(state.evidence)}),this.diagnostics=this.diagnostics.slice(0,60),this.notify())}proposalCandidate(registration){let source=this.integration.readSource(registration.messageId);if("status"in source)throw new ProposalBlocked(source.reason);let observation=this.readWorld(registration.messageId);if(!observation)throw new ProposalBlocked("workflow_unknown");let{world}=registration;if(!world||!observation.member||world.taskId!==observation.member.taskId||world.rootId!==observation.member.rootId)throw new ProposalBlocked("member_mismatch");let run=observation.run;if(!run||run.messageId!==registration.messageId||run.at<registration.registeredAt)throw new ProposalBlocked("waiting_workflow");let results=run.taskResults.filter(result2=>result2.taskId===world.taskId);if(results.length!==1)throw new ProposalBlocked("waiting_workflow");let result=results[0],evidence=worldEvidence(observation,registration,result);if(this.reception.evidence=structuredClone(evidence),result.skipped)throw new ProposalBlocked("world_skipped");if(!result.success)throw new ProposalBlocked("world_failed");if(evidence.patch.issues.some(issue2=>issue2.kind!=="heal")||evidence.patch.failedFragments.length)throw new ProposalBlocked("world_patch_failed");let raw=result.extractedTags?.国策提案;if(!raw?.trim())throw new ProposalBlocked("missing_proposal");let evidenceKey=JSON.stringify({at:run.at,raw,evidence,fingerprint:observation.fingerprint}),failed=(reason,detail)=>{let envelope;try{envelope=parseWorldProposalEnvelope(raw)}catch{}if(envelope&&envelope.nonce!==registration.nonce)throw new ProposalBlocked("nonce_mismatch");let originalId=envelope?.proposal?.id;throw typeof originalId=="string"&&registration.state.receipts.includes(originalId)?new ProposalBlocked("preview_changed","原提案已有保存记录，不得以新的修复 ID 重复套用"):(this.repairMaterial?.evidenceKey!==evidenceKey&&(this.repairMaterial=structuredClone({version:1,id:requestId("repair-source"),registration,reason,raw,errors:[detail],world:observation.world,evidence,evidenceKey}),this.repairStatus={status:"available"},this.storeRepair()),new ProposalBlocked(reason,detail))},parsed;try{parsed=parseWorldProposal(raw)}catch(error2){return failed("invalid_proposal",error2 instanceof Error?error2.message:String(error2))}if(parsed.nonce!==registration.nonce)throw new ProposalBlocked("nonce_mismatch");if(parsed.proposal.until!==registration.now)return failed("until_mismatch",`提案终点 ${parsed.proposal.until} 与来源时间 ${registration.now} 不一致`);let snapshot={identity:"",messageId:registration.messageId,day:registration.now,turn:0,state:source.state,context:{}},preview;try{preview=this.proposedState("update",snapshot,parsed.proposal)}catch(error2){return failed("invalid_rules",error2 instanceof Error?error2.message:String(error2))}return{registration,proposal:parsed.proposal,preview,evidence,evidenceKey}}blockProposal(reason,detail){let waiting=["waiting_workflow","mvu_busy","update_busy"].includes(reason),expired=["source_changed","not_latest","not_assistant","request_expired","preview_changed","invalid_time"].includes(reason),unavailable2=["workflow_unknown","missing_proposal","invalid_proposal","read_failed","mvu_unavailable"].includes(reason),state={...this.reception,status:waiting?"waiting":expired?"expired":unavailable2?"unavailable":"rejected",reason,detail},unpaired=["workflow_unknown","nonce_mismatch","missing_proposal","invalid_proposal","world_failed","world_skipped","world_patch_failed"].includes(reason);!waiting&&!unpaired&&(this.proposalPeriods?.abort(),this.review=null,this.integration.invalidate()),this.setProposalState(state)}refreshProposal(){this.checked(()=>this.checkProposal())}checked(check2){if(this.worldCache)return check2();this.worldCache=new Map;try{return this.integration.cached(check2)}finally{this.worldCache=null}}readWorld(messageId){let cache=this.worldCache;return cache?(cache.has(messageId)||cache.set(messageId,this.platform.readWorldProposal?.(messageId)??null),cache.get(messageId)):this.platform.readWorldProposal?.(messageId)}checkProposal(){if(this.disposed||this.accepting)return;if(this.observeRollback(),this.repairMaterial&&this.repairStatus?.status!=="expired")try{this.checkRepairSource(this.repairMaterial)}catch(error2){this.repairSourceFailed(error2);return}if(this.repairing)return;if(this.review?.repair&&!["accepted","overwritten"].includes(this.reception.status)){this.setProposalState({...this.reception,status:"pending",reason:void 0,detail:void 0});return}if(this.reception.status==="accepted"&&this.overwriteTicks<=0)return;let registration=this.review?.repair?this.review.registration:this.integration.current();if(!registration)return;if(this.reception.status==="accepted"){if(this.overwriteTicks<=0||!this.review)return;let source2=this.integration.readSource(registration.messageId);if("status"in source2){source2.reason!=="mvu_busy"&&this.blockProposal(source2.reason);return}this.overwriteTicks--,source2.chatId!==registration.chatId||source2.swipeId!==registration.swipeId||source2.now!==registration.now?this.blockProposal("source_changed"):source2.state.receipts.includes(this.review.proposal.id)||(this.proposalPeriods?.abort(),sameData(source2.state,registration.state)?this.setProposalState({...this.reception,status:"overwritten",reason:"overwritten"}):this.blockProposal("preview_changed"));return}if(this.reception.status==="overwritten"){let current=this.integration.readSource(registration.messageId);if("status"in current&&current.reason==="mvu_busy")return;if(this.review?.repair)try{this.checkRepairSource(this.review.repair)}catch(error2){this.repairSourceFailed(error2)}else this.integration.retry(registration.nonce)||this.blockProposal("preview_changed");return}let source={chatId:registration.chatId,messageId:registration.messageId,swipeId:registration.swipeId,now:registration.now,nonce:registration.nonce};this.reception.source?.nonce!==registration.nonce&&this.setProposalState({status:"waiting",reason:"waiting_workflow",source});try{let input2=this.integration.readSource(registration.messageId);if("status"in input2)throw new ProposalBlocked(input2.reason);if(!this.integration.lookup(registration.nonce))throw new ProposalBlocked("source_changed");let candidate=this.proposalCandidate(registration);if(this.review&&candidate.evidenceKey!==this.review.evidenceKey)throw new ProposalBlocked("preview_changed");this.review=candidate,this.setProposalState({status:"pending",source,proposal:candidate.proposal,preview:candidate.preview,evidence:candidate.evidence})}catch(error2){this.blockProposal(error2 instanceof ProposalBlocked?error2.reason:"read_failed",error2 instanceof ProposalBlocked?error2.detail:void 0)}}reject(){this.accepting||!["pending","waiting","overwritten"].includes(this.reception.status)||(this.review=null,this.invalidateRepair("user_rejected"),this.integration.invalidate(),this.setProposalState({...this.reception,status:"rejected",reason:"user_rejected"}))}repairProposal(){if(this.repairing)return this.repairing;let material=this.repairMaterial;if(!material||this.disposed||this.accepting||this.repairStatus?.status==="expired"||["pending","accepted","overwritten"].includes(this.reception.status)||this.jobs.some(job=>job.kind==="update"&&["queued","running"].includes(job.state)))return Promise.resolve(!1);this.integration.invalidate();let id=requestId("repair"),aborter=new AbortController;this.repairAborter=aborter;let status={id,kind:"repair",label:"修复世界提案",state:"running",message:"修复世界提案",time:new Date().toLocaleTimeString(),started:Date.now()};return this.jobs.unshift(status),this.jobs=this.jobs.slice(0,40),this.aborters.set(id,aborter),this.repairStatus={...this.repairStatus,status:"running",error:void 0},this.notify(),this.repairing=(async()=>{let sourceSignal,cancel=()=>aborter.abort();try{await this.writes,aborter.signal.throwIfAborted(),this.checkRepairSource(material);let snapshot=await this.platform.read(this.config,"update");sourceSignal=snapshot.signal,sourceSignal?.addEventListener("abort",cancel,{once:!0}),sourceSignal?.throwIfAborted(),this.checkRepairSource(material);let context=snapshot.context&&typeof snapshot.context=="object"?{...snapshot.context}:{};delete context.world;let proposal=await this.request("update",{job:"update",stage:"repair",now:material.registration.now,state:workingState(material.registration.state,!0),context,world:material.world??null,failed:{raw:material.raw,errors:material.errors},schema:external_exports.toJSONSchema(ProposalSchema.omit({id:!0,until:!0}),{io:"input"})},ProposalSchema,aborter.signal,status,value=>{this.checkRepairSource(material),this.proposedState("update",snapshot,value)},snapshot.prompts,value=>value&&typeof value=="object"&&!Array.isArray(value)?{...value,id,until:material.registration.now}:value);aborter.signal.throwIfAborted(),this.checkRepairSource(material);let preview=this.proposedState("update",snapshot,proposal);this.review={registration:material.registration,proposal,preview,evidence:material.evidence,evidenceKey:material.evidenceKey,repair:material},this.repairStatus={...this.repairStatus,status:"available"},status.state="success",status.message="修复已通过验证，等待审阅与接收";let{chatId,messageId,swipeId,now,nonce}=material.registration;return this.setProposalState({status:"pending",origin:"repair",source:{chatId,messageId,swipeId,now,nonce},proposal,preview,evidence:material.evidence}),!0}catch(error2){return status.state=aborter.signal.aborted?"cancelled":"failed",status.message=redactApiError(error2,this.config.apis),this.repairMaterial===material&&(this.repairStatus={...this.repairStatus,status:"failed",error:status.message},this.repairSourceFailed(error2)),!1}finally{sourceSignal?.removeEventListener("abort",cancel),this.aborters.delete(id),status.finished=Date.now(),this.repairAborter=null,this.notify()}})().finally(()=>{this.repairing=null}),this.repairing}accept(){if(this.accepting)return this.accepting;if(!this.review||!["pending","overwritten"].includes(this.reception.status))return Promise.resolve(!1);let review=this.review,retry=this.reception.status==="overwritten",verify=()=>{if(this.review!==review)throw new ProposalBlocked("request_expired");if(review.repair){this.checkRepairSource(review.repair);let preview=this.proposedState("update",{identity:"",messageId:review.registration.messageId,day:review.registration.now,turn:0,state:review.registration.state,context:{}},review.proposal);if(!sameData(preview,review.preview))throw new ProposalBlocked("preview_changed");return}let source=this.integration.readSource(review.registration.messageId);if("status"in source)throw new ProposalBlocked(source.reason);let registered=retry?this.integration.retry(review.registration.nonce):this.integration.lookup(review.registration.nonce);if(!registered)throw new ProposalBlocked("preview_changed");let candidate=this.proposalCandidate(registered);if(candidate.evidenceKey!==review.evidenceKey||!sameData(candidate.preview,review.preview))throw new ProposalBlocked("preview_changed")};return this.accepting=(async()=>{try{verify();let snapshot=await this.platform.read(this.config);verify();let committed=await this.commitUpdate(review.proposal,snapshot,snapshot.signal,verify);if(!review.repair&&this.integration.current()?.nonce!==review.registration.nonce)throw new ProposalBlocked("request_expired");review.repair||this.integration.consume(review.registration.nonce),this.repairMaterial=null,this.repairStatus=null,this.storeRepair(),this.acceptedCheckpoint=review.registration.state.receipts.includes(review.proposal.id)?null:{source:{chatId:review.registration.chatId,messageId:review.registration.messageId,swipeId:review.registration.swipeId},proposalId:review.proposal.id,before:worldFingerprint(review.registration.state)},this.rollback=null,this.coordination.status==="proposal_wait"&&this.setCoordination({...this.coordination,status:"idle"}),this.state=committed.state,this.overwriteTicks=2,this.setProposalState({...this.reception,status:"accepted",reason:void 0}),this.proposalPeriods?.abort();let periods=new AbortController;this.proposalPeriods=periods;for(let period of committed.periods)this.run("generate",period.candidate,period.work,{signal:periods.signal,receipt:review.proposal.id});return!0}catch(error2){if(this.review!==review)return!1;review.repair&&this.repairSourceFailed(error2);let reason=error2 instanceof ProposalBlocked?error2.reason:"save_failed";return retry&&["mvu_busy","workflow_unknown","waiting_workflow"].includes(reason)?this.setProposalState({...this.reception,status:"overwritten",reason}):this.blockProposal(reason,error2 instanceof ProposalBlocked?error2.detail:void 0),!1}})().finally(()=>{this.accepting=null}),this.accepting}async mutate(operation,changesTimeline=!1){this.disposed||(await this.writeState(snapshot=>{if(changesTimeline&&Object.values(snapshot.state.countries).some(c=>c.enabled&&!c.calibration&&c.cursor!==snapshot.day))throw new Error("故事时间已前进，请先完成「更新局势」，再开始、暂停或交接国策；避免把新操作倒填至过去。");return operation(snapshot.state)}),await this.refresh())}saveSettings(config2){let parsed=ConfigSchema.parse(config2);parsed.apis=parsed.apis.map(validateApi);let names=new Set(parsed.apis.map(a=>a.name));if(names.size!==parsed.apis.length)throw new Error("API 名称不可重复");for(let job of Object.values(parsed.jobs))if(![job.api,...job.fallback].every(name=>!name||names.has(name)))throw new Error("任务引用不存在的 API");this.platform.saveConfig(parsed),this.integration.invalidate(),this.cancelAll(),this.config=parsed,this.pools.clear(),parsed.runLog||(this.logs=[]),this.state&&this.platform.inject(this.state,parsed.newsPrompt),this.notify()}cancel(id){this.aborters.get(id)?.abort()}cancelAll(){this.coordinationEpoch++,this.finishPredictionWait(!1,"cancelled"),this.runEpoch++,this.progress.clear();for(let aborter of this.aborters.values())aborter.abort()}async runScheduled(){let epoch=this.runEpoch,coordinationEpoch=this.coordinationEpoch;for(let kind of["identify","update","reshape"]){if(this.disposed||epoch!==this.runEpoch)return;let job=this.config.jobs[kind];if(job.schedule==="manual")continue;let snapshot=await this.platform.read(this.config);if(this.disposed||epoch!==this.runEpoch)return;scheduledDue(job,snapshot,kind)&&(kind==="identify"||Object.values(snapshot.state.countries).some(c=>c.enabled))&&(kind==="update"?await this.scheduledUpdate(snapshot,epoch,coordinationEpoch):await this.run(kind))}}get rollbackNotice(){return structuredClone(this.rollback)}dismissRollback(){this.rollback=null,this.acceptedCheckpoint=null,this.notify()}observeRollback(){let checkpoint=this.acceptedCheckpoint;if(!checkpoint)return;let source=this.integration.readSource(checkpoint.source.messageId);if("status"in source){(source.reason==="not_latest"||source.reason==="not_assistant")&&this.dismissRollback();return}let identity={chatId:source.chatId,messageId:source.messageId,swipeId:source.swipeId};if(!sameData(identity,checkpoint.source)){this.dismissRollback();return}if(this.rollback)return;let receiptMissing=!source.state.receipts.includes(checkpoint.proposalId);if(!receiptMissing)return;let returnedToBefore=worldFingerprint(source.state)===checkpoint.before;(receiptMissing||returnedToBefore)&&(this.rollback={...identity,proposalId:checkpoint.proposalId,detectedAt:Date.now(),receiptMissing,returnedToBefore},this.notify())}get scheduleCoordination(){return structuredClone(this.coordination)}scheduleIdentity(source){return JSON.stringify([source.chatId,source.messageId,source.swipeId])}setCoordination(state){this.coordination=state,this.notify()}finishPredictionWait(proceed,reason){let wait=this.predictionWait;wait&&(clearTimeout(wait.timer),this.predictionWait=null,this.setCoordination({...this.coordination,status:proceed?"idle":"cancelled",reason}),wait.finish(proceed))}pollPredictionWait(){let currentSource=this.platform.readScheduleSource?.();currentSource&&this.coordination.source&&this.scheduleIdentity(currentSource)!==this.scheduleIdentity({...this.coordination.source,content:""})&&(this.yieldedSource="",this.finishPredictionWait(!1,"source_changed"),this.setCoordination({status:"idle"}));let wait=this.predictionWait;if(!wait)return;if(!sameData(currentSource,wait.source)){this.finishPredictionWait(!1,"source_changed");return}let registration=this.integration.current();if(registration&&this.integration.lookup(registration.nonce)){this.finishPredictionWait(!0,"nonce");return}let run=this.readWorld(wait.source.messageId)?.run;if(run&&run.messageId===wait.source.messageId&&run.at>=wait.startedAt&&run.at>wait.previousAt){let result=run.taskResults.find(item=>item.taskId===wait.taskId);result&&(result.skipped||!result.extractedTags?.国策提案?.trim())&&this.finishPredictionWait(!0,"result")}}async scheduledUpdate(snapshot,epoch,coordinationEpoch){if(this.predictionWait||coordinationEpoch!==this.coordinationEpoch)return;let observed=this.platform.readScheduleSource?.();if(this.platform.readScheduleSource&&(!observed||observed.messageId!==snapshot.messageId)){this.setCoordination({status:"cancelled",reason:"source_changed"});return}let source=observed??{chatId:this.platform.chatId(),messageId:snapshot.messageId,swipeId:0,content:""},floor=this.scheduleIdentity(source);this.waitFloor!==floor&&(this.waitFloor=floor,this.waitedSources.clear(),this.yieldedSource="");let yieldToProposal=()=>{let registration=this.integration.current();if(registration&&this.integration.lookup(registration.nonce)||this.repairMaterial&&this.repairStatus?.status!=="expired"||this.yieldedSource===floor){this.yieldedSource=floor;let{content:_content2,...identity2}=source;return this.setCoordination({status:"proposal_wait",source:identity2,reason:"nonce"}),this.refreshProposal(),!0}return!1};if(yieldToProposal())return;let prediction=this.platform.predictWorldSchedule?.(source)??{status:"unknown",reason:"unavailable"},key=JSON.stringify([source,snapshot.day,worldFingerprint(snapshot.state)]),{content:_content,...identity}=source;if(this.setCoordination({status:"idle",source:identity,prediction}),prediction.status==="due"&&prediction.member&&this.platform.readScheduleSource&&!this.waitedSources.has(key)){this.waitedSources.add(key);let startedAt=Date.now(),previousAt=this.platform.readWorldProposal?.(source.messageId)?.run?.at??-1;if(!await new Promise(finish=>{let timer=setTimeout(()=>{this.pollPredictionWait(),this.finishPredictionWait(!0,"timeout")},PREDICTION_WAIT_MS);this.predictionWait={source,startedAt,previousAt,taskId:prediction.member.taskId,timer,finish},this.setCoordination({status:"prediction_wait",source:identity,prediction,startedAt,deadline:startedAt+PREDICTION_WAIT_MS})})||this.disposed||epoch!==this.runEpoch||coordinationEpoch!==this.coordinationEpoch||yieldToProposal())return;let current=await this.platform.read(this.config);if(this.disposed||epoch!==this.runEpoch||coordinationEpoch!==this.coordinationEpoch||current.identity!==snapshot.identity||current.day!==snapshot.day||!sameData(this.platform.readScheduleSource(),source)){this.setCoordination({...this.coordination,status:"cancelled",reason:"source_changed"});return}let job=this.config.jobs.update;if(!scheduledDue(job,current,"update")||!Object.values(current.state.countries).some(country=>country.enabled)){this.setCoordination({...this.coordination,status:"idle",reason:"not_due"});return}}await this.runTask("update",void 0,void 0,void 0,"scheduled")}async removeCountry(id){let country=this.state?.countries[id];await this.mutate(state=>removeCountry(state,id));for(let key of[...this.progress.keys()])key.endsWith(`\0${id}`)&&this.progress.delete(key);country&&!this.candidates.some(candidate=>candidate.id===id)&&(this.candidates=[...this.candidates,{id,name:country.name,description:country.description,evidence:country.evidence}]),this.notify()}async importTrees(entries,options){await this.mutate(state=>importTrees(state,entries,options));let ids=new Set(entries.map(entry=>entry.tree.id));this.candidates=this.candidates.filter(candidate=>!ids.has(candidate.id)),this.notify()}drawing=new Map;drawFor(state,id){let taken=[...Object.values(state.countries).filter(country=>country.id!==id&&country.shape).map(country=>signature(country.shape)),...[...this.drawing].filter(([other])=>other!==id).map(([,structure])=>signature(structure))];return drawStructure({large:state.settings.size==="large",taken})}async enable(candidates){await Promise.all(candidates.map(candidate=>this.run("generate",candidate)))}async run(kind,candidate,periodWork,externalPeriod){kind==="update"&&(this.invalidateRepair("update_started"),this.coordinationEpoch++,this.finishPredictionWait(!1,"manual"),this.yieldedSource="",this.setCoordination({...this.coordination,status:"idle",reason:"manual"})),await this.runTask(kind,candidate,periodWork,externalPeriod,"manual")}async runTask(kind,candidate,periodWork,externalPeriod,mode="manual"){if(this.disposed||kind==="update"&&mode==="scheduled"&&this.repairMaterial&&this.repairStatus?.status!=="expired"||this.jobs.some(job=>job.kind===kind&&job.candidate?.id===candidate?.id&&["queued","running"].includes(job.state)&&!this.aborters.get(job.id)?.signal.aborted))return;let access=kind==="update"?this.integration.beginUpdate(mode):void 0;if(access&&access.status!=="acquired"){access.status==="waiting"&&(this.yieldedSource=this.waitFloor,this.setCoordination({...this.coordination,status:"proposal_wait",reason:"nonce"}),this.refreshProposal());return}kind==="update"&&mode==="scheduled"&&this.setCoordination({...this.coordination,status:"running"});let releaseUpdate=()=>{access?.status==="acquired"&&this.integration.endUpdate(access.token)},id=requestId("job"),aborter=new AbortController,cancelPeriod=()=>aborter.abort();externalPeriod?.signal.addEventListener("abort",cancelPeriod,{once:!0}),externalPeriod?.signal.aborted&&aborter.abort(),aborter.signal.addEventListener("abort",releaseUpdate,{once:!0});let status={id,kind,state:"queued",message:"准备任务",time:new Date().toLocaleTimeString(),...candidate?{label:candidate.name,candidate}:{},...periodWork?{periodWork,label:`${candidate?.name} · 换期`}:{}};this.jobs.unshift(status),this.jobs=this.jobs.slice(0,40),this.aborters.set(id,aborter),this.notify();let sourceSignal,cancelSource=()=>aborter.abort(),periods=[];try{aborter.signal.throwIfAborted(),status.state="running",status.started=Date.now(),status.message="正在分析本楼资料",this.notify();let snapshot=await this.platform.read(this.config,kind);if(externalPeriod&&!snapshot.state.receipts.includes(externalPeriod.receipt))throw new Error("外部提案的保存记录已失效");sourceSignal=snapshot.signal,sourceSignal?.addEventListener("abort",cancelSource,{once:!0}),sourceSignal?.aborted&&aborter.abort(),aborter.signal.throwIfAborted(),periodWork&&checkTransition(snapshot.state,periodWork.transition);let structure=kind==="generate"&&candidate?this.drawFor(snapshot.state,candidate.id):void 0;if(structure&&this.drawing.set(candidate.id,structure),kind==="generate"&&!candidate)throw new Error("请先选择要生成的候选国家");let ask=async(stage,data,schema4,validate2,label2,shown)=>(aborter.signal.throwIfAborted(),status.message=label2??(kind==="generate"?"单次生成完整国策树":"分析本楼局势"),this.notify(),this.request(kind,{job:kind,stage,...data,schema:external_exports.toJSONSchema(shown??schema4,{io:"input"})},schema4,aborter.signal,status,validate2,snapshot.prompts)),segmentMax=this.segmentMax(),progressKey=kind==="generate"?[snapshot.identity,snapshot.state.settings.size,candidate.id].join("\0"):"",progress=this.progress.get(progressKey)??{filled:{}};if(kind==="generate"){for(this.progress.delete(progressKey),this.progress.set(progressKey,progress);this.progress.size>8;)this.progress.delete(this.progress.keys().next().value);progress.skeleton&&(status.message=`沿用先前完成的骨架与 ${Object.keys(progress.filled).length} 项内容`,this.notify())}let result=periodWork?await ask("period",{now:snapshot.day,context:snapshot.context,world:Object.values(snapshot.state.countries).filter(country=>country.enabled&&country.id!==candidate.id).map(country=>({id:country.id,name:country.name,agenda:country.agenda||country.analysis,current:country.nodes[country.current]?.name,capabilities:Object.values(country.capabilities).filter(c=>c.active)})),state:workingState({...snapshot.state,countries:{[candidate.id]:snapshot.state.countries[candidate.id]},events:Object.fromEntries(Object.entries(snapshot.state.events).filter(([,event])=>event.countries.includes(candidate.id)))},!0),candidate,transition:periodWork.transition,anchor:periodAnchor(snapshot.state.countries[candidate.id],periodWork.transition.invalidateActive),prefix:`p${snapshot.state.countries[candidate.id].period.number+1}_`,limits:{min:sizeLimits[snapshot.state.settings.size][0],max:sizeLimits[snapshot.state.settings.size][1],days:focusDays,periodDays:periodDays[snapshot.state.settings.pace],...shapeLimits(snapshot.state.settings,structure?.type.key)},...structure?{structure:structureData(structure)}:{},instructions:"生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程序原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。"},PeriodReplySchema,value=>{transitionPeriod(snapshot.state,periodWork.transition,value)},"生成下一期与旧期摘要"):kind==="generate"?await generateCountry(snapshot,candidate,ask,progress,segmentMax,this.config.jobs.generate.retries,structure):await ask(kind,taskData(snapshot,kind==="reshape"),kind==="identify"?CandidatesSchema:ProposalSchema,value=>{this.proposedState(kind,snapshot,value,candidate)});aborter.signal.throwIfAborted();let next;if(kind==="update"){let committed=await this.commitUpdate(ProposalSchema.parse(result),snapshot,aborter.signal);next=committed.state,periods.push(...committed.periods)}else next=await this.writeState(current=>{if(externalPeriod&&!current.state.receipts.includes(externalPeriod.receipt))throw new Error("外部提案的保存记录已失效");let state=periodWork?transitionPeriod(current.state,periodWork.transition,PeriodReplySchema.parse(result)):this.proposedState(kind,current,result,candidate);return structure&&state.countries[candidate.id]&&(state.countries[candidate.id].shape=structure),state.schedules[kind]={turn:snapshot.turn,day:snapshot.day},state},aborter.signal);kind==="identify"&&(this.candidates=candidateKeys(CandidatesSchema.parse(result).countries,next)),kind==="generate"&&this.progress.delete(progressKey),status.state="success",status.message=kind==="identify"?"候选国家已就绪，请勾选启用":"验证通过，已保存至本楼",await this.refresh()}catch(error2){let message=redactApiError(error2,this.config.apis);status.state=aborter.signal.aborted||error2 instanceof Error&&error2.name==="AbortError"?"cancelled":"failed",status.message=status.state==="cancelled"?"已取消，未套用结果":`未提交：${message.slice(0,1500)}`}finally{kind==="update"&&mode==="scheduled"&&this.coordination.status==="running"&&this.setCoordination({...this.coordination,status:"idle"}),externalPeriod?.signal.removeEventListener("abort",cancelPeriod),releaseUpdate(),aborter.signal.removeEventListener("abort",releaseUpdate),sourceSignal?.removeEventListener("abort",cancelSource),status.finished=Date.now(),this.aborters.delete(id),kind==="generate"&&candidate&&this.drawing.delete(candidate.id),this.notify()}!this.disposed&&!aborter.signal.aborted&&await Promise.all(periods.map(period=>this.run("generate",period.candidate,period.work)))}segmentMax(config2=this.config){if(config2.jobs.generate.segmentMax!==void 0)return config2.jobs.generate.segmentMax;let name=config2.jobs.generate.api||currentApiName(config2,this.platform.chatId());return config2.apis.find(api=>api.name===name)?.segmentMax??defaultSegmentMax}messages(kind,prompts,payload2,config2=this.config){let chain=prompts??config2.jobs[kind].prompts.filter(item=>item.enabled||item.kind==="data").map(item=>({...item,content:promptText(item,kind)}));if(payload2.stage==="repair"){let task={id:"task",kind:"task",name:"修复任务指示",role:"system",content:REPAIR_TASK};chain.some(item=>item.kind==="task")?chain=chain.map(item=>item.kind==="task"?task:item):chain=[task,...chain]}let json2=JSON.stringify(payload2);return chain.map(item=>({role:item.role,name:item.name,content:item.kind!=="data"?item.content:item.content.includes(DATA_TOKEN)?item.content.split(DATA_TOKEN).join(json2):`${item.content}
+`),$8:user,$U:persona,$C:character},enabled={$1:!0,$2:settings.managedEntries,$5:settings.summaryIndex,$6:settings.memoryRecallRecentCount>0,$7:!0,$8:settings.includeLatestUser,$U:settings.persona,$C:settings.characterDescription},jsonValues={$1:worldbook,$2:managed,$5:summaryIndex,$6:memory,$7:history,$8:user,$U:persona,$C:character},context={},blocks=[];for(let key of Object.keys(placeholders)){let placement=used.has(key)?"segment":enabled[key]?"json":"off",value=jsonValues[key],empty=Array.isArray(value)?!1:!value;placement==="json"&&(!empty||key==="$1"||key==="$7"||key==="$6")&&(context[contextKeys[key]]=value),blocks.push({name:contextKeys[key],placeholder:key,placement,characters:placement==="segment"?values[key].length:placement==="json"?JSON.stringify(value).length:0})}context.variables=Object.fromEntries(settings.variables.filter(path=>path&&path!=="国策"&&!path.startsWith("国策.")).map(path=>[path,valueAt(input2.variables,path)])),context.requirements=settings.extra,input2.job==="update"&&input2.world!==void 0&&(context.world=structuredClone(input2.world),blocks.push({name:"world（世界任务结果）",placeholder:"",placement:"json",characters:JSON.stringify(context.world).length})),used.size&&(context.segmentSources=[...used].map(key=>contextKeys[key])),blocks.push({name:"variables",placeholder:"",placement:"json",characters:JSON.stringify(context.variables).length},{name:"requirements",placeholder:"",placement:"json",characters:JSON.stringify(settings.extra).length});let prompts=[],segmentReports=[];for(let item of chain){let text2=promptText(item,input2.job),content=item.kind==="data"?text2:(await render(replacePlaceholders(text2,values),"slash_command")).trim();segmentReports.push({name:item.name||"未命名段",role:item.role,kind:item.kind,characters:content.length}),content&&prompts.push({id:item.id,kind:item.kind,name:item.name,role:item.role,content})}let written=new Set(chain.filter(item=>item.kind==="custom"||isModified(item)).map(item=>item.id)),segmentCharacters=prompts.filter(prompt=>prompt.kind!=="data"&&written.has(prompt.id)).reduce((sum,prompt)=>sum+prompt.content.length,0),report={history:historyReport,entries:entryReports,blocks,segments:segmentReports,notes,characters:JSON.stringify(context).length+segmentCharacters,limit:settings.maxInputCharacters};return{context,prompts,report}}function memoryRows(entries,count){if(count<=0)return[];let enabled=entries.filter(entry=>entry.enabled),rows=enabled.flatMap(entry=>{let name=normalizedEntryName(entry.name);if(!memoryRow(name))return[];let code=[...(entry.strategy?.keys??[]).map(String),entry.name].map(value=>/\bAM(\d{4})\b/i.exec(value)?.[1]).find(Boolean);return code?[{entry,code:Number(code)}]:[]}).sort((a,b)=>b.code-a.code||a.entry.uid-b.entry.uid).slice(0,count).sort((a,b)=>a.code-b.code||a.entry.uid-b.entry.uid);if(!rows.length)return[];let before=enabled.find(entry=>/CustomExport-纪要-包裹-上$/.test(normalizedEntryName(entry.name))),after=enabled.find(entry=>/CustomExport-纪要-包裹-下$/.test(normalizedEntryName(entry.name)));return[...before?[before]:[],...rows.map(row=>row.entry),...after?[after]:[]]}function messageCharacters(messages){return messages.reduce((sum,message)=>sum+message.content.length,0)}function assertInputSize(messages,limit){let count=messageCharacters(messages);if(count>limit)throw new InputSizeError(`输入过大：${count.toLocaleString()} 字元，超过上限 ${limit.toLocaleString()}。未呼叫 API；请在「世界书与上下文」预览并调整条目、提取／排除规则、提示词段或上限。字元数不是 Token 数。`)}var RoutePool=class{constructor(limits2){this.limits=limits2}active=new Map;waiters=[];free(route){let cap=this.limits.get(route)??0;return cap<=0||(this.active.get(route)??0)<cap}occupy(route){return this.active.set(route,(this.active.get(route)??0)+1),route}count(route){return this.active.get(route)??0}acquire(routes,signal){signal?.throwIfAborted();let route=routes.find(name=>this.free(name));return route?Promise.resolve(this.occupy(route)):new Promise((resolve,reject)=>{let waiter={routes,resolve:name=>{signal?.removeEventListener("abort",cancel),resolve(name)}},cancel=()=>{this.waiters=this.waiters.filter(item=>item!==waiter),reject(signal?.reason??new Error("任务已取消"))};signal?.addEventListener("abort",cancel,{once:!0}),this.waiters.push(waiter)})}release(route){this.active.set(route,Math.max(0,(this.active.get(route)??0)-1));for(let waiter of[...this.waiters]){let next=waiter.routes.find(name=>this.free(name));next&&(this.waiters=this.waiters.filter(item=>item!==waiter),waiter.resolve(this.occupy(next)))}}};function routeLimits(chain,primary,fallback){let limits2=new Map;return chain.forEach((route,index)=>{limits2.has(route)||limits2.set(route,Math.max(0,Math.floor((index===0?primary:fallback[index-1])??0)))}),limits2}function unavailable(reason){return{version:1,status:"unavailable",reason}}function integrationSource(input2){if("status"in input2)return input2;if(input2.signal?.aborted)return unavailable("source_changed");if(input2.messageId!==input2.lastMessageId)return unavailable("not_latest");if(input2.role!=="assistant")return unavailable("not_assistant");if(input2.extraAnalysis)return unavailable("mvu_busy");if(!input2.data.stat_data)return unavailable("missing_stat_data");let now;try{now=storyDay(valueAt(input2.data.stat_data,input2.timePath))}catch{return unavailable("invalid_time")}let saved=input2.data.国策!==void 0?input2.data.国策:input2.data.stat_data.国策;if(saved===void 0)return unavailable("missing_state");let parsed=StateSchema.safeParse(saved);if(!parsed.success)return unavailable("invalid_state");let state=migrateCountryKeys(parsed.data);return{chatId:input2.chatId,messageId:input2.messageId,swipeId:input2.swipeId,timePath:input2.timePath,now,cursors:Object.fromEntries(Object.values(state.countries).map(country=>[country.id,country.cursor])),state}}function sameData(left,right){if(left===right)return!0;if(!left||!right||typeof left!="object"||typeof right!="object")return!1;let a=Object.entries(left),b=right;return a.length===Object.keys(b).length&&a.every(([key,value])=>Object.hasOwn(b,key)&&sameData(value,b[key]))}function payload(registration){let{state,now,cursors,nonce}=registration,working=workingState(state,!0);delete working.instructions;for(let event of working.events.ongoing)delete event.review;return structuredClone({version:1,status:"ready",nonce,now,cursors,state:working,schema:external_exports.toJSONSchema(ProposalSchema,{io:"input"}),history:{complete:!1,since:null,countries:Object.fromEntries(Object.values(state.countries).map(country=>[country.id,{progress:country.progress,periods:country.period.history}])),events:state.events}})}var FocusIntegration=class{constructor(read,changed=()=>{}){this.read=read;this.changed=changed}registration=null;consumed=null;sourceSignal;owner=null;epoch=0;pendingRequest="";sourceKey="";seenRequests=new Set;disposed=!1;sourceCache=null;current(){return structuredClone(this.registration??this.consumed)}readSource(messageId){let cache=this.sourceCache;return cache?(cache.has(messageId)||cache.set(messageId,integrationSource(this.read(messageId))),structuredClone(cache.get(messageId))):integrationSource(this.read(messageId))}cached(check2){if(this.sourceCache)return check2();this.sourceCache=new Map;try{return check2()}finally{this.sourceCache=null}}consume(nonce){this.registration?.nonce===nonce&&(this.consumed=this.registration,this.registration=null)}retry(nonce){return this.consumed?.nonce!==nonce||this.owner||this.disposed?null:this.validate(this.consumed)}invalidate(reason="request_expired"){this.epoch++,this.registration=null,this.consumed=null,this.sourceSignal=void 0,this.pendingRequest="",this.changed(reason)}dispose(){this.disposed=!0,this.invalidate(),this.owner=null,this.seenRequests.clear()}lookup(nonce){let registered=this.registration;return this.disposed||!registered||registered.nonce!==nonce?null:this.validate(registered)}validate(registered){let source=this.readSource(registered.messageId);if("status"in source&&source.reason==="mvu_busy")return null;let{nonce:_nonce,requestId:_requestId,registeredAt:_at,world:_world,...expected}=registered;return this.sourceSignal?.aborted||"status"in source||!sameData(source,expected)?(this.invalidate(),null):structuredClone(registered)}beginUpdate(mode){if(this.disposed)return{status:"unavailable",reason:"disposed"};if(this.owner)return{status:"unavailable",reason:"update_busy"};let registered=this.registration&&this.lookup(this.registration.nonce);return mode==="scheduled"&&registered?{status:"waiting",nonce:registered.nonce}:(this.invalidate("update_started"),this.owner=Symbol("focus-update"),{status:"acquired",token:this.owner})}endUpdate(token){this.owner===token&&(this.owner=null)}async prepare(messageId,options={},writes=Promise.resolve()){if(this.disposed)return unavailable("disposed");if(options.mode!=="request")return unavailable("preview");let id=typeof options.requestId=="string"?options.requestId.trim():"";if(!id)return unavailable("invalid_request");if(this.owner)return unavailable("update_busy");let input2=this.read(messageId),signal="signal"in input2?input2.signal:void 0,initial=integrationSource(input2);if("status"in initial)return initial;let key=JSON.stringify([initial.chatId,initial.messageId,initial.swipeId]);key!==this.sourceKey&&(this.invalidate(),this.sourceKey=key,this.seenRequests.clear());let registered=this.registration&&this.lookup(this.registration.nonce);if(registered?.requestId===id)return payload(registered);if(this.pendingRequest!==id){if(this.seenRequests.has(id))return unavailable("request_expired");this.invalidate(),this.pendingRequest=id,this.seenRequests.add(id)}let epoch=this.epoch;if(await writes,this.disposed)return unavailable("disposed");if(this.owner)return unavailable("update_busy");if(epoch!==this.epoch)return unavailable("request_expired");let latestInput=this.read(messageId),current=integrationSource(latestInput);if("status"in current)return this.invalidate(),current;if(signal?.aborted||!sameData(initial,current))return this.invalidate(),unavailable("source_changed");if(this.registration?.requestId===id)return payload(this.registration);let next={...current,nonce:requestId("focus"),requestId:id,registeredAt:Date.now(),world:"world"in latestInput?structuredClone(latestInput.world):void 0},result=payload(next);return this.registration=next,this.sourceSignal=signal,this.pendingRequest="",this.changed(),result}};var FOCUS_WORLD="阿斯塔利亚",WORLD_FAMILY="世界状态摘要@world",TaskSchema=external_exports.object({id:external_exports.string(),syncAsReplicaFamily:external_exports.boolean().optional(),replicaFamilySpec:external_exports.string().optional(),replicaFamilyRootId:external_exports.string().optional(),replicaFamilyAttrValue:external_exports.string().optional()}),ResultSchema=external_exports.object({taskId:external_exports.string(),success:external_exports.boolean(),skipped:external_exports.boolean().optional(),skipReason:external_exports.string().optional(),extractedTags:external_exports.record(external_exports.string(),external_exports.string()).optional()}),RunStatusSchema=external_exports.object({messageId:external_exports.number(),at:external_exports.number(),taskResults:external_exports.array(ResultSchema)});function worldMember(settings){let parsed=external_exports.object({tasks:external_exports.array(TaskSchema)}).safeParse(settings);if(!parsed.success)return null;let roots=parsed.data.tasks.filter(task=>task.syncAsReplicaFamily&&task.replicaFamilySpec===WORLD_FAMILY&&!task.replicaFamilyRootId);if(roots.length!==1)return null;let members2=parsed.data.tasks.filter(task=>task.replicaFamilyRootId===roots[0].id&&task.replicaFamilyAttrValue===FOCUS_WORLD);return members2.length===1?{taskId:members2[0].id,rootId:roots[0].id}:null}function worldFingerprint(value){if(value===void 0)return null;let canonical=item=>Array.isArray(item)?item.map(canonical):item&&typeof item=="object"?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a.localeCompare(b)).map(([key,entry])=>[key,canonical(entry)])):item,text2=JSON.stringify(canonical(value)),hash2=2166136261,second=5381;for(let i=0;i<text2.length;i++)hash2=Math.imul(hash2^text2.charCodeAt(i),16777619),second=Math.imul(second,33)^text2.charCodeAt(i);return`${text2.length}:${hash2>>>0}:${second>>>0}`}function parseWorldProposalEnvelope(raw){let text2=([...raw.matchAll(/<国策提案\s*>([\s\S]*?)<\/国策提案\s*>/g)].at(-1)?.[1]??raw).trim();text2=text2.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();let value;try{value=JSON.parse(text2)}catch{value=JSON.parse(JSON.parse(`"${text2.replace(/\r/g,"\\r").replace(/\n/g,"\\n")}"`))}return typeof value=="string"&&(value=JSON.parse(value)),external_exports.object({nonce:external_exports.string().trim().min(1),proposal:external_exports.unknown()}).parse(value)}function parseWorldProposal(raw){let envelope=parseWorldProposalEnvelope(raw);return{nonce:envelope.nonce,proposal:ProposalSchema.parse(repairReply(envelope.proposal,"update"))}}function worldPath(path){return typeof path=="string"&&[`/${FOCUS_WORLD}`,`/世界/${FOCUS_WORLD}`].some(root=>path===root||path.startsWith(`${root}/`))}function operationPath(op){if(!op||typeof op!="object")return null;let data=op;return[data.path,data.from,data.to].find(worldPath)??null}function worldEvidence(observation,registration,result){let log=external_exports.object({messageId:external_exports.number(),timestamp:external_exports.number(),ops:external_exports.array(external_exports.unknown()),issues:external_exports.array(external_exports.object({kind:external_exports.string(),message:external_exports.string(),op:external_exports.unknown().optional()})),failedFragments:external_exports.array(external_exports.object({index:external_exports.number(),message:external_exports.string(),snippet:external_exports.string()}))}).safeParse(observation.patchLog),patch={known:!1,operationCount:null,issues:[],failedFragments:[],unassigned:0};if(log.success&&log.data.messageId===registration.messageId&&log.data.timestamp>=registration.registeredAt){patch.known=!0,patch.operationCount=log.data.ops.filter(op=>operationPath(op)).length;for(let issue2 of log.data.issues){let path=operationPath(issue2.op);path?patch.issues.push({kind:issue2.kind,message:issue2.message.slice(0,500),path}):issue2.op||patch.unassigned++}for(let fragment of log.data.failedFragments)try{let op=JSON.parse(fragment.snippet);operationPath(op)?patch.failedFragments.push({index:fragment.index,message:fragment.message.slice(0,500)}):patch.unassigned++}catch{patch.unassigned++}}return{...observation.member,at:observation.run.at,success:result.success,skipped:result.skipped===!0,skipReason:result.skipReason?.slice(0,500),changed:registration.world?.fingerprint!=null&&observation.fingerprint!=null?registration.world.fingerprint!==observation.fingerprint:null,patch}}var PREDICTION_WAIT_MS=1e4,units={minute:6e4,hour:36e5,day:864e5,week:6048e5,month:31*864e5,year:372*864e5},ScheduleSchema=external_exports.object({mode:external_exports.enum(["round","time"]).optional(),timeInterval:external_exports.object({enabled:external_exports.boolean().optional(),value:external_exports.number().positive(),unit:external_exports.enum(["minute","hour","day","week","month","year"]),timeSource:external_exports.unknown()})});function calendarTime(raw){if(typeof raw!="string")return null;let text2=raw.split(" @")[0].trim(),match=/^复兴纪元(\d{1,6})年-(\d{1,2})月-(\d{1,2})日-星期[一二三四五六日天]-(\d{1,2}):(\d{2})$/.exec(text2);if(!match)return null;let[,year,month,day,hour,minute]=match.map(Number);return month<1||month>12||day<1||day>31||hour>23||minute>59?null:(((year*372+(month-1)*31+day-1)*24+hour)*60+minute)*6e4}function predictWorldSchedule(settings,chatKey,content){let member=worldMember(settings);if(!member)return{status:"unknown",reason:"member_unknown"};let root=settings,task=root.tasks.find(entry=>entry.id===member.taskId);if(root.enabled===!1||task.enabled===!1)return{status:"not_due",reason:"disabled",member};let parsed=ScheduleSchema.safeParse(task.schedule);if(task.enabled!==!0||!parsed.success||(parsed.data.mode??(parsed.data.timeInterval.enabled?"time":"round"))!=="time")return{status:"unknown",reason:"unsupported_schedule",member};let interval=parsed.data.timeInterval;if(!external_exports.object({type:external_exports.literal("message_tag"),scope:external_exports.literal("current_ai"),tagNames:external_exports.tuple([external_exports.literal("tp")])}).safeParse(interval.timeSource).success)return{status:"unknown",reason:"unsupported_source",member};let raw=[...content.matchAll(/<tp\s*>([\s\S]*?)<\/tp\s*>/g)].at(-1)?.[1],now=calendarTime(raw);if(now===null)return{status:"unknown",reason:"invalid_time",member};let state=root.scheduleState?.[task.id];if(state===void 0)return{status:"due",reason:"first_run",member};let anchor2=external_exports.object({lastRunChatKey:external_exports.string().optional(),lastRunGameTimeRaw:external_exports.string().optional(),lastRunGameTimeMs:external_exports.number().optional()}).safeParse(state);if(!anchor2.success)return{status:"unknown",reason:"unknown_anchor",member};if(chatKey.trim()&&anchor2.data.lastRunChatKey?.trim()!==chatKey.trim())return{status:"due",reason:"different_chat",member};let previous2=calendarTime(anchor2.data.lastRunGameTimeRaw);if(previous2===null)return anchor2.data.lastRunGameTimeRaw||anchor2.data.lastRunGameTimeMs!==void 0?{status:"unknown",reason:"unknown_anchor",member}:{status:"due",reason:"first_run",member};let elapsed2=now-previous2;if(elapsed2<0)return{status:"due",reason:"time_regressed",member};let due=elapsed2>=interval.value*units[interval.unit];return{status:due?"due":"not_due",reason:due?"interval_due":"interval_pending",member}}function taskData(snapshot,full){return{now:snapshot.day,state:workingState(snapshot.state,full),context:snapshot.context}}function scheduledDue(job,snapshot,kind){let last=snapshot.state.schedules[kind];return job.schedule==="reply"?last?.turn!==snapshot.turn:job.schedule==="rounds"?!last||snapshot.turn-last.turn>=job.interval:job.schedule==="days"?!last||snapshot.day-last.day>=job.interval:!1}var ProposalBlocked=class extends Error{constructor(reason,detail){super(reason);this.reason=reason;this.detail=detail}},FocusController=class{constructor(platform){this.platform=platform;this.config=ConfigSchema.parse(platform.loadConfig()),this.integration=new FocusIntegration(messageId=>platform.readIntegration?.(messageId,this.config)??unavailable("unsupported"),reason=>{let current=this.integration.current(),material=this.repairMaterial??this.review?.repair;(reason==="update_started"||current&&material&&current.nonce!==material.registration.nonce)&&this.invalidateRepair(reason??"request_expired"),this.review&&!this.review.repair&&current?.nonce!==this.review.registration.nonce&&(this.proposalPeriods?.abort(),this.setProposalState({...this.reception,status:"expired",reason:reason??"request_expired"}),this.review=null),this.pollPredictionWait(),this.notify()})}config;integration;state=null;readOnly=null;candidates=[];jobs=[];logs=[];error="";pools=new Map;progress=new Map;listeners=new Set;aborters=new Map;runEpoch=0;writes=Promise.resolve();automatic=null;pendingReady=!1;disposed=!1;stops=[];reception={status:"none"};diagnostics=[];review=null;repairMaterial=null;repairStatus=null;repairing=null;repairAborter=null;accepting=null;overwriteTicks=0;worldCache=null;proposalPeriods=null;rollback=null;acceptedCheckpoint=null;coordination={status:"idle"};coordinationEpoch=0;yieldedSource="";waitFloor="";waitedSources=new Set;predictionWait=null;subscribe(callback){return this.listeners.add(callback),()=>this.listeners.delete(callback)}notify(){if(!this.disposed)for(let listener of this.listeners)listener()}async initialize(){let stopTick=this.platform.onIntegrationTick?.(()=>{this.checked(()=>{this.pollPredictionWait(),this.refreshProposal()})});stopTick&&this.stops.push(stopTick);let unbind=this.platform.bindIntegration?.({version:1,prepare:(messageId,options)=>this.integration.prepare(messageId,options,this.writes),lookup:nonce=>this.integration.lookup(nonce)});unbind&&this.stops.push(unbind),this.stops.push(this.platform.onReady(()=>{this.cancelAll(),this.readOnly&&this.refresh(),this.pendingReady=!0,this.automatic||(this.automatic=(async()=>{for(;this.pendingReady&&!this.disposed;){this.pendingReady=!1;try{await this.runScheduled()}catch(error2){this.report(error2)}}})().finally(()=>{this.automatic=null}))})),this.stops.push(this.platform.onChange(()=>{this.repairSourceFailed(new ProposalBlocked("source_changed")),this.dismissRollback(),this.waitFloor="",this.waitedSources.clear(),this.yieldedSource="",this.setCoordination({status:"idle"}),this.integration.invalidate(),this.cancelAll(),this.pendingReady=!1,this.candidates=[],this.repairMaterial=null,this.repairStatus=null,this.review=null,this.reception={status:"none"},this.restoreRepair(),this.refresh()})),await this.refresh(),this.restoreRepair()}dispose(){if(!this.disposed){this.disposed=!0,this.integration.dispose(),this.pendingReady=!1,this.cancelAll();for(let stop of this.stops)stop();this.listeners.clear()}}report(error2){this.error=redactApiError(error2,this.config.apis),this.notify()}async refresh(){if(!this.disposed){try{let snapshot=await this.platform.read(this.config);if(this.disposed)return;this.state=snapshot.state,this.readOnly=null,this.platform.inject(snapshot.state,this.config.newsPrompt),this.error=""}catch(error2){let shown=error2 instanceof FloorNotReady?await this.platform.peek?.(this.config).catch(()=>null):null;if(this.disposed)return;shown?(this.state=shown.state,this.readOnly={messageId:shown.messageId,reason:error2 instanceof Error?error2.message:""},this.platform.inject(shown.state,this.config.newsPrompt),this.error=""):(this.state=null,this.readOnly=null,this.report(error2))}this.notify()}}writeState(operation,signal){let epoch=this.runEpoch,save=this.writes.then(async()=>{let checkCancelled=()=>{if(signal?.throwIfAborted(),this.disposed||epoch!==this.runEpoch)throw new DOMException("任务已取消","AbortError")};checkCancelled();let snapshot=await this.platform.read(this.config);checkCancelled();let next=operation(snapshot);return next===null?snapshot.state:(await this.platform.commit(snapshot,next),next)});return this.writes=save.catch(()=>{}),save}async commitUpdate(proposal,source,signal,verifyExternal){if(proposal.until!==source.day)throw new Error("更新终点必须等于来源故事时间");let periods=[];return{state:await this.writeState(current=>{if(source.signal?.throwIfAborted(),verifyExternal?.(),current.state.receipts.includes(proposal.id))return null;let next=this.proposedState("update",current,proposal);next.schedules.update={turn:source.turn,day:source.day};for(let transition of proposal.transitions){let country=next.countries[transition.country];!country.enabled||!country.autoPeriod||country.calibration||periods.push({candidate:{id:country.id,name:country.name,description:country.description,evidence:country.evidence},work:{transition}})}return next},signal??source.signal),periods}}get externalProposal(){return structuredClone(this.reception)}get proposalRepair(){return structuredClone(this.repairStatus)}storeRepair(chatId=this.repairMaterial?.registration.chatId??this.platform.chatId()){try{this.platform.saveProposalRepair?.(this.repairMaterial,chatId)}catch(error2){this.repairStatus?this.repairStatus.storageError=`修复材料仅保留在本次页面：${redactApiError(error2,this.config.apis)}`:this.report(error2)}}restoreRepair(){try{let raw=this.platform.loadProposalRepair?.();if(!raw)return;let material=ProposalRepairSchema.parse(raw);if(material.registration.chatId!==this.platform.chatId())return;this.repairMaterial=material,this.repairStatus={status:"available"};let{chatId,messageId,swipeId,now,nonce}=material.registration;this.setProposalState({status:"rejected",reason:material.reason,detail:material.errors.join(`
+`),source:{chatId,messageId,swipeId,now,nonce},evidence:material.evidence}),this.checkRepairSource(material)}catch(error2){this.repairMaterial?this.repairSourceFailed(error2):this.report(error2)}}invalidateRepair(reason){this.repairAborter?.abort(),(this.review?.repair||this.repairMaterial)&&(this.proposalPeriods?.abort(),this.review?.repair&&(this.review=null),this.setProposalState({...this.reception,status:"expired",reason}));let chatId=this.repairMaterial?.registration.chatId;this.repairMaterial=null,this.repairStatus=null,chatId!==void 0&&this.storeRepair(chatId)}checkRepairSource(material){if(this.disposed)throw new ProposalBlocked("disposed");if(material.expired)throw new ProposalBlocked("request_expired");let{nonce:_nonce,requestId:_requestId,registeredAt:_at,world:_world,...expected}=material.registration,source=this.integration.readSource(expected.messageId);if("status"in source)throw new ProposalBlocked(source.reason);if(!sameData(source,expected))throw new ProposalBlocked("source_changed");let observation=this.readWorld(source.messageId);if(!observation?.run)throw new ProposalBlocked("workflow_unknown");let result=observation.run.taskResults.filter(item=>item.taskId===material.evidence.taskId);if(observation.run.messageId!==source.messageId||result.length!==1||observation.member?.taskId!==material.evidence.taskId||observation.member.rootId!==material.evidence.rootId)throw new ProposalBlocked("source_changed");let evidence=worldEvidence(observation,material.registration,result[0]);if(JSON.stringify({at:observation.run.at,raw:result[0].extractedTags?.国策提案,evidence,fingerprint:observation.fingerprint})!==material.evidenceKey||!sameData(observation.world,material.world))throw new ProposalBlocked("source_changed")}repairSourceFailed(error2){if(!this.repairMaterial&&!this.review?.repair)return;let reason=error2 instanceof ProposalBlocked?error2.reason:"read_failed";["mvu_busy","workflow_unknown","read_failed"].includes(reason)||(this.repairAborter?.abort(),this.repairStatus&&(this.repairStatus={...this.repairStatus,status:"expired",error:"修复来源已改变，请使用当前楼层重新更新局势。"}),this.repairMaterial&&(this.repairMaterial.expired=!0,this.storeRepair()),this.review=null,this.setProposalState({...this.reception,status:"expired",reason}))}get proposalDiagnostics(){return structuredClone(this.diagnostics)}clearProposalDiagnostics(){this.diagnostics=[],this.notify()}setProposalState(state){sameData(this.reception,state)||(this.reception=structuredClone(state),this.diagnostics.unshift({at:Date.now(),status:state.status,reason:state.reason,detail:state.detail,source:structuredClone(state.source),proposalId:state.proposal?.id,evidence:structuredClone(state.evidence)}),this.diagnostics=this.diagnostics.slice(0,60),this.notify())}proposalCandidate(registration){let source=this.integration.readSource(registration.messageId);if("status"in source)throw new ProposalBlocked(source.reason);let observation=this.readWorld(registration.messageId);if(!observation)throw new ProposalBlocked("workflow_unknown");let{world}=registration;if(!world||!observation.member||world.taskId!==observation.member.taskId||world.rootId!==observation.member.rootId)throw new ProposalBlocked("member_mismatch");let run=observation.run;if(!run||run.messageId!==registration.messageId||run.at<registration.registeredAt)throw new ProposalBlocked("waiting_workflow");let results=run.taskResults.filter(result2=>result2.taskId===world.taskId);if(results.length!==1)throw new ProposalBlocked("waiting_workflow");let result=results[0],evidence=worldEvidence(observation,registration,result);if(this.reception.evidence=structuredClone(evidence),result.skipped)throw new ProposalBlocked("world_skipped");if(!result.success)throw new ProposalBlocked("world_failed");if(evidence.patch.issues.some(issue2=>issue2.kind!=="heal")||evidence.patch.failedFragments.length)throw new ProposalBlocked("world_patch_failed");let raw=result.extractedTags?.国策提案;if(!raw?.trim())throw new ProposalBlocked("missing_proposal");let evidenceKey=JSON.stringify({at:run.at,raw,evidence,fingerprint:observation.fingerprint}),failed=(reason,detail)=>{let envelope;try{envelope=parseWorldProposalEnvelope(raw)}catch{}if(envelope&&envelope.nonce!==registration.nonce)throw new ProposalBlocked("nonce_mismatch");let originalId=envelope?.proposal?.id;throw typeof originalId=="string"&&registration.state.receipts.includes(originalId)?new ProposalBlocked("preview_changed","原提案已有保存记录，不得以新的修复 ID 重复套用"):(this.repairMaterial?.evidenceKey!==evidenceKey&&(this.repairMaterial=structuredClone({version:1,id:requestId("repair-source"),registration,reason,raw,errors:[detail],world:observation.world,evidence,evidenceKey}),this.repairStatus={status:"available"},this.storeRepair()),new ProposalBlocked(reason,detail))},parsed;try{parsed=parseWorldProposal(raw)}catch(error2){return failed("invalid_proposal",error2 instanceof Error?error2.message:String(error2))}if(parsed.nonce!==registration.nonce)throw new ProposalBlocked("nonce_mismatch");if(parsed.proposal.until!==registration.now)return failed("until_mismatch",`提案终点 ${parsed.proposal.until} 与来源时间 ${registration.now} 不一致`);let snapshot={identity:"",messageId:registration.messageId,day:registration.now,turn:0,state:source.state,context:{}},preview;try{preview=this.proposedState("update",snapshot,parsed.proposal)}catch(error2){return failed("invalid_rules",error2 instanceof Error?error2.message:String(error2))}return{registration,proposal:parsed.proposal,preview,evidence,evidenceKey}}blockProposal(reason,detail){let waiting=["waiting_workflow","mvu_busy","update_busy"].includes(reason),expired=["source_changed","not_latest","not_assistant","request_expired","preview_changed","invalid_time"].includes(reason),unavailable2=["workflow_unknown","missing_proposal","invalid_proposal","read_failed","mvu_unavailable"].includes(reason),state={...this.reception,status:waiting?"waiting":expired?"expired":unavailable2?"unavailable":"rejected",reason,detail},unpaired=["workflow_unknown","nonce_mismatch","missing_proposal","invalid_proposal","world_failed","world_skipped","world_patch_failed"].includes(reason);!waiting&&!unpaired&&(this.proposalPeriods?.abort(),this.review=null,this.integration.invalidate()),this.setProposalState(state)}refreshProposal(){this.checked(()=>this.checkProposal())}checked(check2){if(this.worldCache)return check2();this.worldCache=new Map;try{return this.integration.cached(check2)}finally{this.worldCache=null}}readWorld(messageId){let cache=this.worldCache;return cache?(cache.has(messageId)||cache.set(messageId,this.platform.readWorldProposal?.(messageId)??null),cache.get(messageId)):this.platform.readWorldProposal?.(messageId)}checkProposal(){if(this.disposed||this.accepting)return;if(this.observeRollback(),this.repairMaterial&&this.repairStatus?.status!=="expired")try{this.checkRepairSource(this.repairMaterial)}catch(error2){this.repairSourceFailed(error2);return}if(this.repairing)return;if(this.review?.repair&&!["accepted","overwritten"].includes(this.reception.status)){this.setProposalState({...this.reception,status:"pending",reason:void 0,detail:void 0});return}if(this.reception.status==="accepted"&&this.overwriteTicks<=0)return;let registration=this.review?.repair?this.review.registration:this.integration.current();if(!registration)return;if(this.reception.status==="accepted"){if(this.overwriteTicks<=0||!this.review)return;let source2=this.integration.readSource(registration.messageId);if("status"in source2){source2.reason!=="mvu_busy"&&this.blockProposal(source2.reason);return}this.overwriteTicks--,source2.chatId!==registration.chatId||source2.swipeId!==registration.swipeId||source2.now!==registration.now?this.blockProposal("source_changed"):source2.state.receipts.includes(this.review.proposal.id)||(this.proposalPeriods?.abort(),sameData(source2.state,registration.state)?this.setProposalState({...this.reception,status:"overwritten",reason:"overwritten"}):this.blockProposal("preview_changed"));return}if(this.reception.status==="overwritten"){let current=this.integration.readSource(registration.messageId);if("status"in current&&current.reason==="mvu_busy")return;if(this.review?.repair)try{this.checkRepairSource(this.review.repair)}catch(error2){this.repairSourceFailed(error2)}else this.integration.retry(registration.nonce)||this.blockProposal("preview_changed");return}let source={chatId:registration.chatId,messageId:registration.messageId,swipeId:registration.swipeId,now:registration.now,nonce:registration.nonce};this.reception.source?.nonce!==registration.nonce&&this.setProposalState({status:"waiting",reason:"waiting_workflow",source});try{let input2=this.integration.readSource(registration.messageId);if("status"in input2)throw new ProposalBlocked(input2.reason);if(!this.integration.lookup(registration.nonce))throw new ProposalBlocked("source_changed");let candidate=this.proposalCandidate(registration);if(this.review&&candidate.evidenceKey!==this.review.evidenceKey)throw new ProposalBlocked("preview_changed");this.review=candidate,this.setProposalState({status:"pending",source,proposal:candidate.proposal,preview:candidate.preview,evidence:candidate.evidence})}catch(error2){this.blockProposal(error2 instanceof ProposalBlocked?error2.reason:"read_failed",error2 instanceof ProposalBlocked?error2.detail:void 0)}}reject(){this.accepting||!["pending","waiting","overwritten"].includes(this.reception.status)||(this.review=null,this.invalidateRepair("user_rejected"),this.integration.invalidate(),this.setProposalState({...this.reception,status:"rejected",reason:"user_rejected"}))}repairProposal(){if(this.repairing)return this.repairing;let material=this.repairMaterial;if(!material||this.disposed||this.accepting||this.repairStatus?.status==="expired"||["pending","accepted","overwritten"].includes(this.reception.status)||this.jobs.some(job=>job.kind==="update"&&["queued","running"].includes(job.state)))return Promise.resolve(!1);this.integration.invalidate();let id=requestId("repair"),aborter=new AbortController;this.repairAborter=aborter;let status={id,kind:"repair",label:"修复世界提案",state:"running",message:"修复世界提案",time:new Date().toLocaleTimeString(),started:Date.now()};return this.jobs.unshift(status),this.jobs=this.jobs.slice(0,40),this.aborters.set(id,aborter),this.repairStatus={...this.repairStatus,status:"running",error:void 0},this.notify(),this.repairing=(async()=>{let sourceSignal,cancel=()=>aborter.abort();try{await this.writes,aborter.signal.throwIfAborted(),this.checkRepairSource(material);let snapshot=await this.platform.read(this.config,"update");sourceSignal=snapshot.signal,sourceSignal?.addEventListener("abort",cancel,{once:!0}),sourceSignal?.throwIfAborted(),this.checkRepairSource(material);let context=snapshot.context&&typeof snapshot.context=="object"?{...snapshot.context}:{};delete context.world;let proposal=await this.request("update",{job:"update",stage:"repair",now:material.registration.now,state:workingState(material.registration.state,!0),context,world:material.world??null,failed:{raw:material.raw,errors:material.errors},schema:external_exports.toJSONSchema(ProposalSchema.omit({id:!0,until:!0}),{io:"input"})},ProposalSchema,aborter.signal,status,value=>{this.checkRepairSource(material),this.proposedState("update",snapshot,value)},snapshot.prompts,value=>value&&typeof value=="object"&&!Array.isArray(value)?{...value,id,until:material.registration.now}:value);aborter.signal.throwIfAborted(),this.checkRepairSource(material);let preview=this.proposedState("update",snapshot,proposal);this.review={registration:material.registration,proposal,preview,evidence:material.evidence,evidenceKey:material.evidenceKey,repair:material},this.repairStatus={...this.repairStatus,status:"available"},status.state="success",status.message="修复已通过验证，等待审阅与接收";let{chatId,messageId,swipeId,now,nonce}=material.registration;return this.setProposalState({status:"pending",origin:"repair",source:{chatId,messageId,swipeId,now,nonce},proposal,preview,evidence:material.evidence}),!0}catch(error2){return status.state=aborter.signal.aborted?"cancelled":"failed",status.message=redactApiError(error2,this.config.apis),this.repairMaterial===material&&(this.repairStatus={...this.repairStatus,status:"failed",error:status.message},this.repairSourceFailed(error2)),!1}finally{sourceSignal?.removeEventListener("abort",cancel),this.aborters.delete(id),status.finished=Date.now(),this.repairAborter=null,this.notify()}})().finally(()=>{this.repairing=null}),this.repairing}accept(){if(this.accepting)return this.accepting;if(!this.review||!["pending","overwritten"].includes(this.reception.status))return Promise.resolve(!1);let review=this.review,retry=this.reception.status==="overwritten",verify=()=>{if(this.review!==review)throw new ProposalBlocked("request_expired");if(review.repair){this.checkRepairSource(review.repair);let preview=this.proposedState("update",{identity:"",messageId:review.registration.messageId,day:review.registration.now,turn:0,state:review.registration.state,context:{}},review.proposal);if(!sameData(preview,review.preview))throw new ProposalBlocked("preview_changed");return}let source=this.integration.readSource(review.registration.messageId);if("status"in source)throw new ProposalBlocked(source.reason);let registered=retry?this.integration.retry(review.registration.nonce):this.integration.lookup(review.registration.nonce);if(!registered)throw new ProposalBlocked("preview_changed");let candidate=this.proposalCandidate(registered);if(candidate.evidenceKey!==review.evidenceKey||!sameData(candidate.preview,review.preview))throw new ProposalBlocked("preview_changed")};return this.accepting=(async()=>{try{verify();let snapshot=await this.platform.read(this.config);verify();let committed=await this.commitUpdate(review.proposal,snapshot,snapshot.signal,verify);if(!review.repair&&this.integration.current()?.nonce!==review.registration.nonce)throw new ProposalBlocked("request_expired");review.repair||this.integration.consume(review.registration.nonce),this.repairMaterial=null,this.repairStatus=null,this.storeRepair(),this.acceptedCheckpoint=review.registration.state.receipts.includes(review.proposal.id)?null:{source:{chatId:review.registration.chatId,messageId:review.registration.messageId,swipeId:review.registration.swipeId},proposalId:review.proposal.id,before:worldFingerprint(review.registration.state)},this.rollback=null,this.coordination.status==="proposal_wait"&&this.setCoordination({...this.coordination,status:"idle"}),this.state=committed.state,this.readOnly=null,this.overwriteTicks=2,this.setProposalState({...this.reception,status:"accepted",reason:void 0}),this.proposalPeriods?.abort();let periods=new AbortController;this.proposalPeriods=periods;for(let period of committed.periods)this.run("generate",period.candidate,period.work,{signal:periods.signal,receipt:review.proposal.id});return!0}catch(error2){if(this.review!==review)return!1;review.repair&&this.repairSourceFailed(error2);let reason=error2 instanceof ProposalBlocked?error2.reason:"save_failed";return retry&&["mvu_busy","workflow_unknown","waiting_workflow"].includes(reason)?this.setProposalState({...this.reception,status:"overwritten",reason}):this.blockProposal(reason,error2 instanceof ProposalBlocked?error2.detail:void 0),!1}})().finally(()=>{this.accepting=null}),this.accepting}async mutate(operation,changesTimeline=!1){this.disposed||(await this.writeState(snapshot=>{if(changesTimeline&&Object.values(snapshot.state.countries).some(c=>c.enabled&&!c.calibration&&c.cursor!==snapshot.day))throw new Error("故事时间已前进，请先完成「更新局势」，再开始、暂停或交接国策；避免把新操作倒填至过去。");return operation(snapshot.state)}),await this.refresh())}saveSettings(config2){let parsed=ConfigSchema.parse(config2);parsed.apis=parsed.apis.map(validateApi);let names=new Set(parsed.apis.map(a=>a.name));if(names.size!==parsed.apis.length)throw new Error("API 名称不可重复");for(let job of Object.values(parsed.jobs))if(![job.api,...job.fallback].every(name=>!name||names.has(name)))throw new Error("任务引用不存在的 API");this.platform.saveConfig(parsed),this.integration.invalidate(),this.cancelAll(),this.config=parsed,this.pools.clear(),parsed.runLog||(this.logs=[]),this.state&&this.platform.inject(this.state,parsed.newsPrompt),this.notify()}cancel(id){this.aborters.get(id)?.abort()}cancelAll(){this.coordinationEpoch++,this.finishPredictionWait(!1,"cancelled"),this.runEpoch++,this.progress.clear();for(let aborter of this.aborters.values())aborter.abort()}async runScheduled(){let epoch=this.runEpoch,coordinationEpoch=this.coordinationEpoch;for(let kind of["identify","update","reshape"]){if(this.disposed||epoch!==this.runEpoch)return;let job=this.config.jobs[kind];if(job.schedule==="manual")continue;let snapshot=await this.platform.read(this.config);if(this.disposed||epoch!==this.runEpoch)return;scheduledDue(job,snapshot,kind)&&(kind==="identify"||Object.values(snapshot.state.countries).some(c=>c.enabled))&&(kind==="update"?await this.scheduledUpdate(snapshot,epoch,coordinationEpoch):await this.run(kind))}}get rollbackNotice(){return structuredClone(this.rollback)}dismissRollback(){this.rollback=null,this.acceptedCheckpoint=null,this.notify()}observeRollback(){let checkpoint=this.acceptedCheckpoint;if(!checkpoint)return;let source=this.integration.readSource(checkpoint.source.messageId);if("status"in source){(source.reason==="not_latest"||source.reason==="not_assistant")&&this.dismissRollback();return}let identity={chatId:source.chatId,messageId:source.messageId,swipeId:source.swipeId};if(!sameData(identity,checkpoint.source)){this.dismissRollback();return}if(this.rollback)return;let receiptMissing=!source.state.receipts.includes(checkpoint.proposalId);if(!receiptMissing)return;let returnedToBefore=worldFingerprint(source.state)===checkpoint.before;(receiptMissing||returnedToBefore)&&(this.rollback={...identity,proposalId:checkpoint.proposalId,detectedAt:Date.now(),receiptMissing,returnedToBefore},this.notify())}get scheduleCoordination(){return structuredClone(this.coordination)}scheduleIdentity(source){return JSON.stringify([source.chatId,source.messageId,source.swipeId])}setCoordination(state){this.coordination=state,this.notify()}finishPredictionWait(proceed,reason){let wait=this.predictionWait;wait&&(clearTimeout(wait.timer),this.predictionWait=null,this.setCoordination({...this.coordination,status:proceed?"idle":"cancelled",reason}),wait.finish(proceed))}pollPredictionWait(){let currentSource=this.platform.readScheduleSource?.();currentSource&&this.coordination.source&&this.scheduleIdentity(currentSource)!==this.scheduleIdentity({...this.coordination.source,content:""})&&(this.yieldedSource="",this.finishPredictionWait(!1,"source_changed"),this.setCoordination({status:"idle"}));let wait=this.predictionWait;if(!wait)return;if(!sameData(currentSource,wait.source)){this.finishPredictionWait(!1,"source_changed");return}let registration=this.integration.current();if(registration&&this.integration.lookup(registration.nonce)){this.finishPredictionWait(!0,"nonce");return}let run=this.readWorld(wait.source.messageId)?.run;if(run&&run.messageId===wait.source.messageId&&run.at>=wait.startedAt&&run.at>wait.previousAt){let result=run.taskResults.find(item=>item.taskId===wait.taskId);result&&(result.skipped||!result.extractedTags?.国策提案?.trim())&&this.finishPredictionWait(!0,"result")}}async scheduledUpdate(snapshot,epoch,coordinationEpoch){if(this.predictionWait||coordinationEpoch!==this.coordinationEpoch)return;let observed=this.platform.readScheduleSource?.();if(this.platform.readScheduleSource&&(!observed||observed.messageId!==snapshot.messageId)){this.setCoordination({status:"cancelled",reason:"source_changed"});return}let source=observed??{chatId:this.platform.chatId(),messageId:snapshot.messageId,swipeId:0,content:""},floor=this.scheduleIdentity(source);this.waitFloor!==floor&&(this.waitFloor=floor,this.waitedSources.clear(),this.yieldedSource="");let yieldToProposal=()=>{let registration=this.integration.current();if(registration&&this.integration.lookup(registration.nonce)||this.repairMaterial&&this.repairStatus?.status!=="expired"||this.yieldedSource===floor){this.yieldedSource=floor;let{content:_content2,...identity2}=source;return this.setCoordination({status:"proposal_wait",source:identity2,reason:"nonce"}),this.refreshProposal(),!0}return!1};if(yieldToProposal())return;let prediction=this.platform.predictWorldSchedule?.(source)??{status:"unknown",reason:"unavailable"},key=JSON.stringify([source,snapshot.day,worldFingerprint(snapshot.state)]),{content:_content,...identity}=source;if(this.setCoordination({status:"idle",source:identity,prediction}),prediction.status==="due"&&prediction.member&&this.platform.readScheduleSource&&!this.waitedSources.has(key)){this.waitedSources.add(key);let startedAt=Date.now(),previousAt=this.platform.readWorldProposal?.(source.messageId)?.run?.at??-1;if(!await new Promise(finish=>{let timer=setTimeout(()=>{this.pollPredictionWait(),this.finishPredictionWait(!0,"timeout")},PREDICTION_WAIT_MS);this.predictionWait={source,startedAt,previousAt,taskId:prediction.member.taskId,timer,finish},this.setCoordination({status:"prediction_wait",source:identity,prediction,startedAt,deadline:startedAt+PREDICTION_WAIT_MS})})||this.disposed||epoch!==this.runEpoch||coordinationEpoch!==this.coordinationEpoch||yieldToProposal())return;let current=await this.platform.read(this.config);if(this.disposed||epoch!==this.runEpoch||coordinationEpoch!==this.coordinationEpoch||current.identity!==snapshot.identity||current.day!==snapshot.day||!sameData(this.platform.readScheduleSource(),source)){this.setCoordination({...this.coordination,status:"cancelled",reason:"source_changed"});return}let job=this.config.jobs.update;if(!scheduledDue(job,current,"update")||!Object.values(current.state.countries).some(country=>country.enabled)){this.setCoordination({...this.coordination,status:"idle",reason:"not_due"});return}}await this.runTask("update",void 0,void 0,void 0,"scheduled")}async removeCountry(id){let country=this.state?.countries[id];await this.mutate(state=>removeCountry(state,id));for(let key of[...this.progress.keys()])key.endsWith(`\0${id}`)&&this.progress.delete(key);country&&!this.candidates.some(candidate=>candidate.id===id)&&(this.candidates=[...this.candidates,{id,name:country.name,description:country.description,evidence:country.evidence}]),this.notify()}async importTrees(entries,options){await this.mutate(state=>importTrees(state,entries,options));let ids=new Set(entries.map(entry=>entry.tree.id));this.candidates=this.candidates.filter(candidate=>!ids.has(candidate.id)),this.notify()}drawing=new Map;drawFor(state,id){let taken=[...Object.values(state.countries).filter(country=>country.id!==id&&country.shape).map(country=>signature(country.shape)),...[...this.drawing].filter(([other])=>other!==id).map(([,structure])=>signature(structure))];return drawStructure({large:state.settings.size==="large",taken})}async enable(candidates){await Promise.all(candidates.map(candidate=>this.run("generate",candidate)))}async run(kind,candidate,periodWork,externalPeriod){kind==="update"&&(this.invalidateRepair("update_started"),this.coordinationEpoch++,this.finishPredictionWait(!1,"manual"),this.yieldedSource="",this.setCoordination({...this.coordination,status:"idle",reason:"manual"})),await this.runTask(kind,candidate,periodWork,externalPeriod,"manual")}async runTask(kind,candidate,periodWork,externalPeriod,mode="manual"){if(this.disposed||kind==="update"&&mode==="scheduled"&&this.repairMaterial&&this.repairStatus?.status!=="expired"||this.jobs.some(job=>job.kind===kind&&job.candidate?.id===candidate?.id&&["queued","running"].includes(job.state)&&!this.aborters.get(job.id)?.signal.aborted))return;let access=kind==="update"?this.integration.beginUpdate(mode):void 0;if(access&&access.status!=="acquired"){access.status==="waiting"&&(this.yieldedSource=this.waitFloor,this.setCoordination({...this.coordination,status:"proposal_wait",reason:"nonce"}),this.refreshProposal());return}kind==="update"&&mode==="scheduled"&&this.setCoordination({...this.coordination,status:"running"});let releaseUpdate=()=>{access?.status==="acquired"&&this.integration.endUpdate(access.token)},id=requestId("job"),aborter=new AbortController,cancelPeriod=()=>aborter.abort();externalPeriod?.signal.addEventListener("abort",cancelPeriod,{once:!0}),externalPeriod?.signal.aborted&&aborter.abort(),aborter.signal.addEventListener("abort",releaseUpdate,{once:!0});let status={id,kind,state:"queued",message:"准备任务",time:new Date().toLocaleTimeString(),...candidate?{label:candidate.name,candidate}:{},...periodWork?{periodWork,label:`${candidate?.name} · 换期`}:{}};this.jobs.unshift(status),this.jobs=this.jobs.slice(0,40),this.aborters.set(id,aborter),this.notify();let sourceSignal,cancelSource=()=>aborter.abort(),periods=[];try{aborter.signal.throwIfAborted(),status.state="running",status.started=Date.now(),status.message="正在分析本楼资料",this.notify();let snapshot=await this.platform.read(this.config,kind);if(externalPeriod&&!snapshot.state.receipts.includes(externalPeriod.receipt))throw new Error("外部提案的保存记录已失效");sourceSignal=snapshot.signal,sourceSignal?.addEventListener("abort",cancelSource,{once:!0}),sourceSignal?.aborted&&aborter.abort(),aborter.signal.throwIfAborted(),periodWork&&checkTransition(snapshot.state,periodWork.transition);let structure=kind==="generate"&&candidate?this.drawFor(snapshot.state,candidate.id):void 0;if(structure&&this.drawing.set(candidate.id,structure),kind==="generate"&&!candidate)throw new Error("请先选择要生成的候选国家");let ask=async(stage,data,schema4,validate2,label2,shown)=>(aborter.signal.throwIfAborted(),status.message=label2??(kind==="generate"?"单次生成完整国策树":"分析本楼局势"),this.notify(),this.request(kind,{job:kind,stage,...data,schema:external_exports.toJSONSchema(shown??schema4,{io:"input"})},schema4,aborter.signal,status,validate2,snapshot.prompts)),segmentMax=this.segmentMax(),progressKey=kind==="generate"?[snapshot.identity,snapshot.state.settings.size,candidate.id].join("\0"):"",progress=this.progress.get(progressKey)??{filled:{}};if(kind==="generate"){for(this.progress.delete(progressKey),this.progress.set(progressKey,progress);this.progress.size>8;)this.progress.delete(this.progress.keys().next().value);progress.skeleton&&(status.message=`沿用先前完成的骨架与 ${Object.keys(progress.filled).length} 项内容`,this.notify())}let result=periodWork?await ask("period",{now:snapshot.day,context:snapshot.context,world:Object.values(snapshot.state.countries).filter(country=>country.enabled&&country.id!==candidate.id).map(country=>({id:country.id,name:country.name,agenda:country.agenda||country.analysis,current:country.nodes[country.current]?.name,capabilities:Object.values(country.capabilities).filter(c=>c.active)})),state:workingState({...snapshot.state,countries:{[candidate.id]:snapshot.state.countries[candidate.id]},events:Object.fromEntries(Object.entries(snapshot.state.events).filter(([,event])=>event.countries.includes(candidate.id)))},!0),candidate,transition:periodWork.transition,anchor:periodAnchor(snapshot.state.countries[candidate.id],periodWork.transition.invalidateActive),prefix:`p${snapshot.state.countries[candidate.id].period.number+1}_`,limits:{min:sizeLimits[snapshot.state.settings.size][0],max:sizeLimits[snapshot.state.settings.size][1],days:focusDays,periodDays:periodDays[snapshot.state.settings.pace],...shapeLimits(snapshot.state.settings,structure?.type.key)},...structure?{structure:structureData(structure)}:{},instructions:"生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程序原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。"},PeriodReplySchema,value=>{transitionPeriod(snapshot.state,periodWork.transition,value)},"生成下一期与旧期摘要"):kind==="generate"?await generateCountry(snapshot,candidate,ask,progress,segmentMax,this.config.jobs.generate.retries,structure):await ask(kind,taskData(snapshot,kind==="reshape"),kind==="identify"?CandidatesSchema:ProposalSchema,value=>{this.proposedState(kind,snapshot,value,candidate)});aborter.signal.throwIfAborted();let next;if(kind==="update"){let committed=await this.commitUpdate(ProposalSchema.parse(result),snapshot,aborter.signal);next=committed.state,periods.push(...committed.periods)}else next=await this.writeState(current=>{if(externalPeriod&&!current.state.receipts.includes(externalPeriod.receipt))throw new Error("外部提案的保存记录已失效");let state=periodWork?transitionPeriod(current.state,periodWork.transition,PeriodReplySchema.parse(result)):this.proposedState(kind,current,result,candidate);return structure&&state.countries[candidate.id]&&(state.countries[candidate.id].shape=structure),state.schedules[kind]={turn:snapshot.turn,day:snapshot.day},state},aborter.signal);kind==="identify"&&(this.candidates=candidateKeys(CandidatesSchema.parse(result).countries,next)),kind==="generate"&&this.progress.delete(progressKey),status.state="success",status.message=kind==="identify"?"候选国家已就绪，请勾选启用":"验证通过，已保存至本楼",await this.refresh()}catch(error2){let message=redactApiError(error2,this.config.apis);status.state=aborter.signal.aborted||error2 instanceof Error&&error2.name==="AbortError"?"cancelled":"failed",status.message=status.state==="cancelled"?"已取消，未套用结果":`未提交：${message.slice(0,1500)}`}finally{kind==="update"&&mode==="scheduled"&&this.coordination.status==="running"&&this.setCoordination({...this.coordination,status:"idle"}),externalPeriod?.signal.removeEventListener("abort",cancelPeriod),releaseUpdate(),aborter.signal.removeEventListener("abort",releaseUpdate),sourceSignal?.removeEventListener("abort",cancelSource),status.finished=Date.now(),this.aborters.delete(id),kind==="generate"&&candidate&&this.drawing.delete(candidate.id),this.notify()}!this.disposed&&!aborter.signal.aborted&&await Promise.all(periods.map(period=>this.run("generate",period.candidate,period.work)))}segmentMax(config2=this.config){if(config2.jobs.generate.segmentMax!==void 0)return config2.jobs.generate.segmentMax;let name=config2.jobs.generate.api||currentApiName(config2,this.platform.chatId());return config2.apis.find(api=>api.name===name)?.segmentMax??defaultSegmentMax}messages(kind,prompts,payload2,config2=this.config){let chain=prompts??config2.jobs[kind].prompts.filter(item=>item.enabled||item.kind==="data").map(item=>({...item,content:promptText(item,kind)}));if(payload2.stage==="repair"){let task={id:"task",kind:"task",name:"修复任务指示",role:"system",content:REPAIR_TASK};chain.some(item=>item.kind==="task")?chain=chain.map(item=>item.kind==="task"?task:item):chain=[task,...chain]}let json2=JSON.stringify(payload2);return chain.map(item=>({role:item.role,name:item.name,content:item.kind!=="data"?item.content:item.content.includes(DATA_TOKEN)?item.content.split(DATA_TOKEN).join(json2):`${item.content}
 ${json2}`}))}async preview(kind,config2=this.config){let snapshot=await this.platform.read(config2,kind);if(kind==="generate"){let candidate=this.candidates[0]??{id:"example_country",name:"（执行时为勾选的国家）",description:"预览用示例候选国家",evidence:"预览"},segmented=isSegmented(snapshot.state.settings.size),plan=segmented?skeletonPlan(snapshot,candidate):generationPlan(snapshot,candidate,this.drawFor(snapshot.state,candidate.id));return this.messages(kind,snapshot.prompts,{job:kind,stage:segmented?"skeleton":kind,...plan.data,schema:external_exports.toJSONSchema(plan.schema,{io:"input"}),correction:""},config2)}return this.messages(kind,snapshot.prompts,{job:kind,stage:kind,...taskData(snapshot,kind==="reshape"),schema:external_exports.toJSONSchema(kind==="identify"?CandidatesSchema:ProposalSchema,{io:"input"}),correction:""},config2)}pool(kind,chain){let job=this.config.jobs[kind],limits2=routeLimits(chain,job.primaryMaxConcurrency,job.fallbackMaxConcurrencies),key=`${kind}\0${chain.map(route=>`${route}:${limits2.get(route)}`).join(">")}`,pool=this.pools.get(key);return pool||(pool=new RoutePool(limits2),this.pools.set(key,pool)),pool}log(entry){this.config.runLog&&(this.logs.unshift(entry),this.logs=this.logs.slice(0,20))}async request(kind,data,schema4,signal,status,validate2,prompts,normalize){let settings=this.config.jobs[kind],lastError,feedback="",stageMessage=status.message,chain=[...new Set([settings.api||currentApiName(this.config,this.platform.chatId()),...settings.fallback])];for(let route of chain)if(!this.config.apis.some(a=>a.name===route))throw new Error("任务引用不存在的 API");let pool=this.pool(kind,chain);status.state="queued",status.message="等待 API 连接空位",this.notify();let first=await pool.acquire(chain,signal);status.state="running",status.message=stageMessage,this.notify();let index=chain.indexOf(first),order2=[...chain.slice(index),...chain.slice(0,index)];for(let[position,route]of order2.entries()){let held=position===0?first:await pool.acquire([route],signal);try{let api=this.config.apis.find(a=>a.name===route);for(let attempt=0;attempt<=settings.retries;attempt++){signal.throwIfAborted();let request=new AbortController,cancel=()=>request.abort();signal.addEventListener("abort",cancel,{once:!0});let timer=setTimeout(()=>request.abort(),settings.timeout*1e3),started=Date.now(),output2="",reasoning="",messages=[],phase="request";try{messages=this.messages(kind,prompts,{...data,correction:feedback}),status.inputCharacters=messageCharacters(messages),assertInputSize(messages,this.config.sources.maxInputCharacters);let reply=await new Promise((resolve,reject)=>{let stopWaiting=()=>reject(new Error("API 任务已取消或超时"));request.signal.addEventListener("abort",stopWaiting,{once:!0}),this.platform.generate(messages,api,api.apiKey,request.signal).then(resolve,reject).finally(()=>request.signal.removeEventListener("abort",stopWaiting))});output2=reply.content,reasoning=reply.reasoning??"",signal.throwIfAborted(),phase="validate";let parsed=parseJsonReply(output2),result=schema4.parse(repairReply(normalize?normalize(parsed):parsed,data.stage));return validate2?.(result),status.route=route,this.log({jobId:status.id,kind,stage:stageMessage,time:new Date().toLocaleTimeString(),route,attempt:attempt+1,durationMs:Date.now()-started,messages,output:output2,reasoning,error:""}),result}catch(error2){if(messages.length&&this.log({jobId:status.id,kind,stage:stageMessage,time:new Date().toLocaleTimeString(),route,attempt:attempt+1,durationMs:Date.now()-started,messages,output:output2,reasoning,error:redactApiError(error2,this.config.apis)}),error2 instanceof InputSizeError||error2 instanceof ProposalBlocked)throw error2;lastError=error2;let reason=phase!=="validate"?"":error2 instanceof external_exports.ZodError?JSON.stringify(error2.issues.map(i=>({path:i.path,message:i.message}))).slice(0,2e3):error2 instanceof SyntaxError?`回应不是完整的 JSON（${error2.message}），可能超出输出长度而被截断；请精简文字并输出完整对象`:error2 instanceof Error?error2.message.slice(0,1e3):"";feedback=reason?`上次回应未通过本机验证：${reason}。请修正后重新输出完整 JSON。`:"前次回应未通过，请重新核对 Schema 与本阶段所有约束。",status.message=`${stageMessage} · ${route} 尝试 ${attempt+1}/${settings.retries+1} 未通过${reason?`：${reason.slice(0,120)}`:""}`,this.notify()}finally{clearTimeout(timer),signal.removeEventListener("abort",cancel)}}}finally{pool.release(held)}}throw signal.throwIfAborted(),lastError??new Error("没有可用的 API 回应")}proposedState(kind,snapshot,result,candidate){if(kind==="identify"){let next2=structuredClone(snapshot.state);return next2.revision++,next2}if(kind==="generate"){let tree=TreeSchema.parse(result);if(tree.id!==candidate?.id)throw new Error("生成的国家 ID 与选取国家不一致");let limits2=sizeLimits,[min,max]=limits2[snapshot.state.settings.size];if(!tree.nodes.length||tree.nodes.length>max)throw new Error(`生成规模须为 ${min}–${max} 节点`);return installCountry(snapshot.state,{...tree,autoPeriod:!0},snapshot.day)}let proposal=ProposalSchema.parse(result);if(proposal.until!==snapshot.day)throw new Error("更新终点必须等于来源故事时间");let next=applyProposal(snapshot.state,proposal,kind==="reshape");if(proposal.transitions.length&&kind!=="update")throw new Error("只有局势更新可发起换期");let countries=new Set;for(let transition of proposal.transitions){let country=next.countries[transition.country];if(!country)throw new Error("换期引用不存在的国家");if(country.enabled&&country.autoPeriod&&!country.calibration&&checkTransition(next,transition),countries.has(transition.country))throw new Error("同一次更新不可对同国重复换期");countries.add(transition.country)}return next}};function candidateKeys(candidates,state){let names=new Set(Object.values(state.countries).map(country=>country.name.trim())),seen=new Set;return candidates.map(candidate=>({...candidate,id:countryKey(candidate.name)??candidate.id})).filter(candidate=>{let fresh=!state.countries[candidate.id]&&!names.has(candidate.name.trim())&&!seen.has(candidate.id);return seen.add(candidate.id),fresh})}var authLine=/^\s*(?:authorization|proxy-authorization|x-api-key|api-key|x-goog-api-key)\s*:|\bbearer\s/i;function splitAuthHeaders(headers){let lines=String(headers||"").split(`
 `),auth=lines.filter(line=>authLine.test(line));return{publicHeaders:lines.filter(line=>!authLine.test(line)).join(`
 `).trim(),authHeaders:auth.join(`
@@ -308,7 +308,7 @@ ${[...ongoing.map(event=>eventHistory(state,event)),...resolved.map(event=>`- ${
 ${details.join(`
 
 `)}
-</国策动态>`:""}`:""}var bookPrefix="国策档案-";function currentBookName(name){if(name.startsWith(bookPrefix))return name;let legacyPrefix="國策檔案-";if(!name.startsWith(legacyPrefix))return null;let suffix=name.slice(legacyPrefix.length);return bookPrefix+({世界概況:"世界概况","國家動態-包裹-上":"国家动态-包裹-上","國家動態-包裹-下":"国家动态-包裹-下"}[suffix]??(suffix.startsWith("國家-")?`国家-${suffix.slice(3)}`:suffix))}var bookOrder={overview:99990,open:99991,country:99992,close:99993};function bookEntries(view,constant=!0){let read=path=>`<%- getvar('国策.prompt.${path}', { defaults: '' }) %>`,ids=Object.keys(view.countries);return view.overview?[{name:`${bookPrefix}世界概况`,constant:!0,keys:[],content:read("overview"),order:bookOrder.overview},{name:`${bookPrefix}国家动态-包裹-上`,constant:!0,keys:[],content:"<国策动态>",order:bookOrder.open},...ids.map(id=>({name:`${bookPrefix}国家-${id}`,constant,keys:view.countries[id].keys,content:read(`countries.${id}.text`),order:bookOrder.country})),{name:`${bookPrefix}国家动态-包裹-下`,constant:!0,keys:[],content:"</国策动态>",order:bookOrder.close}]:[]}function movedCountryEntries(existing,wanted){let countryPrefix=`${bookPrefix}国家-`,present=new Set(existing.map(entry=>currentBookName(entry.name))),wantedNames=new Set(wanted.map(entry=>entry.name)),open2=wanted.filter(entry=>entry.name.startsWith(countryPrefix)&&!present.has(entry.name)),moved=new Map;for(let entry of existing){let name=currentBookName(entry.name);if(!name?.startsWith(countryPrefix)||wantedNames.has(name))continue;let keys=entry.strategy.keys.map(String),index=open2.findIndex(target=>target.keys[0]!==void 0&&keys.includes(target.keys[0]));index>=0&&(moved.set(name,open2[index].name),open2.splice(index,1))}return moved}function reconcileBook(existing,wanted){let byName=new Map(wanted.map(entry=>[entry.name,entry])),moved=movedCountryEntries(existing,wanted),changed=!1,kept=[];for(let entry of existing){let current=currentBookName(entry.name),name=current===null?null:moved.get(current)??current;if(name===null){kept.push(entry);continue}let target=byName.get(name);if(!target){changed=!0;continue}byName.delete(name);let type=target.constant?"constant":"selective",keys=entry.strategy.keys.map(String),missing=target.keys.filter(key=>!keys.includes(key));entry.name!==target.name||entry.content!==target.content||entry.strategy.type!==type||missing.length?(changed=!0,kept.push({...entry,name:target.name,content:target.content,strategy:{...entry.strategy,type,keys:[...entry.strategy.keys,...missing]}})):kept.push(entry)}for(let target of byName.values())changed=!0,kept.push({name:target.name,enabled:!0,strategy:{type:target.constant?"constant":"selective",keys:target.keys},position:{type:"after_character_definition",role:"system",depth:4,order:target.order},content:target.content,recursion:{prevent_incoming:!0,prevent_outgoing:!0,delay_until:null}});return changed?kept:null}var storageKey="national-focus-skeleton.config.v1",legacyStorageKey="national-focus.config.v1",injectionId="national-focus-public-state";function explainOpaqueError(detail){if(/<!DOCTYPE html|<html[\s>]/i.test(detail)){let code=/Error code (\d{3})/i.exec(detail)?.[1]??/\b(52[0-9])\b/.exec(detail)?.[1],title=/<title>([^<]*)<\/title>/i.exec(detail)?.[1]?.trim();return code==="524"?`反向代理超时（Cloudflare 524：约 100 秒内没有开始回应）。请在 API 预设开启「流式传输」（代理若有假流式也可开启），或调低推理强度、每批填写国策数，或改用没有此限制的连接${title?`。代理页面：${title}`:""}`:`反向代理返回错误页（${code?`错误码 ${code}`:"无错误码"}${title?`：${title}`:""}）。这通常是代理或上游服务的问题，请稍后重试或改用其他连接`}let bare=detail.replace(/^(Error:\s*)+/i,"").trim();return!bare||/^(<none>|none|null|undefined|true|Response not OK|Unknown error)$/i.test(bare)?`${detail}（API 或反向代理没有提供原因。常见原因：回应被供应商的安全过滤挡下、思考用完输出上限而没有正文、代理超时或上游断线。请开启执行记录查看请求，或改用其他连接／降低输出上限后重试）`:detail}var TavernPlatform=class{constructor(api,storage,secrets){this.api=api;this.storage=storage;this.secrets=secrets??new TavernSecretStore(()=>this.context(),api.indexedDB);let listen=(event,callback)=>{if(event){let listener=api.eventOn(event,callback);this.stops.push(()=>listener.stop())}};listen("national-focus:refresh-news",messageId=>{if(typeof messageId!="number"||!Number.isInteger(messageId)||messageId<0)return;let signal=this.sourceRun.signal;this.newsQueue=this.newsQueue.then(async()=>{await this.annotating,!(this.disposed||signal.aborted)&&await this.annotate(messageId)}).catch(error2=>console.warn("[国策档案] 无法更新本楼快讯资料：",error2))});for(let name of["CHAT_CHANGED","MESSAGE_SWIPED","MESSAGE_DELETED"])listen(api.tavern_events[name],()=>{this.pending=null,this.readyIdentity="",this.generating=!1,this.mvuBusy=!1,api.uninjectPrompts([injectionId]),this.sourceRun.abort(),this.sourceRun=new AbortController,this.bookEpoch++;for(let callback of this.changeListeners)callback()});listen(api.tavern_events.GENERATION_STARTED,(type,_options,dryRun)=>{dryRun||type==="quiet"||(this.generating=!0,this.readyIdentity="",this.sourceRun.abort(),this.sourceRun=new AbortController)}),listen(api.tavern_events.GENERATION_STOPPED,()=>{this.generating=!1,this.pending=null}),listen(api.tavern_events.MESSAGE_RECEIVED,(_id,type)=>{if(["quiet","impersonate","extension"].includes(type))return;let item=this.pendingForCurrent();item&&(item.received=!0)}),listen(api.tavern_events.GENERATION_ENDED,()=>{if(!this.generating&&!this.pending?.received)return;this.generating=!1;let item=this.pendingForCurrent();item&&(item.ended=!0)});let boundMvu=!1,bindMvu=()=>{boundMvu||!api.Mvu||(boundMvu=!0,listen(api.Mvu.events.VARIABLE_UPDATE_STARTED,()=>{this.mvuBusy=!0}),listen(api.Mvu.events.VARIABLE_UPDATE_ENDED,(after,before)=>{this.mvuBusy=!1;let saved=before?.国策!==void 0?before.国策:before?.stat_data?.国策;saved!==void 0&&(after.国策=structuredClone(saved),delete after.stat_data.国策)}),listen(api.Mvu.events.BEFORE_MESSAGE_UPDATE,context=>{if(this.writing)return;let message=this.api.getChatMessages(-1)[0];if(message&&(this.generating||this.pending?.received||this.pending?.ended)&&context?.message_content===(message.message??message.swipes[message.swipe_id])){let item=this.pendingForCurrent();item&&(item.mvu=!0)}this.mvuBusy=!1}))};bindMvu();for(let event of["MESSAGE_EDITED","MESSAGE_UPDATED"])listen(api.tavern_events[event],()=>{for(let callback of this.integrationListeners)callback()});let ticks=0;this.timer=setInterval(()=>{if(bindMvu(),++ticks%5===0)for(let callback of this.integrationListeners)callback();let pending=this.pending;if(!(!pending||this.writing||this.generating||this.mvuBusy||api.Mvu?.isDuringExtraAnalysis())){if(pending.identity!==this.identity()){this.pending=null;return}if(pending.received&&pending.ended&&pending.mvu&&!this.annotating){let signal=this.sourceRun.signal;this.pending=null,this.readyIdentity=pending.identity,this.annotating=this.annotate().catch(error2=>console.warn("[国策档案] 无法更新快讯条资料：",error2)).finally(()=>{if(this.annotating=null,!(this.disposed||signal.aborted))for(let callback of this.readyListeners)callback()})}}},200)}demo=!1;chatId(){return this.api.SillyTavern.getCurrentChatId()}async models(api){if(!api.url.trim())throw new Error("请先填写端点（基础 URL），也可以直接手动输入模型名称");if(!this.api.getModelList)throw new Error("目前酒馆助手未提供模型加载功能，请更新助手或手动输入模型名称");try{let models=await this.api.getModelList({apiurl:api.url.trim(),key:api.apiKey||void 0});return[...new Set(models.filter(model=>typeof model=="string"&&model.trim()).map(model=>model.trim()))].sort()}catch(error2){throw new Error(redactApiError(error2,[api]))}}writing=!1;config=null;promptSaved=!1;bookQueue=Promise.resolve();bookToken=0;bookEpoch=0;bookWarned=!1;writtenBook=null;disposed=!1;annotating=null;newsQueue=Promise.resolve();generating=!1;mvuBusy=!1;readyIdentity="";sourceRun=new AbortController;stops=[];readyListeners=new Set;changeListeners=new Set;integrationListeners=new Set;pending=null;timer;secrets;context(){try{return this.api.SillyTavern.getContext?.()??this.api.SillyTavern}catch{return this.api.SillyTavern}}macrosEnabled(){let root=this.context()?.extensionSettings,value=root?.tavern_helper?.macro?.enabled??root?.TavernHelper?.macro?.enabled;return typeof value=="boolean"?value:!0}renderer(messageId){let memo2=new Map,depth=Math.max(0,this.api.getLastMessageId()-messageId),macros=(text2,source)=>{let substitute=()=>{try{return this.api.substitudeMacros?.(text2)??text2}catch{return text2}};if(!this.macrosEnabled()||!this.api.formatAsTavernRegexedString)return substitute();try{return this.api.formatAsTavernRegexedString(text2,source,"prompt",{depth})}catch{return substitute()}},run=async(text2,source)=>{let output2=macros(text2,source),template=this.api.EjsTemplate,evaluate=template?.evaltemplate??template?.evalTemplate;if(evaluate&&(text2.includes("<%")||output2.includes("<%")))try{let context=await template?.prepareContext?.({},messageId)??{};output2=await evaluate.call(template,output2,context)}catch(error2){console.warn("[国策档案] EJS 模板处理失败，保留原文：",error2)}return macros(output2,source)};return(text2,source="world_info")=>{if(!text2?.trim())return Promise.resolve(text2??"");let key=`${source}\0${text2}`,pending=memo2.get(key);return pending||(pending=run(text2,source),memo2.set(key,pending)),pending}}tables(){try{let value=this.api.parent?.AutoCardUpdaterAPI?.exportTableAsJson?.();return value&&typeof value=="object"?value:null}catch{return null}}persona(){try{return this.context()?.powerUserSettings?.persona_description||this.api.getPersona?.("current")?.description||""}catch{return""}}async characterDescription(){try{return(await this.api.getCharacter?.("current"))?.description??this.api.getCharData?.("current")?.description??""}catch{try{return this.api.getCharData?.("current")?.description??""}catch{return""}}}current(){return this.api.getChatMessages(-1,{include_swipes:!0})[0]}identity(){let message=this.current();return stamp([this.api.SillyTavern.getCurrentChatId(),this.api.getLastMessageId(),message?.swipe_id])}pendingForCurrent(){let message=this.current();if(!message||message.role!=="assistant")return null;let identity=this.identity();return this.readyIdentity===identity?null:(this.pending?.identity!==identity&&(this.pending={identity,received:!1,ended:!1,mvu:!1,since:Date.now()}),this.pending)}bindIntegration(api){let parent=this.api.parent;if(!parent)return()=>{};parent.NationalFocusIntegration=api;let remove=()=>{parent.NationalFocusIntegration===api&&delete parent.NationalFocusIntegration};return this.stops.push(remove),remove}readIntegration(messageId,config2){if(this.disposed)return unavailable("disposed");try{let lastMessageId=this.api.getLastMessageId();if(!Number.isInteger(messageId)||messageId<0||messageId!==lastMessageId)return unavailable("not_latest");let message=this.api.getChatMessages(messageId,{include_swipes:!0})[0];if(!message||message.role!=="assistant")return unavailable("not_assistant");if(message.message_id!==messageId||!this.chatId())return unavailable("source_changed");let mvu=this.api.Mvu;if(!mvu)return unavailable("mvu_unavailable");if(this.generating||this.mvuBusy||this.writing||mvu.isDuringExtraAnalysis())return unavailable("mvu_busy");let data=mvu.getMvuData({type:"message",message_id:messageId}),world=this.readWorldProposal(messageId);return{chatId:this.chatId(),messageId,swipeId:message.swipe_id,lastMessageId,role:message.role,extraAnalysis:!1,data,world:world?.member?{...world.member,fingerprint:world.fingerprint}:void 0,timePath:config2.sources.timePath,signal:this.sourceRun.signal}}catch{return unavailable("read_failed")}}onIntegrationTick(callback){return this.integrationListeners.add(callback),()=>this.integrationListeners.delete(callback)}readWorldProposal(messageId){let workflow=this.api.parent?.AcuPostProcessAPI;if(!workflow)return null;try{let member=worldMember(workflow.getEffectiveSettings()),status=RunStatusSchema.safeParse(workflow.getRunStatusForFloor(messageId)),data=this.api.Mvu?.getMvuData({type:"message",message_id:messageId}),patchLog=null;try{patchLog=this.api.parent?.Addon?.getLastPatchLog()??null}catch{}return{member,run:status.success?status.data:null,fingerprint:worldFingerprint(valueAt(data?.addon_data,`世界.${FOCUS_WORLD}`)),patchLog,world:structuredClone(valueAt(data?.addon_data,`世界.${FOCUS_WORLD}`))}}catch{return null}}loadProposalRepair(){let saved=this.storage.getItem(`national-focus-skeleton.repair.v1.${this.chatId()}`);return saved?JSON.parse(saved):null}saveProposalRepair(material,chatId){let key=`national-focus-skeleton.repair.v1.${chatId}`;material?this.storage.setItem(key,JSON.stringify(material)):this.storage.removeItem(key)}readScheduleSource(){try{let message=this.current();return!message||message.role!=="assistant"||message.message_id!==this.api.getLastMessageId()?null:{chatId:this.chatId(),messageId:message.message_id,swipeId:message.swipe_id,content:message.swipes[message.swipe_id]??message.message??""}}catch{return null}}predictWorldSchedule(source){try{let workflow=this.api.parent?.AcuPostProcessAPI;if(workflow){let chatKey=String(this.api.parent?.SillyTavern?.getContext?.()?.chatId||"").trim()||"unknown_chat";return predictWorldSchedule(workflow.getEffectiveSettings(),chatKey,source.content)}}catch{}return{status:"unknown",reason:"unavailable"}}async read(config2,job){let signal=this.sourceRun.signal;await this.annotating,signal.throwIfAborted();let mvu=this.api.Mvu;if(!mvu)throw new Error("尚未检测到 MVU，请先启用 MVU 变数框架");if(this.generating||this.mvuBusy||mvu.isDuringExtraAnalysis())throw new Error("正文或一般 MVU 更新尚未完成，请稍后重试");if(this.pending&&!this.readyIdentity)throw new Error("等待本楼正文完成及 MVU 写入事件；若已等待过久，请检查 MVU 工作状态后重新加载脚本");let message=this.current();if(!message||message.role!=="assistant")throw new Error("请在一则已完成且具有 MVU 变数的 AI 回复后使用");let identity=this.identity(),data=mvu.getMvuData({type:"message",message_id:message.message_id});if(!data.stat_data)throw new Error("本楼尚无 MVU stat_data，不能建立另一份聊天存档替代");let rawTime=valueAt(data.stat_data,config2.sources.timePath),day;try{day=storyDay(rawTime)}catch(error2){let found=rawTime===void 0?"没有这个变量":`读到「${String(JSON.stringify(rawTime)).slice(0,60)}」`;throw new Error(`读不到故事时间（stat_data.${config2.sources.timePath}：${found}）。国策进度以故事日计算，所有国策任务暂停；请到「设置 › 世界书与上下文 › 故事时间路径」修正。${error2 instanceof Error?error2.message:""}`)}let saved=data.国策!==void 0?data.国策:data.stat_data.国策;this.config=config2,this.promptSaved=!!data.国策?.prompt;let state=saved===void 0?createState(day):migrateCountryKeys(StateSchema.parse(saved));state.time=timeText(rawTime);let messages=this.api.getChatMessages(`0-${message.message_id}`),sourceData;if(job){let settings=config2.sources,cache=new Map,selection=effectiveSources(settings,job).worldbook,used=segmentPlaceholders(config2.jobs[job].prompts,job),uses=placeholder=>used.has(placeholder),needCharacter=settings.managedEntries||settings.persona||uses("$2")||uses("$U"),needCharacterText=settings.characterDescription||uses("$C"),needDefault=settings.memoryRecallRecentCount>0||settings.summaryIndex||uses("$5")||uses("$6"),[books,memoryBooks,characterBooks,character]=await Promise.all([this.sources(selection,cache),needDefault?this.sources(settings.worldbook,cache):[],needCharacter?this.sources({source:"character",manualSelection:[],enabledEntries:{}},cache):[],needCharacterText?this.characterDescription():""]);sourceData=await buildSourceContext({config:config2,job,messages,currentId:message.message_id,entries:books,memoryEntries:memoryBooks,characterEntries:characterBooks,variables:data.stat_data,world:job==="update"&&this.api.parent?.AcuPostProcessAPI?valueAt(data.addon_data,`世界.${FOCUS_WORLD}`):void 0,tables:this.tables(),persona:settings.persona||uses("$U")?this.persona():"",character,renderEntry:this.renderer(message.message_id)})}return signal.throwIfAborted(),{identity,messageId:message.message_id,signal,turn:messages.filter(m=>m.role==="assistant").length,day,state,context:sourceData?.context??{},prompts:sourceData?.prompts,sourceReport:sourceData?.report}}async commit(snapshot,state){if(this.disposed)throw new Error("脚本已卸载");snapshot.signal?.throwIfAborted();let mvu=this.api.Mvu;if(!mvu)throw new Error("尚未检测到 MVU");let message=this.api.getChatMessages(snapshot.messageId)[0];if(!message||message.role!=="assistant")throw new Error("目标 AI 楼层不存在");let latest=mvu.getMvuData({type:"message",message_id:snapshot.messageId}),saved=StateSchema.parse(state);stampNews(saved,message.message_id);let rawTime=this.config?timeText(valueAt(latest.stat_data,this.config.sources.timePath)):"";saved.time=rawTime||saved.time;let bar=latest.国策?.快讯;latest.国策={...saved,prompt:promptView(saved,this.config?.newsPrompt??!0),...bar?{快讯:{...bar,insiders:insiders(saved,bar.location)}}:{}},delete latest.stat_data.国策,this.writing=!0;try{await mvu.replaceMvuData(latest,{type:"message",message_id:message.message_id})}finally{this.writing=!1}snapshot.signal?.throwIfAborted(),await this.appendNewsTag(message.message_id),await this.api.eventEmit?.("national-focus:news-saved",message.message_id)}async annotate(messageId){let signal=this.sourceRun.signal,mvu=this.api.Mvu,message=messageId===void 0?this.current():this.api.getChatMessages(messageId)[0],config2=this.config??this.loadConfig();if(!mvu||!message||message.role!=="assistant")return;let id=message.message_id,data=mvu.getMvuData({type:"message",message_id:id}),parsed=StateSchema.safeParse(data?.国策);if(!data?.stat_data||!parsed.success)return;let earlier;for(let previousId=id-1;previousId>=0;previousId--){let item=this.api.getChatMessages(previousId)[0];if(item?.role==="assistant"&&item.message_id<id){earlier=item;break}}let before=earlier?mvu.getMvuData({type:"message",message_id:earlier.message_id}):void 0,sources=config2.sources,carried=data.国策.快讯,bar=buildNewsBar({state:parsed.data,floor:id,time:timeText(valueAt(data.stat_data,sources.timePath)),location:timeText(valueAt(data.stat_data,sources.locationPath)),newsPath:sources.newsPath,timePath:sources.timePath,locationPath:sources.locationPath,news:valueAt(data.stat_data,sources.newsPath),previousNews:before?.stat_data?valueAt(before.stat_data,sources.newsPath):void 0,hasPrevious:!!before?.stat_data,previous:before?.国策?.快讯??carried});if(stamp([carried])!==stamp([bar])){this.writing=!0;try{let latest=mvu.getMvuData({type:"message",message_id:id});if(!latest?.国策||typeof latest.国策!="object")return;latest.国策={...latest.国策,快讯:bar},await mvu.replaceMvuData(latest,{type:"message",message_id:id})}finally{this.writing=!1}}signal.aborted||(await this.appendNewsTag(id),await this.api.eventEmit?.("national-focus:news-saved",id))}async readNews(messageId){let data=this.api.Mvu?.getMvuData({type:"message",message_id:messageId}),raw=data?.国策??data?.stat_data?.国策,parsed=StateSchema.safeParse(raw),seen=raw?.快讯?.insiders;return parsed.success?{state:parsed.data,events:floorNews(parsed.data,messageId,seen??void 0)}:null}onNewsRequest(callback){let listener=this.api.eventOn(NEWS_EVENT,(messageId,action)=>{typeof messageId=="number"&&callback(messageId,action==="panel"||action==="events"?action:"news")});return()=>listener.stop()}async appendNewsTag(messageId){let[message]=this.api.getChatMessages(messageId),text2=message?.message??"";if(!(!this.api.setChatMessages||/<国策快讯\s*\/>/.test(text2)))try{await this.api.setChatMessages([{message_id:messageId,message:`${text2}
+</国策动态>`:""}`:""}var bookPrefix="国策档案-";function currentBookName(name){if(name.startsWith(bookPrefix))return name;let legacyPrefix="國策檔案-";if(!name.startsWith(legacyPrefix))return null;let suffix=name.slice(legacyPrefix.length);return bookPrefix+({世界概況:"世界概况","國家動態-包裹-上":"国家动态-包裹-上","國家動態-包裹-下":"国家动态-包裹-下"}[suffix]??(suffix.startsWith("國家-")?`国家-${suffix.slice(3)}`:suffix))}var bookOrder={overview:99990,open:99991,country:99992,close:99993};function bookEntries(view,constant=!0){let read=path=>`<%- getvar('国策.prompt.${path}', { defaults: '' }) %>`,ids=Object.keys(view.countries);return view.overview?[{name:`${bookPrefix}世界概况`,constant:!0,keys:[],content:read("overview"),order:bookOrder.overview},{name:`${bookPrefix}国家动态-包裹-上`,constant:!0,keys:[],content:"<国策动态>",order:bookOrder.open},...ids.map(id=>({name:`${bookPrefix}国家-${id}`,constant,keys:view.countries[id].keys,content:read(`countries.${id}.text`),order:bookOrder.country})),{name:`${bookPrefix}国家动态-包裹-下`,constant:!0,keys:[],content:"</国策动态>",order:bookOrder.close}]:[]}function movedCountryEntries(existing,wanted){let countryPrefix=`${bookPrefix}国家-`,present=new Set(existing.map(entry=>currentBookName(entry.name))),wantedNames=new Set(wanted.map(entry=>entry.name)),open2=wanted.filter(entry=>entry.name.startsWith(countryPrefix)&&!present.has(entry.name)),moved=new Map;for(let entry of existing){let name=currentBookName(entry.name);if(!name?.startsWith(countryPrefix)||wantedNames.has(name))continue;let keys=entry.strategy.keys.map(String),index=open2.findIndex(target=>target.keys[0]!==void 0&&keys.includes(target.keys[0]));index>=0&&(moved.set(name,open2[index].name),open2.splice(index,1))}return moved}function reconcileBook(existing,wanted){let byName=new Map(wanted.map(entry=>[entry.name,entry])),moved=movedCountryEntries(existing,wanted),changed=!1,kept=[];for(let entry of existing){let current=currentBookName(entry.name),name=current===null?null:moved.get(current)??current;if(name===null){kept.push(entry);continue}let target=byName.get(name);if(!target){changed=!0;continue}byName.delete(name);let type=target.constant?"constant":"selective",keys=entry.strategy.keys.map(String),missing=target.keys.filter(key=>!keys.includes(key));entry.name!==target.name||entry.content!==target.content||entry.strategy.type!==type||missing.length?(changed=!0,kept.push({...entry,name:target.name,content:target.content,strategy:{...entry.strategy,type,keys:[...entry.strategy.keys,...missing]}})):kept.push(entry)}for(let target of byName.values())changed=!0,kept.push({name:target.name,enabled:!0,strategy:{type:target.constant?"constant":"selective",keys:target.keys},position:{type:"after_character_definition",role:"system",depth:4,order:target.order},content:target.content,recursion:{prevent_incoming:!0,prevent_outgoing:!0,delay_until:null}});return changed?kept:null}var storageKey="national-focus-skeleton.config.v1",legacyStorageKey="national-focus.config.v1",injectionId="national-focus-public-state";function explainOpaqueError(detail){if(/<!DOCTYPE html|<html[\s>]/i.test(detail)){let code=/Error code (\d{3})/i.exec(detail)?.[1]??/\b(52[0-9])\b/.exec(detail)?.[1],title=/<title>([^<]*)<\/title>/i.exec(detail)?.[1]?.trim();return code==="524"?`反向代理超时（Cloudflare 524：约 100 秒内没有开始回应）。请在 API 预设开启「流式传输」（代理若有假流式也可开启），或调低推理强度、每批填写国策数，或改用没有此限制的连接${title?`。代理页面：${title}`:""}`:`反向代理返回错误页（${code?`错误码 ${code}`:"无错误码"}${title?`：${title}`:""}）。这通常是代理或上游服务的问题，请稍后重试或改用其他连接`}let bare=detail.replace(/^(Error:\s*)+/i,"").trim();return!bare||/^(<none>|none|null|undefined|true|Response not OK|Unknown error)$/i.test(bare)?`${detail}（API 或反向代理没有提供原因。常见原因：回应被供应商的安全过滤挡下、思考用完输出上限而没有正文、代理超时或上游断线。请开启执行记录查看请求，或改用其他连接／降低输出上限后重试）`:detail}var TavernPlatform=class{constructor(api,storage,secrets){this.api=api;this.storage=storage;this.secrets=secrets??new TavernSecretStore(()=>this.context(),api.indexedDB);let listen=(event,callback)=>{if(event){let listener=api.eventOn(event,callback);this.stops.push(()=>listener.stop())}};listen("national-focus:refresh-news",messageId=>{if(typeof messageId!="number"||!Number.isInteger(messageId)||messageId<0)return;let signal=this.sourceRun.signal;this.newsQueue=this.newsQueue.then(async()=>{await this.annotating,!(this.disposed||signal.aborted)&&await this.annotate(messageId)}).catch(error2=>console.warn("[国策档案] 无法更新本楼快讯资料：",error2))});for(let name of["CHAT_CHANGED","MESSAGE_SWIPED","MESSAGE_DELETED"])listen(api.tavern_events[name],()=>{this.pending=null,this.readyIdentity="",this.generating=!1,this.mvuBusy=!1,api.uninjectPrompts([injectionId]),this.sourceRun.abort(),this.sourceRun=new AbortController,this.bookEpoch++;for(let callback of this.changeListeners)callback()});listen(api.tavern_events.GENERATION_STARTED,(type,_options,dryRun)=>{dryRun||type==="quiet"||(this.generating=!0,this.readyIdentity="",this.sourceRun.abort(),this.sourceRun=new AbortController)}),listen(api.tavern_events.GENERATION_STOPPED,()=>{this.generating=!1,this.pending=null}),listen(api.tavern_events.MESSAGE_RECEIVED,(_id,type)=>{if(["quiet","impersonate","extension"].includes(type))return;let item=this.pendingForCurrent();item&&(item.received=!0)}),listen(api.tavern_events.GENERATION_ENDED,()=>{if(!this.generating&&!this.pending?.received)return;this.generating=!1;let item=this.pendingForCurrent();item&&(item.ended=!0)});let boundMvu=!1,bindMvu=()=>{boundMvu||!api.Mvu||(boundMvu=!0,listen(api.Mvu.events.VARIABLE_UPDATE_STARTED,()=>{this.mvuBusy=!0}),listen(api.Mvu.events.VARIABLE_UPDATE_ENDED,(after,before)=>{this.mvuBusy=!1;let saved=before?.国策!==void 0?before.国策:before?.stat_data?.国策;saved!==void 0&&(after.国策=structuredClone(saved),delete after.stat_data.国策)}),listen(api.Mvu.events.BEFORE_MESSAGE_UPDATE,context=>{if(this.writing)return;let message=this.api.getChatMessages(-1)[0];if(message&&(this.generating||this.pending?.received||this.pending?.ended)&&context?.message_content===(message.message??message.swipes[message.swipe_id])){let item=this.pendingForCurrent();item&&(item.mvu=!0)}this.mvuBusy=!1}))};bindMvu();for(let event of["MESSAGE_EDITED","MESSAGE_UPDATED"])listen(api.tavern_events[event],()=>{for(let callback of this.integrationListeners)callback()});let ticks=0;this.timer=setInterval(()=>{if(bindMvu(),++ticks%5===0)for(let callback of this.integrationListeners)callback();let pending=this.pending;if(!(!pending||this.writing||this.generating||this.mvuBusy||api.Mvu?.isDuringExtraAnalysis())){if(pending.identity!==this.identity()){this.pending=null;return}if(pending.received&&pending.ended&&pending.mvu&&!this.annotating){let signal=this.sourceRun.signal;this.pending=null,this.readyIdentity=pending.identity,this.annotating=this.annotate().catch(error2=>console.warn("[国策档案] 无法更新快讯条资料：",error2)).finally(()=>{if(this.annotating=null,!(this.disposed||signal.aborted))for(let callback of this.readyListeners)callback()})}}},200)}demo=!1;chatId(){return this.api.SillyTavern.getCurrentChatId()}async models(api){if(!api.url.trim())throw new Error("请先填写端点（基础 URL），也可以直接手动输入模型名称");if(!this.api.getModelList)throw new Error("目前酒馆助手未提供模型加载功能，请更新助手或手动输入模型名称");try{let models=await this.api.getModelList({apiurl:api.url.trim(),key:api.apiKey||void 0});return[...new Set(models.filter(model=>typeof model=="string"&&model.trim()).map(model=>model.trim()))].sort()}catch(error2){throw new Error(redactApiError(error2,[api]))}}writing=!1;config=null;promptSaved=!1;bookQueue=Promise.resolve();bookToken=0;bookEpoch=0;bookWarned=!1;writtenBook=null;disposed=!1;annotating=null;newsQueue=Promise.resolve();generating=!1;mvuBusy=!1;readyIdentity="";sourceRun=new AbortController;stops=[];readyListeners=new Set;changeListeners=new Set;integrationListeners=new Set;pending=null;timer;secrets;context(){try{return this.api.SillyTavern.getContext?.()??this.api.SillyTavern}catch{return this.api.SillyTavern}}macrosEnabled(){let root=this.context()?.extensionSettings,value=root?.tavern_helper?.macro?.enabled??root?.TavernHelper?.macro?.enabled;return typeof value=="boolean"?value:!0}renderer(messageId){let memo2=new Map,depth=Math.max(0,this.api.getLastMessageId()-messageId),macros=(text2,source)=>{let substitute=()=>{try{return this.api.substitudeMacros?.(text2)??text2}catch{return text2}};if(!this.macrosEnabled()||!this.api.formatAsTavernRegexedString)return substitute();try{return this.api.formatAsTavernRegexedString(text2,source,"prompt",{depth})}catch{return substitute()}},run=async(text2,source)=>{let output2=macros(text2,source),template=this.api.EjsTemplate,evaluate=template?.evaltemplate??template?.evalTemplate;if(evaluate&&(text2.includes("<%")||output2.includes("<%")))try{let context=await template?.prepareContext?.({},messageId)??{};output2=await evaluate.call(template,output2,context)}catch(error2){console.warn("[国策档案] EJS 模板处理失败，保留原文：",error2)}return macros(output2,source)};return(text2,source="world_info")=>{if(!text2?.trim())return Promise.resolve(text2??"");let key=`${source}\0${text2}`,pending=memo2.get(key);return pending||(pending=run(text2,source),memo2.set(key,pending)),pending}}tables(){try{let value=this.api.parent?.AutoCardUpdaterAPI?.exportTableAsJson?.();return value&&typeof value=="object"?value:null}catch{return null}}persona(){try{return this.context()?.powerUserSettings?.persona_description||this.api.getPersona?.("current")?.description||""}catch{return""}}async characterDescription(){try{return(await this.api.getCharacter?.("current"))?.description??this.api.getCharData?.("current")?.description??""}catch{try{return this.api.getCharData?.("current")?.description??""}catch{return""}}}current(){return this.api.getChatMessages(-1,{include_swipes:!0})[0]}identity(){let message=this.current();return stamp([this.api.SillyTavern.getCurrentChatId(),this.api.getLastMessageId(),message?.swipe_id])}pendingForCurrent(){let message=this.current();if(!message||message.role!=="assistant")return null;let identity=this.identity();return this.readyIdentity===identity?null:(this.pending?.identity!==identity&&(this.pending={identity,received:!1,ended:!1,mvu:!1,since:Date.now()}),this.pending)}bindIntegration(api){let parent=this.api.parent;if(!parent)return()=>{};parent.NationalFocusIntegration=api;let remove=()=>{parent.NationalFocusIntegration===api&&delete parent.NationalFocusIntegration};return this.stops.push(remove),remove}readIntegration(messageId,config2){if(this.disposed)return unavailable("disposed");try{let lastMessageId=this.api.getLastMessageId();if(!Number.isInteger(messageId)||messageId<0||messageId!==lastMessageId)return unavailable("not_latest");let message=this.api.getChatMessages(messageId,{include_swipes:!0})[0];if(!message||message.role!=="assistant")return unavailable("not_assistant");if(message.message_id!==messageId||!this.chatId())return unavailable("source_changed");let mvu=this.api.Mvu;if(!mvu)return unavailable("mvu_unavailable");if(this.generating||this.mvuBusy||this.writing||mvu.isDuringExtraAnalysis())return unavailable("mvu_busy");let data=mvu.getMvuData({type:"message",message_id:messageId}),world=this.readWorldProposal(messageId);return{chatId:this.chatId(),messageId,swipeId:message.swipe_id,lastMessageId,role:message.role,extraAnalysis:!1,data,world:world?.member?{...world.member,fingerprint:world.fingerprint}:void 0,timePath:config2.sources.timePath,signal:this.sourceRun.signal}}catch{return unavailable("read_failed")}}onIntegrationTick(callback){return this.integrationListeners.add(callback),()=>this.integrationListeners.delete(callback)}readWorldProposal(messageId){let workflow=this.api.parent?.AcuPostProcessAPI;if(!workflow)return null;try{let member=worldMember(workflow.getEffectiveSettings()),status=RunStatusSchema.safeParse(workflow.getRunStatusForFloor(messageId)),data=this.api.Mvu?.getMvuData({type:"message",message_id:messageId}),patchLog=null;try{patchLog=this.api.parent?.Addon?.getLastPatchLog()??null}catch{}return{member,run:status.success?status.data:null,fingerprint:worldFingerprint(valueAt(data?.addon_data,`世界.${FOCUS_WORLD}`)),patchLog,world:structuredClone(valueAt(data?.addon_data,`世界.${FOCUS_WORLD}`))}}catch{return null}}loadProposalRepair(){let saved=this.storage.getItem(`national-focus-skeleton.repair.v1.${this.chatId()}`);return saved?JSON.parse(saved):null}saveProposalRepair(material,chatId){let key=`national-focus-skeleton.repair.v1.${chatId}`;material?this.storage.setItem(key,JSON.stringify(material)):this.storage.removeItem(key)}readScheduleSource(){try{let message=this.current();return!message||message.role!=="assistant"||message.message_id!==this.api.getLastMessageId()?null:{chatId:this.chatId(),messageId:message.message_id,swipeId:message.swipe_id,content:message.swipes[message.swipe_id]??message.message??""}}catch{return null}}predictWorldSchedule(source){try{let workflow=this.api.parent?.AcuPostProcessAPI;if(workflow){let chatKey=String(this.api.parent?.SillyTavern?.getContext?.()?.chatId||"").trim()||"unknown_chat";return predictWorldSchedule(workflow.getEffectiveSettings(),chatKey,source.content)}}catch{}return{status:"unknown",reason:"unavailable"}}async read(config2,job){let signal=this.sourceRun.signal;await this.annotating,signal.throwIfAborted();let mvu=this.api.Mvu;if(!mvu)throw new Error("尚未检测到 MVU，请先启用 MVU 变数框架");if(this.generating||this.mvuBusy||mvu.isDuringExtraAnalysis())throw new FloorNotReady("正文或一般 MVU 更新尚未完成，请稍后重试");if(this.pending&&!this.readyIdentity)throw new FloorNotReady("等待本楼正文完成及 MVU 写入事件；若已等待过久，请检查 MVU 工作状态后重新加载脚本");let message=this.current();if(!message||message.role!=="assistant")throw new FloorNotReady("请在一则已完成且具有 MVU 变数的 AI 回复后使用");let identity=this.identity(),data=mvu.getMvuData({type:"message",message_id:message.message_id});if(!data.stat_data)throw new Error("本楼尚无 MVU stat_data，不能建立另一份聊天存档替代");let rawTime=valueAt(data.stat_data,config2.sources.timePath),day;try{day=storyDay(rawTime)}catch(error2){let found=rawTime===void 0?"没有这个变量":`读到「${String(JSON.stringify(rawTime)).slice(0,60)}」`;throw new Error(`读不到故事时间（stat_data.${config2.sources.timePath}：${found}）。国策进度以故事日计算，所有国策任务暂停；请到「设置 › 世界书与上下文 › 故事时间路径」修正。${error2 instanceof Error?error2.message:""}`)}let saved=data.国策!==void 0?data.国策:data.stat_data.国策;this.config=config2,this.promptSaved=!!data.国策?.prompt;let state=saved===void 0?createState(day):migrateCountryKeys(StateSchema.parse(saved));state.time=timeText(rawTime);let messages=this.api.getChatMessages(`0-${message.message_id}`),sourceData;if(job){let settings=config2.sources,cache=new Map,selection=effectiveSources(settings,job).worldbook,used=segmentPlaceholders(config2.jobs[job].prompts,job),uses=placeholder=>used.has(placeholder),needCharacter=settings.managedEntries||settings.persona||uses("$2")||uses("$U"),needCharacterText=settings.characterDescription||uses("$C"),needDefault=settings.memoryRecallRecentCount>0||settings.summaryIndex||uses("$5")||uses("$6"),[books,memoryBooks,characterBooks,character]=await Promise.all([this.sources(selection,cache),needDefault?this.sources(settings.worldbook,cache):[],needCharacter?this.sources({source:"character",manualSelection:[],enabledEntries:{}},cache):[],needCharacterText?this.characterDescription():""]);sourceData=await buildSourceContext({config:config2,job,messages,currentId:message.message_id,entries:books,memoryEntries:memoryBooks,characterEntries:characterBooks,variables:data.stat_data,world:job==="update"&&this.api.parent?.AcuPostProcessAPI?valueAt(data.addon_data,`世界.${FOCUS_WORLD}`):void 0,tables:this.tables(),persona:settings.persona||uses("$U")?this.persona():"",character,renderEntry:this.renderer(message.message_id)})}return signal.throwIfAborted(),{identity,messageId:message.message_id,signal,turn:messages.filter(m=>m.role==="assistant").length,day,state,context:sourceData?.context??{},prompts:sourceData?.prompts,sourceReport:sourceData?.report}}async commit(snapshot,state){if(this.disposed)throw new Error("脚本已卸载");snapshot.signal?.throwIfAborted();let mvu=this.api.Mvu;if(!mvu)throw new Error("尚未检测到 MVU");let message=this.api.getChatMessages(snapshot.messageId)[0];if(!message||message.role!=="assistant")throw new Error("目标 AI 楼层不存在");let latest=mvu.getMvuData({type:"message",message_id:snapshot.messageId}),saved=StateSchema.parse(state);stampNews(saved,message.message_id);let rawTime=this.config?timeText(valueAt(latest.stat_data,this.config.sources.timePath)):"";saved.time=rawTime||saved.time;let bar=latest.国策?.快讯;latest.国策={...saved,prompt:promptView(saved,this.config?.newsPrompt??!0),...bar?{快讯:{...bar,insiders:insiders(saved,bar.location)}}:{}},delete latest.stat_data.国策,this.writing=!0;try{await mvu.replaceMvuData(latest,{type:"message",message_id:message.message_id})}finally{this.writing=!1}snapshot.signal?.throwIfAborted(),await this.appendNewsTag(message.message_id),await this.api.eventEmit?.("national-focus:news-saved",message.message_id)}async annotate(messageId){let signal=this.sourceRun.signal,mvu=this.api.Mvu,message=messageId===void 0?this.current():this.api.getChatMessages(messageId)[0],config2=this.config??this.loadConfig();if(!mvu||!message||message.role!=="assistant")return;let id=message.message_id,data=mvu.getMvuData({type:"message",message_id:id}),parsed=StateSchema.safeParse(data?.国策);if(!data?.stat_data||!parsed.success)return;let earlier;for(let previousId=id-1;previousId>=0;previousId--){let item=this.api.getChatMessages(previousId)[0];if(item?.role==="assistant"&&item.message_id<id){earlier=item;break}}let before=earlier?mvu.getMvuData({type:"message",message_id:earlier.message_id}):void 0,sources=config2.sources,carried=data.国策.快讯,bar=buildNewsBar({state:parsed.data,floor:id,time:timeText(valueAt(data.stat_data,sources.timePath)),location:timeText(valueAt(data.stat_data,sources.locationPath)),newsPath:sources.newsPath,timePath:sources.timePath,locationPath:sources.locationPath,news:valueAt(data.stat_data,sources.newsPath),previousNews:before?.stat_data?valueAt(before.stat_data,sources.newsPath):void 0,hasPrevious:!!before?.stat_data,previous:before?.国策?.快讯??carried});if(stamp([carried])!==stamp([bar])){this.writing=!0;try{let latest=mvu.getMvuData({type:"message",message_id:id});if(!latest?.国策||typeof latest.国策!="object")return;latest.国策={...latest.国策,快讯:bar},await mvu.replaceMvuData(latest,{type:"message",message_id:id})}finally{this.writing=!1}}signal.aborted||(await this.appendNewsTag(id),await this.api.eventEmit?.("national-focus:news-saved",id))}async readNews(messageId){let data=this.api.Mvu?.getMvuData({type:"message",message_id:messageId}),raw=data?.国策??data?.stat_data?.国策,parsed=StateSchema.safeParse(raw),seen=raw?.快讯?.insiders;return parsed.success?{state:parsed.data,events:floorNews(parsed.data,messageId,seen??void 0)}:null}async peek(config2){let mvu=this.api.Mvu,last=this.api.getLastMessageId();if(!mvu||last<0)return null;for(let message of this.api.getChatMessages(`0-${last}`).reverse()){if(message.role!=="assistant")continue;let data=mvu.getMvuData({type:"message",message_id:message.message_id}),saved=data?.国策!==void 0?data.国策:data?.stat_data?.国策;if(saved===void 0)continue;let parsed=StateSchema.safeParse(saved);if(!parsed.success)return null;this.config=config2,this.promptSaved=!!data.国策?.prompt;let state=migrateCountryKeys(parsed.data),rawTime=valueAt(data.stat_data,config2.sources.timePath);try{storyDay(rawTime),state.time=timeText(rawTime)}catch{}return{state,messageId:message.message_id}}return null}onNewsRequest(callback){let listener=this.api.eventOn(NEWS_EVENT,(messageId,action)=>{typeof messageId=="number"&&callback(messageId,action==="panel"||action==="events"?action:"news")});return()=>listener.stop()}async appendNewsTag(messageId){let[message]=this.api.getChatMessages(messageId),text2=message?.message??"";if(!(!this.api.setChatMessages||/<国策快讯\s*\/>/.test(text2)))try{await this.api.setChatMessages([{message_id:messageId,message:`${text2}
 
 ${NEWS_TAG}`}],{refresh:"affected"})}catch(error2){console.warn("[国策档案] 无法在正文加入新闻标签：",error2)}}async generate(messages,api,secret,signal){if(signal.throwIfAborted(),api.url&&!api.proxy){let service=this.context()?.ChatCompletionService;if(service)try{let response=await service.processRequest(customRequest(api,messages,secret),{},!0,signal);signal.throwIfAborted();let result=(api.stream?await readStream(response):null)??extractApiResult(response);if(signal.throwIfAborted(),!result.content)throw new Error("API 回应没有文字内容");return result}catch(error2){if(signal.aborted)throw error2;let detail=explainOpaqueError(redactApiError(error2,[{...api,apiKey:secret}]));if(hasAdvancedApi(api))throw new Error(`ChatCompletionService 失败，进阶参数不能回退 generateRaw：${detail}`);console.warn("[国策档案] ChatCompletionService 失败，回退 generateRaw：",detail)}}if(hasAdvancedApi(api))throw new Error("进阶 API 参数需要酒馆 ChatCompletionService 及明确 URL；未送出省略设置的请求");let id=requestId("national_focus"),stop=()=>this.api.stopGenerationById(id);signal.addEventListener("abort",stop,{once:!0});try{let result=await this.api.generateRaw({generation_id:id,should_silence:!0,should_stream:api.stream,max_chat_history:0,overrides:{world_info_before:"",world_info_after:"",persona_description:"",char_description:"",char_personality:"",scenario:"",dialogue_examples:"",chat_history:{with_depth_entries:!1,prompts:[]}},ordered_prompts:messages.map(({role,content})=>({role,content})),custom_api:{max_tokens:api.maxTokens,temperature:api.temperature,...api.url||api.model||api.proxy?{apiurl:api.url||void 0,model:api.model||void 0,proxy_preset:api.proxy||void 0,key:secret||void 0,source:api.url||api.proxy?"openai":void 0}:{}}});if(signal.throwIfAborted(),typeof result!="string")throw new Error("API 回应不是文字 JSON");return{content:result}}catch(error2){throw new Error(explainOpaqueError(redactApiError(error2,[{...api,apiKey:secret}])))}finally{signal.removeEventListener("abort",stop)}}async worldbooks(){let character=this.api.getCharWorldbookNames("current"),names=[...new Set([...character.primary?[character.primary]:[],...character.additional])];return{character:names,all:this.api.getWorldbookNames?.()??names}}async sources(selection=this.loadConfig().sources.worldbook,cache){let names=selection.source==="manual"?[...new Set(selection.manualSelection)]:(await this.worldbooks()).character,read=book=>{let pending=cache?.get(book);return pending||(pending=this.api.getWorldbook(book).then(entries=>entries.map(entry=>({...entry,book}))),cache?.set(book,pending)),pending};return(await Promise.all(names.map(read))).flat()}loadConfig(){let shared=this.secrets.durable?this.secrets.loadConfig():null,saved=shared??this.storage.getItem(storageKey)??this.storage.getItem(legacyStorageKey),raw=saved?JSON.parse(saved):void 0,config2=raw?ConfigSchema.parse(raw):defaultConfig();if(config2.defaultApi||(config2.defaultApi=config2.apis[0].name),raw&&raw.apiBindings===void 0)for(let job of Object.values(config2.jobs))(job.api==="目前连线"||job.api==="目前連線")&&(job.api="");if(!this.secrets.durable)return config2;let stored=this.secrets.load();if(hasSecrets(config2)){let merged={version:1,byPreset:{...extractSecrets(config2).byPreset,...stored?.byPreset??{}}};return this.secrets.save(merged),this.writeConfig(JSON.stringify(stripSecrets(config2))),mergeSecrets(stripSecrets(config2),merged)}return saved&&!shared&&this.secrets.saveConfig(saved),mergeSecrets(config2,stored)}saveConfig(config2){if(this.config=config2,!this.secrets.durable){this.storage.setItem(storageKey,JSON.stringify(config2));return}this.secrets.save(extractSecrets(config2)),this.writeConfig(JSON.stringify(stripSecrets(config2)))}writeConfig(text2){this.secrets.saveConfig(text2),this.storage.setItem(storageKey,text2)}secretLocation(){return this.secrets.durable?"tavern":"local"}onReady(callback){return this.readyListeners.add(callback),()=>this.readyListeners.delete(callback)}onChange(callback){return this.changeListeners.add(callback),()=>this.changeListeners.delete(callback)}bookMode(){return this.config?.promptMode!=="inject"&&!!this.api.EjsTemplate&&!!this.api.updateWorldbookWith}inject(state,news=!0){if(this.disposed)return;let view=promptView(state,news),content=promptText2(view);content?this.api.injectPrompts([{id:injectionId,position:"in_chat",depth:0,role:"system",should_scan:!1,content}]):this.api.uninjectPrompts([injectionId]);let book=this.bookMode();this.queueBook(book?view:null,{chat:this.api.SillyTavern.getCurrentChatId(),epoch:this.bookEpoch,token:++this.bookToken,handOff:book&&this.promptSaved&&!!content})}bookCurrent(source){return!this.disposed&&source.token===this.bookToken&&source.epoch===this.bookEpoch&&this.api.SillyTavern.getCurrentChatId()===source.chat}queueBook(view,source){let api=this.api;this.bookQueue=this.bookQueue.then(async()=>{if(!this.bookCurrent(source)||!api.updateWorldbookWith)return;let wanted=view?bookEntries(view,this.config?.countryEntries!=="keyword"):[],name=api.getCharWorldbookNames("current").primary?.trim()||null;if(!name&&wanted.length)throw new Error("当前角色尚未设置主世界书。请在酒馆的角色设置中绑定主世界书；不会自动建立新书。");let previous2=this.writtenBook?.chat===source.chat?this.writtenBook.name:null;if(previous2&&previous2!==name){let entries=await api.getWorldbook(previous2);if(!this.bookCurrent(source)||(reconcileBook(entries,[])!==null&&await api.updateWorldbookWith(previous2,entries2=>reconcileBook(entries2,[])??entries2),!this.bookCurrent(source)))return;this.writtenBook=null}if(!name||!this.bookCurrent(source))return;let current=await api.getWorldbook(name);if(!this.bookCurrent(source)||reconcileBook(current,wanted)!==null&&(await api.updateWorldbookWith(name,entries=>reconcileBook(entries,wanted)??entries),console.info("[国策档案] 已更新角色主世界书条目",name),!this.bookCurrent(source)))return;let character=api.getCharWorldbookNames("current"),activeBooks=[api.getChatWorldbookName?.("current"),character.primary,...character.additional,...api.getGlobalWorldbookNames()];if(source.handOff&&activeBooks.includes(name)&&api.uninjectPrompts([injectionId]),this.writtenBook=wanted.length?{chat:source.chat,name}:null,wanted.length&&!activeBooks.includes(name)){this.bookWarned||api.toastr?.warning(`条目已写入「${name}」，但此书未在本聊天启用。国策资料暂用直接注入；请在酒馆中绑定或启用该书。`,"国策档案"),this.bookWarned=!0;return}this.bookWarned=!1}).catch(error2=>{console.warn("[国策档案] 角色主世界书条目更新失败",error2),this.bookCurrent(source)&&!this.bookWarned&&(this.bookWarned=!0,api.toastr?.warning(`世界书条目更新失败，国策资料暂用直接注入。${error2 instanceof Error?error2.message:"详情见浏览器主控台。"}`,"国策档案"))})}dispose(){if(this.sourceRun.abort(),!this.disposed){this.disposed=!0,clearInterval(this.timer);for(let stop of this.stops)stop();this.api.uninjectPrompts([injectionId])}}};var escape=value=>value.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]),time3=day=>storyTime(day);function periodControl(country){return`<label class="switch-label period-toggle" title="关闭后保留当前树，事件仍继续推进"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod?"checked":""}>自动换期</label>`}function periodNote(country,jobs){return jobs.some(job=>job.periodWork?.transition.country===country.id&&["queued","running"].includes(job.state))?"下一期生成中；事件继续更新，成功后才换树":country.autoPeriod?country.agenda||"本期目的完成或局势不再适配时自动换期":"保留当前国策树；事件仍继续更新"}function periodLine(country,jobs){let note=periodNote(country,jobs),lots=country.shape?[country.shape.type,country.shape.naming,...country.shape.lots].map(lot=>`${lot.category}：${lot.name}`):[],shape=country.shape?`<span class="period-shape" title="${escape(lots.join(`
 `))}">${escape(country.shape.type.name)} · ${escape(country.shape.naming.name)}</span>`:"";return`<div class="period-line" aria-label="当前期别"><strong>第 ${country.period.number} 期 · ${escape(country.periodTitle)}</strong>${shape}${periodControl(country)}<button class="linkish period-history-btn" data-action="period-history">往期摘要${country.period.history.length?` · ${country.period.history.length}`:""}</button></div><p class="period-note" role="status" title="${escape(note)}">${escape(note)}</p>`}function anchorBadge(country,node2){return country.period.anchor===node2.id?'<span class="period-anchor-badge">前期承接</span>':""}function anchorNotice(country,node2){return country.period.anchor===node2.id?'<div class="period-anchor-note"><strong>前期承接</strong><span>保留原国策的状态、工期及已生效成果，相关事件继续更新。</span></div>':""}function historyBody(country){return`<p class="muted">${escape(country.name)} · 往期只保留时间与摘要</p>${country.period.history.length?[...country.period.history].reverse().map(h=>`<article class="period-history"><time>${time3(h.start)} — ${time3(h.end)}</time><p>${escape(h.summary)}</p></article>`).join(""):'<p class="muted">尚未换期。</p>'}`}var paths={crown:'<path d="M10 18l10 9 12-17 12 17 10-9-6 29H16z"/><path d="M16 53h32M21 38h22"/>',industry:'<path d="M10 53V28l15 8V24l14 8V11h9l3 42z"/><path d="M17 43h5m8 0h5m8 0h3"/>',army:'<path d="M15 10l39 39-5 5L10 15zM49 10L10 49l5 5 39-39zM7 40l17 17m16-50 17 17"/>',science:'<path d="M24 9h16M28 9v21L14 49q-3 6 4 6h28q7 0 4-6L36 30V9M23 40h18"/><circle cx="32" cy="46" r="2"/>',trade:'<path d="M10 25h44L44 13m10 12L44 37M54 43H10l10-12M10 43l10 12"/>',diplomacy:'<circle cx="32" cy="32" r="22"/><ellipse cx="32" cy="32" rx="10" ry="22"/><path d="M10 32h44M15 19h34M15 45h34"/>',eagle:'<path d="M32 15l-7-6-4 3 6 9-9-4L6 8l3 20 14 10-9 7 12-2 6 14 6-14 12 2-9-7 14-10 3-20-12 9-9 4 6-9-4-3z"/><path d="M27 28l5 13 5-13"/>'};function icon(name,className=""){return`<svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${paths[name]??paths.crown}</svg>`}function snapshotTasks(config2,name){let jobs={};for(let kind of jobKinds){let job=config2.jobs[kind];jobs[kind]=TaskSnapshotSchema.parse({retries:job.retries,timeout:job.timeout,schedule:job.schedule,interval:job.interval,...kind==="generate"&&job.segmentMax!==void 0?{segmentMax:job.segmentMax}:{},recommendedModel:job.recommendedModel,prompts:structuredClone(job.prompts)})}return TaskPresetSchema.parse({name,savedAt:Date.now(),jobs,sources:structuredClone(config2.sources)})}function presetName(name){let trimmed=String(name??"").trim();if(!trimmed)throw new Error("请输入任务预设名称");return trimmed}function saveTaskPreset(config2,name){let entry=snapshotTasks(config2,presetName(name)),next=structuredClone(config2),index=next.taskPresets.findIndex(preset=>preset.name===entry.name);return index>=0?next.taskPresets[index]=entry:next.taskPresets.push(entry),next.activeTaskPreset=entry.name,next}function applyTaskPreset(config2,name){let entry=config2.taskPresets.find(preset=>preset.name===name);if(!entry)throw new Error(`找不到任务预设「${name}」`);let next=structuredClone(config2);for(let kind of jobKinds){let saved=entry.jobs[kind];saved&&(next.jobs[kind]={...next.jobs[kind],...structuredClone(saved),prompts:normalizePrompts(structuredClone(saved.prompts))})}return entry.sources!==void 0&&(next.sources=SourcesSchema.parse(structuredClone(entry.sources))),next.activeTaskPreset=entry.name,next}function deleteTaskPreset(config2,name){if(!config2.taskPresets.some(preset=>preset.name===name))throw new Error(`找不到任务预设「${name}」`);let next=structuredClone(config2);return next.taskPresets=next.taskPresets.filter(preset=>preset.name!==name),next.activeTaskPreset===name&&(next.activeTaskPreset=""),next}var ExportSchema=external_exports.object({kind:external_exports.literal("national-focus-task-presets"),version:external_exports.literal(1),presets:external_exports.array(TaskPresetSchema).min(1)});function exportTaskPresets(config2,name){let presets=name?config2.taskPresets.filter(preset=>preset.name===name):config2.taskPresets;if(!presets.length)throw new Error(name?`找不到任务预设「${name}」`:"目前没有可导出的任务预设");return JSON.stringify({kind:"national-focus-task-presets",version:1,presets},null,2)}function describeIssues(error2){return error2.issues.slice(0,5).map(issue2=>`${issue2.path.join(".")||"（根）"}：${issue2.message}`).join("；")}function explainImport(raw){let value=raw&&typeof raw=="object"?raw:{};if(Array.isArray(value.tasks)||Array.isArray(value.promptGroups))throw new Error("这是工作流助手的预设文件，格式与国策任务预设不同，不能直接导入。请导入由本扩展导出、kind 为 national-focus-task-presets 的文件（例如「织界国策-任务预设.json」）。");if(value.kind==="national-focus-task-presets"){let result=ExportSchema.safeParse(raw);throw new Error(`任务预设文件内容有误：${result.success?"未知错误":describeIssues(result.error)}`)}throw new Error("这不是国策任务预设文件。请导入由本扩展导出、kind 为 national-focus-task-presets 的 JSON。")}function importTaskPresets(config2,raw){let exported=ExportSchema.safeParse(raw),entries;if(exported.success)entries=exported.data.presets;else{let list=Array.isArray(raw)?raw:[raw],parsed=list.map(item=>TaskPresetSchema.safeParse(item));(!list.length||parsed.some(result=>!result.success))&&explainImport(raw),entries=parsed.map(result=>result.data)}let next=structuredClone(config2);for(let entry of entries){entry.sources!==void 0&&SourcesSchema.parse(entry.sources);let index=next.taskPresets.findIndex(preset=>preset.name===entry.name);index>=0?next.taskPresets[index]=entry:next.taskPresets.push(entry)}return{config:next,names:entries.map(entry=>entry.name)}}var escape2=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]),taskNames={identify:"辨识国家",generate:"生成国策树",update:"局势更新",reshape:"重大改树"},taskHints={identify:"从世界书与正文列出候选国家。手动执行。",generate:"为勾选的国家生成国策树，全部通过验证才保存。",update:"正文完成后依排程推进各国局势、选策与事件。",reshape:"剧情大幅改变时修改尚未开始的国策。"},kindLabels={guide:"内建",task:"内建",data:"资料",custom:"自定义"},selectedAttr=value=>value?"selected":"";function mountTaskPanel(controller,host,getDraft,persist,initial={},hooks){let selected2=initial.selected??"update",expanded=new Set,previews=new Map,status=initial.status??"",confirmDelete=!1,disposed=!1,options=(values,value)=>values.map(([id,label2])=>`<option value="${escape2(id)}" ${selectedAttr(id===value)}>${escape2(label2)}</option>`).join("");function lastRun(kind){let job=controller.jobs.find(item=>item.kind===kind&&!["running","queued"].includes(item.state)),running=controller.jobs.some(item=>item.kind===kind&&["running","queued"].includes(item.state)),saved=controller.state?.schedules[kind],text2=running?"执行中":job?`上次：${job.state==="success"?"成功":job.state==="failed"?"失败":"已取消"} · ${job.time}`:saved?`上次成功：第 ${saved.turn} 则正文 · ${storyTime(saved.day)}`:"尚未执行";return`<small class="last-run">${escape2(text2)}</small>`}let promptCount=items=>`${items.length} 段 · 送出 ${items.filter(item=>item.enabled||item.kind==="data").length} 段`;function promptCard(kind,item,index,count){let key=`${kind}:${item.id}`,open2=expanded.has(key),text2=promptText(item,kind),modified=isModified(item),badge=item.kind==="custom"?"自定义":modified?`${kindLabels[item.kind]}·已修改`:kindLabels[item.kind];return`<div class="prompt-card ${item.enabled||item.kind==="data"?"":"off"} ${open2?"open":""}" data-prompt-row data-id="${escape2(item.id)}" data-kind="${item.kind}">
@@ -352,4987 +352,5032 @@ ${NEWS_TAG}`}],{refresh:"affected"})}catch(error2){console.warn("[国策档案] 
 ━━ #${i+1} ${message.role}${message.name?` · ${message.name}`:""} · ${message.content.length.toLocaleString()} 字符 ━━
 ${message.content.length>3e4?`${message.content.slice(0,3e4)}
 【画面只显示前 30,000 字符，实际未截断】`:message.content}`)].join(`
-`))}catch(error2){previews.set(kind,`无法预览：${error2 instanceof Error?error2.message:String(error2)}`)}disposed||render()})();return}}renderPrompts(kind)},change=event=>{let input2=event.target;if(input2.matches("[data-preset-select]")){if(!input2.value)return;try{read(),commit(applyTaskPreset(getDraft(),input2.value),`已套用任务预设「${input2.value}」并保存。`,!0)}catch(error2){status=error2 instanceof Error?error2.message:String(error2),render()}return}if(input2.matches("[data-preset-file]")){let file2=input2.files?.[0];if(input2.value="",!file2)return;file2.text().then(text2=>{read();let result=importTaskPresets(getDraft(),JSON.parse(text2));commit(result.config,`已导入 ${result.names.map(name=>`「${name}」`).join("、")}；选择后即可套用。`)}).catch(error2=>{status=`导入失败：${error2 instanceof Error?error2.message:String(error2)}`,render()});return}if(input2.dataset.t==="schedule"){let section=input2.closest("[data-task-editor]"),interval=section.querySelector("[data-interval]");interval.hidden=!["rounds","days"].includes(input2.value),interval.firstChild.textContent=input2.value==="days"?"间隔（故事日）":"间隔（则正文）",section.querySelector("[data-days-note]").hidden=input2.value!=="days";return}if(input2.dataset.sourceMode&&hooks){let kind=input2.closest("[data-task-editor]").dataset.taskEditor;read(),hooks.setMode(kind,input2.dataset.sourceMode,input2.value==="custom"),render();return}if(input2.dataset.t==="api"||input2.dataset.t==="recommendedModel"){let section=input2.closest("[data-task-editor]");read(),section.querySelector("[data-model-note]").innerHTML=modelNote(section.dataset.taskEditor,getDraft());return}let row=input2.closest("[data-prompt-row]");if(row&&input2.dataset.p==="enabled"){row.classList.toggle("off",!input2.checked),read();let kind=row.closest("[data-task-editor]").dataset.taskEditor,count=host.querySelector(`[data-task-editor="${kind}"] .prompt-toolbar small`);count&&(count.textContent=promptCount(getDraft().jobs[kind].prompts))}row&&input2.dataset.p==="name"&&(row.querySelector(".pname").textContent=input2.value||"未命名段"),row&&input2.dataset.p==="role"&&(row.querySelector(".role-tag").textContent=input2.value)};return host.addEventListener("click",click),host.addEventListener("change",change),render(),{read,state:()=>({selected:selected2,status}),refresh(){render()},dispose(){disposed=!0,host.removeEventListener("click",click),host.removeEventListener("change",change)}}}var escape3=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]),linger={queued:1/0,running:1/0,success:6e3,cancelled:6e3,failed:2e4},symbols={queued:'<i class="hud-sym wait">…</i>',running:'<i class="hud-sym run">●</i>',success:'<i class="hud-sym ok">✓</i>',failed:'<i class="hud-sym bad">!</i>',cancelled:'<i class="hud-sym off">–</i>'},HUD_WIDTH=320,GAP=10,EDGE=8;function elapsed(ms){let seconds=Math.max(0,Math.floor(ms/1e3));return`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,"0")}`}function mountHud(options){let{root,doc:doc2,controller}=options,hud=doc2.createElement("section");hud.className="hud",hud.hidden=!0,hud.setAttribute("role","status"),hud.setAttribute("aria-label","国策任务进度"),hud.innerHTML='<header class="hud-head" title="拖动可移动悬浮球与本窗口"><i class="status-dot"></i><strong>国策任务</strong><span class="hud-count"></span><span class="hud-actions"><button data-hud="stop" class="danger" title="取消全部执行中与排队的任务">停止</button><button data-hud="log" title="开启任务记录">记录</button><button data-hud="collapse" class="icon" aria-label="收合"></button><button data-hud="dismiss" class="icon" aria-label="关闭已完成项目" title="关闭已完成项目">×</button></span></header><div class="hud-bar"><i></i></div><ul class="hud-list"></ul>',root.append(hud);let head=hud.querySelector(".hud-head"),count=hud.querySelector(".hud-count"),dot=hud.querySelector(".status-dot"),bar=hud.querySelector(".hud-bar"),fill=bar.querySelector("i"),list=hud.querySelector(".hud-list"),button=name=>hud.querySelector(`[data-hud="${name}"]`),dismissed=new Set,collapsed=options.collapsed,suppressed=!1,timer,drawn="",drawnIds=new Set,view=doc2.defaultView;function visibleJobs(now){return controller.jobs.filter(job=>dismissed.has(job.id)?!1:job.state==="queued"||job.state==="running"?!0:job.finished!==void 0&&now-job.finished<linger[job.state])}function place(){if(hud.hidden)return;let width=doc2.documentElement.clientWidth,height=doc2.documentElement.clientHeight,orb=options.anchor(),boxWidth=Math.min(HUD_WIDTH,width-EDGE*2);hud.style.width=`${boxWidth}px`;let left=orb.left+orb.size/2>width/2?orb.left+orb.size-boxWidth:orb.left;hud.style.left=`${Math.max(EDGE,Math.min(width-boxWidth-EDGE,left))}px`;let above=orb.top-GAP-EDGE,below=height-(orb.top+orb.size+GAP)-EDGE;above>=Math.min(hud.scrollHeight,220)||above>=below?(hud.style.top="auto",hud.style.bottom=`${height-orb.top+GAP}px`,hud.style.maxHeight=`${Math.max(80,above)}px`,hud.dataset.side="above"):(hud.style.bottom="auto",hud.style.top=`${orb.top+orb.size+GAP}px`,hud.style.maxHeight=`${Math.max(80,below)}px`,hud.dataset.side="below")}function update(){let now=Date.now(),jobs=visibleJobs(now);if(!jobs.length||suppressed){hud.hidden=!0,timer!==void 0&&(clearInterval(timer),timer=void 0);return}let running=jobs.filter(job=>job.state==="running").length,queued=jobs.filter(job=>job.state==="queued").length,failed=jobs.filter(job=>job.state==="failed").length,active=running+queued,finished=jobs.length-active;count.textContent=active?[running&&`${running} 执行中`,queued&&`${queued} 排队`].filter(Boolean).join(" · "):failed?`${failed} 项失败`:"已完成",dot.className=`status-dot ${active?"busy":failed?"failed":"done"}`,button("stop").hidden=!active,button("dismiss").hidden=!!active;let collapse=button("collapse");collapse.textContent=collapsed?"▴":"▾",collapse.setAttribute("aria-label",collapsed?"展开":"收合"),collapse.title=collapsed?"展开清单":"收合清单",hud.classList.toggle("collapsed",collapsed),bar.hidden=jobs.length<2,fill.style.width=`${Math.round(finished/jobs.length*100)}%`,list.hidden=collapsed;let time4=job=>job.state==="running"&&job.started?elapsed(now-job.started):job.started&&job.finished?elapsed(job.finished-job.started):"",detail=job=>`${options.message(job)}${job.route&&job.state==="success"?` · ${job.route}`:""}`,signature2=jobs.map(job=>`${job.id}:${job.state}`).join("|");if(signature2!==drawn)list.innerHTML=jobs.map(job=>{let name=options.names[job.kind]??job.kind;return`<li class="hud-item ${job.state} ${drawnIds.has(job.id)?"":"enter"}" data-job="${escape3(job.id)}">${symbols[job.state]}<div class="hud-text"><b>${escape3(name)}${job.label?` · ${escape3(job.label)}`:""}</b><small title="${escape3(detail(job))}">${escape3(detail(job))}</small></div><time>${time4(job)}</time>${job.state!=="queued"&&job.state!=="running"?`<button class="icon" data-hud-dismiss="${escape3(job.id)}" aria-label="关闭此项">×</button>`:""}</li>`}).join(""),drawn=signature2,drawnIds=new Set(jobs.map(job=>job.id));else for(let job of jobs){let row=list.querySelector(`[data-job="${CSS.escape(job.id)}"]`);if(!row)continue;let clock=row.querySelector("time"),value=time4(job);clock.textContent!==value&&(clock.textContent=value);let small=row.querySelector("small"),text2=detail(job);small.textContent!==text2&&(small.textContent=text2,small.title=text2)}let wasHidden=hud.hidden;hud.hidden=!1,place(),wasHidden&&(hud.classList.remove("enter"),hud.offsetWidth,hud.classList.add("enter")),timer===void 0&&(timer=setInterval(update,1e3))}let click=event=>{let target=event.target.closest("button");if(target){if(target.dataset.hudDismiss){dismissed.add(target.dataset.hudDismiss),update();return}switch(target.dataset.hud){case"stop":controller.cancelAll();break;case"log":options.openLog();break;case"collapse":collapsed=!collapsed,options.onCollapse(collapsed),update();break;case"dismiss":for(let job of controller.jobs)job.state!=="queued"&&job.state!=="running"&&dismissed.add(job.id);update();break}}},pointerdown=event=>{event.target.closest("button")||event.button!==0||options.drag(event,head)};return hud.addEventListener("click",click),head.addEventListener("pointerdown",pointerdown),view.addEventListener("resize",place),{update,place,suppress(value){suppressed!==value&&(suppressed=value,update())},element:hud,dispose(){timer!==void 0&&clearInterval(timer),view.removeEventListener("resize",place),hud.remove()}}}function letterDigest(state,preview,proposal){let out=[];for(let after of Object.values(preview.countries)){let before=state.countries[after.id];if(!before||!after.enabled)continue;let entries=[];for(let[id,progress]of Object.entries(after.progress)){let was=before.progress[id],name=after.nodes[id]?.name??id;if(progress.started!==null&&(!was||was.started===null)&&entries.push({day:progress.started,kind:"start",title:`开始「${name}」`}),progress.status==="completed"&&was?.status!=="completed"&&progress.completed!==null){let by=progress.by;entries.push({day:progress.completed,kind:"complete",title:`完成「${name}」`,note:by?`${by.mode==="achieved"?"由事件达成":"由事件促成"}：${by.title}`:void 0})}}for(let event of Object.values(preview.events)){if(!event.countries.includes(after.id))continue;let old=state.events[event.id];if(!old){entries.push({day:event.at,kind:"event",title:event.headline||event.title,note:event.public?void 0:"未公开"});continue}for(let item of event.timeline.slice(old.timeline.length))entries.push({day:item.at,kind:"update",title:`${old.headline||old.title}：${item.text}`})}for(let step of proposal.steps)for(let fact of step.facts)fact.country===after.id&&entries.push({day:step.at,kind:"fact",title:fact.evidence,note:fact.value?void 0:"不成立"});for(let transition of proposal.transitions)transition.country===after.id&&entries.push({day:proposal.until,kind:"transition",title:transition.cause==="completed"?"本期议程完成，进入下一期":"局势变化，本期议程改换",note:transition.reason});entries.sort((a,b)=>a.day-b.day||order[a.kind]-order[b.kind]);let capability=s=>new Map(Object.values(s.capabilities).filter(c=>c.active).map(c=>[c.id,c.name])),had=capability(before),has=capability(after);out.push({id:after.id,name:after.name,stability:[before.stability,after.stability],warSupport:[before.warSupport,after.warSupport],focus:[before.nodes[before.current]?.name??"",after.nodes[after.current]?.name??""],gained:[...has].filter(([id])=>!had.has(id)).map(([,name])=>name),lost:[...had].filter(([id])=>!has.has(id)).map(([,name])=>name),entries})}return out.sort((a,b)=>weight(b)-weight(a))}var order={complete:0,start:1,event:2,update:3,fact:4,transition:5};function weight(country){let moved=+(country.stability[0]!==country.stability[1])+ +(country.warSupport[0]!==country.warSupport[1]);return country.entries.length+moved+country.gained.length+country.lost.length}var reasonText={waiting_workflow:"世界推演还没有结果。工作流完成后，提案会出现在这里。",workflow_unknown:"读不到工作流的执行纪录，无法确认提案来自哪一次推演。",member_mismatch:"找不到唯一的阿斯塔利亚世界任务，无法确认提案来源。",missing_proposal:"这次世界推演没有附上国策提案。",invalid_proposal:"提案的格式无法解读。",nonce_mismatch:"提案不属于目前这一次请求。",invalid_rules:"提案违反国策规则，无法套用。",until_mismatch:"提案推进到的时间与这一楼的故事时间不一致。",world_failed:"世界推演回报失败。",world_skipped:"世界推演本轮被跳过。",world_patch_failed:"世界资料写入时出现问题。",preview_changed:"审阅期间国策或提案已有变动，请重新审阅。",user_rejected:"你已驳回这份提案。",save_failed:"保存国策时失败，提案没有套用。",overwritten:"接收后被其他脚本覆写，国策已回到接收前的状态。可以再接收一次。",update_started:"已改用国策自己的局势更新，这份提案不再适用。",request_expired:"这份提案已被更新的请求取代。",source_changed:"这一楼的来源资料已改变。",not_latest:"已经有更新的一楼，这份提案已过期。",not_assistant:"来源不是有效的 AI 回复。",invalid_time:"读不到这一楼的故事时间。",mvu_busy:"正文或变量仍在更新，请稍候。",update_busy:"国策正在进行自己的局势更新。",mvu_unavailable:"没有检测到 MVU。",missing_stat_data:"这一楼没有 MVU 变量。",missing_state:"这一楼还没有国策存档。",invalid_state:"国策存档的格式无效。",read_failed:"读取这一楼的资料时失败。",unsupported:"目前的环境不支持世界整合。",disposed:"国策面板已关闭。",preview:"这是预览，没有登记请求。",invalid_request:"世界任务没有提供有效的请求编号。"};function letterReason(reception){return reception.reason?reasonText[reception.reason]:""}function evidenceLines(evidence){if(!evidence)return[{text:"没有世界执行纪录",tone:"unknown"}];let lines=[];lines.push(evidence.skipped?{text:`世界任务本轮跳过${evidence.skipReason?`：${evidence.skipReason}`:""}`,tone:"warn"}:evidence.success?{text:"世界任务回报执行完成",tone:"ok"}:{text:"世界任务回报失败",tone:"warn"}),lines.push(evidence.changed===null?{text:"无法比较世界资料是否变动",tone:"unknown"}:evidence.changed?{text:"世界资料已变动",tone:"ok"}:{text:"世界资料没有变动（若本轮没有世界变化，这是正常的）",tone:"unknown"});let patch=evidence.patch;if(!patch.known)lines.push({text:"读不到写入日志",tone:"unknown"});else{let repairs=patch.issues.filter(issue2=>issue2.kind==="heal"),problems=patch.issues.length-repairs.length+patch.failedFragments.length;lines.push(problems?{text:`写入日志有 ${problems} 个问题`,tone:"warn"}:{text:`写入日志没有问题${patch.operationCount!==null?`（${patch.operationCount} 项写入）`:""}`,tone:"ok"});for(let issue2 of patch.issues)lines.push({text:`${issue2.kind==="heal"?"已自动修正":"写入问题"}：${issue2.message}（${issue2.path}）`,tone:issue2.kind==="heal"?"unknown":"warn"});for(let fragment of patch.failedFragments)lines.push({text:`第 ${fragment.index} 项无法处理：${fragment.message}`,tone:"warn"});patch.unassigned&&lines.push({text:`另有 ${patch.unassigned} 个无法归属世界的日志问题`,tone:"unknown"})}return lines}var style_default=`/* 国策档案 v0.4 · 战情档案馆介面\r
- * Tokens first; every colour below derives from them so states stay consistent. */\r
-:host {\r
-  all: initial;\r
-  --ink: #0d1310;\r
-  --bg: #131a16;\r
-  --panel: #19221d;\r
-  --raised: #212b25;\r
-  --raised-2: #29352e;\r
-  --line: rgba(217, 191, 120, 0.14);\r
-  --line-strong: rgba(217, 191, 120, 0.32);\r
-  --gold: #dcc27c;\r
-  --gold-deep: #a88d4c;\r
-  --text: #ece6d4;\r
-  --muted: #a8b0a1;\r
-  --faint: #7d867a;\r
-  --green: #72c492;\r
-  --amber: #e6a950;\r
-  --blue: #8fb0d6;\r
-  --red: #d9705f;\r
-  --cross: #7fa6cf;\r
-  /* Cinnabar seal ink: used only for the world letter's seal, so ratifying a proposal reads as one act. */\r
-  --seal: #b4432f;\r
-  --seal-ink: #f3dccb;\r
-  --radius: 10px;\r
-  --drawer: 392px;\r
-  /* Simplified Chinese faces first (zh-Hans text), traditional faces only as fallbacks; same as the news card. */\r
-  --sans:\r
-    'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans TC',\r
-    'Microsoft JhengHei', 'PingFang TC', system-ui, sans-serif;\r
-  --serif:\r
-    'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'Noto Serif TC', 'Source Han Serif TC', Georgia,\r
-    var(--sans);\r
-  font-family: var(--sans);\r
-  color: var(--text);\r
-  font-size: 14px;\r
-  line-height: 1.6;\r
-  -webkit-font-smoothing: antialiased;\r
-}\r
-* {\r
-  box-sizing: border-box;\r
-}\r
-button,\r
-input,\r
-select,\r
-textarea {\r
-  font: inherit;\r
-  color: inherit;\r
-}\r
-button {\r
-  cursor: pointer;\r
-  border: 1px solid var(--line-strong);\r
-  background: var(--raised);\r
-  padding: 7px 12px;\r
-  border-radius: 7px;\r
-  line-height: 1.3;\r
-  transition:\r
-    background 0.15s,\r
-    border-color 0.15s,\r
-    color 0.15s;\r
-}\r
-button:hover:not(:disabled) {\r
-  border-color: var(--gold);\r
-  background: var(--raised-2);\r
-}\r
-button:disabled {\r
-  opacity: 0.4;\r
-  cursor: not-allowed;\r
-}\r
-button:focus-visible,\r
-input:focus-visible,\r
-select:focus-visible,\r
-textarea:focus-visible,\r
-summary:focus-visible {\r
-  outline: 2px solid var(--gold);\r
-  outline-offset: 2px;\r
-}\r
-input,\r
-select,\r
-textarea {\r
-  color: var(--text);\r
-  background: var(--ink);\r
-  border: 1px solid rgba(217, 191, 120, 0.24);\r
-  border-radius: 7px;\r
-  padding: 8px 10px;\r
-  max-width: 100%;\r
-}\r
-/* Same line height, so a select and an input side by side are the same height. */\r
-input,\r
-select {\r
-  line-height: 1.3;\r
-}\r
-input::placeholder,\r
-textarea::placeholder {\r
-  color: var(--faint);\r
-}\r
-select option {\r
-  background: var(--panel);\r
-}\r
-input[type='checkbox'] {\r
-  accent-color: var(--gold);\r
-  width: 16px;\r
-  height: 16px;\r
-}\r
-svg {\r
-  width: 24px;\r
-  height: 24px;\r
-  flex-shrink: 0;\r
-}\r
-a {\r
-  color: var(--gold);\r
-}\r
-p {\r
-  margin: 0 0 12px;\r
-}\r
-h1,\r
-h2,\r
-h3,\r
-h4 {\r
-  font-family: var(--serif);\r
-  font-weight: 600;\r
-  margin: 0;\r
-}\r
-small {\r
-  color: var(--muted);\r
-}\r
-code {\r
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\r
-  font-size: 12px;\r
-}\r
-.muted {\r
-  color: var(--muted);\r
-}\r
-.gold {\r
-  color: var(--gold);\r
-}\r
-.row {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 10px;\r
-  flex-wrap: wrap;\r
-}\r
-.between {\r
-  justify-content: space-between;\r
-}\r
-.primary {\r
-  background: linear-gradient(180deg, #7a6a37, #5b4f28);\r
-  border-color: var(--gold);\r
-  color: #fff4d0;\r
-  font-weight: 600;\r
-}\r
-.primary:hover:not(:disabled) {\r
-  background: linear-gradient(180deg, #8d7b41, #6a5c2f);\r
-}\r
-.ghost {\r
-  background: transparent;\r
-  border-color: transparent;\r
-}\r
-.danger {\r
-  color: #f0a898;\r
-}\r
-.tag {\r
-  font-size: 11px;\r
-  letter-spacing: 0.18em;\r
-  color: var(--gold);\r
-}\r
-.pill {\r
-  display: inline-flex;\r
-  align-items: center;\r
-  border: 1px solid var(--line-strong);\r
-  padding: 2px 8px;\r
-  font-size: 12px;\r
-  border-radius: 99px;\r
-}\r
-.separator {\r
-  height: 1px;\r
-  background: var(--line);\r
-  margin: 16px 0;\r
-}\r
-.sr {\r
-  position: absolute;\r
-  width: 1px;\r
-  height: 1px;\r
-  padding: 0;\r
-  margin: -1px;\r
-  overflow: hidden;\r
-  clip: rect(0, 0, 0, 0);\r
-  white-space: nowrap;\r
-  border: 0;\r
-}\r
-.spinner {\r
-  display: inline-block;\r
-  width: 14px;\r
-  height: 14px;\r
-  border: 2px solid rgba(220, 194, 124, 0.3);\r
-  border-top-color: var(--gold);\r
-  border-radius: 50%;\r
-  animation: spin 0.9s linear infinite;\r
-  vertical-align: -2px;\r
-}\r
-@keyframes spin {\r
-  to {\r
-    transform: rotate(360deg);\r
-  }\r
-}\r
-\r
-/* ---------- Floating orb ---------- */\r
-.orb {\r
-  position: fixed;\r
-  right: 24px;\r
-  bottom: 24px;\r
-  width: 60px;\r
-  height: 60px;\r
-  padding: 12px;\r
-  border-radius: 50%;\r
-  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);\r
-  border: 2px solid var(--gold-deep);\r
-  box-shadow:\r
-    0 8px 28px rgba(0, 0, 0, 0.55),\r
-    inset 0 0 0 3px rgba(0, 0, 0, 0.35);\r
-  color: var(--gold);\r
-  z-index: 2147482999;\r
-}\r
-.orb:hover:not(:disabled) {\r
-  border-color: var(--gold);\r
-  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);\r
-}\r
-.orb svg {\r
-  width: 100%;\r
-  height: 100%;\r
-}\r
-.orb .count {\r
-  position: absolute;\r
-  top: -3px;\r
-  right: -3px;\r
-  min-width: 20px;\r
-  height: 20px;\r
-  padding: 0 5px;\r
-  border-radius: 10px;\r
-  background: var(--gold);\r
-  color: #1a1d12;\r
-  font-size: 11px;\r
-  font-weight: 700;\r
-  line-height: 20px;\r
-}\r
-\r
-/* ---------- Shell ---------- */\r
-.shell {\r
-  position: fixed;\r
-  inset: 16px;\r
-  z-index: 2147483000;\r
-  display: flex;\r
-  flex-direction: column;\r
-  background: var(--bg);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 14px;\r
-  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);\r
-  overflow: hidden;\r
-}\r
-.shell[hidden],\r
-.modal-backdrop[hidden],\r
-.orb[hidden] {\r
-  display: none;\r
-}\r
-\r
-/* Command bar */\r
-.command {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 12px;\r
-  min-height: 58px;\r
-  padding: 8px 14px;\r
-  background: linear-gradient(180deg, #1c2620, #151d18);\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.brand-mark {\r
-  width: 38px;\r
-  height: 38px;\r
-  display: grid;\r
-  place-items: center;\r
-  color: var(--gold);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 9px;\r
-  background: rgba(220, 194, 124, 0.07);\r
-  flex-shrink: 0;\r
-}\r
-.brand-mark svg {\r
-  width: 26px;\r
-  height: 26px;\r
-}\r
-.brand {\r
-  display: grid;\r
-  line-height: 1.15;\r
-  flex-shrink: 0;\r
-}\r
-.brand h1 {\r
-  font-size: 17px;\r
-  letter-spacing: 0.12em;\r
-}\r
-.brand small {\r
-  font-size: 9.5px;\r
-  letter-spacing: 0.3em;\r
-  color: var(--gold-deep);\r
-}\r
-.nation-scroller {\r
-  position: relative;\r
-  display: flex;\r
-  min-width: 0;\r
-  margin-left: 10px;\r
-}\r
-.nation-tabs {\r
-  display: flex;\r
-  gap: 6px;\r
-  overflow-x: auto;\r
-  scrollbar-width: none;\r
-  min-width: 0;\r
-}\r
-/* Arrows only at an edge with more tabs behind it; the fade shows the list goes on. */\r
-.nation-scroll {\r
-  position: absolute;\r
-  top: 0;\r
-  bottom: 0;\r
-  z-index: 1;\r
-  display: none;\r
-  place-items: center;\r
-  width: 34px;\r
-  padding: 0;\r
-  border: 0;\r
-  border-radius: 0;\r
-  font-size: 22px;\r
-  color: var(--gold);\r
-  background: linear-gradient(90deg, #19221c 45%, rgba(25, 34, 28, 0));\r
-}\r
-.nation-scroll.prev {\r
-  left: 0;\r
-  justify-content: start;\r
-  padding-left: 4px;\r
-}\r
-.nation-scroll.next {\r
-  right: 0;\r
-  justify-content: end;\r
-  padding-right: 4px;\r
-  background: linear-gradient(270deg, #19221c 45%, rgba(25, 34, 28, 0));\r
-}\r
-.nation-scroll:hover {\r
-  color: var(--text);\r
-}\r
-.nation-scroller.can-left .nation-scroll.prev,\r
-.nation-scroller.can-right .nation-scroll.next {\r
-  display: grid;\r
-}\r
-.nation-tabs::-webkit-scrollbar {\r
-  display: none;\r
-}\r
-.nation-tab {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  padding: 5px 12px 5px 6px;\r
-  border-radius: 9px;\r
-  border-color: transparent;\r
-  background: transparent;\r
-  white-space: nowrap;\r
-  flex-shrink: 0;\r
-}\r
-.nation-tab.active {\r
-  background: var(--raised-2);\r
-  border-color: var(--line-strong);\r
-  box-shadow: inset 0 -2px 0 var(--gold);\r
-}\r
-.tab-crest {\r
-  width: 30px;\r
-  height: 30px;\r
-  display: grid;\r
-  place-items: center;\r
-  border-radius: 7px;\r
-  background: rgba(255, 255, 255, 0.04);\r
-  color: var(--blue);\r
-}\r
-.nation-tab.player .tab-crest {\r
-  color: var(--gold);\r
-}\r
-.tab-crest svg {\r
-  width: 20px;\r
-  height: 20px;\r
-}\r
-.tab-copy {\r
-  display: grid;\r
-  text-align: left;\r
-  line-height: 1.2;\r
-}\r
-.tab-copy strong {\r
-  font-size: 13.5px;\r
-  font-weight: 600;\r
-}\r
-.tab-copy small {\r
-  font-size: 11px;\r
-}\r
-.nation-tab.add {\r
-  width: 38px;\r
-  justify-content: center;\r
-  padding: 6px;\r
-  border: 1px dashed var(--line-strong);\r
-  color: var(--gold);\r
-}\r
-.nation-picker {\r
-  display: none;\r
-  min-width: 0;\r
-  flex: 1;\r
-}\r
-.nation-picker select {\r
-  width: 100%;\r
-}\r
-.command-spacer {\r
-  flex: 1;\r
-}\r
-.test-label {\r
-  font-size: 11px;\r
-  color: var(--gold);\r
-  border: 1px dashed var(--gold-deep);\r
-  padding: 3px 8px;\r
-  border-radius: 6px;\r
-  white-space: nowrap;\r
-}\r
-.date-chip {\r
-  display: grid;\r
-  max-width: 250px;\r
-  overflow-wrap: anywhere;\r
-  line-height: 1.15;\r
-  text-align: right;\r
-  padding: 0 6px;\r
-}\r
-.date-chip small {\r
-  font-size: 10.5px;\r
-}\r
-.date-chip strong {\r
-  font-family: var(--serif);\r
-  font-size: 17px;\r
-  color: var(--gold);\r
-}\r
-.cmd-btn {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  height: 38px;\r
-  flex-shrink: 0;\r
-  white-space: nowrap;\r
-}\r
-.date-chip,\r
-.test-label,\r
-.nation-tab.add {\r
-  flex-shrink: 0;\r
-}\r
-.cmd-btn.busy {\r
-  border-color: var(--gold);\r
-}\r
-.cmd-btn.close {\r
-  width: 38px;\r
-  justify-content: center;\r
-  font-size: 20px;\r
-  padding: 0;\r
-}\r
-.error-banner {\r
-  display: flex;\r
-  gap: 12px;\r
-  align-items: center;\r
-  justify-content: space-between;\r
-  padding: 9px 16px;\r
-  background: rgba(217, 112, 95, 0.14);\r
-  border-bottom: 1px solid rgba(217, 112, 95, 0.4);\r
-  color: #f6c6ba;\r
-  font-size: 13px;\r
-}\r
-\r
-/* Nation bar */\r
-.nation-bar {\r
-  display: grid;\r
-  grid-template-columns: minmax(260px, 1fr) auto auto auto;\r
-  align-items: center;\r
-  gap: 20px;\r
-  padding: 12px 18px;\r
-  background: var(--panel);\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.nation-id {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 12px;\r
-  min-width: 0;\r
-}\r
-.nation-crest {\r
-  width: 48px;\r
-  height: 48px;\r
-  display: grid;\r
-  place-items: center;\r
-  border-radius: 12px;\r
-  border: 1px solid var(--line-strong);\r
-  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));\r
-  color: var(--gold);\r
-  flex-shrink: 0;\r
-}\r
-.nation-crest svg {\r
-  width: 32px;\r
-  height: 32px;\r
-}\r
-.nation-copy {\r
-  min-width: 0;\r
-}\r
-.nation-copy h2 {\r
-  font-size: 22px;\r
-  line-height: 1.25;\r
-  letter-spacing: 0.04em;\r
-}\r
-.nation-copy p {\r
-  margin: 2px 0 0;\r
-  color: var(--muted);\r
-  font-size: 12.5px;\r
-  display: -webkit-box;\r
-  -webkit-line-clamp: 2;\r
-  -webkit-box-orient: vertical;\r
-  overflow: hidden;\r
-}\r
-.gauges {\r
-  display: flex;\r
-  gap: 16px;\r
-}\r
-.gauge {\r
-  width: 132px;\r
-}\r
-.gauge-head {\r
-  display: flex;\r
-  justify-content: space-between;\r
-  align-items: baseline;\r
-}\r
-.gauge-head small {\r
-  font-size: 12px;\r
-}\r
-.gauge-head strong {\r
-  font-family: var(--serif);\r
-  font-size: 22px;\r
-  line-height: 1.1;\r
-}\r
-.gauge-track {\r
-  height: 6px;\r
-  border-radius: 3px;\r
-  background: rgba(255, 255, 255, 0.07);\r
-  overflow: hidden;\r
-  margin-top: 4px;\r
-}\r
-.gauge-track i {\r
-  display: block;\r
-  height: 100%;\r
-  border-radius: 3px;\r
-}\r
-.gauge.stability .gauge-track i {\r
-  background: linear-gradient(90deg, #5f9e75, var(--green));\r
-}\r
-.gauge.war .gauge-track i {\r
-  background: linear-gradient(90deg, #b75a49, var(--amber));\r
-}\r
-/* The main focus is a third gauge (v0.15.9): label, name, days left and a slim bar, no card.\r
-   Its width follows the window only, so a status change never moves or resizes it. */\r
-.focus-gauge {\r
-  --state: var(--green);\r
-  --state-deep: #4f9a6b;\r
-  position: relative;\r
-  display: block;\r
-  width: 300px;\r
-  padding: 4px 8px;\r
-  margin: -4px 0;\r
-  border: 0;\r
-  border-radius: 8px;\r
-  background: transparent;\r
-  text-align: left;\r
-}\r
-.focus-gauge.waiting {\r
-  --state: var(--amber);\r
-  --state-deep: #b67c2f;\r
-}\r
-.focus-gauge.paused {\r
-  --state: var(--blue);\r
-  --state-deep: #5c7ca3;\r
-}\r
-.focus-gauge.empty {\r
-  --state: var(--faint);\r
-}\r
-/* hairline between the national gauges and the focus */\r
-.focus-gauge::after {\r
-  content: '';\r
-  position: absolute;\r
-  left: -10px;\r
-  top: 6px;\r
-  bottom: 6px;\r
-  width: 1px;\r
-  background: var(--line);\r
-}\r
-button.focus-gauge:hover:not(:disabled) {\r
-  border-color: transparent;\r
-  background: rgba(255, 255, 255, 0.035);\r
-}\r
-button.focus-gauge:hover .focus-name {\r
-  text-decoration: underline;\r
-  text-decoration-color: var(--line-strong);\r
-  text-underline-offset: 4px;\r
-}\r
-.focus-gauge .gauge-head {\r
-  justify-content: flex-start;\r
-  gap: 8px;\r
-}\r
-.focus-gauge .gauge-track {\r
-  display: block;\r
-}\r
-.focus-label {\r
-  display: inline-flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  flex-shrink: 0;\r
-}\r
-.focus-dot {\r
-  width: 6px;\r
-  height: 6px;\r
-  border-radius: 50%;\r
-  background: var(--state);\r
-}\r
-.focus-gauge.active .focus-dot {\r
-  animation: focus-breathe 2.4s ease-out infinite;\r
-}\r
-.focus-gauge.empty .focus-dot {\r
-  background: transparent;\r
-  border: 1px solid var(--faint);\r
-}\r
-.focus-name {\r
-  flex: 1;\r
-  min-width: 0;\r
-  font-family: var(--serif);\r
-  font-size: 14.5px;\r
-  font-weight: 600;\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-}\r
-.focus-gauge.empty .focus-name {\r
-  color: var(--faint);\r
-  font-weight: 400;\r
-}\r
-.focus-num {\r
-  display: inline-flex;\r
-  align-items: baseline;\r
-  gap: 3px;\r
-  flex-shrink: 0;\r
-}\r
-.focus-num small {\r
-  font-size: 11.5px;\r
-}\r
-/* invisible strut at the numeral's size: 待成果 and 尚未选定 keep the same line height */\r
-.focus-num::after {\r
-  content: '\\200b';\r
-  font-family: var(--serif);\r
-  font-size: 22px;\r
-  line-height: 1.1;\r
-}\r
-.focus-word {\r
-  font-size: 12px;\r
-  color: var(--state);\r
-}\r
-.focus-gauge .gauge-track i {\r
-  background: linear-gradient(90deg, var(--state-deep), var(--state));\r
-}\r
-.focus-gauge.empty .gauge-track {\r
-  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 6px, transparent 6px 10px);\r
-}\r
-/* colour shows up only when something changes: one outline flare (resumed across re-renders) */\r
-.focus-gauge.flare::before {\r
-  content: '';\r
-  position: absolute;\r
-  inset: -2px;\r
-  border-radius: 10px;\r
-  pointer-events: none;\r
-  opacity: 0;\r
-  box-shadow:\r
-    0 0 0 1px var(--state),\r
-    0 0 22px -2px var(--state);\r
-  animation: focus-flare 2.2s ease-out var(--flare-at, 0ms) forwards;\r
-}\r
-@keyframes focus-flare {\r
-  0% {\r
-    opacity: 0;\r
-  }\r
-  12% {\r
-    opacity: 1;\r
-  }\r
-  100% {\r
-    opacity: 0;\r
-  }\r
-}\r
-@keyframes focus-breathe {\r
-  0% {\r
-    box-shadow: 0 0 0 0 rgba(114, 196, 146, 0.55);\r
-  }\r
-  70%,\r
-  100% {\r
-    box-shadow: 0 0 0 6px rgba(114, 196, 146, 0);\r
-  }\r
-}\r
-.nation-actions {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-}\r
-.control-select select {\r
-  height: 36px;\r
-  padding: 0 8px;\r
-}\r
-.toggle {\r
-  height: 36px;\r
-  white-space: nowrap;\r
-}\r
-.toggle.on {\r
-  color: var(--gold);\r
-  border-color: var(--gold-deep);\r
-  background: rgba(220, 194, 124, 0.1);\r
-}\r
-.nation-actions .primary {\r
-  height: 36px;\r
-  white-space: nowrap;\r
-}\r
-\r
-/* ---------- Stage ---------- */\r
-.stage {\r
-  position: relative;\r
-  flex: 1;\r
-  min-height: 0;\r
-  overflow: hidden;\r
-  background:\r
-    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),\r
-    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\r
-    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,\r
-    var(--ink);\r
-}\r
-.canvas {\r
-  position: absolute;\r
-  inset: 0;\r
-  overflow: hidden;\r
-  cursor: grab;\r
-  touch-action: none;\r
-  user-select: none;\r
-}\r
-.canvas:active {\r
-  cursor: grabbing;\r
-}\r
-.canvas:focus-visible {\r
-  outline: 2px solid var(--gold);\r
-  outline-offset: -4px;\r
-}\r
-.tree {\r
-  position: absolute;\r
-  left: 0;\r
-  top: 0;\r
-  transform-origin: 0 0;\r
-}\r
-.connectors {\r
-  position: absolute;\r
-  inset: 0;\r
-  width: auto;\r
-  height: auto;\r
-  overflow: visible;\r
-  pointer-events: none;\r
-}\r
-.connector {\r
-  fill: none;\r
-  stroke: rgba(220, 194, 124, 0.3);\r
-  stroke-width: 2.4;\r
-}\r
-.connector.done {\r
-  stroke: var(--gold);\r
-  stroke-width: 3;\r
-}\r
-.connector.alternative {\r
-  stroke-dasharray: 8 6;\r
-}\r
-.connector.cross-branch {\r
-  stroke: rgba(127, 166, 207, 0.55);\r
-}\r
-.connector.cross-branch.done {\r
-  stroke: var(--cross);\r
-}\r
-.connector.mutex {\r
-  stroke: var(--red);\r
-  stroke-width: 2;\r
-  stroke-dasharray: 2 6;\r
-  stroke-linecap: round;\r
-}\r
-.branch-banner {\r
-  position: absolute;\r
-  top: 16px;\r
-  height: 34px;\r
-  display: flex;\r
-  align-items: center;\r
-  justify-content: center;\r
-  border-bottom: 1px solid var(--line-strong);\r
-  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));\r
-  pointer-events: none;\r
-}\r
-.branch-banner span {\r
-  font-family: var(--serif);\r
-  font-size: 15px;\r
-  letter-spacing: 0.3em;\r
-  color: var(--gold);\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  padding: 0 8px;\r
-}\r
-.branch-banner.active {\r
-  border-bottom-color: var(--gold);\r
-}\r
-.branch-summary {\r
-  position: absolute;\r
-  height: 66px;\r
-  display: grid;\r
-  align-content: center;\r
-  text-align: left;\r
-  border: 1px dashed var(--gold-deep);\r
-  background: rgba(220, 194, 124, 0.06);\r
-  border-radius: var(--radius);\r
-  padding: 8px 14px;\r
-}\r
-.branch-summary strong {\r
-  font-family: var(--serif);\r
-  color: var(--gold);\r
-}\r
-.branch-summary span {\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-}\r
-\r
-/* Nodes */\r
-.node {\r
-  /* Medal focus: the icon medal is the focus, the name plate sits under it, no box around both. */\r
-  position: absolute;\r
-  display: flex;\r
-  flex-direction: column;\r
-  align-items: center;\r
-  padding: 0;\r
-  border: 0;\r
-  background: none;\r
-  color: var(--text);\r
-  text-align: center;\r
-  transition: opacity 0.15s;\r
-}\r
-.node-medal {\r
-  position: relative;\r
-  flex: none;\r
-  width: 58px;\r
-  height: 58px;\r
-  border-radius: 50%;\r
-  display: grid;\r
-  place-items: center;\r
-  color: var(--gold);\r
-  background: radial-gradient(circle at 36% 30%, #3a4a3f, #18201b 72%);\r
-  border: 2px solid rgba(220, 194, 124, 0.85);\r
-  box-shadow:\r
-    0 0 0 4px var(--bg),\r
-    0 0 0 5px rgba(220, 194, 124, 0.28),\r
-    0 8px 18px rgba(0, 0, 0, 0.55);\r
-  transition:\r
-    transform 0.15s,\r
-    box-shadow 0.15s;\r
-}\r
-.node-medal svg {\r
-  width: 30px;\r
-  height: 30px;\r
-}\r
-.node:hover:not(:disabled) .node-medal {\r
-  transform: translateY(-2px);\r
-  box-shadow:\r
-    0 0 0 4px var(--bg),\r
-    0 0 0 5px var(--gold),\r
-    0 0 22px rgba(220, 194, 124, 0.35);\r
-}\r
-.node-meta {\r
-  position: absolute;\r
-  bottom: -9px;\r
-  left: 50%;\r
-  transform: translateX(-50%);\r
-  white-space: nowrap;\r
-  font-size: 10.5px;\r
-  line-height: 16px;\r
-  padding: 0 7px;\r
-  border-radius: 9px;\r
-  color: var(--muted);\r
-  background: #0f1512;\r
-  border: 1px solid rgba(220, 194, 124, 0.35);\r
-}\r
-.node-plate {\r
-  margin-top: 15px;\r
-  width: 100%;\r
-  padding: 5px 8px 6px;\r
-  background: linear-gradient(180deg, rgba(38, 48, 42, 0.96), rgba(24, 31, 27, 0.96));\r
-  border: 1px solid rgba(220, 194, 124, 0.2);\r
-  border-top: 2px solid rgba(220, 194, 124, 0.6);\r
-  border-radius: 3px 3px 9px 9px;\r
-}\r
-.node-name {\r
-  display: -webkit-box;\r
-  -webkit-line-clamp: 2;\r
-  -webkit-box-orient: vertical;\r
-  overflow: hidden;\r
-  font-size: 13px;\r
-  font-weight: 600;\r
-  line-height: 1.28;\r
-  color: var(--text);\r
-}\r
-.node-pivot {\r
-  position: absolute;\r
-  top: -7px;\r
-  right: -9px;\r
-  font-size: 13px;\r
-  color: var(--gold);\r
-  text-shadow: 0 0 6px rgba(220, 194, 124, 0.7);\r
-}\r
-.node-flag {\r
-  position: absolute;\r
-  top: -6px;\r
-  left: -11px;\r
-  font-size: 12px;\r
-  color: var(--red);\r
-}\r
-/* Progress ring for running, waiting and paused focuses. */\r
-.node.active .node-medal::before,\r
-.node.waiting .node-medal::before,\r
-.node.paused .node-medal::before {\r
-  content: '';\r
-  position: absolute;\r
-  inset: -7px;\r
-  border-radius: 50%;\r
-  background: conic-gradient(var(--ring) calc(var(--p) * 1%), rgba(255, 255, 255, 0.08) 0);\r
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));\r
-  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));\r
-}\r
-.node.available .node-medal {\r
-  box-shadow:\r
-    0 0 0 4px var(--bg),\r
-    0 0 0 5px rgba(220, 194, 124, 0.55),\r
-    0 0 20px rgba(220, 194, 124, 0.28);\r
-}\r
-.node.available .node-name {\r
-  color: #fffaf0;\r
-}\r
-.node.locked .node-medal,\r
-.node.unknown .node-medal {\r
-  color: var(--faint);\r
-  background: radial-gradient(circle at 36% 30%, #263029, #141a16 72%);\r
-  border-color: rgba(168, 176, 161, 0.35);\r
-  box-shadow:\r
-    0 0 0 4px var(--bg),\r
-    0 0 0 5px rgba(168, 176, 161, 0.12);\r
-}\r
-.node.unknown .node-medal {\r
-  background:\r
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 5px, transparent 5px 10px),\r
-    radial-gradient(circle at 36% 30%, #263029, #141a16 72%);\r
-}\r
-.node.locked .node-plate,\r
-.node.unknown .node-plate {\r
-  border-top-color: rgba(168, 176, 161, 0.3);\r
-  background: rgba(22, 29, 25, 0.92);\r
-}\r
-.node.locked .node-name,\r
-.node.unknown .node-name {\r
-  color: #9aa394;\r
-}\r
-.node.completed .node-medal {\r
-  color: #2c240f;\r
-  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);\r
-  border-color: #f6e2a6;\r
-  box-shadow:\r
-    0 0 0 4px var(--bg),\r
-    0 0 0 5px rgba(238, 212, 141, 0.5),\r
-    0 0 18px rgba(238, 212, 141, 0.3);\r
-}\r
-.node.completed .node-meta {\r
-  color: #f1dfa6;\r
-  border-color: rgba(238, 212, 141, 0.6);\r
-}\r
-.node.completed .node-plate {\r
-  border-top-color: #eed48d;\r
-  background: linear-gradient(180deg, rgba(76, 64, 30, 0.95), rgba(40, 34, 18, 0.95));\r
-}\r
-.node.completed .node-name {\r
-  color: #fff2c8;\r
-}\r
-.node.active {\r
-  --ring: var(--green);\r
-}\r
-.node.active .node-medal {\r
-  color: var(--green);\r
-  border-color: rgba(114, 196, 146, 0.5);\r
-}\r
-.node.active .node-meta {\r
-  color: #a7e3bd;\r
-  border-color: rgba(114, 196, 146, 0.55);\r
-}\r
-.node.active .node-plate {\r
-  border-top-color: var(--green);\r
-}\r
-.node.waiting {\r
-  --ring: var(--amber);\r
-}\r
-.node.waiting .node-medal,\r
-.node.waiting .node-meta {\r
-  color: var(--amber);\r
-}\r
-.node.waiting .node-medal {\r
-  border-color: rgba(230, 169, 80, 0.5);\r
-}\r
-.node.waiting .node-meta {\r
-  border-color: rgba(230, 169, 80, 0.55);\r
-}\r
-.node.waiting .node-plate {\r
-  border-top-color: var(--amber);\r
-}\r
-.node.paused {\r
-  --ring: var(--blue);\r
-}\r
-.node.paused .node-medal,\r
-.node.paused .node-meta {\r
-  color: var(--blue);\r
-}\r
-.node.paused .node-medal {\r
-  border-color: rgba(143, 176, 214, 0.5);\r
-}\r
-.node.paused .node-meta {\r
-  border-color: rgba(143, 176, 214, 0.55);\r
-}\r
-.node.paused .node-plate {\r
-  border-top-color: var(--blue);\r
-}\r
-.node.sealed .node-medal,\r
-.node.terminated .node-medal {\r
-  color: rgba(217, 112, 95, 0.8);\r
-  border-color: rgba(217, 112, 95, 0.5);\r
-  background:\r
-    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.12) 0 5px, transparent 5px 10px),\r
-    radial-gradient(circle at 36% 30%, #2e2724, #1a1614 72%);\r
-  box-shadow:\r
-    0 0 0 4px var(--bg),\r
-    0 0 0 5px rgba(217, 112, 95, 0.18);\r
-}\r
-.node.sealed .node-meta,\r
-.node.terminated .node-meta {\r
-  color: #f0a898;\r
-  border-color: rgba(217, 112, 95, 0.45);\r
-}\r
-.node.sealed .node-plate,\r
-.node.terminated .node-plate {\r
-  border-top-color: rgba(217, 112, 95, 0.5);\r
-  background: rgba(30, 25, 23, 0.92);\r
-}\r
-.node.sealed .node-name,\r
-.node.terminated .node-name {\r
-  color: #a9928c;\r
-  text-decoration: line-through;\r
-  text-decoration-color: rgba(217, 112, 95, 0.55);\r
-}\r
-.node.current .node-medal {\r
-  animation: current-pulse 2.6s ease-in-out infinite;\r
-}\r
-@keyframes current-pulse {\r
-  50% {\r
-    box-shadow:\r
-      0 0 0 4px var(--bg),\r
-      0 0 0 6px rgba(114, 196, 146, 0.35),\r
-      0 0 30px rgba(114, 196, 146, 0.4);\r
-  }\r
-}\r
-.node.selected .node-medal {\r
-  outline: 2px solid var(--gold);\r
-  outline-offset: 8px;\r
-}\r
-.node.selected .node-plate {\r
-  border-color: var(--gold);\r
-}\r
-.node:focus-visible {\r
-  outline: none;\r
-}\r
-.node:focus-visible .node-medal {\r
-  outline: 2px solid var(--gold);\r
-  outline-offset: 8px;\r
-}\r
-.node.dim {\r
-  opacity: 0.16;\r
-}\r
-\r
-/* Overlays on the stage */\r
-.routes {\r
-  position: absolute;\r
-  top: 12px;\r
-  left: 12px;\r
-  bottom: 12px;\r
-  width: 268px;\r
-  display: none;\r
-  flex-direction: column;\r
-  background: rgba(19, 26, 22, 0.94);\r
-  backdrop-filter: blur(8px);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 12px;\r
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);\r
-  z-index: 3;\r
-  max-height: calc(100% - 24px);\r
-}\r
-.routes.open {\r
-  display: flex;\r
-}\r
-.routes-head {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  padding: 10px 8px 6px 14px;\r
-}\r
-.routes-head strong {\r
-  font-family: var(--serif);\r
-  font-size: 15px;\r
-  color: var(--gold);\r
-}\r
-.routes-head small {\r
-  flex: 1;\r
-  font-size: 12px;\r
-}\r
-.routes-head button {\r
-  width: 30px;\r
-  height: 30px;\r
-  padding: 0;\r
-  font-size: 18px;\r
-}\r
-.search-row {\r
-  display: flex;\r
-  gap: 6px;\r
-  padding: 4px 10px 8px;\r
-}\r
-.search-row label {\r
-  flex: 1;\r
-  min-width: 0;\r
-}\r
-.search-row input {\r
-  width: 100%;\r
-  height: 34px;\r
-}\r
-.search-row button {\r
-  height: 34px;\r
-  white-space: nowrap;\r
-  font-size: 12.5px;\r
-}\r
-.route-list {\r
-  list-style: none;\r
-  margin: 0;\r
-  padding: 4px 6px;\r
-  overflow: auto;\r
-  flex: 1;\r
-  border-top: 1px solid var(--line);\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.route-list li {\r
-  display: flex;\r
-  align-items: stretch;\r
-  gap: 4px;\r
-  margin: 2px 0;\r
-}\r
-.route-jump {\r
-  flex: 1;\r
-  display: grid;\r
-  grid-template-columns: 1fr auto;\r
-  gap: 2px 8px;\r
-  text-align: left;\r
-  padding: 7px 10px;\r
-  border-color: transparent;\r
-  background: transparent;\r
-  min-width: 0;\r
-}\r
-.route-list li.active .route-jump {\r
-  background: var(--raised-2);\r
-  border-color: var(--line-strong);\r
-}\r
-.route-list li.folded .route-name {\r
-  color: var(--faint);\r
-}\r
-.route-name {\r
-  font-size: 13.5px;\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-}\r
-.route-live {\r
-  width: 7px;\r
-  height: 7px;\r
-  border-radius: 50%;\r
-  background: var(--green);\r
-  box-shadow: 0 0 8px var(--green);\r
-  flex-shrink: 0;\r
-}\r
-.route-count {\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-  font-variant-numeric: tabular-nums;\r
-}\r
-.route-bar {\r
-  grid-column: 1/-1;\r
-  height: 3px;\r
-  border-radius: 2px;\r
-  background: rgba(255, 255, 255, 0.07);\r
-  overflow: hidden;\r
-}\r
-.route-bar i {\r
-  display: block;\r
-  height: 100%;\r
-  background: var(--gold);\r
-}\r
-.route-fold {\r
-  width: 30px;\r
-  padding: 0;\r
-  border-color: transparent;\r
-  background: transparent;\r
-  color: var(--muted);\r
-}\r
-.route-actions {\r
-  display: flex;\r
-  gap: 6px;\r
-  padding: 8px 10px 10px;\r
-}\r
-.route-actions button {\r
-  flex: 1;\r
-  font-size: 12.5px;\r
-}\r
-.routes-tab {\r
-  position: absolute;\r
-  top: 12px;\r
-  left: 12px;\r
-  z-index: 3;\r
-  background: rgba(19, 26, 22, 0.94);\r
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);\r
-}\r
-.routes-tab small {\r
-  color: var(--gold);\r
-}\r
-.stage-hint {\r
-  position: absolute;\r
-  left: 50%;\r
-  bottom: 12px;\r
-  transform: translateX(-50%);\r
-  font-size: 12px;\r
-  color: var(--faint);\r
-  pointer-events: none;\r
-  white-space: nowrap;\r
-}\r
-.stage-tools {\r
-  position: absolute;\r
-  right: 12px;\r
-  bottom: 12px;\r
-  display: flex;\r
-  align-items: flex-end;\r
-  gap: 8px;\r
-  z-index: 2;\r
-  transition: right 0.22s ease;\r
-}\r
-.stage-tools > button,\r
-.zoom-controls,\r
-.legend-pop > summary {\r
-  height: 36px;\r
-  background: rgba(19, 26, 22, 0.94);\r
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);\r
-}\r
-.zoom-controls {\r
-  display: flex;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 7px;\r
-  overflow: hidden;\r
-}\r
-.zoom-controls button {\r
-  border: 0;\r
-  border-radius: 0;\r
-  background: transparent;\r
-  min-width: 36px;\r
-}\r
-.zoom-controls button + button {\r
-  border-left: 1px solid var(--line);\r
-}\r
-.zoom-value {\r
-  font-variant-numeric: tabular-nums;\r
-  font-size: 12.5px;\r
-}\r
-.legend-pop {\r
-  position: relative;\r
-}\r
-.legend-pop > summary {\r
-  list-style: none;\r
-  cursor: pointer;\r
-  display: flex;\r
-  align-items: center;\r
-  padding: 0 12px;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 7px;\r
-}\r
-.legend-pop > summary::-webkit-details-marker {\r
-  display: none;\r
-}\r
-.legend-list {\r
-  position: absolute;\r
-  right: 0;\r
-  bottom: 44px;\r
-  width: 210px;\r
-  margin: 0;\r
-  padding: 10px 14px;\r
-  list-style: none;\r
-  display: grid;\r
-  gap: 6px;\r
-  font-size: 12.5px;\r
-  background: rgba(19, 26, 22, 0.97);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 10px;\r
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);\r
-}\r
-.legend-list li {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 10px;\r
-}\r
-.sw {\r
-  width: 22px;\r
-  height: 14px;\r
-  border-radius: 4px;\r
-  border: 1px solid rgba(236, 230, 212, 0.34);\r
-  background: #232d27;\r
-  flex-shrink: 0;\r
-}\r
-.sw.completed {\r
-  background: linear-gradient(160deg, #8a7438, #57491f);\r
-  border-color: #eed48d;\r
-}\r
-.sw.active {\r
-  border: 2px solid var(--green);\r
-}\r
-.sw.waiting {\r
-  border: 2px solid var(--amber);\r
-}\r
-.sw.paused {\r
-  border: 2px solid var(--blue);\r
-}\r
-.sw.locked {\r
-  border-style: dashed;\r
-  opacity: 0.6;\r
-}\r
-.sw.terminated {\r
-  border-color: var(--red);\r
-  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);\r
-}\r
-.sw.unknown {\r
-  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);\r
-}\r
-.ln {\r
-  width: 22px;\r
-  height: 0;\r
-  border-top: 2.5px solid rgba(220, 194, 124, 0.6);\r
-  flex-shrink: 0;\r
-}\r
-.ln.dashed {\r
-  border-top-style: dashed;\r
-}\r
-.ln.cross {\r
-  border-top-color: var(--cross);\r
-}\r
-.ln.mutex {\r
-  border-top: 2.5px dotted var(--red);\r
-}\r
-.minimap {\r
-  position: absolute;\r
-  right: 12px;\r
-  bottom: 58px;\r
-  width: 190px;\r
-  height: 120px;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 10px;\r
-  background: rgba(13, 19, 16, 0.92);\r
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\r
-  z-index: 2;\r
-  padding: 6px;\r
-  cursor: crosshair;\r
-  touch-action: none;\r
-  transition: right 0.22s ease;\r
-}\r
-.minimap-svg {\r
-  width: 100%;\r
-  height: 100%;\r
-}\r
-.mm {\r
-  fill: rgba(236, 230, 212, 0.28);\r
-}\r
-.mm.completed {\r
-  fill: var(--gold);\r
-}\r
-.mm.active,\r
-.mm.current {\r
-  fill: var(--green);\r
-}\r
-.mm.waiting {\r
-  fill: var(--amber);\r
-}\r
-.mm.paused {\r
-  fill: var(--blue);\r
-}\r
-.mm.locked,\r
-.mm.unknown {\r
-  fill: rgba(236, 230, 212, 0.12);\r
-}\r
-.mm.sealed,\r
-.mm.terminated {\r
-  fill: rgba(217, 112, 95, 0.55);\r
-}\r
-.mm.folded {\r
-  fill: rgba(220, 194, 124, 0.25);\r
-}\r
-.mm-view {\r
-  fill: rgba(220, 194, 124, 0.08);\r
-  stroke: var(--gold);\r
-  stroke-width: 1.5;\r
-  vector-effect: non-scaling-stroke;\r
-}\r
-.stage.with-drawer .stage-tools {\r
-  right: calc(var(--drawer) + 12px);\r
-}\r
-/* The drawer already covers part of the tree; the minimap would cover more. */\r
-.stage.with-drawer .minimap {\r
-  display: none;\r
-}\r
-.demo-pop {\r
-  position: absolute;\r
-  top: 12px;\r
-  right: 12px;\r
-  z-index: 2;\r
-  transition: right 0.22s ease;\r
-}\r
-.stage.with-drawer .demo-pop {\r
-  right: calc(var(--drawer) + 12px);\r
-}\r
-.demo-pop > summary {\r
-  list-style: none;\r
-  cursor: pointer;\r
-  font-size: 12px;\r
-  color: var(--gold);\r
-  border: 1px dashed var(--gold-deep);\r
-  background: rgba(19, 26, 22, 0.94);\r
-  padding: 6px 10px;\r
-  border-radius: 7px;\r
-}\r
-.demo-pop > summary::-webkit-details-marker {\r
-  display: none;\r
-}\r
-.demo-pop[open] {\r
-  display: grid;\r
-  gap: 6px;\r
-  width: 200px;\r
-  padding: 10px;\r
-  background: rgba(19, 26, 22, 0.97);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 10px;\r
-}\r
-.demo-pop[open] > summary {\r
-  border: 0;\r
-  padding: 0;\r
-  background: none;\r
-}\r
-\r
-/* Drawer */\r
-.drawer {\r
-  position: absolute;\r
-  top: 0;\r
-  right: 0;\r
-  bottom: 0;\r
-  width: var(--drawer);\r
-  display: flex;\r
-  flex-direction: column;\r
-  background: var(--panel);\r
-  border-left: 1px solid var(--line-strong);\r
-  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);\r
-  transform: translateX(100%);\r
-  transition: transform 0.22s ease;\r
-  z-index: 4;\r
-}\r
-.drawer.open {\r
-  transform: none;\r
-}\r
-.drawer-head {\r
-  position: relative;\r
-  display: grid;\r
-  grid-template-columns: 58px 1fr;\r
-  gap: 14px;\r
-  align-items: center;\r
-  padding: 18px 44px 16px 18px;\r
-  border-bottom: 1px solid var(--line);\r
-  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\r
-  box-shadow: inset 4px 0 0 var(--line-strong);\r
-}\r
-.drawer-head.completed {\r
-  box-shadow: inset 4px 0 0 var(--gold);\r
-}\r
-.drawer-head.active {\r
-  box-shadow: inset 4px 0 0 var(--green);\r
-}\r
-.drawer-head.waiting {\r
-  box-shadow: inset 4px 0 0 var(--amber);\r
-}\r
-.drawer-head.paused {\r
-  box-shadow: inset 4px 0 0 var(--blue);\r
-}\r
-.drawer-head.sealed,\r
-.drawer-head.terminated {\r
-  box-shadow: inset 4px 0 0 var(--red);\r
-}\r
-.drawer-close {\r
-  position: absolute;\r
-  top: 10px;\r
-  right: 10px;\r
-  width: 32px;\r
-  height: 32px;\r
-  padding: 0;\r
-  font-size: 20px;\r
-}\r
-.drawer-emblem {\r
-  width: 58px;\r
-  height: 58px;\r
-  display: grid;\r
-  place-items: center;\r
-  border-radius: 13px;\r
-  background: rgba(220, 194, 124, 0.1);\r
-  border: 1px solid var(--line-strong);\r
-  color: var(--gold);\r
-}\r
-.drawer-emblem svg {\r
-  width: 34px;\r
-  height: 34px;\r
-}\r
-.drawer-branch {\r
-  display: block;\r
-  font-size: 11.5px;\r
-  letter-spacing: 0.2em;\r
-  color: var(--gold);\r
-}\r
-.drawer-head h3 {\r
-  font-size: 20px;\r
-  line-height: 1.3;\r
-  margin: 2px 0 6px;\r
-}\r
-.state-pill,\r
-.days-pill {\r
-  display: inline-block;\r
-  font-size: 12px;\r
-  padding: 1px 9px;\r
-  border-radius: 99px;\r
-  border: 1px solid var(--line-strong);\r
-  margin-right: 6px;\r
-}\r
-.state-pill.completed {\r
-  color: #fff3c9;\r
-  background: rgba(220, 194, 124, 0.22);\r
-  border-color: var(--gold);\r
-}\r
-.state-pill.active {\r
-  color: #a7e3bd;\r
-  border-color: var(--green);\r
-}\r
-.state-pill.waiting {\r
-  color: var(--amber);\r
-  border-color: var(--amber);\r
-}\r
-.state-pill.paused {\r
-  color: var(--blue);\r
-  border-color: var(--blue);\r
-}\r
-.state-pill.available {\r
-  color: #fffaf0;\r
-  border-color: rgba(236, 230, 212, 0.6);\r
-}\r
-.state-pill.locked,\r
-.state-pill.unknown {\r
-  color: var(--muted);\r
-}\r
-.state-pill.sealed,\r
-.state-pill.terminated {\r
-  color: #f0a898;\r
-  border-color: var(--red);\r
-}\r
-.days-pill {\r
-  color: var(--muted);\r
-}\r
-.drawer-body {\r
-  flex: 1;\r
-  overflow: auto;\r
-  padding: 16px 18px 24px;\r
-}\r
-.drawer-progress {\r
-  display: grid;\r
-  gap: 6px;\r
-  margin-bottom: 14px;\r
-}\r
-.drawer-progress strong {\r
-  font-variant-numeric: tabular-nums;\r
-  color: var(--gold);\r
-}\r
-.bar {\r
-  height: 8px;\r
-  border-radius: 4px;\r
-  background: rgba(255, 255, 255, 0.08);\r
-  overflow: hidden;\r
-}\r
-.bar i {\r
-  display: block;\r
-  height: 100%;\r
-  background: linear-gradient(90deg, #4f9a6b, var(--green));\r
-}\r
-.drawer-action {\r
-  display: grid;\r
-  gap: 8px;\r
-  padding: 12px;\r
-  margin-bottom: 16px;\r
-  border-radius: var(--radius);\r
-  background: var(--raised);\r
-  border: 1px solid var(--line);\r
-}\r
-.drawer-action .primary {\r
-  height: 40px;\r
-  font-size: 14.5px;\r
-}\r
-.blockers {\r
-  margin: 0;\r
-  padding-left: 18px;\r
-  font-size: 12.5px;\r
-  color: #f0c49a;\r
-}\r
-.description {\r
-  font-size: 14px;\r
-  line-height: 1.8;\r
-}\r
-.detail-section {\r
-  padding: 14px 0;\r
-  border-top: 1px solid var(--line);\r
-}\r
-.detail-section h4 {\r
-  font-size: 13px;\r
-  letter-spacing: 0.12em;\r
-  color: var(--gold);\r
-  margin-bottom: 8px;\r
-}\r
-.detail-section ul {\r
-  margin: 0;\r
-  padding-left: 18px;\r
-  display: grid;\r
-  gap: 4px;\r
-  font-size: 13.5px;\r
-}\r
-.detail-section p {\r
-  font-size: 13.5px;\r
-}\r
-.reason {\r
-  color: var(--muted);\r
-  font-size: 13px;\r
-  margin: 8px 0 0;\r
-}\r
-.prereqs {\r
-  display: grid;\r
-  gap: 6px;\r
-}\r
-.prereq-group {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 6px;\r
-}\r
-.chip {\r
-  font-size: 12.5px;\r
-  padding: 3px 10px;\r
-  border-radius: 99px;\r
-}\r
-.chip.done {\r
-  border-color: var(--gold);\r
-  color: #fff3c9;\r
-  background: rgba(220, 194, 124, 0.15);\r
-}\r
-.or,\r
-.and {\r
-  font-size: 11.5px;\r
-  color: var(--faint);\r
-}\r
-.and {\r
-  display: block;\r
-  padding-left: 4px;\r
-}\r
-.conditions {\r
-  list-style: none;\r
-  padding: 0 !important;\r
-}\r
-.conditions li {\r
-  display: flex;\r
-  gap: 8px;\r
-  align-items: baseline;\r
-}\r
-.cond-kind {\r
-  flex-shrink: 0;\r
-  font-size: 11px;\r
-  padding: 0 7px;\r
-  border-radius: 4px;\r
-  background: rgba(220, 194, 124, 0.12);\r
-  color: var(--gold);\r
-}\r
-.mutex-note {\r
-  border-left: 3px solid var(--red);\r
-  padding-left: 12px;\r
-}\r
-.route-facts {\r
-  display: grid;\r
-  grid-template-columns: auto 1fr;\r
-  gap: 6px 12px;\r
-  margin: 8px 0 0;\r
-  font-size: 13px;\r
-}\r
-.route-facts dt {\r
-  color: var(--muted);\r
-}\r
-.route-facts dd {\r
-  margin: 0;\r
-}\r
-\r
-/* Status line and empty state */\r
-.statusline {\r
-  display: flex;\r
-  align-items: center;\r
-  justify-content: space-between;\r
-  gap: 12px;\r
-  min-height: 32px;\r
-  padding: 4px 16px;\r
-  border-top: 1px solid var(--line);\r
-  background: #111814;\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-}\r
-.status-dot {\r
-  display: inline-block;\r
-  width: 7px;\r
-  height: 7px;\r
-  border-radius: 50%;\r
-  background: var(--green);\r
-  margin-right: 8px;\r
-  vertical-align: 1px;\r
-}\r
-.status-dot.busy {\r
-  background: var(--gold);\r
-  box-shadow: 0 0 8px var(--gold);\r
-}\r
-.linkish {\r
-  border: 0;\r
-  background: none;\r
-  padding: 2px 4px;\r
-  color: var(--gold);\r
-  font-size: 12px;\r
-}\r
-.empty {\r
-  flex: 1;\r
-  display: grid;\r
-  place-items: center;\r
-  padding: 24px;\r
-  background: var(--ink);\r
-}\r
-.empty-card {\r
-  max-width: 440px;\r
-  text-align: center;\r
-  display: grid;\r
-  justify-items: center;\r
-  gap: 12px;\r
-}\r
-.empty-card svg {\r
-  width: 72px;\r
-  height: 72px;\r
-  color: var(--gold);\r
-}\r
-.empty-card p {\r
-  color: var(--muted);\r
-}\r
-\r
-/* ---------- Modals and settings ---------- */\r
-.modal-backdrop {\r
-  position: fixed;\r
-  inset: 0;\r
-  z-index: 2147483001;\r
-  background: rgba(5, 9, 7, 0.78);\r
-  backdrop-filter: blur(3px);\r
-  display: grid;\r
-  place-items: center;\r
-  padding: 24px;\r
-}\r
-.modal {\r
-  width: min(880px, 100%);\r
-  max-height: 90vh;\r
-  display: flex;\r
-  flex-direction: column;\r
-  background: var(--panel);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 14px;\r
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);\r
-  overflow: hidden;\r
-}\r
-.modal-header {\r
-  display: flex;\r
-  justify-content: space-between;\r
-  align-items: center;\r
-  padding: 16px 20px;\r
-  border-bottom: 1px solid var(--line);\r
-  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);\r
-}\r
-.modal-header h2 {\r
-  font-size: 20px;\r
-  letter-spacing: 0.06em;\r
-}\r
-.modal-header button {\r
-  width: 34px;\r
-  height: 34px;\r
-  padding: 0;\r
-  font-size: 19px;\r
-}\r
-.modal-body {\r
-  padding: 18px 22px;\r
-  overflow: auto;\r
-}\r
-.modal-footer {\r
-  display: flex;\r
-  justify-content: flex-end;\r
-  gap: 10px;\r
-  padding: 12px 20px;\r
-  border-top: 1px solid var(--line);\r
-  background: #161e1a;\r
-}\r
-.modal-error {\r
-  color: #f6b3a4;\r
-  font-size: 13px;\r
-  white-space: pre-wrap;\r
-}\r
-.modal-body h3 {\r
-  font-size: 17px;\r
-  color: var(--gold);\r
-  margin-bottom: 6px;\r
-}\r
-.modal-body h4 {\r
-  font-size: 14px;\r
-  margin: 14px 0 6px;\r
-}\r
-.tabs {\r
-  display: flex;\r
-  gap: 6px;\r
-  flex-wrap: wrap;\r
-  margin-bottom: 18px;\r
-  padding-bottom: 10px;\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.tabs button {\r
-  border-color: transparent;\r
-  background: transparent;\r
-}\r
-.tabs button.active {\r
-  background: var(--raised-2);\r
-  border-color: var(--line-strong);\r
-  color: var(--gold);\r
-  box-shadow: inset 0 -2px 0 var(--gold);\r
-}\r
-.settings-section[hidden] {\r
-  display: none;\r
-}\r
-.form-grid {\r
-  display: grid;\r
-  grid-template-columns: 1fr 1fr;\r
-  gap: 14px 18px;\r
-}\r
-.form-grid > .wide {\r
-  grid-column: 1/-1;\r
-  min-width: 0;\r
-}\r
-.field {\r
-  display: grid;\r
-  /* A field stretched to a taller neighbor in its row keeps its own control height. */\r
-  align-content: start;\r
-  gap: 6px;\r
-  font-size: 13px;\r
-  color: #d5d0bf;\r
-  min-width: 0;\r
-}\r
-.field.wide {\r
-  grid-column: 1/-1;\r
-}\r
-.field small {\r
-  font-size: 11.5px;\r
-  line-height: 1.7;\r
-}\r
-.field textarea {\r
-  min-height: 80px;\r
-  resize: vertical;\r
-}\r
-.check {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  font-size: 13px;\r
-  color: #d5d0bf;\r
-}\r
-.check.wide,\r
-.check:has(> small) {\r
-  flex-wrap: wrap;\r
-}\r
-.check small {\r
-  flex-basis: 100%;\r
-  font-size: 11.5px;\r
-  line-height: 1.7;\r
-  padding-left: 24px;\r
-}\r
-.api-row,\r
-.candidate,\r
-.event-card {\r
-  padding: 14px 16px;\r
-  border: 1px solid var(--line);\r
-  background: var(--raised);\r
-  border-radius: var(--radius);\r
-  margin-bottom: 12px;\r
-}\r
-.candidate {\r
-  display: flex;\r
-  gap: 12px;\r
-  align-items: flex-start;\r
-  flex-wrap: wrap;\r
-}\r
-.candidate strong {\r
-  display: block;\r
-  margin-bottom: 2px;\r
-}\r
-.candidate p {\r
-  font-size: 13px;\r
-  color: var(--muted);\r
-  margin: 0;\r
-}\r
-.event-card h3 {\r
-  margin: 6px 0;\r
-}\r
-.event-card p {\r
-  font-size: 13.5px;\r
-}\r
-.api-actions {\r
-  display: flex;\r
-  align-items: end;\r
-  flex-wrap: wrap;\r
-  gap: 10px;\r
-  margin: 12px 0;\r
-}\r
-.segment-max {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: end;\r
-  gap: 8px 12px;\r
-}\r
-.segment-max .field {\r
-  flex: 0 1 220px;\r
-}\r
-.segment-max-chips {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 6px;\r
-  padding-bottom: 4px;\r
-}\r
-.segment-max small {\r
-  flex-basis: 100%;\r
-}\r
-.api-picker {\r
-  flex: 1;\r
-  min-width: 180px;\r
-}\r
-.api-editor {\r
-  margin-top: 16px;\r
-}\r
-.api-status {\r
-  white-space: pre-wrap;\r
-  overflow-wrap: anywhere;\r
-  color: var(--gold);\r
-  font-size: 13px;\r
-}\r
-#source-panel fieldset {\r
-  border: 1px solid var(--line);\r
-  border-radius: var(--radius);\r
-  margin: 16px 0;\r
-  padding: 14px;\r
-  min-width: 0;\r
-}\r
-#source-panel legend {\r
-  color: var(--gold);\r
-  padding: 0 6px;\r
-  font-size: 13.5px;\r
-}\r
-#source-panel fieldset:disabled {\r
-  opacity: 0.55;\r
-}\r
-.source-list {\r
-  max-height: 300px;\r
-  overflow: auto;\r
-  border: 1px solid var(--line);\r
-  border-radius: 8px;\r
-  padding: 6px 12px;\r
-  margin: 8px 0;\r
-  background: var(--ink);\r
-}\r
-.source-group {\r
-  position: sticky;\r
-  top: -6px;\r
-  margin: 8px -12px 4px;\r
-  padding: 6px 12px;\r
-  font-size: 12.5px;\r
-  color: var(--gold);\r
-  background: var(--ink);\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.source-entry {\r
-  display: flex;\r
-  align-items: start;\r
-  gap: 10px;\r
-  padding: 6px 0;\r
-  font-size: 13px;\r
-}\r
-.source-entry small {\r
-  display: block;\r
-  font-size: 11.5px;\r
-}\r
-.source-disabled span {\r
-  opacity: 0.65;\r
-}\r
-.source-book[hidden],\r
-.source-entry[hidden] {\r
-  display: none;\r
-}\r
-.source-rule {\r
-  display: grid;\r
-  grid-template-columns: 1fr 1fr auto;\r
-  gap: 8px;\r
-  margin: 8px 0;\r
-}\r
-.source-rule input {\r
-  min-width: 0;\r
-}\r
-.source-toggles {\r
-  display: grid;\r
-  grid-template-columns: 1fr 1fr;\r
-  gap: 12px 18px;\r
-}\r
-.segment {\r
-  display: grid;\r
-  gap: 8px;\r
-  border: 1px solid var(--line);\r
-  border-radius: 8px;\r
-  padding: 10px;\r
-  margin: 8px 0;\r
-  background: var(--ink);\r
-}\r
-.segment-head {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 8px;\r
-  align-items: center;\r
-}\r
-.segment-head input[data-seg='name'] {\r
-  flex: 1;\r
-  min-width: 120px;\r
-}\r
-.segment textarea {\r
-  min-height: 70px;\r
-  resize: vertical;\r
-  width: 100%;\r
-}\r
-.legend {\r
-  margin-bottom: 14px;\r
-  font-size: 13px;\r
-}\r
-.legend summary {\r
-  cursor: pointer;\r
-  color: var(--gold);\r
-}\r
-.legend code {\r
-  color: var(--gold);\r
-}\r
-\r
-/* ---------- Responsive ---------- */\r
-/* the focus gauge gives way in steps, by window width only */\r
-@media (max-width: 1499px) {\r
-  .focus-gauge {\r
-    width: 260px;\r
-  }\r
-}\r
-@media (max-width: 1279px) {\r
-  .nation-copy p {\r
-    -webkit-line-clamp: 1;\r
-  }\r
-}\r
-@media (max-width: 1180px) {\r
-  .nation-bar {\r
-    grid-template-columns: minmax(180px, 1fr) auto auto;\r
-  }\r
-  .nation-actions {\r
-    grid-column: 1/-1;\r
-    justify-content: flex-end;\r
-    margin-top: -4px;\r
-  }\r
-}\r
-@media (max-width: 1100px) {\r
-  .brand,\r
-  .cmd-text {\r
-    display: none;\r
-  }\r
-  .cmd-btn {\r
-    width: 38px;\r
-    justify-content: center;\r
-    padding: 0;\r
-  }\r
-}\r
-@media (max-width: 1000px) {\r
-  .nation-bar {\r
-    grid-template-columns: 1fr auto;\r
-    gap: 12px 16px;\r
-  }\r
-  /* the focus shares the second row with the actions */\r
-  .focus-gauge {\r
-    order: 3;\r
-    width: auto;\r
-  }\r
-  .focus-gauge::after {\r
-    display: none;\r
-  }\r
-  .nation-actions {\r
-    grid-column: auto;\r
-    margin-top: 0;\r
-    order: 4;\r
-  }\r
-  :host {\r
-    --drawer: 340px;\r
-  }\r
-}\r
-@media (max-width: 760px) {\r
-  .shell {\r
-    inset: 0;\r
-    border-radius: 0;\r
-    border: 0;\r
-  }\r
-  .command {\r
-    gap: 8px;\r
-    padding: 6px 8px;\r
-    min-height: 52px;\r
-  }\r
-  .brand-mark {\r
-    width: 34px;\r
-    height: 34px;\r
-  }\r
-  .nation-scroller,\r
-  .date-chip,\r
-  .test-label {\r
-    display: none;\r
-  }\r
-  .nation-picker {\r
-    display: block;\r
-  }\r
-  .command-spacer {\r
-    display: none;\r
-  }\r
-  .cmd-text {\r
-    display: none;\r
-  }\r
-  .cmd-btn {\r
-    width: 38px;\r
-    justify-content: center;\r
-    padding: 0;\r
-  }\r
-  .cmd-btn.busy {\r
-    width: auto;\r
-    padding: 0 8px;\r
-  }\r
-  .cmd-btn.busy .cmd-text {\r
-    display: inline;\r
-  }\r
-  .nation-bar {\r
-    grid-template-columns: 1fr auto;\r
-    padding: 10px 12px;\r
-    gap: 10px;\r
-  }\r
-  .nation-crest {\r
-    width: 38px;\r
-    height: 38px;\r
-  }\r
-  .nation-copy h2 {\r
-    font-size: 18px;\r
-  }\r
-  .nation-copy p {\r
-    display: none;\r
-  }\r
-  .gauges {\r
-    gap: 10px;\r
-  }\r
-  .gauge {\r
-    width: 72px;\r
-  }\r
-  .gauge-head {\r
-    display: grid;\r
-  }\r
-  .gauge-head small {\r
-    font-size: 10.5px;\r
-    white-space: nowrap;\r
-  }\r
-  .gauge-head strong {\r
-    font-size: 18px;\r
-  }\r
-  .nation-actions {\r
-    grid-column: 1/-1;\r
-    justify-content: stretch;\r
-    margin: 0;\r
-  }\r
-  .nation-actions > * {\r
-    flex: 1;\r
-  }\r
-  .control-select select {\r
-    width: 100%;\r
-  }\r
-  .routes {\r
-    top: 0;\r
-    left: 0;\r
-    bottom: 0;\r
-    width: min(320px, 86%);\r
-    max-height: none;\r
-    border-radius: 0 12px 12px 0;\r
-  }\r
-  .minimap,\r
-  .stage-hint {\r
-    display: none;\r
-  }\r
-  .stage.with-drawer .demo-pop {\r
-    right: 12px;\r
-  }\r
-  .drawer {\r
-    top: auto;\r
-    left: 0;\r
-    width: auto;\r
-    height: 72%;\r
-    border-left: 0;\r
-    border-top: 1px solid var(--line-strong);\r
-    border-radius: 16px 16px 0 0;\r
-    transform: translateY(100%);\r
-    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);\r
-  }\r
-  .drawer::before {\r
-    content: '';\r
-    display: block;\r
-    width: 44px;\r
-    height: 4px;\r
-    border-radius: 2px;\r
-    background: var(--line-strong);\r
-    margin: 8px auto 0;\r
-  }\r
-  .drawer.open {\r
-    transform: none;\r
-  }\r
-  .stage.with-drawer .stage-tools {\r
-    right: 12px;\r
-  }\r
-  .statusline .status-mid {\r
-    display: none;\r
-  }\r
-  .modal-backdrop {\r
-    padding: 0;\r
-    place-items: end stretch;\r
-  }\r
-  .modal {\r
-    max-height: 94dvh;\r
-    border-radius: 16px 16px 0 0;\r
-  }\r
-  .modal-body {\r
-    padding: 14px;\r
-  }\r
-  .form-grid,\r
-  .source-toggles {\r
-    grid-template-columns: 1fr;\r
-  }\r
-}\r
-@media (prefers-reduced-motion: reduce) {\r
-  *,\r
-  *::before {\r
-    animation: none !important;\r
-    transition: none !important;\r
-  }\r
-}\r
-@media (max-width: 1200px) {\r
-  .stage.with-drawer .minimap {\r
-    display: none;\r
-  }\r
-}\r
-.demo-pop[open] button {\r
-  width: 100%;\r
-  text-align: left;\r
-}\r
-\r
-/* ---------- Tasks tab (任务) ---------- */\r
-.preset-bar {\r
-  padding: 14px 16px;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: var(--radius);\r
-  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));\r
-  margin-bottom: 14px;\r
-}\r
-.preset-title {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: baseline;\r
-  gap: 4px 12px;\r
-  margin-bottom: 10px;\r
-}\r
-.preset-title h3 {\r
-  margin: 0;\r
-}\r
-.preset-title small {\r
-  color: var(--muted);\r
-  font-size: 12px;\r
-  line-height: 1.6;\r
-}\r
-.preset-row {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 8px;\r
-  align-items: center;\r
-}\r
-.preset-row select {\r
-  flex: 1 1 200px;\r
-  min-width: 0;\r
-}\r
-.preset-row input[data-preset-name] {\r
-  flex: 1 1 160px;\r
-  min-width: 0;\r
-}\r
-.preset-bar .api-status:empty {\r
-  display: none;\r
-}\r
-.preset-bar .api-status {\r
-  margin: 8px 0 0;\r
-}\r
-.task-tabs {\r
-  display: grid;\r
-  grid-template-columns: repeat(4, minmax(0, 1fr));\r
-  gap: 8px;\r
-  margin-bottom: 14px;\r
-}\r
-.task-tab {\r
-  display: grid;\r
-  gap: 3px;\r
-  text-align: left;\r
-  padding: 10px 12px;\r
-  background: var(--raised);\r
-  border-color: var(--line);\r
-  min-width: 0;\r
-}\r
-.task-tab strong {\r
-  font-family: var(--serif);\r
-  font-size: 14.5px;\r
-  font-weight: 600;\r
-}\r
-.task-tab small {\r
-  color: var(--faint);\r
-  font-size: 11.5px;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.task-tab.active {\r
-  border-color: var(--gold);\r
-  background: var(--raised-2);\r
-  box-shadow: inset 0 -2px 0 var(--gold);\r
-}\r
-.task-tab.active strong {\r
-  color: var(--gold);\r
-}\r
-.task-editor[hidden] {\r
-  display: none;\r
-}\r
-.task-head {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: baseline;\r
-  gap: 4px 12px;\r
-  margin-bottom: 10px;\r
-}\r
-.task-head h3 {\r
-  margin: 0;\r
-}\r
-.task-head small {\r
-  color: var(--muted);\r
-  font-size: 12.5px;\r
-}\r
-.task-block {\r
-  border: 1px solid var(--line);\r
-  border-radius: var(--radius);\r
-  background: var(--raised);\r
-  padding: 0 14px;\r
-  margin-bottom: 12px;\r
-}\r
-.task-block > summary {\r
-  cursor: pointer;\r
-  padding: 11px 0;\r
-  font-weight: 600;\r
-  color: var(--gold);\r
-  list-style: none;\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-}\r
-.task-block > summary::-webkit-details-marker {\r
-  display: none;\r
-}\r
-.task-block > summary::before {\r
-  content: '▸';\r
-  color: var(--faint);\r
-  transition: transform 0.15s;\r
-}\r
-.task-block[open] > summary::before {\r
-  transform: rotate(90deg);\r
-}\r
-.task-block[open] {\r
-  padding-bottom: 14px;\r
-}\r
-.task-block .summary-note {\r
-  margin-left: auto;\r
-  font-weight: 400;\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-}\r
-.block-note {\r
-  display: block;\r
-  margin-top: 8px;\r
-  color: var(--muted);\r
-  font-size: 11.5px;\r
-  line-height: 1.7;\r
-}\r
-.route-row {\r
-  display: grid;\r
-  grid-template-columns: 1fr 120px auto;\r
-  gap: 10px;\r
-  align-items: end;\r
-  margin-bottom: 10px;\r
-}\r
-.route-row > .field:first-child:last-of-type {\r
-  grid-column: 1/3;\r
-}\r
-.route-row button {\r
-  height: 36px;\r
-}\r
-.prompt-toolbar {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 8px;\r
-  align-items: center;\r
-  margin-bottom: 10px;\r
-}\r
-.prompt-toolbar .spacer {\r
-  flex: 1;\r
-}\r
-.prompt-toolbar small {\r
-  color: var(--muted);\r
-  font-size: 12px;\r
-}\r
-.prompt-list {\r
-  display: grid;\r
-  gap: 6px;\r
-  margin-bottom: 10px;\r
-}\r
-.prompt-card {\r
-  border: 1px solid var(--line);\r
-  border-radius: 8px;\r
-  background: #1b2420;\r
-  transition:\r
-    border-color 0.15s,\r
-    opacity 0.15s;\r
-}\r
-.prompt-card.open {\r
-  border-color: var(--line-strong);\r
-}\r
-.prompt-card[data-kind='data'] {\r
-  border-left: 3px solid var(--blue);\r
-}\r
-.prompt-card[data-kind='guide'],\r
-.prompt-card[data-kind='task'] {\r
-  border-left: 3px solid var(--gold-deep);\r
-}\r
-.prompt-card[data-kind='custom'] {\r
-  border-left: 3px solid var(--green);\r
-}\r
-.prompt-card.off {\r
-  opacity: 0.55;\r
-}\r
-.prompt-card.off .pname {\r
-  text-decoration: line-through;\r
-  text-decoration-color: var(--faint);\r
-}\r
-.prompt-head {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  padding: 4px 6px 4px 4px;\r
-}\r
-.prompt-toggle {\r
-  flex: 1;\r
-  min-width: 0;\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  border: 0;\r
-  background: transparent;\r
-  padding: 6px 8px;\r
-  text-align: left;\r
-}\r
-.prompt-toggle:hover:not(:disabled) {\r
-  background: rgba(255, 255, 255, 0.03);\r
-}\r
-.prompt-toggle .chev {\r
-  color: var(--faint);\r
-  transition: transform 0.15s;\r
-}\r
-.prompt-card.open .chev {\r
-  transform: rotate(90deg);\r
-}\r
-.pname {\r
-  min-width: 0;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-  font-weight: 600;\r
-}\r
-.role-tag,\r
-.kind-tag {\r
-  flex: none;\r
-  font-size: 10.5px;\r
-  padding: 1px 7px;\r
-  border-radius: 99px;\r
-  border: 1px solid var(--line-strong);\r
-  color: var(--muted);\r
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\r
-}\r
-.kind-tag {\r
-  font-family: inherit;\r
-}\r
-.kind-tag.data {\r
-  color: var(--blue);\r
-  border-color: rgba(143, 176, 214, 0.4);\r
-}\r
-.kind-tag.custom {\r
-  color: var(--green);\r
-  border-color: rgba(114, 196, 146, 0.4);\r
-}\r
-.kind-tag.modified {\r
-  color: var(--amber);\r
-  border-color: rgba(230, 169, 80, 0.45);\r
-}\r
-.pchars {\r
-  flex: none;\r
-  margin-left: auto;\r
-  font-size: 11px;\r
-  color: var(--faint);\r
-}\r
-.switch {\r
-  flex: none;\r
-  display: inline-flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-  cursor: pointer;\r
-}\r
-.switch input {\r
-  appearance: none;\r
-  width: 30px;\r
-  height: 17px;\r
-  border-radius: 99px;\r
-  background: #0f1512;\r
-  border: 1px solid var(--line-strong);\r
-  position: relative;\r
-  margin: 0;\r
-  padding: 0;\r
-  cursor: pointer;\r
-  transition: background 0.15s;\r
-}\r
-.switch input::after {\r
-  content: '';\r
-  position: absolute;\r
-  top: 2px;\r
-  left: 2px;\r
-  width: 11px;\r
-  height: 11px;\r
-  border-radius: 50%;\r
-  background: var(--faint);\r
-  transition:\r
-    transform 0.15s,\r
-    background 0.15s;\r
-}\r
-.switch input:checked {\r
-  background: rgba(114, 196, 146, 0.25);\r
-  border-color: var(--green);\r
-}\r
-.switch input:checked::after {\r
-  transform: translateX(13px);\r
-  background: var(--green);\r
-}\r
-.switch input:disabled {\r
-  opacity: 0.6;\r
-  cursor: not-allowed;\r
-}\r
-.switch span {\r
-  display: none;\r
-}\r
-button.icon {\r
-  width: 30px;\r
-  height: 30px;\r
-  padding: 0;\r
-  display: inline-grid;\r
-  place-items: center;\r
-  flex: none;\r
-}\r
-.prompt-body {\r
-  padding: 4px 12px 12px;\r
-  display: grid;\r
-  gap: 8px;\r
-}\r
-.prompt-body[hidden] {\r
-  display: none;\r
-}\r
-.prompt-fields {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 8px;\r
-}\r
-.prompt-fields input {\r
-  flex: 1 1 180px;\r
-  min-width: 0;\r
-}\r
-.prompt-fields select {\r
-  flex: 0 0 120px;\r
-}\r
-.prompt-body textarea {\r
-  width: 100%;\r
-  resize: vertical;\r
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\r
-  font-size: 12.5px;\r
-  line-height: 1.6;\r
-}\r
-.prompt-body small {\r
-  color: var(--muted);\r
-  font-size: 11.5px;\r
-  line-height: 1.7;\r
-}\r
-.prompt-preview {\r
-  margin-top: 12px;\r
-}\r
-.prompt-preview textarea {\r
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;\r
-  font-size: 12px;\r
-  line-height: 1.55;\r
-  min-height: 260px;\r
-}\r
-.legend {\r
-  font-size: 12.5px;\r
-  color: var(--muted);\r
-  margin-bottom: 10px;\r
-}\r
-.legend summary {\r
-  cursor: pointer;\r
-  color: var(--gold);\r
-}\r
-.legend ul {\r
-  margin: 8px 0 0;\r
-  padding-left: 18px;\r
-  line-height: 1.8;\r
-}\r
-.legend code {\r
-  color: var(--text);\r
-}\r
-\r
-/* ---------- Progress window above the orb ---------- */\r
-.hud {\r
-  position: fixed;\r
-  z-index: 2147483000;\r
-  display: flex;\r
-  flex-direction: column;\r
-  background: rgba(22, 30, 26, 0.96);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 12px;\r
-  box-shadow:\r
-    0 14px 40px rgba(0, 0, 0, 0.55),\r
-    inset 0 1px 0 rgba(220, 194, 124, 0.08);\r
-  backdrop-filter: blur(6px);\r
-  color: var(--text);\r
-  font-size: 13px;\r
-  overflow: hidden;\r
-}\r
-.hud[hidden] {\r
-  display: none;\r
-}\r
-.hud.enter {\r
-  animation: hud-in 0.18s ease-out;\r
-}\r
-@keyframes hud-in {\r
-  from {\r
-    opacity: 0;\r
-    transform: translateY(6px);\r
-  }\r
-}\r
-.hud[data-side='below'].enter {\r
-  animation-name: hud-in-below;\r
-}\r
-@keyframes hud-in-below {\r
-  from {\r
-    opacity: 0;\r
-    transform: translateY(-6px);\r
-  }\r
-}\r
-.hud-head {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  padding: 7px 8px 7px 12px;\r
-  cursor: grab;\r
-  user-select: none;\r
-  border-bottom: 1px solid var(--line);\r
-  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);\r
-}\r
-.hud-head:active {\r
-  cursor: grabbing;\r
-}\r
-.hud-head .status-dot {\r
-  margin-right: 2px;\r
-  flex: none;\r
-}\r
-.status-dot.failed {\r
-  background: var(--red);\r
-}\r
-.hud-head strong {\r
-  font-family: var(--serif);\r
-  color: var(--gold);\r
-  letter-spacing: 0.06em;\r
-  flex: none;\r
-}\r
-.hud-count {\r
-  min-width: 0;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-  color: var(--muted);\r
-  font-size: 12px;\r
-}\r
-.hud-actions {\r
-  margin-left: auto;\r
-  display: flex;\r
-  gap: 4px;\r
-  flex: none;\r
-}\r
-.hud-actions button {\r
-  padding: 3px 8px;\r
-  font-size: 12px;\r
-}\r
-.hud-actions button.icon {\r
-  width: 26px;\r
-  height: 26px;\r
-  padding: 0;\r
-}\r
-.hud-actions button[hidden] {\r
-  display: none;\r
-}\r
-.hud-bar {\r
-  height: 3px;\r
-  background: rgba(220, 194, 124, 0.12);\r
-  position: relative;\r
-  overflow: hidden;\r
-  flex: none;\r
-}\r
-.hud-bar i {\r
-  position: absolute;\r
-  inset: 0 auto 0 0;\r
-  background: var(--gold);\r
-  transition: width 0.3s;\r
-}\r
-/* v0.15.4: no moving bar; it only shows how much of a batch is done. */\r
-.hud-bar[hidden] {\r
-  display: none;\r
-}\r
-.hud-list {\r
-  list-style: none;\r
-  margin: 0;\r
-  padding: 4px 0;\r
-  overflow: auto;\r
-  min-height: 0;\r
-}\r
-.hud-list[hidden] {\r
-  display: none;\r
-}\r
-.hud-item {\r
-  display: grid;\r
-  grid-template-columns: 18px minmax(0, 1fr) auto auto;\r
-  gap: 8px;\r
-  align-items: center;\r
-  padding: 6px 8px 6px 12px;\r
-}\r
-.hud-item.enter {\r
-  animation: hud-in 0.18s ease-out;\r
-}\r
-.hud-item + .hud-item {\r
-  border-top: 1px solid rgba(217, 191, 120, 0.07);\r
-}\r
-.hud-sym.run {\r
-  color: var(--gold);\r
-  font-size: 9px;\r
-}\r
-.hud-sym {\r
-  font-style: normal;\r
-  font-weight: 700;\r
-  text-align: center;\r
-  width: 16px;\r
-  height: 16px;\r
-  line-height: 16px;\r
-  border-radius: 50%;\r
-  font-size: 11px;\r
-}\r
-.hud-sym.ok {\r
-  color: #0f1512;\r
-  background: var(--green);\r
-}\r
-.hud-sym.bad {\r
-  color: #0f1512;\r
-  background: var(--red);\r
-}\r
-.hud-sym.wait,\r
-.hud-sym.off {\r
-  color: var(--muted);\r
-  border: 1px solid var(--line-strong);\r
-  line-height: 14px;\r
-}\r
-.hud-text {\r
-  min-width: 0;\r
-  display: grid;\r
-}\r
-.hud-text b {\r
-  font-weight: 600;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.hud-text small {\r
-  color: var(--muted);\r
-  font-size: 11.5px;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.hud-item.failed .hud-text small {\r
-  color: #f0a898;\r
-  white-space: normal;\r
-  display: -webkit-box;\r
-  -webkit-line-clamp: 3;\r
-  -webkit-box-orient: vertical;\r
-}\r
-.hud-item.success .hud-text b {\r
-  color: var(--green);\r
-}\r
-.hud-item.cancelled {\r
-  opacity: 0.7;\r
-}\r
-.hud-item time {\r
-  font-variant-numeric: tabular-nums;\r
-  color: var(--faint);\r
-  font-size: 11.5px;\r
-}\r
-.hud-item button.icon {\r
-  width: 22px;\r
-  height: 22px;\r
-  border-color: transparent;\r
-  background: transparent;\r
-  color: var(--faint);\r
-}\r
-.hud.collapsed .hud-head {\r
-  border-bottom: 0;\r
-}\r
-\r
-@media (max-width: 760px) {\r
-  .task-tabs {\r
-    grid-template-columns: repeat(2, minmax(0, 1fr));\r
-  }\r
-  .route-row {\r
-    grid-template-columns: 1fr 90px;\r
-  }\r
-  .route-row > button {\r
-    grid-column: 1/-1;\r
-  }\r
-  .route-row > .field:first-child:last-of-type {\r
-    grid-column: 1/-1;\r
-  }\r
-  .pchars,\r
-  .role-tag {\r
-    display: none;\r
-  }\r
-  .hud-actions button[data-hud='log'] {\r
-    display: none;\r
-  }\r
-}\r
-.task-block.prompts-block {\r
-  padding: 12px 14px 14px;\r
-}\r
-.prompt-toolbar h4 {\r
-  margin: 0;\r
-  color: var(--gold);\r
-  font-size: 14px;\r
-}\r
-.prompts-block > .muted {\r
-  font-size: 12.5px;\r
-  margin: 0 0 8px;\r
-}\r
-.task-editor input:not([type='checkbox']),\r
-.task-editor select,\r
-.preset-row input,\r
-.preset-row select,\r
-.preset-row button,\r
-.route-row button {\r
-  height: 38px;\r
-}\r
-.task-editor .prompt-body input {\r
-  height: 36px;\r
-}\r
-\r
-/* ---------- Country manager: delete tree ---------- */\r
-.country-row {\r
-  align-items: center;\r
-}\r
-.country-row .row-spacer {\r
-  flex: 1;\r
-}\r
-.remove-confirm {\r
-  flex-basis: 100%;\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 8px;\r
-  padding: 10px 12px;\r
-  border: 1px solid rgba(217, 112, 95, 0.45);\r
-  border-radius: 8px;\r
-  background: rgba(217, 112, 95, 0.08);\r
-}\r
-.remove-confirm small {\r
-  flex: 1 1 260px;\r
-  color: #f0c2b8;\r
-  line-height: 1.6;\r
-}\r
-\r
-/* ---------- Country manager: tree files ---------- */\r
-.tree-io h3 {\r
-  margin-bottom: 4px;\r
-}\r
-.tree-io > small {\r
-  display: block;\r
-  color: var(--muted);\r
-  font-size: 12px;\r
-  line-height: 1.6;\r
-  margin-bottom: 10px;\r
-}\r
-.tree-io-actions {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 8px;\r
-  align-items: center;\r
-}\r
-.tree-io .api-status {\r
-  margin: 8px 0 0;\r
-}\r
-.import-panel {\r
-  margin-top: 12px;\r
-  padding: 12px 14px;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: var(--radius);\r
-  background: var(--raised);\r
-  display: grid;\r
-  gap: 10px;\r
-}\r
-.import-panel h4 {\r
-  margin: 0;\r
-  color: var(--gold);\r
-}\r
-.import-panel ul {\r
-  margin: 0;\r
-  padding-left: 18px;\r
-  font-size: 13px;\r
-  line-height: 1.8;\r
-}\r
-.import-panel code {\r
-  font-size: 11.5px;\r
-  color: var(--muted);\r
-}\r
-.import-panel .warn {\r
-  color: var(--amber);\r
-}\r
-.tree-io {\r
-  margin-bottom: 18px;\r
-}\r
-\r
-/* ---------- News window (国际快讯) ---------- */\r
-.event-timeline {\r
-  margin: 6px 0;\r
-  padding-left: 18px;\r
-  font-size: 13px;\r
-  line-height: 1.7;\r
-  color: var(--muted);\r
-}\r
-.event-timeline b {\r
-  color: var(--gold);\r
-  margin-right: 6px;\r
-}\r
-.event-current {\r
-  font-size: 13px;\r
-}\r
-.event-current b {\r
-  color: var(--gold);\r
-  margin-right: 6px;\r
-}\r
-.event-steps {\r
-  list-style: none;\r
-  margin: 6px 0;\r
-  padding: 0;\r
-  font-size: 13px;\r
-  line-height: 1.7;\r
-}\r
-.event-steps li::before {\r
-  display: inline-block;\r
-  width: 1.4em;\r
-  color: var(--muted);\r
-}\r
-.event-steps li.done {\r
-  color: var(--muted);\r
-  text-decoration: line-through;\r
-}\r
-.event-steps li.done::before {\r
-  content: '✓';\r
-}\r
-.event-steps li.active {\r
-  color: var(--gold);\r
-  font-weight: 700;\r
-}\r
-.event-steps li.active::before {\r
-  content: '▶';\r
-}\r
-.event-steps li.pending::before {\r
-  content: '○';\r
-}\r
-.event-steps li.planned {\r
-  font-style: italic;\r
-}\r
-.event-steps li.planned::before {\r
-  content: '◷';\r
-}\r
-.event-effects {\r
-  display: block;\r
-  color: var(--gold);\r
-}\r
-.pivotal-note {\r
-  border-left: 3px solid var(--gold);\r
-  padding-left: 10px;\r
-}\r
-.rel-core {\r
-  border: 1px solid var(--gold);\r
-  border-radius: 10px;\r
-  padding: 10px 14px;\r
-  margin: 10px 0 14px;\r
-  background: rgba(220, 194, 124, 0.08);\r
-}\r
-.rel-core h3,\r
-.rel-independent h3 {\r
-  margin: 0 0 6px;\r
-  font-size: 15px;\r
-}\r
-.rel-list {\r
-  list-style: none;\r
-  padding: 0;\r
-  margin: 0;\r
-  display: grid;\r
-  gap: 10px;\r
-}\r
-.rel-card {\r
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));\r
-  border-radius: 10px;\r
-  padding: 10px 12px;\r
-}\r
-.rel-card p {\r
-  margin: 6px 0;\r
-}\r
-.rel-pair {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 6px;\r
-  margin-top: 6px;\r
-}\r
-.rel-branch {\r
-  color: var(--muted);\r
-}\r
-.rel-arrow {\r
-  color: var(--gold);\r
-}\r
-.rel-via {\r
-  margin: 4px 0 0;\r
-  padding-left: 18px;\r
-  font-size: 12.5px;\r
-  color: var(--muted);\r
-}\r
-.rel-independent {\r
-  margin-top: 14px;\r
-}\r
-.rel-independent dt {\r
-  font-weight: 600;\r
-}\r
-.rel-independent dd {\r
-  margin: 0 0 8px;\r
-  color: var(--muted);\r
-}\r
-\r
-/* v0.13.1 UI review */\r
-.status-jobs {\r
-  color: var(--muted);\r
-  display: inline-flex;\r
-  align-items: center;\r
-}\r
-.status-jobs.failed {\r
-  color: var(--red);\r
-}\r
-.status-jobs.busy {\r
-  color: var(--gold);\r
-}\r
-.status-dot.failed {\r
-  background: var(--red);\r
-}\r
-.cmd-btn {\r
-  position: relative;\r
-}\r
-.alert-dot {\r
-  position: absolute;\r
-  top: 4px;\r
-  right: 4px;\r
-  width: 8px;\r
-  height: 8px;\r
-  border-radius: 50%;\r
-  background: var(--red);\r
-  box-shadow: 0 0 0 2px var(--bg);\r
-}\r
-.lock-confirm {\r
-  border: 1px solid var(--amber);\r
-  border-radius: 8px;\r
-  padding: 10px 12px;\r
-  background: rgba(230, 169, 80, 0.08);\r
-}\r
-.lock-confirm p {\r
-  margin: 0 0 8px;\r
-  font-size: 13px;\r
-}\r
-.lock-confirm strong {\r
-  color: var(--amber);\r
-}\r
-.lock-confirm .row {\r
-  display: flex;\r
-  gap: 8px;\r
-}\r
-.job-actions {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 8px;\r
-  padding-bottom: 12px;\r
-  margin-bottom: 8px;\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.job-buttons {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 6px;\r
-  justify-content: flex-end;\r
-}\r
-.event-filters {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 6px;\r
-  margin-bottom: 12px;\r
-}\r
-.event-filters select {\r
-  width: auto;\r
-  min-width: 140px;\r
-}\r
-.event-filters small {\r
-  margin-left: auto;\r
-  color: var(--muted);\r
-}\r
-.chip.active {\r
-  border-color: var(--gold);\r
-  color: var(--gold);\r
-  background: rgba(220, 194, 124, 0.1);\r
-}\r
-.country-row {\r
-  flex-wrap: wrap;\r
-  gap: 10px 14px;\r
-}\r
-.country-name {\r
-  min-width: 7em;\r
-}\r
-.switch-label {\r
-  display: inline-flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  font-size: 13px;\r
-}\r
-.tree-io > summary {\r
-  cursor: pointer;\r
-  color: var(--gold);\r
-  font-weight: 700;\r
-  margin-bottom: 8px;\r
-}\r
-.task-head {\r
-  flex-wrap: wrap;\r
-}\r
-.task-head .spacer {\r
-  flex: 1;\r
-}\r
-.last-run {\r
-  color: var(--muted);\r
-}\r
-.field .static {\r
-  margin: 6px 0 0;\r
-  font-size: 13px;\r
-  color: var(--muted);\r
-}\r
-.unsaved {\r
-  margin-right: auto;\r
-  color: var(--amber);\r
-  font-size: 13px;\r
-}\r
-.field[hidden] {\r
-  display: none;\r
-}\r
-.modal-task-status {\r
-  display: inline-flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  margin: 0 12px 0 auto;\r
-  min-width: 0;\r
-  max-width: 55%;\r
-  font-size: 12px;\r
-  color: var(--gold);\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-}\r
-.modal-task-status[hidden] {\r
-  display: none;\r
-}\r
-.modal-task-status.failed {\r
-  color: var(--red);\r
-}\r
-.modal-task-status .spinner {\r
-  flex: none;\r
-  width: 12px;\r
-  height: 12px;\r
-}\r
-.modal-task-status .status-dot {\r
-  margin-right: 0;\r
-}\r
-.status-jobs {\r
-  max-width: 60vw;\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-}\r
-\r
-/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;\r
-   the control select and 更新局势 open from ⋯ (the top picker lists names only). */\r
-.nation-more-btn,\r
-.control-tag {\r
-  display: none;\r
-}\r
-@media (max-width: 760px) {\r
-  .nation-bar {\r
-    grid-template-columns: minmax(0, 1fr) auto auto;\r
-    padding: 6px 10px 8px;\r
-    gap: 6px 10px;\r
-  }\r
-  .nation-crest {\r
-    display: none;\r
-  }\r
-  .nation-copy h2 {\r
-    font-size: 16px;\r
-    white-space: nowrap;\r
-    overflow: hidden;\r
-    text-overflow: ellipsis;\r
-  }\r
-  .control-tag {\r
-    display: block;\r
-    font-size: 11px;\r
-    color: var(--muted);\r
-    white-space: nowrap;\r
-    overflow: hidden;\r
-    text-overflow: ellipsis;\r
-  }\r
-  .gauges {\r
-    gap: 10px;\r
-  }\r
-  .gauge {\r
-    width: auto;\r
-    min-width: 44px;\r
-  }\r
-  .gauge-head {\r
-    display: grid;\r
-    line-height: 1.1;\r
-  }\r
-  .gauge-head small {\r
-    font-size: 10px;\r
-  }\r
-  .gauge-head strong {\r
-    font-size: 16px;\r
-  }\r
-  .gauge-track {\r
-    height: 3px;\r
-    margin-top: 2px;\r
-  }\r
-  .nation-more-btn {\r
-    display: grid;\r
-    place-items: center;\r
-    width: 34px;\r
-    height: 34px;\r
-    padding: 0;\r
-    font-size: 18px;\r
-  }\r
-  .nation-more-btn[aria-expanded='true'] {\r
-    border-color: var(--gold);\r
-    color: var(--gold);\r
-  }\r
-  /* the main focus as one slim full-width row: dot, name, days left, bar */\r
-  .focus-gauge {\r
-    grid-column: 1/-1;\r
-    width: auto;\r
-    padding: 2px 0;\r
-    margin: 0;\r
-  }\r
-  .focus-gauge .gauge-head {\r
-    display: flex;\r
-    gap: 8px;\r
-  }\r
-  .focus-name {\r
-    font-size: 14px;\r
-  }\r
-  .focus-num::after {\r
-    font-size: 16px;\r
-  }\r
-  .nation-actions {\r
-    display: none;\r
-  }\r
-  .nation-bar.more-open .nation-actions {\r
-    display: flex;\r
-  }\r
-}\r
-\r
-/* v0.13.3: settings and details additions */\r
-.notice {\r
-  border: 1px solid var(--amber);\r
-  border-radius: 8px;\r
-  padding: 8px 12px;\r
-  background: rgba(230, 169, 80, 0.08);\r
-  color: #f0c49a;\r
-  font-size: 13px;\r
-}\r
-.api-actions.confirm-row {\r
-  border: 1px solid var(--amber);\r
-  border-radius: 8px;\r
-  padding: 8px 10px;\r
-  background: rgba(230, 169, 80, 0.08);\r
-}\r
-.block-note.model-hint {\r
-  color: #f0c49a;\r
-}\r
-.source-scope {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 8px 12px;\r
-  padding: 8px 12px;\r
-  margin: 4px 0 6px;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 8px;\r
-  background: var(--raised);\r
-}\r
-.source-scope.custom {\r
-  border-color: var(--gold);\r
-}\r
-.source-scope b {\r
-  color: var(--gold);\r
-}\r
-.source-scope label {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-}\r
-details.fold > summary {\r
-  cursor: pointer;\r
-  color: var(--muted);\r
-  font-size: 12.5px;\r
-  list-style: none;\r
-}\r
-details.fold > summary::before {\r
-  content: '▸ ';\r
-}\r
-details.fold[open] > summary::before {\r
-  content: '▾ ';\r
-}\r
-details.detail-section.fold > summary h4 {\r
-  display: inline;\r
-  margin: 0;\r
-}\r
-details.detail-section.fold > summary::before {\r
-  color: var(--gold);\r
-}\r
-.source-modes {\r
-  display: grid;\r
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;\r
-  gap: 10px;\r
-  align-items: end;\r
-}\r
-@media (max-width: 760px) {\r
-  .source-modes {\r
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\r
-  }\r
-  .source-modes > button {\r
-    grid-column: 1/-1;\r
-  }\r
-}\r
-.api-actions.api-save {\r
-  align-items: center;\r
-  position: sticky;\r
-  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */\r
-  bottom: -18px;\r
-  margin-bottom: -18px;\r
-  padding-bottom: 18px !important;\r
-  z-index: 2;\r
-  padding: 10px 0;\r
-  background: var(--panel);\r
-  border-top: 1px solid var(--line);\r
-}\r
-.api-actions.api-save .api-status {\r
-  margin: 0;\r
-  flex: 1 1 200px;\r
-}\r
-@media (max-width: 760px) {\r
-  .api-actions.api-save {\r
-    bottom: -14px;\r
-    margin-bottom: -14px;\r
-    padding-bottom: 14px !important;\r
-  }\r
-}\r
-\r
-/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */\r
-.period-anchor-note {\r
-  display: flex;\r
-  flex-direction: column;\r
-  gap: 5px;\r
-  margin-bottom: 14px;\r
-  border-left: 2px solid var(--blue);\r
-  padding: 10px 12px;\r
-  background: var(--raised);\r
-  font-size: 12px;\r
-}\r
-.period-anchor-note strong {\r
-  color: var(--blue);\r
-}\r
-.event-card.flash {\r
-  border-color: var(--gold);\r
-  box-shadow: 0 0 0 1px var(--gold) inset;\r
-}\r
-.period-shape {\r
-  margin-left: 10px;\r
-  padding: 1px 8px;\r
-  border-radius: 10px;\r
-  font-size: 11.5px;\r
-  font-weight: 400;\r
-  color: #e5d3a0;\r
-  background: rgba(220, 194, 124, 0.08);\r
-  border: 1px solid rgba(220, 194, 124, 0.28);\r
-  cursor: help;\r
-}\r
-.period-anchor-badge {\r
-  position: absolute;\r
-  top: -18px;\r
-  right: 0;\r
-  font-size: 10px;\r
-  line-height: 16px;\r
-  padding: 0 5px;\r
-  color: var(--blue);\r
-  background: var(--panel);\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 3px;\r
-}\r
-.period-history {\r
-  margin: 14px 0;\r
-  border-left: 2px solid var(--gold-deep);\r
-  padding: 4px 16px;\r
-}\r
-.period-history time {\r
-  color: var(--gold);\r
-  font-size: 12px;\r
-}\r
-.period-history p {\r
-  line-height: 1.95;\r
-}\r
-\r
-/* ---------- v0.15.0 · the period joins the nation bar; one tool cluster; drawer status ---------- */\r
-.period-line {\r
-  display: flex;\r
-  align-items: center;\r
-  flex-wrap: wrap;\r
-  gap: 2px 12px;\r
-  margin-top: 3px;\r
-  font-size: 12.5px;\r
-}\r
-.period-line strong {\r
-  color: var(--gold);\r
-  font-weight: 600;\r
-}\r
-.period-line .period-shape {\r
-  margin-left: 0;\r
-}\r
-.period-line .switch-label {\r
-  gap: 5px;\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-}\r
-.period-history-btn {\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-}\r
-.nation-copy p.period-note {\r
-  margin: 1px 0 0;\r
-  font-size: 12px;\r
-  color: var(--faint);\r
-  display: block;\r
-  white-space: nowrap;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-}\r
-.tag-day {\r
-  display: none;\r
-}\r
-@media (min-width: 761px) {\r
-  .nation-bar {\r
-    padding: 9px 18px;\r
-  }\r
-  .nation-copy h2 {\r
-    display: flex;\r
-    align-items: baseline;\r
-    gap: 10px;\r
-    font-size: 21px;\r
-  }\r
-  .nation-copy h2 .control-tag {\r
-    display: inline;\r
-    font-family: var(--sans);\r
-    font-size: 12px;\r
-    font-weight: 400;\r
-    letter-spacing: 0;\r
-    color: var(--muted);\r
-  }\r
-  .routes {\r
-    width: 244px;\r
-    bottom: auto;\r
-  }\r
-}\r
-@media (max-width: 760px) {\r
-  .nation-id {\r
-    grid-column: 1 / -1;\r
-  }\r
-  .gauges {\r
-    justify-self: start;\r
-  }\r
-  .tag-day {\r
-    display: inline;\r
-  }\r
-  .period-line {\r
-    font-size: 12px;\r
-  }\r
-  .stage-tools {\r
-    left: 8px;\r
-    right: 8px;\r
-    flex-wrap: wrap;\r
-    justify-content: flex-end;\r
-  }\r
-  .stage-tools [data-action='overview'] {\r
-    display: none;\r
-  }\r
-  .nation-copy p.period-note {\r
-    display: none;\r
-  }\r
-}\r
-.stage-tools {\r
-  align-items: center;\r
-  gap: 6px;\r
-  padding: 6px;\r
-  border-radius: 12px;\r
-  background: rgba(13, 19, 16, 0.82);\r
-  border: 1px solid var(--line);\r
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);\r
-  backdrop-filter: blur(6px);\r
-}\r
-.stage-tools > button,\r
-.stage-tools .zoom-controls,\r
-.stage-tools .legend-pop > summary {\r
-  height: 32px;\r
-  box-shadow: none;\r
-  font-size: 12.5px;\r
-  white-space: nowrap;\r
-}\r
-.minimap {\r
-  bottom: 66px;\r
-}\r
-.legend-list {\r
-  bottom: 46px;\r
-}\r
-/* Readable small type on the tree. */\r
-.node-meta {\r
-  font-size: 11px;\r
-  color: #c3c9b9;\r
-  border-color: rgba(220, 194, 124, 0.45);\r
-}\r
-.node.locked .node-name,\r
-.node.unknown .node-name {\r
-  color: #b9bfae;\r
-}\r
-/* Drawer: a completed focus leads with how and when it was completed. */\r
-.drawer-status {\r
-  display: grid;\r
-  grid-template-columns: 36px 1fr;\r
-  gap: 12px;\r
-  align-items: start;\r
-  padding: 12px 14px;\r
-  margin-bottom: 14px;\r
-  border-radius: var(--radius);\r
-  border: 1px solid rgba(238, 212, 141, 0.35);\r
-  background: linear-gradient(180deg, rgba(76, 64, 30, 0.35), rgba(40, 34, 18, 0.18));\r
-}\r
-.status-medal {\r
-  width: 36px;\r
-  height: 36px;\r
-  border-radius: 50%;\r
-  display: grid;\r
-  place-items: center;\r
-  font-weight: 700;\r
-  color: #2c240f;\r
-  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);\r
-}\r
-.drawer-status strong {\r
-  display: block;\r
-  color: #fff2c8;\r
-  font-size: 14px;\r
-}\r
-.drawer-status small {\r
-  display: block;\r
-  color: var(--muted);\r
-  font-size: 12px;\r
-}\r
-.drawer-status .done-cause {\r
-  margin: 6px 0;\r
-  font-size: 12.5px;\r
-}\r
-.drawer-status.bypassed {\r
-  border-color: rgba(143, 176, 214, 0.35);\r
-  background: rgba(143, 176, 214, 0.06);\r
-}\r
-.drawer-status.bypassed .status-medal {\r
-  color: var(--blue);\r
-  background: #1f2832;\r
-  border: 1px solid var(--blue);\r
-}\r
-.chip.static {\r
-  cursor: default;\r
-}\r
-.detail-section.gained {\r
-  border-top: 0;\r
-  padding-top: 0;\r
-}\r
-.blockers-title {\r
-  font-size: 12px;\r
-  color: var(--amber);\r
-}\r
-/* Motion; turned off with the system's reduced-motion setting (see above). */\r
-.tree.entering {\r
-  animation: tree-in 0.28s ease-out;\r
-}\r
-@keyframes tree-in {\r
-  from {\r
-    opacity: 0;\r
-    transform-origin: top center;\r
-  }\r
-}\r
-.node.just-done .node-medal {\r
-  animation: medal-shine 1.4s ease-out 0.15s;\r
-}\r
-@keyframes medal-shine {\r
-  0% {\r
-    box-shadow:\r
-      0 0 0 4px var(--bg),\r
-      0 0 0 5px rgba(238, 212, 141, 0.5);\r
-  }\r
-  35% {\r
-    box-shadow:\r
-      0 0 0 4px var(--bg),\r
-      0 0 0 7px #f6e2a6,\r
-      0 0 36px rgba(246, 226, 166, 0.85);\r
-  }\r
-}\r
-\r
-/* ---------- v0.15.1 · settings: preset list and card, flat task page, short hints ---------- */\r
-.modal:focus {\r
-  outline: none;\r
-}\r
-.footer-dirty {\r
-  margin-right: auto;\r
-  font-size: 12.5px;\r
-  color: var(--amber);\r
-}\r
-.footer-dirty:not(:empty)::before {\r
-  content: '';\r
-  display: inline-block;\r
-  width: 7px;\r
-  height: 7px;\r
-  margin-right: 8px;\r
-  border-radius: 50%;\r
-  background: var(--amber);\r
-  vertical-align: 1px;\r
-}\r
-.hint-fold > summary {\r
-  display: inline;\r
-  list-style: none;\r
-  cursor: pointer;\r
-}\r
-.hint-fold > summary::-webkit-details-marker {\r
-  display: none;\r
-}\r
-.hint-more {\r
-  margin-left: 6px;\r
-  color: var(--faint);\r
-  text-decoration: underline;\r
-  text-decoration-color: rgba(220, 194, 124, 0.35);\r
-  text-underline-offset: 3px;\r
-}\r
-.hint-fold[open] .hint-more,\r
-.hint-fold[open] .hint-cut {\r
-  display: none;\r
-}\r
-/* API presets: list on the left, the edited preset as a card with its own save. */\r
-.api-layout {\r
-  display: grid;\r
-  grid-template-columns: 210px minmax(0, 1fr);\r
-  gap: 16px;\r
-  align-items: start;\r
-}\r
-.api-list {\r
-  position: sticky;\r
-  top: 0;\r
-  display: flex;\r
-  flex-direction: column;\r
-  max-height: min(62vh, 560px);\r
-}\r
-.api-list-head {\r
-  padding: 0 4px 6px;\r
-  font-size: 12px;\r
-  color: var(--faint);\r
-}\r
-.api-search {\r
-  margin-bottom: 6px;\r
-}\r
-.api-list-scroll {\r
-  display: grid;\r
-  gap: 4px;\r
-  align-content: start;\r
-  min-height: 0;\r
-  overflow: auto;\r
-}\r
-.api-item {\r
-  display: grid;\r
-  gap: 1px;\r
-  text-align: left;\r
-  padding: 8px 12px;\r
-  border-color: transparent;\r
-  background: transparent;\r
-  min-width: 0;\r
-}\r
-.api-item[hidden] {\r
-  display: none;\r
-}\r
-.api-item b {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 6px;\r
-  font-size: 13.5px;\r
-  font-weight: 600;\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.api-item small {\r
-  font-size: 11.5px;\r
-  color: var(--faint);\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.api-item.on {\r
-  background: var(--raised-2);\r
-  border-color: var(--line-strong);\r
-  box-shadow: inset 2px 0 0 var(--gold);\r
-}\r
-.dirty-dot {\r
-  flex: none;\r
-  width: 7px;\r
-  height: 7px;\r
-  border-radius: 50%;\r
-  background: var(--amber);\r
-}\r
-.api-add {\r
-  margin-top: 6px;\r
-  border-style: dashed;\r
-  color: var(--gold);\r
-}\r
-.api-card {\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 12px;\r
-  background: var(--raised);\r
-  min-width: 0;\r
-}\r
-.api-card-head {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 6px 10px;\r
-  padding: 10px 14px;\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.api-card-head small {\r
-  font-size: 12px;\r
-  color: var(--faint);\r
-}\r
-.api-card-head b {\r
-  font-size: 15px;\r
-}\r
-.api-card-tools {\r
-  display: flex;\r
-  gap: 6px;\r
-  margin-left: auto;\r
-}\r
-.api-card-tools button {\r
-  padding: 4px 10px;\r
-  font-size: 12.5px;\r
-}\r
-.api-card > .confirm-row {\r
-  margin: 10px 14px 0;\r
-}\r
-.api-card-body {\r
-  padding: 4px 14px 6px;\r
-}\r
-.inline-field {\r
-  display: flex;\r
-  gap: 8px;\r
-}\r
-.inline-field input {\r
-  flex: 1;\r
-  min-width: 0;\r
-}\r
-.inline-field button {\r
-  white-space: nowrap;\r
-}\r
-.api-advanced {\r
-  border-top: 1px solid var(--line);\r
-}\r
-.api-advanced > summary {\r
-  cursor: pointer;\r
-  padding: 10px 0;\r
-  color: var(--gold);\r
-  font-weight: 600;\r
-  font-size: 13.5px;\r
-}\r
-.api-advanced > summary small {\r
-  margin-left: 10px;\r
-  font-weight: 400;\r
-  font-size: 12px;\r
-  color: var(--faint);\r
-}\r
-.api-card-foot {\r
-  position: sticky;\r
-  bottom: 0;\r
-  display: flex;\r
-  align-items: center;\r
-  justify-content: flex-end;\r
-  gap: 8px;\r
-  padding: 10px 14px;\r
-  border-top: 1px solid var(--line);\r
-  border-radius: 0 0 12px 12px;\r
-  background: #1d2621;\r
-}\r
-.api-card-foot .api-status {\r
-  margin: 0 auto 0 0;\r
-  font-size: 12.5px;\r
-  color: var(--green);\r
-}\r
-/* Tasks: the four tasks on the left, one flat page on the right. */\r
-.preset-bar {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 8px 12px;\r
-  padding: 8px 12px;\r
-}\r
-.preset-bar .preset-title {\r
-  margin: 0;\r
-  cursor: help;\r
-}\r
-.preset-bar .preset-title h3 {\r
-  margin: 0;\r
-  font-size: 14px;\r
-  white-space: nowrap;\r
-}\r
-.preset-bar .preset-row {\r
-  flex: 1;\r
-  margin: 0;\r
-}\r
-.preset-bar .api-status {\r
-  flex-basis: 100%;\r
-}\r
-.task-layout {\r
-  display: grid;\r
-  grid-template-columns: 196px minmax(0, 1fr);\r
-  gap: 18px;\r
-  align-items: start;\r
-}\r
-.task-layout .task-tabs {\r
-  position: sticky;\r
-  top: 0;\r
-  grid-template-columns: 1fr;\r
-  gap: 4px;\r
-  margin: 0;\r
-}\r
-.task-layout .task-tab {\r
-  padding: 9px 12px;\r
-  border-color: transparent;\r
-  background: transparent;\r
-}\r
-.task-layout .task-tab small {\r
-  white-space: normal;\r
-}\r
-.task-layout .task-tab.active {\r
-  background: var(--raised-2);\r
-  border-color: var(--line-strong);\r
-  box-shadow: inset 2px 0 0 var(--gold);\r
-}\r
-.task-editors {\r
-  min-width: 0;\r
-}\r
-.task-editors .task-block {\r
-  border: 0;\r
-  border-top: 1px solid var(--line);\r
-  border-radius: 0;\r
-  background: none;\r
-  padding: 0;\r
-  margin: 0;\r
-}\r
-.task-editors .task-block.prompts-block {\r
-  padding-top: 12px;\r
-}\r
-@media (max-width: 760px) {\r
-  .api-layout,\r
-  .task-layout {\r
-    grid-template-columns: minmax(0, 1fr);\r
-  }\r
-  .api-list,\r
-  .task-layout .task-tabs {\r
-    position: static;\r
-    max-height: none;\r
-  }\r
-  .api-list-scroll {\r
-    grid-auto-flow: column;\r
-    grid-auto-columns: minmax(140px, max-content);\r
-    overflow-x: auto;\r
-  }\r
-  .task-layout .task-tabs {\r
-    grid-template-columns: repeat(2, minmax(0, 1fr));\r
-  }\r
-}\r
-\r
-/* ---------- v0.15.2 · task cards and request log ---------- */\r
-.job-list {\r
-  display: grid;\r
-  gap: 10px;\r
-  margin-top: 14px;\r
-}\r
-.job-card2 {\r
-  display: grid;\r
-  grid-template-columns: 32px minmax(0, 1fr) auto;\r
-  gap: 12px;\r
-  align-items: start;\r
-  padding: 12px 14px;\r
-  border-radius: 10px;\r
-  background: var(--raised);\r
-  border: 1px solid var(--line);\r
-}\r
-.job-card2.running {\r
-  border-color: rgba(220, 194, 124, 0.45);\r
-}\r
-.job-card2.failed {\r
-  border-color: rgba(217, 112, 95, 0.45);\r
-  background: linear-gradient(180deg, rgba(217, 112, 95, 0.08), rgba(217, 112, 95, 0.02));\r
-}\r
-.job-icon {\r
-  width: 30px;\r
-  height: 30px;\r
-  border-radius: 50%;\r
-  display: grid;\r
-  place-items: center;\r
-  font-weight: 700;\r
-  font-size: 14px;\r
-  color: var(--muted);\r
-  border: 1px solid var(--line-strong);\r
-}\r
-.job-card2.success .job-icon {\r
-  color: #0e1a12;\r
-  background: var(--green);\r
-  border-color: var(--green);\r
-}\r
-.job-card2.failed .job-icon {\r
-  color: #1a0f0c;\r
-  background: var(--red);\r
-  border-color: var(--red);\r
-}\r
-.job-card2.running .job-icon {\r
-  border-color: var(--gold);\r
-}\r
-.job-main {\r
-  min-width: 0;\r
-}\r
-.job-name {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 4px 8px;\r
-  font-weight: 600;\r
-}\r
-.job-chip {\r
-  font-size: 11px;\r
-  font-weight: 400;\r
-  padding: 0 7px;\r
-  line-height: 18px;\r
-  border-radius: 9px;\r
-  color: var(--muted);\r
-  border: 1px solid var(--line-strong);\r
-}\r
-.job-sub {\r
-  margin-top: 3px;\r
-  font-size: 12.5px;\r
-  color: var(--muted);\r
-}\r
-.job-sub b {\r
-  color: var(--text);\r
-  font-weight: 600;\r
-}\r
-.job-card2.failed .job-sub b {\r
-  color: #f0a898;\r
-}\r
-.job-problems {\r
-  margin: 6px 0 0;\r
-  padding-left: 18px;\r
-  font-size: 12.5px;\r
-  line-height: 1.7;\r
-  color: #e4cfc9;\r
-}\r
-.job-problems code,\r
-.log-code {\r
-  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;\r
-}\r
-.job-problems code {\r
-  font-size: 12px;\r
-  color: #f2d79a;\r
-}\r
-.job-more > summary {\r
-  cursor: pointer;\r
-  font-size: 12px;\r
-  color: var(--faint);\r
-  margin-top: 2px;\r
-}\r
-.job-note {\r
-  margin-top: 14px;\r
-  font-size: 12px;\r
-}\r
-.log-entry {\r
-  margin-top: 12px;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 12px;\r
-  background: var(--raised);\r
-  overflow: hidden;\r
-}\r
-.log-entry > summary {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  align-items: center;\r
-  gap: 6px 10px;\r
-  padding: 12px 16px;\r
-  cursor: pointer;\r
-  list-style: none;\r
-}\r
-.log-entry > summary::-webkit-details-marker {\r
-  display: none;\r
-}\r
-.log-entry[open] > summary {\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.log-result {\r
-  font-weight: 600;\r
-  font-size: 13px;\r
-}\r
-.log-result.ok {\r
-  color: var(--green);\r
-}\r
-.log-result.failed {\r
-  color: var(--red);\r
-}\r
-.log-title {\r
-  font-weight: 600;\r
-}\r
-.log-chips {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 6px;\r
-  flex-basis: 100%;\r
-}\r
-.log-error {\r
-  margin: 10px 16px 0;\r
-}\r
-.log-part2 {\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.log-part2:last-child {\r
-  border-bottom: 0;\r
-}\r
-.log-part2 > summary {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  padding: 8px 16px;\r
-  font-size: 13px;\r
-  cursor: pointer;\r
-  list-style: none;\r
-}\r
-.log-part2 > summary::-webkit-details-marker {\r
-  display: none;\r
-}\r
-.log-part2 > summary::before {\r
-  content: '▸';\r
-  width: 10px;\r
-  color: var(--faint);\r
-}\r
-.log-part2[open] > summary::before {\r
-  content: '▾';\r
-}\r
-.log-role {\r
-  font-family: Consolas, monospace;\r
-  font-size: 10.5px;\r
-  letter-spacing: 0.06em;\r
-  padding: 1px 6px;\r
-  border-radius: 4px;\r
-  background: #0f1512;\r
-  border: 1px solid var(--line-strong);\r
-  color: var(--blue);\r
-}\r
-.log-role.user {\r
-  color: var(--green);\r
-}\r
-.log-role.output,\r
-.log-role.assistant {\r
-  color: var(--gold);\r
-}\r
-.log-role.think {\r
-  color: var(--faint);\r
-}\r
-.log-count {\r
-  font-size: 12px;\r
-  color: var(--faint);\r
-}\r
-.log-copy {\r
-  margin-left: auto;\r
-  padding: 3px 10px;\r
-  font-size: 12px;\r
-}\r
-.log-code {\r
-  margin: 0 16px 12px;\r
-  padding: 12px 14px;\r
-  max-height: 340px;\r
-  overflow: auto;\r
-  border-radius: 8px;\r
-  background: #0b100d;\r
-  border: 1px solid var(--line);\r
-  font-size: 12.5px;\r
-  line-height: 1.6;\r
-  color: #cfd5c6;\r
-  white-space: pre-wrap;\r
-  word-break: break-word;\r
-}\r
-.log-code .k {\r
-  color: #e6c97e;\r
-}\r
-.log-code .s {\r
-  color: #9fd3ae;\r
-}\r
-.log-code .n {\r
-  color: #8fb0d6;\r
-}\r
-.log-code .b {\r
-  color: #d9a0c8;\r
-}\r
-@media (max-width: 760px) {\r
-  .job-card2 {\r
-    grid-template-columns: 28px minmax(0, 1fr);\r
-  }\r
-  .job-card2 .job-buttons {\r
-    grid-column: 1 / -1;\r
-    justify-content: flex-start;\r
-  }\r
-}\r
-.api-card-foot button,\r
-.modal-footer button {\r
-  white-space: nowrap;\r
-}\r
-@media (max-width: 760px) {\r
-  .api-card-foot,\r
-  .modal-footer {\r
-    flex-wrap: wrap;\r
-  }\r
-  .api-card-foot .api-status,\r
-  .footer-dirty:not(:empty) {\r
-    flex-basis: 100%;\r
-  }\r
-}\r
-\r
-/* ---------- v0.15.3 · one size for the settings window; windows open with a short rise ---------- */\r
-.modal.modal-settings {\r
-  height: 90vh;\r
-}\r
-.modal.modal-settings .modal-body {\r
-  flex: 1;\r
-}\r
-@media (max-width: 760px) {\r
-  .modal.modal-settings {\r
-    height: 94dvh;\r
-  }\r
-}\r
-.modal {\r
-  animation: modal-in 0.2s ease-out;\r
-}\r
-.modal-backdrop:not([hidden]) {\r
-  animation: backdrop-in 0.2s ease-out;\r
-}\r
-@keyframes modal-in {\r
-  from {\r
-    opacity: 0;\r
-    transform: translateY(10px) scale(0.985);\r
-  }\r
-}\r
-@keyframes backdrop-in {\r
-  from {\r
-    opacity: 0;\r
-  }\r
-}\r
-\r
-/* v0.16 世界来函 · the world task's national-focus proposal, reviewed before it is saved.\r
- * The cinnabar seal is the one loud element: it marks a letter waiting for review and stamps 准 on\r
- * acceptance. Everything else follows the archive's ledger look: hairlines, serif names, quiet text. */\r
-.letter-seal {\r
-  display: inline-grid;\r
-  place-items: center;\r
-  width: 20px;\r
-  height: 20px;\r
-  border: 1.5px solid currentColor;\r
-  border-radius: 3px;\r
-  font-family: var(--serif);\r
-  font-size: 12px;\r
-  font-weight: 700;\r
-  line-height: 1;\r
-  transform: rotate(-4deg);\r
-}\r
-.cmd-btn.letter-quiet {\r
-  color: var(--muted);\r
-  border-style: dashed;\r
-}\r
-.cmd-btn.letter-muted {\r
-  color: var(--faint);\r
-}\r
-.cmd-btn.letter-pending {\r
-  border-color: var(--gold);\r
-  color: var(--text);\r
-}\r
-.cmd-btn.letter-pending .letter-seal {\r
-  background: var(--seal);\r
-  border-color: var(--seal);\r
-  color: var(--seal-ink);\r
-  animation: seal-arrive 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;\r
-}\r
-.cmd-btn.letter-alert {\r
-  border-color: var(--red);\r
-  color: #f2b3a6;\r
-}\r
-@keyframes seal-arrive {\r
-  from {\r
-    transform: rotate(-14deg) scale(1.7);\r
-    opacity: 0;\r
-  }\r
-  to {\r
-    transform: rotate(-4deg) scale(1);\r
-    opacity: 1;\r
-  }\r
-}\r
-.orb-letter {\r
-  position: absolute;\r
-  bottom: -2px;\r
-  left: -4px;\r
-  display: grid;\r
-  place-items: center;\r
-  width: 22px;\r
-  height: 22px;\r
-  border-radius: 4px;\r
-  background: var(--seal);\r
-  color: var(--seal-ink);\r
-  font-family: var(--serif);\r
-  font-size: 12px;\r
-  font-weight: 700;\r
-  transform: rotate(-6deg);\r
-  box-shadow: 0 0 0 2px var(--ink);\r
-}\r
-.orb-letter[hidden] {\r
-  display: none;\r
-}\r
-.status-jobs.letter {\r
-  color: var(--gold);\r
-}\r
-.status-dot.letter {\r
-  background: var(--seal);\r
-  border-radius: 2px;\r
-  transform: rotate(-6deg);\r
-}\r
-\r
-.modal.modal-letter {\r
-  width: min(1000px, 100%);\r
-}\r
-.letter-sheet {\r
-  display: grid;\r
-  gap: 18px;\r
-}\r
-.letter-head {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 18px;\r
-}\r
-.letter-seal-big {\r
-  position: relative;\r
-  flex: none;\r
-  width: 62px;\r
-  height: 62px;\r
-}\r
-.letter-seal-big .seal-mark,\r
-.letter-seal-big .seal-stamp {\r
-  position: absolute;\r
-  inset: 0;\r
-  display: grid;\r
-  place-items: center;\r
-  border-radius: 6px;\r
-  font-family: var(--serif);\r
-  font-weight: 700;\r
-}\r
-.letter-seal-big .seal-mark {\r
-  border: 2px solid var(--gold-deep);\r
-  color: var(--gold);\r
-  font-size: 30px;\r
-  transform: rotate(-3deg);\r
-  box-shadow:\r
-    inset 0 0 0 3px var(--panel),\r
-    inset 0 0 0 4px rgba(220, 194, 124, 0.25);\r
-}\r
-.letter-seal-big .seal-stamp {\r
-  background: var(--seal);\r
-  color: var(--seal-ink);\r
-  font-size: 32px;\r
-  transform: rotate(-9deg);\r
-  box-shadow:\r
-    inset 0 0 0 3px var(--seal),\r
-    inset 0 0 0 4px rgba(243, 220, 203, 0.55);\r
-  opacity: 0;\r
-}\r
-.letter-seal-big.sealed .seal-stamp {\r
-  opacity: 1;\r
-}\r
-.letter-seal-big.sealed .seal-mark {\r
-  opacity: 0.25;\r
-}\r
-.letter-seal-big.fresh .seal-stamp {\r
-  animation: seal-press 0.55s cubic-bezier(0.25, 1.1, 0.35, 1) both;\r
-}\r
-@keyframes seal-press {\r
-  0% {\r
-    transform: rotate(-16deg) scale(1.9);\r
-    opacity: 0;\r
-  }\r
-  60% {\r
-    transform: rotate(-9deg) scale(0.93);\r
-    opacity: 1;\r
-  }\r
-  100% {\r
-    transform: rotate(-9deg) scale(1);\r
-    opacity: 1;\r
-  }\r
-}\r
-.letter-from {\r
-  font-family: var(--serif);\r
-  font-size: 19px;\r
-  line-height: 1.45;\r
-  color: var(--text);\r
-}\r
-.letter-meta {\r
-  margin-top: 2px;\r
-  color: var(--muted);\r
-  font-size: 13px;\r
-  font-variant-numeric: tabular-nums;\r
-}\r
-.letter-state {\r
-  padding: 9px 14px;\r
-  border-left: 2px solid var(--gold-deep);\r
-  background: rgba(220, 194, 124, 0.05);\r
-  color: var(--text);\r
-}\r
-.letter-state.muted {\r
-  border-left-color: var(--faint);\r
-  color: var(--muted);\r
-}\r
-.letter-state.alert {\r
-  border-left-color: var(--red);\r
-  background: rgba(217, 112, 95, 0.08);\r
-}\r
-.letter-state.done {\r
-  border-left-color: var(--seal);\r
-}\r
-.letter-checks {\r
-  margin: 0;\r
-  border-top: 1px solid var(--line);\r
-}\r
-.letter-check {\r
-  display: grid;\r
-  grid-template-columns: 112px 1fr;\r
-  gap: 16px;\r
-  padding: 11px 0;\r
-  border-bottom: 1px solid var(--line);\r
-}\r
-.letter-check dt {\r
-  font-family: var(--serif);\r
-  color: var(--gold);\r
-  display: flex;\r
-  align-items: baseline;\r
-  gap: 8px;\r
-}\r
-.letter-check dt::before {\r
-  content: "";\r
-  width: 9px;\r
-  height: 9px;\r
-  flex: none;\r
-  border-radius: 50%;\r
-  transform: translateY(-1px);\r
-}\r
-.letter-check.ok dt::before {\r
-  background: var(--green);\r
-}\r
-.letter-check.unknown dt::before {\r
-  border: 1.5px solid var(--amber);\r
-  background: linear-gradient(90deg, var(--amber) 50%, transparent 50%);\r
-}\r
-.letter-check dd {\r
-  margin: 0;\r
-  color: var(--muted);\r
-}\r
-.letter-check ul {\r
-  margin: 6px 0 0;\r
-  padding: 0;\r
-  list-style: none;\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 4px 18px;\r
-}\r
-.letter-check li {\r
-  font-size: 13px;\r
-}\r
-.letter-check li::before {\r
-  content: "";\r
-  display: inline-block;\r
-  width: 6px;\r
-  height: 6px;\r
-  margin-right: 7px;\r
-  border-radius: 50%;\r
-  vertical-align: 2px;\r
-  background: var(--faint);\r
-}\r
-.letter-check li.ok::before {\r
-  background: var(--green);\r
-}\r
-.letter-check li.warn {\r
-  color: #f2b3a6;\r
-}\r
-.letter-check li.warn::before {\r
-  background: var(--red);\r
-}\r
-.letter-review {\r
-  display: grid;\r
-  grid-template-columns: 210px 1fr;\r
-  min-height: 260px;\r
-  border: 1px solid var(--line);\r
-  border-radius: 10px;\r
-  overflow: hidden;\r
-}\r
-.letter-nations {\r
-  display: flex;\r
-  flex-direction: column;\r
-  padding: 8px 0;\r
-  background: var(--ink);\r
-  border-right: 1px solid var(--line);\r
-  overflow: auto;\r
-}\r
-.letter-nation {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 8px;\r
-  width: 100%;\r
-  padding: 9px 14px 9px 16px;\r
-  border: 0;\r
-  border-left: 2px solid transparent;\r
-  border-radius: 0;\r
-  background: none;\r
-  text-align: left;\r
-  color: var(--muted);\r
-}\r
-.letter-nation:hover:not(:disabled) {\r
-  background: var(--raised);\r
-  color: var(--text);\r
-}\r
-.letter-nation.active {\r
-  border-left-color: var(--gold);\r
-  background: var(--panel);\r
-  color: var(--text);\r
-}\r
-.letter-nation-name {\r
-  flex: 1;\r
-  font-family: var(--serif);\r
-  overflow: hidden;\r
-  text-overflow: ellipsis;\r
-  white-space: nowrap;\r
-}\r
-.letter-nation-count {\r
-  min-width: 22px;\r
-  font-size: 12px;\r
-  text-align: right;\r
-  color: var(--faint);\r
-  font-variant-numeric: tabular-nums;\r
-}\r
-.letter-nation.active .letter-nation-count {\r
-  color: var(--gold);\r
-}\r
-.letter-detail {\r
-  padding: 16px 22px 20px;\r
-  overflow: auto;\r
-  max-height: 46vh;\r
-}\r
-.modal-body .letter-detail h3 {\r
-  font-family: var(--serif);\r
-  font-size: 20px;\r
-  color: var(--text);\r
-  margin-bottom: 10px;\r
-}\r
-.letter-shifts {\r
-  display: flex;\r
-  flex-wrap: wrap;\r
-  gap: 6px 22px;\r
-  margin: 0 0 16px;\r
-  padding: 0 0 14px;\r
-  list-style: none;\r
-  border-bottom: 1px dashed var(--line-strong);\r
-  color: var(--muted);\r
-  font-size: 13px;\r
-}\r
-.letter-shifts .shift {\r
-  margin-left: 8px;\r
-  color: var(--text);\r
-}\r
-.letter-shifts b {\r
-  font-weight: 600;\r
-  font-variant-numeric: tabular-nums;\r
-}\r
-.letter-shifts i {\r
-  margin: 0 6px;\r
-  font-style: normal;\r
-  color: var(--gold);\r
-}\r
-.letter-still {\r
-  margin-bottom: 14px;\r
-  color: var(--faint);\r
-  font-size: 13px;\r
-}\r
-.letter-timeline {\r
-  position: relative;\r
-  margin: 0;\r
-  padding: 0;\r
-  list-style: none;\r
-}\r
-.letter-timeline::before {\r
-  content: "";\r
-  position: absolute;\r
-  top: 8px;\r
-  bottom: 8px;\r
-  left: 103px;\r
-  width: 1px;\r
-  background: var(--line-strong);\r
-}\r
-.letter-timeline li {\r
-  position: relative;\r
-  display: grid;\r
-  grid-template-columns: 92px 1fr;\r
-  gap: 26px;\r
-  padding: 6px 0;\r
-}\r
-.letter-timeline li::before {\r
-  content: "";\r
-  position: absolute;\r
-  left: 99px;\r
-  top: 12px;\r
-  width: 9px;\r
-  height: 9px;\r
-  border-radius: 50%;\r
-  border: 1.5px solid var(--gold-deep);\r
-  background: var(--panel);\r
-}\r
-.letter-timeline .entry-complete::before {\r
-  border: 0;\r
-  border-radius: 1px;\r
-  background: var(--gold);\r
-  transform: rotate(45deg);\r
-}\r
-.letter-timeline .entry-event::before {\r
-  border-color: var(--blue);\r
-  border-radius: 2px;\r
-}\r
-.letter-timeline .entry-update::before {\r
-  left: 101px;\r
-  top: 14px;\r
-  width: 5px;\r
-  height: 5px;\r
-  border: 0;\r
-  background: var(--faint);\r
-}\r
-.letter-timeline .entry-fact::before {\r
-  top: 15px;\r
-  height: 3px;\r
-  border: 0;\r
-  border-radius: 0;\r
-  background: var(--muted);\r
-}\r
-.letter-timeline .entry-transition::before {\r
-  border-color: var(--gold);\r
-  box-shadow:\r
-    0 0 0 2px var(--panel),\r
-    0 0 0 3px var(--gold-deep);\r
-}\r
-.letter-timeline time {\r
-  color: var(--muted);\r
-  font-size: 13px;\r
-  text-align: right;\r
-  font-variant-numeric: tabular-nums;\r
-  white-space: nowrap;\r
-}\r
-.letter-timeline p {\r
-  line-height: 1.55;\r
-}\r
-.letter-timeline small {\r
-  display: block;\r
-  color: var(--muted);\r
-  font-size: 12.5px;\r
-}\r
-.letter-timeline .entry-complete p {\r
-  color: var(--gold);\r
-}\r
-.entry-kind {\r
-  margin-right: 8px;\r
-  padding: 0 6px;\r
-  border: 1px solid var(--line-strong);\r
-  border-radius: 4px;\r
-  font-size: 12px;\r
-  color: var(--muted);\r
-}\r
-/*\r
- * v0.17 local repair: a marginal slip under the letter's reason. Its rule colour carries the state\r
- * (amber can be mended, blue mending, red not passed, faint expired); the seal red stays reserved.\r
- */\r
-.letter-mend {\r
-  --mend: var(--amber);\r
-  position: relative;\r
-  display: grid;\r
-  gap: 8px;\r
-  padding: 14px 16px 14px 18px;\r
-  border: 1px solid var(--line);\r
-  border-left: 3px solid var(--mend);\r
-  border-radius: 0 var(--radius) var(--radius) 0;\r
-  background:\r
-    linear-gradient(90deg, color-mix(in srgb, var(--mend) 9%, transparent), transparent 62%),\r
-    var(--raised);\r
-  overflow: hidden;\r
-}\r
-.letter-mend.running {\r
-  --mend: var(--blue);\r
-}\r
-.letter-mend.failed {\r
-  --mend: var(--red);\r
-}\r
-.letter-mend.expired {\r
-  --mend: var(--faint);\r
-  background: var(--panel);\r
-}\r
-.letter-mend header {\r
-  display: flex;\r
-  align-items: baseline;\r
-  gap: 12px;\r
-}\r
-.modal-body .letter-mend h3 {\r
-  margin: 0;\r
-  font-family: var(--serif);\r
-  font-size: 16px;\r
-  font-weight: 600;\r
-  color: var(--gold);\r
-  letter-spacing: 0.08em;\r
-}\r
-.letter-mend-state {\r
-  padding: 1px 8px;\r
-  border: 1px solid color-mix(in srgb, var(--mend) 55%, transparent);\r
-  border-radius: 999px;\r
-  color: var(--mend);\r
-  font-size: 12px;\r
-  letter-spacing: 0.12em;\r
-}\r
-.letter-mend > p {\r
-  margin: 0;\r
-  color: var(--text);\r
-  line-height: 1.65;\r
-}\r
-.letter-mend.expired > p {\r
-  color: var(--muted);\r
-}\r
-/* Mending: a hairline sweeps along the top edge instead of a spinner competing with the seal. */\r
-.letter-mend.running::after {\r
-  content: "";\r
-  position: absolute;\r
-  top: 0;\r
-  left: 0;\r
-  width: 38%;\r
-  height: 2px;\r
-  background: linear-gradient(90deg, transparent, var(--blue), transparent);\r
-  animation: mend-sweep 1.6s ease-in-out infinite;\r
-}\r
-@keyframes mend-sweep {\r
-  from {\r
-    transform: translateX(-100%);\r
-  }\r
-  to {\r
-    transform: translateX(280%);\r
-  }\r
-}\r
-.letter-mend .letter-mend-error {\r
-  padding: 7px 10px;\r
-  border-radius: 6px;\r
-  background: rgba(217, 112, 95, 0.1);\r
-  color: #f2b3a6;\r
-  font-size: 13px;\r
-}\r
-.letter-mend .letter-mend-caution {\r
-  color: var(--faint);\r
-  font-size: 12.5px;\r
-  line-height: 1.6;\r
-}\r
-.letter-mend .letter-mend-caution::before {\r
-  content: "※";\r
-  margin-right: 6px;\r
-  color: var(--gold-deep);\r
-}\r
-.letter-error {\r
-  font-size: 13px;\r
-}\r
-.letter-error > summary {\r
-  width: fit-content;\r
-  cursor: pointer;\r
-  color: var(--muted);\r
-  list-style: none;\r
-}\r
-.letter-error > summary::-webkit-details-marker {\r
-  display: none;\r
-}\r
-.letter-error > summary::before {\r
-  content: "▸";\r
-  display: inline-block;\r
-  width: 1em;\r
-  color: var(--gold-deep);\r
-  transition: transform 0.15s ease;\r
-}\r
-.letter-error[open] > summary::before {\r
-  transform: rotate(90deg);\r
-}\r
-.letter-error > summary:hover {\r
-  color: var(--text);\r
-}\r
-.letter-error pre {\r
-  margin: 8px 0 0;\r
-  max-height: 168px;\r
-  overflow: auto;\r
-  padding: 10px 12px;\r
-  border: 1px solid var(--line);\r
-  border-radius: 6px;\r
-  background: var(--ink);\r
-  color: var(--muted);\r
-  font: 12px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace;\r
-  white-space: pre-wrap;\r
-  overflow-wrap: anywhere;\r
-}\r
-.letter-check.repaired dt::before {\r
-  border: 1.5px solid var(--blue);\r
-  border-radius: 2px;\r
-  transform: translateY(-1px) rotate(45deg) scale(0.85);\r
-}\r
-.repair-notes {\r
-  margin: 8px 0 0;\r
-  padding: 0;\r
-  list-style: none;\r
-  counter-reset: mend;\r
-  display: grid;\r
-  gap: 5px;\r
-}\r
-.repair-notes li {\r
-  counter-increment: mend;\r
-  display: grid;\r
-  grid-template-columns: 22px 1fr;\r
-  color: var(--text);\r
-  font-size: 13.5px;\r
-  line-height: 1.6;\r
-}\r
-.letter-check .repair-notes li::before {\r
-  content: counter(mend);\r
-  display: block;\r
-  width: auto;\r
-  height: auto;\r
-  margin: 0;\r
-  border-radius: 0;\r
-  background: none;\r
-  vertical-align: baseline;\r
-  color: var(--blue);\r
-  font-family: var(--serif);\r
-  font-variant-numeric: tabular-nums;\r
-}\r
-@media (prefers-reduced-motion: reduce) {\r
-  .letter-mend.running::after {\r
-    animation: none;\r
-    width: 100%;\r
-    opacity: 0.6;\r
-  }\r
-}\r
-.modal-letter .modal-footer {\r
-  align-items: center;\r
-}\r
-.footer-gap {\r
-  flex: 1;\r
-}\r
-.modal-footer .letter-reject {\r
-  background: none;\r
-  border-color: transparent;\r
-  color: #e9a090;\r
-}\r
-.modal-footer .letter-reject:hover:not(:disabled) {\r
-  background: rgba(217, 112, 95, 0.1);\r
-  border-color: rgba(217, 112, 95, 0.4);\r
-}\r
-@media (max-width: 760px) {\r
-  .cmd-btn.letter-slot .cmd-text {\r
-    display: none;\r
-  }\r
-  .letter-head {\r
-    gap: 14px;\r
-  }\r
-  .letter-seal-big {\r
-    width: 50px;\r
-    height: 50px;\r
-  }\r
-  .letter-from {\r
-    font-size: 16px;\r
-  }\r
-  .letter-check {\r
-    grid-template-columns: 1fr;\r
-    gap: 4px;\r
-  }\r
-  .letter-review {\r
-    grid-template-columns: 1fr;\r
-  }\r
-  .letter-nations {\r
-    flex-direction: row;\r
-    padding: 0;\r
-    border-right: 0;\r
-    border-bottom: 1px solid var(--line);\r
-  }\r
-  .letter-nation {\r
-    width: auto;\r
-    flex: none;\r
-    border-left: 0;\r
-    border-bottom: 2px solid transparent;\r
-    padding: 10px 14px;\r
-  }\r
-  .letter-nation.active {\r
-    border-bottom-color: var(--gold);\r
-  }\r
-  .letter-detail {\r
-    max-height: none;\r
-    padding: 14px 16px 18px;\r
-  }\r
-  .letter-timeline::before {\r
-    left: 79px;\r
-  }\r
-  .letter-timeline li {\r
-    grid-template-columns: 70px 1fr;\r
-    gap: 22px;\r
-  }\r
-  .letter-timeline li::before {\r
-    left: 75px;\r
-  }\r
-  .letter-timeline .entry-update::before {\r
-    left: 77px;\r
-  }\r
-  .modal-letter .modal-footer {\r
-    flex-wrap: wrap;\r
-  }\r
-  .modal-letter .footer-gap {\r
-    display: none;\r
-  }\r
-}\r
-\r
-/* v0.16: national focus went back after a proposal was accepted (usually a workflow re-run). */\r
-.rollback-banner {\r
-  display: flex;\r
-  align-items: center;\r
-  gap: 12px;\r
-  padding: 9px 16px;\r
-  background: rgba(217, 112, 95, 0.1);\r
-  border-bottom: 1px solid rgba(217, 112, 95, 0.36);\r
-  color: #f6c6ba;\r
-  font-size: 13px;\r
-}\r
-.rollback-banner .letter-seal {\r
-  flex: none;\r
-  color: var(--red);\r
-}\r
-.rollback-banner p {\r
-  flex: 1;\r
-}\r
-.rollback-slot[hidden] {\r
-  display: none;\r
-}\r
+`))}catch(error2){previews.set(kind,`无法预览：${error2 instanceof Error?error2.message:String(error2)}`)}disposed||render()})();return}}renderPrompts(kind)},change=event=>{let input2=event.target;if(input2.matches("[data-preset-select]")){if(!input2.value)return;try{read(),commit(applyTaskPreset(getDraft(),input2.value),`已套用任务预设「${input2.value}」并保存。`,!0)}catch(error2){status=error2 instanceof Error?error2.message:String(error2),render()}return}if(input2.matches("[data-preset-file]")){let file2=input2.files?.[0];if(input2.value="",!file2)return;file2.text().then(text2=>{read();let result=importTaskPresets(getDraft(),JSON.parse(text2));commit(result.config,`已导入 ${result.names.map(name=>`「${name}」`).join("、")}；选择后即可套用。`)}).catch(error2=>{status=`导入失败：${error2 instanceof Error?error2.message:String(error2)}`,render()});return}if(input2.dataset.t==="schedule"){let section=input2.closest("[data-task-editor]"),interval=section.querySelector("[data-interval]");interval.hidden=!["rounds","days"].includes(input2.value),interval.firstChild.textContent=input2.value==="days"?"间隔（故事日）":"间隔（则正文）",section.querySelector("[data-days-note]").hidden=input2.value!=="days";return}if(input2.dataset.sourceMode&&hooks){let kind=input2.closest("[data-task-editor]").dataset.taskEditor;read(),hooks.setMode(kind,input2.dataset.sourceMode,input2.value==="custom"),render();return}if(input2.dataset.t==="api"||input2.dataset.t==="recommendedModel"){let section=input2.closest("[data-task-editor]");read(),section.querySelector("[data-model-note]").innerHTML=modelNote(section.dataset.taskEditor,getDraft());return}let row=input2.closest("[data-prompt-row]");if(row&&input2.dataset.p==="enabled"){row.classList.toggle("off",!input2.checked),read();let kind=row.closest("[data-task-editor]").dataset.taskEditor,count=host.querySelector(`[data-task-editor="${kind}"] .prompt-toolbar small`);count&&(count.textContent=promptCount(getDraft().jobs[kind].prompts))}row&&input2.dataset.p==="name"&&(row.querySelector(".pname").textContent=input2.value||"未命名段"),row&&input2.dataset.p==="role"&&(row.querySelector(".role-tag").textContent=input2.value)};return host.addEventListener("click",click),host.addEventListener("change",change),render(),{read,state:()=>({selected:selected2,status}),refresh(){render()},dispose(){disposed=!0,host.removeEventListener("click",click),host.removeEventListener("change",change)}}}var escape3=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]),linger={queued:1/0,running:1/0,success:6e3,cancelled:6e3,failed:2e4},symbols={queued:'<i class="hud-sym wait">…</i>',running:'<i class="hud-sym run">●</i>',success:'<i class="hud-sym ok">✓</i>',failed:'<i class="hud-sym bad">!</i>',cancelled:'<i class="hud-sym off">–</i>'},HUD_WIDTH=320,GAP=10,EDGE=8;function elapsed(ms){let seconds=Math.max(0,Math.floor(ms/1e3));return`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,"0")}`}function mountHud(options){let{root,doc:doc2,controller}=options,hud=doc2.createElement("section");hud.className="hud",hud.hidden=!0,hud.setAttribute("role","status"),hud.setAttribute("aria-label","国策任务进度"),hud.innerHTML='<header class="hud-head" title="拖动可移动悬浮球与本窗口"><i class="status-dot"></i><strong>国策任务</strong><span class="hud-count"></span><span class="hud-actions"><button data-hud="stop" class="danger" title="取消全部执行中与排队的任务">停止</button><button data-hud="log" title="开启任务记录">记录</button><button data-hud="collapse" class="icon" aria-label="收合"></button><button data-hud="dismiss" class="icon" aria-label="关闭已完成项目" title="关闭已完成项目">×</button></span></header><div class="hud-bar"><i></i></div><ul class="hud-list"></ul>',root.append(hud);let head=hud.querySelector(".hud-head"),count=hud.querySelector(".hud-count"),dot=hud.querySelector(".status-dot"),bar=hud.querySelector(".hud-bar"),fill=bar.querySelector("i"),list=hud.querySelector(".hud-list"),button=name=>hud.querySelector(`[data-hud="${name}"]`),dismissed=new Set,collapsed=options.collapsed,suppressed=!1,timer,drawn="",drawnIds=new Set,view=doc2.defaultView;function visibleJobs(now){return controller.jobs.filter(job=>dismissed.has(job.id)?!1:job.state==="queued"||job.state==="running"?!0:job.finished!==void 0&&now-job.finished<linger[job.state])}function place(){if(hud.hidden)return;let width=doc2.documentElement.clientWidth,height=doc2.documentElement.clientHeight,orb=options.anchor(),boxWidth=Math.min(HUD_WIDTH,width-EDGE*2);hud.style.width=`${boxWidth}px`;let left=orb.left+orb.size/2>width/2?orb.left+orb.size-boxWidth:orb.left;hud.style.left=`${Math.max(EDGE,Math.min(width-boxWidth-EDGE,left))}px`;let above=orb.top-GAP-EDGE,below=height-(orb.top+orb.size+GAP)-EDGE;above>=Math.min(hud.scrollHeight,220)||above>=below?(hud.style.top="auto",hud.style.bottom=`${height-orb.top+GAP}px`,hud.style.maxHeight=`${Math.max(80,above)}px`,hud.dataset.side="above"):(hud.style.bottom="auto",hud.style.top=`${orb.top+orb.size+GAP}px`,hud.style.maxHeight=`${Math.max(80,below)}px`,hud.dataset.side="below")}function update(){let now=Date.now(),jobs=visibleJobs(now);if(!jobs.length||suppressed){hud.hidden=!0,timer!==void 0&&(clearInterval(timer),timer=void 0);return}let running=jobs.filter(job=>job.state==="running").length,queued=jobs.filter(job=>job.state==="queued").length,failed=jobs.filter(job=>job.state==="failed").length,active=running+queued,finished=jobs.length-active;count.textContent=active?[running&&`${running} 执行中`,queued&&`${queued} 排队`].filter(Boolean).join(" · "):failed?`${failed} 项失败`:"已完成",dot.className=`status-dot ${active?"busy":failed?"failed":"done"}`,button("stop").hidden=!active,button("dismiss").hidden=!!active;let collapse=button("collapse");collapse.textContent=collapsed?"▴":"▾",collapse.setAttribute("aria-label",collapsed?"展开":"收合"),collapse.title=collapsed?"展开清单":"收合清单",hud.classList.toggle("collapsed",collapsed),bar.hidden=jobs.length<2,fill.style.width=`${Math.round(finished/jobs.length*100)}%`,list.hidden=collapsed;let time4=job=>job.state==="running"&&job.started?elapsed(now-job.started):job.started&&job.finished?elapsed(job.finished-job.started):"",detail=job=>`${options.message(job)}${job.route&&job.state==="success"?` · ${job.route}`:""}`,signature2=jobs.map(job=>`${job.id}:${job.state}`).join("|");if(signature2!==drawn)list.innerHTML=jobs.map(job=>{let name=options.names[job.kind]??job.kind;return`<li class="hud-item ${job.state} ${drawnIds.has(job.id)?"":"enter"}" data-job="${escape3(job.id)}">${symbols[job.state]}<div class="hud-text"><b>${escape3(name)}${job.label?` · ${escape3(job.label)}`:""}</b><small title="${escape3(detail(job))}">${escape3(detail(job))}</small></div><time>${time4(job)}</time>${job.state!=="queued"&&job.state!=="running"?`<button class="icon" data-hud-dismiss="${escape3(job.id)}" aria-label="关闭此项">×</button>`:""}</li>`}).join(""),drawn=signature2,drawnIds=new Set(jobs.map(job=>job.id));else for(let job of jobs){let row=list.querySelector(`[data-job="${CSS.escape(job.id)}"]`);if(!row)continue;let clock=row.querySelector("time"),value=time4(job);clock.textContent!==value&&(clock.textContent=value);let small=row.querySelector("small"),text2=detail(job);small.textContent!==text2&&(small.textContent=text2,small.title=text2)}let wasHidden=hud.hidden;hud.hidden=!1,place(),wasHidden&&(hud.classList.remove("enter"),hud.offsetWidth,hud.classList.add("enter")),timer===void 0&&(timer=setInterval(update,1e3))}let click=event=>{let target=event.target.closest("button");if(target){if(target.dataset.hudDismiss){dismissed.add(target.dataset.hudDismiss),update();return}switch(target.dataset.hud){case"stop":controller.cancelAll();break;case"log":options.openLog();break;case"collapse":collapsed=!collapsed,options.onCollapse(collapsed),update();break;case"dismiss":for(let job of controller.jobs)job.state!=="queued"&&job.state!=="running"&&dismissed.add(job.id);update();break}}},pointerdown=event=>{event.target.closest("button")||event.button!==0||options.drag(event,head)};return hud.addEventListener("click",click),head.addEventListener("pointerdown",pointerdown),view.addEventListener("resize",place),{update,place,suppress(value){suppressed!==value&&(suppressed=value,update())},element:hud,dispose(){timer!==void 0&&clearInterval(timer),view.removeEventListener("resize",place),hud.remove()}}}function letterDigest(state,preview,proposal){let out=[];for(let after of Object.values(preview.countries)){let before=state.countries[after.id];if(!before||!after.enabled)continue;let entries=[];for(let[id,progress]of Object.entries(after.progress)){let was=before.progress[id],name=after.nodes[id]?.name??id;if(progress.started!==null&&(!was||was.started===null)&&entries.push({day:progress.started,kind:"start",title:`开始「${name}」`}),progress.status==="completed"&&was?.status!=="completed"&&progress.completed!==null){let by=progress.by;entries.push({day:progress.completed,kind:"complete",title:`完成「${name}」`,note:by?`${by.mode==="achieved"?"由事件达成":"由事件促成"}：${by.title}`:void 0})}}for(let event of Object.values(preview.events)){if(!event.countries.includes(after.id))continue;let old=state.events[event.id];if(!old){entries.push({day:event.at,kind:"event",title:event.headline||event.title,note:event.public?void 0:"未公开"});continue}for(let item of event.timeline.slice(old.timeline.length))entries.push({day:item.at,kind:"update",title:`${old.headline||old.title}：${item.text}`})}for(let step of proposal.steps)for(let fact of step.facts)fact.country===after.id&&entries.push({day:step.at,kind:"fact",title:fact.evidence,note:fact.value?void 0:"不成立"});for(let transition of proposal.transitions)transition.country===after.id&&entries.push({day:proposal.until,kind:"transition",title:transition.cause==="completed"?"本期议程完成，进入下一期":"局势变化，本期议程改换",note:transition.reason});entries.sort((a,b)=>a.day-b.day||order[a.kind]-order[b.kind]);let capability=s=>new Map(Object.values(s.capabilities).filter(c=>c.active).map(c=>[c.id,c.name])),had=capability(before),has=capability(after);out.push({id:after.id,name:after.name,stability:[before.stability,after.stability],warSupport:[before.warSupport,after.warSupport],focus:[before.nodes[before.current]?.name??"",after.nodes[after.current]?.name??""],gained:[...has].filter(([id])=>!had.has(id)).map(([,name])=>name),lost:[...had].filter(([id])=>!has.has(id)).map(([,name])=>name),entries})}return out.sort((a,b)=>weight(b)-weight(a))}var order={complete:0,start:1,event:2,update:3,fact:4,transition:5};function weight(country){let moved=+(country.stability[0]!==country.stability[1])+ +(country.warSupport[0]!==country.warSupport[1]);return country.entries.length+moved+country.gained.length+country.lost.length}var reasonText={waiting_workflow:"世界推演还没有结果。工作流完成后，提案会出现在这里。",workflow_unknown:"读不到工作流的执行纪录，无法确认提案来自哪一次推演。",member_mismatch:"找不到唯一的阿斯塔利亚世界任务，无法确认提案来源。",missing_proposal:"这次世界推演没有附上国策提案。",invalid_proposal:"提案的格式无法解读。",nonce_mismatch:"提案不属于目前这一次请求。",invalid_rules:"提案违反国策规则，无法套用。",until_mismatch:"提案推进到的时间与这一楼的故事时间不一致。",world_failed:"世界推演回报失败。",world_skipped:"世界推演本轮被跳过。",world_patch_failed:"世界资料写入时出现问题。",preview_changed:"审阅期间国策或提案已有变动，请重新审阅。",user_rejected:"你已驳回这份提案。",save_failed:"保存国策时失败，提案没有套用。",overwritten:"接收后被其他脚本覆写，国策已回到接收前的状态。可以再接收一次。",update_started:"已改用国策自己的局势更新，这份提案不再适用。",request_expired:"这份提案已被更新的请求取代。",source_changed:"这一楼的来源资料已改变。",not_latest:"已经有更新的一楼，这份提案已过期。",not_assistant:"来源不是有效的 AI 回复。",invalid_time:"读不到这一楼的故事时间。",mvu_busy:"正文或变量仍在更新，请稍候。",update_busy:"国策正在进行自己的局势更新。",mvu_unavailable:"没有检测到 MVU。",missing_stat_data:"这一楼没有 MVU 变量。",missing_state:"这一楼还没有国策存档。",invalid_state:"国策存档的格式无效。",read_failed:"读取这一楼的资料时失败。",unsupported:"目前的环境不支持世界整合。",disposed:"国策面板已关闭。",preview:"这是预览，没有登记请求。",invalid_request:"世界任务没有提供有效的请求编号。"};function letterReason(reception){return reception.reason?reasonText[reception.reason]:""}function evidenceLines(evidence){if(!evidence)return[{text:"没有世界执行纪录",tone:"unknown"}];let lines=[];lines.push(evidence.skipped?{text:`世界任务本轮跳过${evidence.skipReason?`：${evidence.skipReason}`:""}`,tone:"warn"}:evidence.success?{text:"世界任务回报执行完成",tone:"ok"}:{text:"世界任务回报失败",tone:"warn"}),lines.push(evidence.changed===null?{text:"无法比较世界资料是否变动",tone:"unknown"}:evidence.changed?{text:"世界资料已变动",tone:"ok"}:{text:"世界资料没有变动（若本轮没有世界变化，这是正常的）",tone:"unknown"});let patch=evidence.patch;if(!patch.known)lines.push({text:"读不到写入日志",tone:"unknown"});else{let repairs=patch.issues.filter(issue2=>issue2.kind==="heal"),problems=patch.issues.length-repairs.length+patch.failedFragments.length;lines.push(problems?{text:`写入日志有 ${problems} 个问题`,tone:"warn"}:{text:`写入日志没有问题${patch.operationCount!==null?`（${patch.operationCount} 项写入）`:""}`,tone:"ok"});for(let issue2 of patch.issues)lines.push({text:`${issue2.kind==="heal"?"已自动修正":"写入问题"}：${issue2.message}（${issue2.path}）`,tone:issue2.kind==="heal"?"unknown":"warn"});for(let fragment of patch.failedFragments)lines.push({text:`第 ${fragment.index} 项无法处理：${fragment.message}`,tone:"warn"});patch.unassigned&&lines.push({text:`另有 ${patch.unassigned} 个无法归属世界的日志问题`,tone:"unknown"})}return lines}var style_default=`/* 国策档案 v0.4 · 战情档案馆介面
+ * Tokens first; every colour below derives from them so states stay consistent. */
+:host {
+  all: initial;
+  --ink: #0d1310;
+  --bg: #131a16;
+  --panel: #19221d;
+  --raised: #212b25;
+  --raised-2: #29352e;
+  --line: rgba(217, 191, 120, 0.14);
+  --line-strong: rgba(217, 191, 120, 0.32);
+  --gold: #dcc27c;
+  --gold-deep: #a88d4c;
+  --text: #ece6d4;
+  --muted: #a8b0a1;
+  --faint: #7d867a;
+  --green: #72c492;
+  --amber: #e6a950;
+  --blue: #8fb0d6;
+  --red: #d9705f;
+  --cross: #7fa6cf;
+  /* Cinnabar seal ink: used only for the world letter's seal, so ratifying a proposal reads as one act. */
+  --seal: #b4432f;
+  --seal-ink: #f3dccb;
+  --radius: 10px;
+  --drawer: 392px;
+  /* Simplified Chinese faces first (zh-Hans text), traditional faces only as fallbacks; same as the news card. */
+  --sans:
+    'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans TC',
+    'Microsoft JhengHei', 'PingFang TC', system-ui, sans-serif;
+  --serif:
+    'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'Noto Serif TC', 'Source Han Serif TC', Georgia,
+    var(--sans);
+  font-family: var(--sans);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  padding: 7px 12px;
+  border-radius: 7px;
+  line-height: 1.3;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+button:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--raised-2);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+input,
+select,
+textarea {
+  color: var(--text);
+  background: var(--ink);
+  border: 1px solid rgba(217, 191, 120, 0.24);
+  border-radius: 7px;
+  padding: 8px 10px;
+  max-width: 100%;
+}
+/* Same line height, so a select and an input side by side are the same height. */
+input,
+select {
+  line-height: 1.3;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--faint);
+}
+select option {
+  background: var(--panel);
+}
+input[type='checkbox'] {
+  accent-color: var(--gold);
+  width: 16px;
+  height: 16px;
+}
+svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+a {
+  color: var(--gold);
+}
+p {
+  margin: 0 0 12px;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--serif);
+  font-weight: 600;
+  margin: 0;
+}
+small {
+  color: var(--muted);
+}
+code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+}
+.muted {
+  color: var(--muted);
+}
+.gold {
+  color: var(--gold);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.between {
+  justify-content: space-between;
+}
+.primary {
+  background: linear-gradient(180deg, #7a6a37, #5b4f28);
+  border-color: var(--gold);
+  color: #fff4d0;
+  font-weight: 600;
+}
+.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #8d7b41, #6a5c2f);
+}
+.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.danger {
+  color: #f0a898;
+}
+.tag {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 99px;
+}
+.separator {
+  height: 1px;
+  background: var(--line);
+  margin: 16px 0;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(220, 194, 124, 0.3);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  vertical-align: -2px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Floating orb ---------- */
+.orb {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 60px;
+  height: 60px;
+  padding: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3d4a3d, #151c18 70%);
+  border: 2px solid var(--gold-deep);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.35);
+  color: var(--gold);
+  z-index: 2147482999;
+}
+.orb:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: radial-gradient(circle at 35% 30%, #4a5949, #151c18 70%);
+}
+.orb svg {
+  width: 100%;
+  height: 100%;
+}
+.orb .count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--gold);
+  color: #1a1d12;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+/* ---------- Shell ---------- */
+.shell {
+  position: fixed;
+  inset: 16px;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.shell[hidden],
+.modal-backdrop[hidden],
+.orb[hidden] {
+  display: none;
+}
+
+/* Command bar */
+.command {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #1c2620, #151d18);
+  border-bottom: 1px solid var(--line);
+}
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: rgba(220, 194, 124, 0.07);
+  flex-shrink: 0;
+}
+.brand-mark svg {
+  width: 26px;
+  height: 26px;
+}
+.brand {
+  display: grid;
+  line-height: 1.15;
+  flex-shrink: 0;
+}
+.brand h1 {
+  font-size: 17px;
+  letter-spacing: 0.12em;
+}
+.brand small {
+  font-size: 9.5px;
+  letter-spacing: 0.3em;
+  color: var(--gold-deep);
+}
+.nation-scroller {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  margin-left: 10px;
+}
+.nation-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+}
+/* Arrows only at an edge with more tabs behind it; the fade shows the list goes on. */
+.nation-scroll {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: none;
+  place-items: center;
+  width: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 22px;
+  color: var(--gold);
+  background: linear-gradient(90deg, #19221c 45%, rgba(25, 34, 28, 0));
+}
+.nation-scroll.prev {
+  left: 0;
+  justify-content: start;
+  padding-left: 4px;
+}
+.nation-scroll.next {
+  right: 0;
+  justify-content: end;
+  padding-right: 4px;
+  background: linear-gradient(270deg, #19221c 45%, rgba(25, 34, 28, 0));
+}
+.nation-scroll:hover {
+  color: var(--text);
+}
+.nation-scroller.can-left .nation-scroll.prev,
+.nation-scroller.can-right .nation-scroll.next {
+  display: grid;
+}
+.nation-tabs::-webkit-scrollbar {
+  display: none;
+}
+.nation-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 9px;
+  border-color: transparent;
+  background: transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nation-tab.active {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.tab-crest {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--blue);
+}
+.nation-tab.player .tab-crest {
+  color: var(--gold);
+}
+.tab-crest svg {
+  width: 20px;
+  height: 20px;
+}
+.tab-copy {
+  display: grid;
+  text-align: left;
+  line-height: 1.2;
+}
+.tab-copy strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.tab-copy small {
+  font-size: 11px;
+}
+.nation-tab.add {
+  width: 38px;
+  justify-content: center;
+  padding: 6px;
+  border: 1px dashed var(--line-strong);
+  color: var(--gold);
+}
+.nation-picker {
+  display: none;
+  min-width: 0;
+  flex: 1;
+}
+.nation-picker select {
+  width: 100%;
+}
+.command-spacer {
+  flex: 1;
+}
+.test-label {
+  font-size: 11px;
+  color: var(--gold);
+  border: 1px dashed var(--gold-deep);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.date-chip {
+  display: grid;
+  max-width: 250px;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+  text-align: right;
+  padding: 0 6px;
+}
+.date-chip small {
+  font-size: 10.5px;
+}
+.date-chip strong {
+  font-family: var(--serif);
+  font-size: 17px;
+  color: var(--gold);
+}
+.cmd-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.date-chip,
+.test-label,
+.nation-tab.add {
+  flex-shrink: 0;
+}
+.cmd-btn.busy {
+  border-color: var(--gold);
+}
+.cmd-btn.close {
+  width: 38px;
+  justify-content: center;
+  font-size: 20px;
+  padding: 0;
+}
+.error-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 16px;
+  background: rgba(217, 112, 95, 0.14);
+  border-bottom: 1px solid rgba(217, 112, 95, 0.4);
+  color: #f6c6ba;
+  font-size: 13px;
+}
+
+/* Nation bar */
+.nation-bar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.nation-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.nation-crest {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(160deg, rgba(220, 194, 124, 0.16), rgba(220, 194, 124, 0.02));
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.nation-crest svg {
+  width: 32px;
+  height: 32px;
+}
+.nation-copy {
+  min-width: 0;
+}
+.nation-copy h2 {
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+}
+.nation-copy p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gauges {
+  display: flex;
+  gap: 16px;
+}
+.gauge {
+  width: 132px;
+}
+.gauge-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.gauge-head small {
+  font-size: 12px;
+}
+.gauge-head strong {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+}
+.gauge-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.gauge-track i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+.gauge.stability .gauge-track i {
+  background: linear-gradient(90deg, #5f9e75, var(--green));
+}
+.gauge.war .gauge-track i {
+  background: linear-gradient(90deg, #b75a49, var(--amber));
+}
+/* The main focus is a third gauge (v0.15.9): label, name, days left and a slim bar, no card.
+   Its width follows the window only, so a status change never moves or resizes it. */
+.focus-gauge {
+  --state: var(--green);
+  --state-deep: #4f9a6b;
+  position: relative;
+  display: block;
+  width: 300px;
+  padding: 4px 8px;
+  margin: -4px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+.focus-gauge.waiting {
+  --state: var(--amber);
+  --state-deep: #b67c2f;
+}
+.focus-gauge.paused {
+  --state: var(--blue);
+  --state-deep: #5c7ca3;
+}
+.focus-gauge.empty {
+  --state: var(--faint);
+}
+/* hairline between the national gauges and the focus */
+.focus-gauge::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line);
+}
+button.focus-gauge:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.035);
+}
+button.focus-gauge:hover .focus-name {
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+}
+.focus-gauge .gauge-head {
+  justify-content: flex-start;
+  gap: 8px;
+}
+.focus-gauge .gauge-track {
+  display: block;
+}
+.focus-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.focus-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state);
+}
+.focus-gauge.active .focus-dot {
+  animation: focus-breathe 2.4s ease-out infinite;
+}
+.focus-gauge.empty .focus-dot {
+  background: transparent;
+  border: 1px solid var(--faint);
+}
+.focus-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-gauge.empty .focus-name {
+  color: var(--faint);
+  font-weight: 400;
+}
+.focus-num {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.focus-num small {
+  font-size: 11.5px;
+}
+/* invisible strut at the numeral's size: 待成果 and 尚未选定 keep the same line height */
+.focus-num::after {
+  content: '\\200b';
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+}
+.focus-word {
+  font-size: 12px;
+  color: var(--state);
+}
+.focus-gauge .gauge-track i {
+  background: linear-gradient(90deg, var(--state-deep), var(--state));
+}
+.focus-gauge.empty .gauge-track {
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 6px, transparent 6px 10px);
+}
+/* colour shows up only when something changes: one outline flare (resumed across re-renders) */
+.focus-gauge.flare::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 10px;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 0 0 1px var(--state),
+    0 0 22px -2px var(--state);
+  animation: focus-flare 2.2s ease-out var(--flare-at, 0ms) forwards;
+}
+@keyframes focus-flare {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes focus-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgba(114, 196, 146, 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px rgba(114, 196, 146, 0);
+  }
+}
+.nation-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.control-select select {
+  height: 36px;
+  padding: 0 8px;
+}
+.toggle {
+  height: 36px;
+  white-space: nowrap;
+}
+.toggle.on {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+  background: rgba(220, 194, 124, 0.1);
+}
+.nation-actions .primary {
+  height: 36px;
+  white-space: nowrap;
+}
+
+/* ---------- Stage ---------- */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(220, 194, 124, 0.06), transparent 60%),
+    linear-gradient(rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, rgba(220, 194, 124, 0.035) 1px, transparent 1px) 0 0 / 40px 40px,
+    var(--ink);
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.canvas:active {
+  cursor: grabbing;
+}
+.canvas:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+.tree {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.connectors {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
+}
+.connector {
+  fill: none;
+  stroke: rgba(220, 194, 124, 0.3);
+  stroke-width: 2.4;
+}
+.connector.done {
+  stroke: var(--gold);
+  stroke-width: 3;
+}
+.connector.alternative {
+  stroke-dasharray: 8 6;
+}
+.connector.cross-branch {
+  stroke: rgba(127, 166, 207, 0.55);
+}
+.connector.cross-branch.done {
+  stroke: var(--cross);
+}
+.connector.mutex {
+  stroke: var(--red);
+  stroke-width: 2;
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+.branch-banner {
+  position: absolute;
+  top: 16px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, transparent, rgba(220, 194, 124, 0.05));
+  pointer-events: none;
+}
+.branch-banner span {
+  font-family: var(--serif);
+  font-size: 15px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+.branch-banner.active {
+  border-bottom-color: var(--gold);
+}
+.branch-summary {
+  position: absolute;
+  height: 66px;
+  display: grid;
+  align-content: center;
+  text-align: left;
+  border: 1px dashed var(--gold-deep);
+  background: rgba(220, 194, 124, 0.06);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+}
+.branch-summary strong {
+  font-family: var(--serif);
+  color: var(--gold);
+}
+.branch-summary span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Nodes */
+.node {
+  /* Medal focus: the icon medal is the focus, the name plate sits under it, no box around both. */
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: center;
+  transition: opacity 0.15s;
+}
+.node-medal {
+  position: relative;
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  background: radial-gradient(circle at 36% 30%, #3a4a3f, #18201b 72%);
+  border: 2px solid rgba(220, 194, 124, 0.85);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(220, 194, 124, 0.28),
+    0 8px 18px rgba(0, 0, 0, 0.55);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.node-medal svg {
+  width: 30px;
+  height: 30px;
+}
+.node:hover:not(:disabled) .node-medal {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px var(--gold),
+    0 0 22px rgba(220, 194, 124, 0.35);
+}
+.node-meta {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10.5px;
+  line-height: 16px;
+  padding: 0 7px;
+  border-radius: 9px;
+  color: var(--muted);
+  background: #0f1512;
+  border: 1px solid rgba(220, 194, 124, 0.35);
+}
+.node-plate {
+  margin-top: 15px;
+  width: 100%;
+  padding: 5px 8px 6px;
+  background: linear-gradient(180deg, rgba(38, 48, 42, 0.96), rgba(24, 31, 27, 0.96));
+  border: 1px solid rgba(220, 194, 124, 0.2);
+  border-top: 2px solid rgba(220, 194, 124, 0.6);
+  border-radius: 3px 3px 9px 9px;
+}
+.node-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.28;
+  color: var(--text);
+}
+.node-pivot {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  font-size: 13px;
+  color: var(--gold);
+  text-shadow: 0 0 6px rgba(220, 194, 124, 0.7);
+}
+.node-flag {
+  position: absolute;
+  top: -6px;
+  left: -11px;
+  font-size: 12px;
+  color: var(--red);
+}
+/* Progress ring for running, waiting and paused focuses. */
+.node.active .node-medal::before,
+.node.waiting .node-medal::before,
+.node.paused .node-medal::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring) calc(var(--p) * 1%), rgba(255, 255, 255, 0.08) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+}
+.node.available .node-medal {
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(220, 194, 124, 0.55),
+    0 0 20px rgba(220, 194, 124, 0.28);
+}
+.node.available .node-name {
+  color: #fffaf0;
+}
+.node.locked .node-medal,
+.node.unknown .node-medal {
+  color: var(--faint);
+  background: radial-gradient(circle at 36% 30%, #263029, #141a16 72%);
+  border-color: rgba(168, 176, 161, 0.35);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(168, 176, 161, 0.12);
+}
+.node.unknown .node-medal {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 5px, transparent 5px 10px),
+    radial-gradient(circle at 36% 30%, #263029, #141a16 72%);
+}
+.node.locked .node-plate,
+.node.unknown .node-plate {
+  border-top-color: rgba(168, 176, 161, 0.3);
+  background: rgba(22, 29, 25, 0.92);
+}
+.node.locked .node-name,
+.node.unknown .node-name {
+  color: #9aa394;
+}
+.node.completed .node-medal {
+  color: #2c240f;
+  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);
+  border-color: #f6e2a6;
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(238, 212, 141, 0.5),
+    0 0 18px rgba(238, 212, 141, 0.3);
+}
+.node.completed .node-meta {
+  color: #f1dfa6;
+  border-color: rgba(238, 212, 141, 0.6);
+}
+.node.completed .node-plate {
+  border-top-color: #eed48d;
+  background: linear-gradient(180deg, rgba(76, 64, 30, 0.95), rgba(40, 34, 18, 0.95));
+}
+.node.completed .node-name {
+  color: #fff2c8;
+}
+.node.active {
+  --ring: var(--green);
+}
+.node.active .node-medal {
+  color: var(--green);
+  border-color: rgba(114, 196, 146, 0.5);
+}
+.node.active .node-meta {
+  color: #a7e3bd;
+  border-color: rgba(114, 196, 146, 0.55);
+}
+.node.active .node-plate {
+  border-top-color: var(--green);
+}
+.node.waiting {
+  --ring: var(--amber);
+}
+.node.waiting .node-medal,
+.node.waiting .node-meta {
+  color: var(--amber);
+}
+.node.waiting .node-medal {
+  border-color: rgba(230, 169, 80, 0.5);
+}
+.node.waiting .node-meta {
+  border-color: rgba(230, 169, 80, 0.55);
+}
+.node.waiting .node-plate {
+  border-top-color: var(--amber);
+}
+.node.paused {
+  --ring: var(--blue);
+}
+.node.paused .node-medal,
+.node.paused .node-meta {
+  color: var(--blue);
+}
+.node.paused .node-medal {
+  border-color: rgba(143, 176, 214, 0.5);
+}
+.node.paused .node-meta {
+  border-color: rgba(143, 176, 214, 0.55);
+}
+.node.paused .node-plate {
+  border-top-color: var(--blue);
+}
+.node.sealed .node-medal,
+.node.terminated .node-medal {
+  color: rgba(217, 112, 95, 0.8);
+  border-color: rgba(217, 112, 95, 0.5);
+  background:
+    repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.12) 0 5px, transparent 5px 10px),
+    radial-gradient(circle at 36% 30%, #2e2724, #1a1614 72%);
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5px rgba(217, 112, 95, 0.18);
+}
+.node.sealed .node-meta,
+.node.terminated .node-meta {
+  color: #f0a898;
+  border-color: rgba(217, 112, 95, 0.45);
+}
+.node.sealed .node-plate,
+.node.terminated .node-plate {
+  border-top-color: rgba(217, 112, 95, 0.5);
+  background: rgba(30, 25, 23, 0.92);
+}
+.node.sealed .node-name,
+.node.terminated .node-name {
+  color: #a9928c;
+  text-decoration: line-through;
+  text-decoration-color: rgba(217, 112, 95, 0.55);
+}
+.node.current .node-medal {
+  animation: current-pulse 2.6s ease-in-out infinite;
+}
+@keyframes current-pulse {
+  50% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 6px rgba(114, 196, 146, 0.35),
+      0 0 30px rgba(114, 196, 146, 0.4);
+  }
+}
+.node.selected .node-medal {
+  outline: 2px solid var(--gold);
+  outline-offset: 8px;
+}
+.node.selected .node-plate {
+  border-color: var(--gold);
+}
+.node:focus-visible {
+  outline: none;
+}
+.node:focus-visible .node-medal {
+  outline: 2px solid var(--gold);
+  outline-offset: 8px;
+}
+.node.dim {
+  opacity: 0.16;
+}
+
+/* Overlays on the stage */
+.routes {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  bottom: 12px;
+  width: 268px;
+  display: none;
+  flex-direction: column;
+  background: rgba(19, 26, 22, 0.94);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  z-index: 3;
+  max-height: calc(100% - 24px);
+}
+.routes.open {
+  display: flex;
+}
+.routes-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 6px 14px;
+}
+.routes-head strong {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--gold);
+}
+.routes-head small {
+  flex: 1;
+  font-size: 12px;
+}
+.routes-head button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 18px;
+}
+.search-row {
+  display: flex;
+  gap: 6px;
+  padding: 4px 10px 8px;
+}
+.search-row label {
+  flex: 1;
+  min-width: 0;
+}
+.search-row input {
+  width: 100%;
+  height: 34px;
+}
+.search-row button {
+  height: 34px;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.route-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 6px;
+  overflow: auto;
+  flex: 1;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.route-list li {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  margin: 2px 0;
+}
+.route-jump {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  text-align: left;
+  padding: 7px 10px;
+  border-color: transparent;
+  background: transparent;
+  min-width: 0;
+}
+.route-list li.active .route-jump {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+}
+.route-list li.folded .route-name {
+  color: var(--faint);
+}
+.route-name {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.route-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  flex-shrink: 0;
+}
+.route-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.route-bar {
+  grid-column: 1/-1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.route-bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+.route-fold {
+  width: 30px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.route-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 10px;
+}
+.route-actions button {
+  flex: 1;
+  font-size: 12.5px;
+}
+.routes-tab {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  background: rgba(19, 26, 22, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.routes-tab small {
+  color: var(--gold);
+}
+.stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--faint);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.stage-tools {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 2;
+  transition: right 0.22s ease;
+}
+.stage-tools > button,
+.zoom-controls,
+.legend-pop > summary {
+  height: 36px;
+  background: rgba(19, 26, 22, 0.94);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.zoom-controls {
+  display: flex;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.zoom-controls button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  min-width: 36px;
+}
+.zoom-controls button + button {
+  border-left: 1px solid var(--line);
+}
+.zoom-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+.legend-pop {
+  position: relative;
+}
+.legend-pop > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+}
+.legend-pop > summary::-webkit-details-marker {
+  display: none;
+}
+.legend-list {
+  position: absolute;
+  right: 0;
+  bottom: 44px;
+  width: 210px;
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  background: rgba(19, 26, 22, 0.97);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sw {
+  width: 22px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(236, 230, 212, 0.34);
+  background: #232d27;
+  flex-shrink: 0;
+}
+.sw.completed {
+  background: linear-gradient(160deg, #8a7438, #57491f);
+  border-color: #eed48d;
+}
+.sw.active {
+  border: 2px solid var(--green);
+}
+.sw.waiting {
+  border: 2px solid var(--amber);
+}
+.sw.paused {
+  border: 2px solid var(--blue);
+}
+.sw.locked {
+  border-style: dashed;
+  opacity: 0.6;
+}
+.sw.terminated {
+  border-color: var(--red);
+  background: repeating-linear-gradient(-45deg, rgba(217, 112, 95, 0.35) 0 3px, transparent 3px 6px);
+}
+.sw.unknown {
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 6px);
+}
+.ln {
+  width: 22px;
+  height: 0;
+  border-top: 2.5px solid rgba(220, 194, 124, 0.6);
+  flex-shrink: 0;
+}
+.ln.dashed {
+  border-top-style: dashed;
+}
+.ln.cross {
+  border-top-color: var(--cross);
+}
+.ln.mutex {
+  border-top: 2.5px dotted var(--red);
+}
+.minimap {
+  position: absolute;
+  right: 12px;
+  bottom: 58px;
+  width: 190px;
+  height: 120px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: rgba(13, 19, 16, 0.92);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  padding: 6px;
+  cursor: crosshair;
+  touch-action: none;
+  transition: right 0.22s ease;
+}
+.minimap-svg {
+  width: 100%;
+  height: 100%;
+}
+.mm {
+  fill: rgba(236, 230, 212, 0.28);
+}
+.mm.completed {
+  fill: var(--gold);
+}
+.mm.active,
+.mm.current {
+  fill: var(--green);
+}
+.mm.waiting {
+  fill: var(--amber);
+}
+.mm.paused {
+  fill: var(--blue);
+}
+.mm.locked,
+.mm.unknown {
+  fill: rgba(236, 230, 212, 0.12);
+}
+.mm.sealed,
+.mm.terminated {
+  fill: rgba(217, 112, 95, 0.55);
+}
+.mm.folded {
+  fill: rgba(220, 194, 124, 0.25);
+}
+.mm-view {
+  fill: rgba(220, 194, 124, 0.08);
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.stage.with-drawer .stage-tools {
+  right: calc(var(--drawer) + 12px);
+}
+/* The drawer already covers part of the tree; the minimap would cover more. */
+.stage.with-drawer .minimap {
+  display: none;
+}
+.demo-pop {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  transition: right 0.22s ease;
+}
+.stage.with-drawer .demo-pop {
+  right: calc(var(--drawer) + 12px);
+}
+.demo-pop > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--gold);
+  border: 1px dashed var(--gold-deep);
+  background: rgba(19, 26, 22, 0.94);
+  padding: 6px 10px;
+  border-radius: 7px;
+}
+.demo-pop > summary::-webkit-details-marker {
+  display: none;
+}
+.demo-pop[open] {
+  display: grid;
+  gap: 6px;
+  width: 200px;
+  padding: 10px;
+  background: rgba(19, 26, 22, 0.97);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+.demo-pop[open] > summary {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+/* Drawer */
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--drawer);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-left: 1px solid var(--line-strong);
+  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.45);
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+  z-index: 4;
+}
+.drawer.open {
+  transform: none;
+}
+.drawer-head {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 44px 16px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);
+  box-shadow: inset 4px 0 0 var(--line-strong);
+}
+.drawer-head.completed {
+  box-shadow: inset 4px 0 0 var(--gold);
+}
+.drawer-head.active {
+  box-shadow: inset 4px 0 0 var(--green);
+}
+.drawer-head.waiting {
+  box-shadow: inset 4px 0 0 var(--amber);
+}
+.drawer-head.paused {
+  box-shadow: inset 4px 0 0 var(--blue);
+}
+.drawer-head.sealed,
+.drawer-head.terminated {
+  box-shadow: inset 4px 0 0 var(--red);
+}
+.drawer-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 20px;
+}
+.drawer-emblem {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(220, 194, 124, 0.1);
+  border: 1px solid var(--line-strong);
+  color: var(--gold);
+}
+.drawer-emblem svg {
+  width: 34px;
+  height: 34px;
+}
+.drawer-branch {
+  display: block;
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+.drawer-head h3 {
+  font-size: 20px;
+  line-height: 1.3;
+  margin: 2px 0 6px;
+}
+.state-pill,
+.days-pill {
+  display: inline-block;
+  font-size: 12px;
+  padding: 1px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  margin-right: 6px;
+}
+.state-pill.completed {
+  color: #fff3c9;
+  background: rgba(220, 194, 124, 0.22);
+  border-color: var(--gold);
+}
+.state-pill.active {
+  color: #a7e3bd;
+  border-color: var(--green);
+}
+.state-pill.waiting {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.state-pill.paused {
+  color: var(--blue);
+  border-color: var(--blue);
+}
+.state-pill.available {
+  color: #fffaf0;
+  border-color: rgba(236, 230, 212, 0.6);
+}
+.state-pill.locked,
+.state-pill.unknown {
+  color: var(--muted);
+}
+.state-pill.sealed,
+.state-pill.terminated {
+  color: #f0a898;
+  border-color: var(--red);
+}
+.days-pill {
+  color: var(--muted);
+}
+.drawer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 18px 24px;
+}
+.drawer-progress {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.drawer-progress strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4f9a6b, var(--green));
+}
+.drawer-action {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+.drawer-action .primary {
+  height: 40px;
+  font-size: 14.5px;
+}
+.blockers {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: #f0c49a;
+}
+.description {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.detail-section {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.detail-section h4 {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.detail-section ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13.5px;
+}
+.detail-section p {
+  font-size: 13.5px;
+}
+.reason {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+.prereqs {
+  display: grid;
+  gap: 6px;
+}
+.prereq-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.chip {
+  font-size: 12.5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+.chip.done {
+  border-color: var(--gold);
+  color: #fff3c9;
+  background: rgba(220, 194, 124, 0.15);
+}
+.or,
+.and {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.and {
+  display: block;
+  padding-left: 4px;
+}
+.conditions {
+  list-style: none;
+  padding: 0 !important;
+}
+.conditions li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.cond-kind {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: rgba(220, 194, 124, 0.12);
+  color: var(--gold);
+}
+.mutex-note {
+  border-left: 3px solid var(--red);
+  padding-left: 12px;
+}
+.route-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.route-facts dt {
+  color: var(--muted);
+}
+.route-facts dd {
+  margin: 0;
+}
+
+/* Status line and empty state */
+.statusline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  padding: 4px 16px;
+  border-top: 1px solid var(--line);
+  background: #111814;
+  font-size: 12px;
+  color: var(--muted);
+}
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+.status-dot.busy {
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+}
+.linkish {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  color: var(--gold);
+  font-size: 12px;
+}
+.empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--ink);
+}
+.empty-card {
+  max-width: 440px;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+.empty-card svg {
+  width: 72px;
+  height: 72px;
+  color: var(--gold);
+}
+.empty-card p {
+  color: var(--muted);
+}
+
+/* ---------- Modals and settings ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  background: rgba(5, 9, 7, 0.78);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.modal {
+  width: min(880px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.07), transparent);
+}
+.modal-header h2 {
+  font-size: 20px;
+  letter-spacing: 0.06em;
+}
+.modal-header button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 19px;
+}
+.modal-body {
+  padding: 18px 22px;
+  overflow: auto;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  background: #161e1a;
+}
+.modal-error {
+  color: #f6b3a4;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.modal-body h3 {
+  font-size: 17px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.modal-body h4 {
+  font-size: 14px;
+  margin: 14px 0 6px;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.tabs button {
+  border-color: transparent;
+  background: transparent;
+}
+.tabs button.active {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  color: var(--gold);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.settings-section[hidden] {
+  display: none;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+.form-grid > .wide {
+  grid-column: 1/-1;
+  min-width: 0;
+}
+.field {
+  display: grid;
+  /* A field stretched to a taller neighbor in its row keeps its own control height. */
+  align-content: start;
+  gap: 6px;
+  font-size: 13px;
+  color: #d5d0bf;
+  min-width: 0;
+}
+.field.wide {
+  grid-column: 1/-1;
+}
+.field small {
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #d5d0bf;
+}
+.check.wide,
+.check:has(> small) {
+  flex-wrap: wrap;
+}
+.check small {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  line-height: 1.7;
+  padding-left: 24px;
+}
+.api-row,
+.candidate,
+.event-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+.candidate {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.candidate strong {
+  display: block;
+  margin-bottom: 2px;
+}
+.candidate p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+/* Long descriptions must wrap inside the text column, not push it below the checkbox. */
+label.candidate {
+  flex-wrap: nowrap;
+  cursor: pointer;
+}
+label.candidate > input {
+  flex: none;
+  margin-top: 3px;
+}
+label.candidate > span {
+  flex: 1;
+  min-width: 0;
+}
+label.candidate small {
+  display: block;
+  margin-top: 4px;
+}
+.candidate-tools {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.event-card h3 {
+  margin: 6px 0;
+}
+.event-card p {
+  font-size: 13.5px;
+}
+.api-actions {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.segment-max {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+}
+.segment-max .field {
+  flex: 0 1 220px;
+}
+.segment-max-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+.segment-max small {
+  flex-basis: 100%;
+}
+.api-picker {
+  flex: 1;
+  min-width: 180px;
+}
+.api-editor {
+  margin-top: 16px;
+}
+.api-status {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--gold);
+  font-size: 13px;
+}
+/* The panel re-renders on every toggle and hints fold afterwards; scroll anchoring would then drift the modal. */
+#source-panel {
+  overflow-anchor: none;
+}
+#source-panel fieldset {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin: 16px 0;
+  padding: 14px;
+  min-width: 0;
+}
+#source-panel legend {
+  color: var(--gold);
+  padding: 0 6px;
+  font-size: 13.5px;
+}
+#source-panel fieldset:disabled {
+  opacity: 0.55;
+}
+.source-list {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 8px 0;
+  background: var(--ink);
+}
+.source-group {
+  position: sticky;
+  top: -6px;
+  margin: 8px -12px 4px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: var(--gold);
+  background: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.source-entry {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.source-entry small {
+  display: block;
+  font-size: 11.5px;
+}
+.source-disabled span {
+  opacity: 0.65;
+}
+.source-book[hidden],
+.source-entry[hidden] {
+  display: none;
+}
+.source-rule {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin: 8px 0;
+}
+.source-rule input {
+  min-width: 0;
+}
+.source-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 18px;
+}
+.segment {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 8px 0;
+  background: var(--ink);
+}
+.segment-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.segment-head input[data-seg='name'] {
+  flex: 1;
+  min-width: 120px;
+}
+.segment textarea {
+  min-height: 70px;
+  resize: vertical;
+  width: 100%;
+}
+.legend {
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.legend summary {
+  cursor: pointer;
+  color: var(--gold);
+}
+.legend code {
+  color: var(--gold);
+}
+
+/* ---------- Responsive ---------- */
+/* the focus gauge gives way in steps, by window width only */
+@media (max-width: 1499px) {
+  .focus-gauge {
+    width: 260px;
+  }
+}
+@media (max-width: 1279px) {
+  .nation-copy p {
+    -webkit-line-clamp: 1;
+  }
+}
+@media (max-width: 1180px) {
+  .nation-bar {
+    grid-template-columns: minmax(180px, 1fr) auto auto;
+  }
+  .nation-actions {
+    grid-column: 1/-1;
+    justify-content: flex-end;
+    margin-top: -4px;
+  }
+}
+@media (max-width: 1100px) {
+  .brand,
+  .cmd-text {
+    display: none;
+  }
+  .cmd-btn {
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+}
+@media (max-width: 1000px) {
+  .nation-bar {
+    grid-template-columns: 1fr auto;
+    gap: 12px 16px;
+  }
+  /* the focus shares the second row with the actions */
+  .focus-gauge {
+    order: 3;
+    width: auto;
+  }
+  .focus-gauge::after {
+    display: none;
+  }
+  .nation-actions {
+    grid-column: auto;
+    margin-top: 0;
+    order: 4;
+  }
+  :host {
+    --drawer: 340px;
+  }
+}
+@media (max-width: 760px) {
+  .shell {
+    inset: 0;
+    border-radius: 0;
+    border: 0;
+  }
+  .command {
+    gap: 8px;
+    padding: 6px 8px;
+    min-height: 52px;
+  }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .nation-scroller,
+  .date-chip,
+  .test-label {
+    display: none;
+  }
+  .nation-picker {
+    display: block;
+  }
+  .command-spacer {
+    display: none;
+  }
+  .cmd-text {
+    display: none;
+  }
+  .cmd-btn {
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+  .cmd-btn.busy {
+    width: auto;
+    padding: 0 8px;
+  }
+  .cmd-btn.busy .cmd-text {
+    display: inline;
+  }
+  .nation-bar {
+    grid-template-columns: 1fr auto;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .nation-crest {
+    width: 38px;
+    height: 38px;
+  }
+  .nation-copy h2 {
+    font-size: 18px;
+  }
+  .nation-copy p {
+    display: none;
+  }
+  .gauges {
+    gap: 10px;
+  }
+  .gauge {
+    width: 72px;
+  }
+  .gauge-head {
+    display: grid;
+  }
+  .gauge-head small {
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+  .gauge-head strong {
+    font-size: 18px;
+  }
+  .nation-actions {
+    grid-column: 1/-1;
+    justify-content: stretch;
+    margin: 0;
+  }
+  .nation-actions > * {
+    flex: 1;
+  }
+  .control-select select {
+    width: 100%;
+  }
+  .routes {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(320px, 86%);
+    max-height: none;
+    border-radius: 0 12px 12px 0;
+  }
+  .minimap,
+  .stage-hint {
+    display: none;
+  }
+  .stage.with-drawer .demo-pop {
+    right: 12px;
+  }
+  .drawer {
+    top: auto;
+    left: 0;
+    width: auto;
+    height: 72%;
+    border-left: 0;
+    border-top: 1px solid var(--line-strong);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);
+  }
+  .drawer::before {
+    content: '';
+    display: block;
+    width: 44px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line-strong);
+    margin: 8px auto 0;
+  }
+  .drawer.open {
+    transform: none;
+  }
+  .stage.with-drawer .stage-tools {
+    right: 12px;
+  }
+  .statusline .status-mid {
+    display: none;
+  }
+  .modal-backdrop {
+    padding: 0;
+    place-items: end stretch;
+  }
+  .modal {
+    max-height: 94dvh;
+    border-radius: 16px 16px 0 0;
+  }
+  .modal-body {
+    padding: 14px;
+  }
+  .form-grid,
+  .source-toggles {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (max-width: 1200px) {
+  .stage.with-drawer .minimap {
+    display: none;
+  }
+}
+.demo-pop[open] button {
+  width: 100%;
+  text-align: left;
+}
+
+/* ---------- Tasks tab (任务) ---------- */
+.preset-bar {
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), rgba(220, 194, 124, 0.02));
+  margin-bottom: 14px;
+}
+.preset-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+.preset-title h3 {
+  margin: 0;
+}
+.preset-title small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.preset-row select {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.preset-row input[data-preset-name] {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.preset-bar .api-status:empty {
+  display: none;
+}
+.preset-bar .api-status {
+  margin: 8px 0 0;
+}
+.task-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.task-tab {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--raised);
+  border-color: var(--line);
+  min-width: 0;
+}
+.task-tab strong {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.task-tab small {
+  color: var(--faint);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-tab.active {
+  border-color: var(--gold);
+  background: var(--raised-2);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.task-tab.active strong {
+  color: var(--gold);
+}
+.task-editor[hidden] {
+  display: none;
+}
+.task-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+.task-head h3 {
+  margin: 0;
+}
+.task-head small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.task-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 0 14px;
+  margin-bottom: 12px;
+}
+.task-block > summary {
+  cursor: pointer;
+  padding: 11px 0;
+  font-weight: 600;
+  color: var(--gold);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-block > summary::-webkit-details-marker {
+  display: none;
+}
+.task-block > summary::before {
+  content: '▸';
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+.task-block[open] > summary::before {
+  transform: rotate(90deg);
+}
+.task-block[open] {
+  padding-bottom: 14px;
+}
+.task-block .summary-note {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+.block-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.route-row {
+  display: grid;
+  grid-template-columns: 1fr 120px auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+.route-row > .field:first-child:last-of-type {
+  grid-column: 1/3;
+}
+.route-row button {
+  height: 36px;
+}
+.prompt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.prompt-toolbar .spacer {
+  flex: 1;
+}
+.prompt-toolbar small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.prompt-list {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.prompt-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #1b2420;
+  transition:
+    border-color 0.15s,
+    opacity 0.15s;
+}
+.prompt-card.open {
+  border-color: var(--line-strong);
+}
+.prompt-card[data-kind='data'] {
+  border-left: 3px solid var(--blue);
+}
+.prompt-card[data-kind='guide'],
+.prompt-card[data-kind='task'] {
+  border-left: 3px solid var(--gold-deep);
+}
+.prompt-card[data-kind='custom'] {
+  border-left: 3px solid var(--green);
+}
+.prompt-card.off {
+  opacity: 0.55;
+}
+.prompt-card.off .pname {
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+.prompt-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 4px;
+}
+.prompt-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  text-align: left;
+}
+.prompt-toggle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.03);
+}
+.prompt-toggle .chev {
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+.prompt-card.open .chev {
+  transform: rotate(90deg);
+}
+.pname {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.role-tag,
+.kind-tag {
+  flex: none;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+.kind-tag {
+  font-family: inherit;
+}
+.kind-tag.data {
+  color: var(--blue);
+  border-color: rgba(143, 176, 214, 0.4);
+}
+.kind-tag.custom {
+  color: var(--green);
+  border-color: rgba(114, 196, 146, 0.4);
+}
+.kind-tag.modified {
+  color: var(--amber);
+  border-color: rgba(230, 169, 80, 0.45);
+}
+.pchars {
+  flex: none;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--faint);
+}
+.switch {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.switch input {
+  appearance: none;
+  width: 30px;
+  height: 17px;
+  border-radius: 99px;
+  background: #0f1512;
+  border: 1px solid var(--line-strong);
+  position: relative;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.switch input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.switch input:checked {
+  background: rgba(114, 196, 146, 0.25);
+  border-color: var(--green);
+}
+.switch input:checked::after {
+  transform: translateX(13px);
+  background: var(--green);
+}
+.switch input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.switch span {
+  display: none;
+}
+button.icon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.prompt-body {
+  padding: 4px 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+.prompt-body[hidden] {
+  display: none;
+}
+.prompt-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prompt-fields input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.prompt-fields select {
+  flex: 0 0 120px;
+}
+.prompt-body textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.prompt-body small {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.prompt-preview {
+  margin-top: 12px;
+}
+.prompt-preview textarea {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  min-height: 260px;
+}
+.legend {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.legend summary {
+  cursor: pointer;
+  color: var(--gold);
+}
+.legend ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.8;
+}
+.legend code {
+  color: var(--text);
+}
+
+/* ---------- Progress window above the orb ---------- */
+.hud {
+  position: fixed;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(22, 30, 26, 0.96);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(220, 194, 124, 0.08);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+  font-size: 13px;
+  overflow: hidden;
+}
+.hud[hidden] {
+  display: none;
+}
+.hud.enter {
+  animation: hud-in 0.18s ease-out;
+}
+@keyframes hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.hud[data-side='below'].enter {
+  animation-name: hud-in-below;
+}
+@keyframes hud-in-below {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.hud-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px 7px 12px;
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(220, 194, 124, 0.08), transparent);
+}
+.hud-head:active {
+  cursor: grabbing;
+}
+.hud-head .status-dot {
+  margin-right: 2px;
+  flex: none;
+}
+.status-dot.failed {
+  background: var(--red);
+}
+.hud-head strong {
+  font-family: var(--serif);
+  color: var(--gold);
+  letter-spacing: 0.06em;
+  flex: none;
+}
+.hud-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+.hud-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.hud-actions button {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.hud-actions button.icon {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+.hud-actions button[hidden] {
+  display: none;
+}
+.hud-bar {
+  height: 3px;
+  background: rgba(220, 194, 124, 0.12);
+  position: relative;
+  overflow: hidden;
+  flex: none;
+}
+.hud-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--gold);
+  transition: width 0.3s;
+}
+/* v0.15.4: no moving bar; it only shows how much of a batch is done. */
+.hud-bar[hidden] {
+  display: none;
+}
+.hud-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow: auto;
+  min-height: 0;
+}
+.hud-list[hidden] {
+  display: none;
+}
+.hud-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px 6px 12px;
+}
+.hud-item.enter {
+  animation: hud-in 0.18s ease-out;
+}
+.hud-item + .hud-item {
+  border-top: 1px solid rgba(217, 191, 120, 0.07);
+}
+.hud-sym.run {
+  color: var(--gold);
+  font-size: 9px;
+}
+.hud-sym {
+  font-style: normal;
+  font-weight: 700;
+  text-align: center;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 50%;
+  font-size: 11px;
+}
+.hud-sym.ok {
+  color: #0f1512;
+  background: var(--green);
+}
+.hud-sym.bad {
+  color: #0f1512;
+  background: var(--red);
+}
+.hud-sym.wait,
+.hud-sym.off {
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  line-height: 14px;
+}
+.hud-text {
+  min-width: 0;
+  display: grid;
+}
+.hud-text b {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-text small {
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-item.failed .hud-text small {
+  color: #f0a898;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.hud-item.success .hud-text b {
+  color: var(--green);
+}
+.hud-item.cancelled {
+  opacity: 0.7;
+}
+.hud-item time {
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+.hud-item button.icon {
+  width: 22px;
+  height: 22px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--faint);
+}
+.hud.collapsed .hud-head {
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .task-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .route-row {
+    grid-template-columns: 1fr 90px;
+  }
+  .route-row > button {
+    grid-column: 1/-1;
+  }
+  .route-row > .field:first-child:last-of-type {
+    grid-column: 1/-1;
+  }
+  .pchars,
+  .role-tag {
+    display: none;
+  }
+  .hud-actions button[data-hud='log'] {
+    display: none;
+  }
+}
+.task-block.prompts-block {
+  padding: 12px 14px 14px;
+}
+.prompt-toolbar h4 {
+  margin: 0;
+  color: var(--gold);
+  font-size: 14px;
+}
+.prompts-block > .muted {
+  font-size: 12.5px;
+  margin: 0 0 8px;
+}
+.task-editor input:not([type='checkbox']),
+.task-editor select,
+.preset-row input,
+.preset-row select,
+.preset-row button,
+.route-row button {
+  height: 38px;
+}
+.task-editor .prompt-body input {
+  height: 36px;
+}
+
+/* ---------- Country manager: delete tree ---------- */
+.country-row {
+  align-items: center;
+}
+.country-row .row-spacer {
+  flex: 1;
+}
+.remove-confirm {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(217, 112, 95, 0.45);
+  border-radius: 8px;
+  background: rgba(217, 112, 95, 0.08);
+}
+.remove-confirm small {
+  flex: 1 1 260px;
+  color: #f0c2b8;
+  line-height: 1.6;
+}
+
+/* ---------- Country manager: tree files ---------- */
+.tree-io h3 {
+  margin-bottom: 4px;
+}
+.tree-io > small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.tree-io-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.tree-io .api-status {
+  margin: 8px 0 0;
+}
+.import-panel {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--raised);
+  display: grid;
+  gap: 10px;
+}
+.import-panel h4 {
+  margin: 0;
+  color: var(--gold);
+}
+.import-panel ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.import-panel code {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.import-panel .warn {
+  color: var(--amber);
+}
+.tree-io {
+  margin-bottom: 18px;
+}
+
+/* ---------- News window (国际快讯) ---------- */
+.event-timeline {
+  margin: 6px 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.event-timeline b {
+  color: var(--gold);
+  margin-right: 6px;
+}
+.event-current {
+  font-size: 13px;
+}
+.event-current b {
+  color: var(--gold);
+  margin-right: 6px;
+}
+.event-steps {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.event-steps li::before {
+  display: inline-block;
+  width: 1.4em;
+  color: var(--muted);
+}
+.event-steps li.done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.event-steps li.done::before {
+  content: '✓';
+}
+.event-steps li.active {
+  color: var(--gold);
+  font-weight: 700;
+}
+.event-steps li.active::before {
+  content: '▶';
+}
+.event-steps li.pending::before {
+  content: '○';
+}
+.event-steps li.planned {
+  font-style: italic;
+}
+.event-steps li.planned::before {
+  content: '◷';
+}
+.event-effects {
+  display: block;
+  color: var(--gold);
+}
+.pivotal-note {
+  border-left: 3px solid var(--gold);
+  padding-left: 10px;
+}
+.rel-core {
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 10px 0 14px;
+  background: rgba(220, 194, 124, 0.08);
+}
+.rel-core h3,
+.rel-independent h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.rel-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.rel-card {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.rel-card p {
+  margin: 6px 0;
+}
+.rel-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.rel-branch {
+  color: var(--muted);
+}
+.rel-arrow {
+  color: var(--gold);
+}
+.rel-via {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.rel-independent {
+  margin-top: 14px;
+}
+.rel-independent dt {
+  font-weight: 600;
+}
+.rel-independent dd {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+/* v0.13.1 UI review */
+.status-jobs {
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+}
+.status-jobs.failed {
+  color: var(--red);
+}
+.status-jobs.busy {
+  color: var(--gold);
+}
+.status-dot.failed {
+  background: var(--red);
+}
+.cmd-btn {
+  position: relative;
+}
+.alert-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.lock-confirm {
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(230, 169, 80, 0.08);
+}
+.lock-confirm p {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.lock-confirm strong {
+  color: var(--amber);
+}
+.lock-confirm .row {
+  display: flex;
+  gap: 8px;
+}
+.job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.job-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.event-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.event-filters select {
+  width: auto;
+  min-width: 140px;
+}
+.event-filters small {
+  margin-left: auto;
+  color: var(--muted);
+}
+.chip.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(220, 194, 124, 0.1);
+}
+.country-row {
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+.country-name {
+  min-width: 7em;
+}
+.switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.tree-io > summary {
+  cursor: pointer;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.task-head {
+  flex-wrap: wrap;
+}
+.task-head .spacer {
+  flex: 1;
+}
+.last-run {
+  color: var(--muted);
+}
+.field .static {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.unsaved {
+  margin-right: auto;
+  color: var(--amber);
+  font-size: 13px;
+}
+.field[hidden] {
+  display: none;
+}
+.modal-task-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 0 auto;
+  min-width: 0;
+  max-width: 55%;
+  font-size: 12px;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.modal-task-status[hidden] {
+  display: none;
+}
+.modal-task-status.failed {
+  color: var(--red);
+}
+.modal-task-status .spinner {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.modal-task-status .status-dot {
+  margin-right: 0;
+}
+.status-jobs {
+  max-width: 60vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* v0.13.3: phone nation bar — name, gauges and ⋯ on one row, the main focus as one slim row;
+   the control select and 更新局势 open from ⋯ (the top picker lists names only). */
+.nation-more-btn,
+.control-tag {
+  display: none;
+}
+@media (max-width: 760px) {
+  .nation-bar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    padding: 6px 10px 8px;
+    gap: 6px 10px;
+  }
+  .nation-crest {
+    display: none;
+  }
+  .nation-copy h2 {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .control-tag {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gauges {
+    gap: 10px;
+  }
+  .gauge {
+    width: auto;
+    min-width: 44px;
+  }
+  .gauge-head {
+    display: grid;
+    line-height: 1.1;
+  }
+  .gauge-head small {
+    font-size: 10px;
+  }
+  .gauge-head strong {
+    font-size: 16px;
+  }
+  .gauge-track {
+    height: 3px;
+    margin-top: 2px;
+  }
+  .nation-more-btn {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    font-size: 18px;
+  }
+  .nation-more-btn[aria-expanded='true'] {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  /* the main focus as one slim full-width row: dot, name, days left, bar */
+  .focus-gauge {
+    grid-column: 1/-1;
+    width: auto;
+    padding: 2px 0;
+    margin: 0;
+  }
+  .focus-gauge .gauge-head {
+    display: flex;
+    gap: 8px;
+  }
+  .focus-name {
+    font-size: 14px;
+  }
+  .focus-num::after {
+    font-size: 16px;
+  }
+  .nation-actions {
+    display: none;
+  }
+  .nation-bar.more-open .nation-actions {
+    display: flex;
+  }
+}
+
+/* v0.13.3: settings and details additions */
+.notice {
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: rgba(230, 169, 80, 0.08);
+  color: #f0c49a;
+  font-size: 13px;
+}
+.api-actions.confirm-row {
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(230, 169, 80, 0.08);
+}
+.block-note.model-hint {
+  color: #f0c49a;
+}
+.source-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  margin: 4px 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+}
+.source-scope.custom {
+  border-color: var(--gold);
+}
+.source-scope b {
+  color: var(--gold);
+}
+.source-scope label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+details.fold > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12.5px;
+  list-style: none;
+}
+details.fold > summary::before {
+  content: '▸ ';
+}
+details.fold[open] > summary::before {
+  content: '▾ ';
+}
+details.detail-section.fold > summary h4 {
+  display: inline;
+  margin: 0;
+}
+details.detail-section.fold > summary::before {
+  color: var(--gold);
+}
+.source-modes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+@media (max-width: 760px) {
+  .source-modes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .source-modes > button {
+    grid-column: 1/-1;
+  }
+}
+.api-actions.api-save {
+  align-items: center;
+  position: sticky;
+  /* Sit on the window's bottom edge: offset by .modal-body's bottom padding. */
+  bottom: -18px;
+  margin-bottom: -18px;
+  padding-bottom: 18px !important;
+  z-index: 2;
+  padding: 10px 0;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.api-actions.api-save .api-status {
+  margin: 0;
+  flex: 1 1 200px;
+}
+@media (max-width: 760px) {
+  .api-actions.api-save {
+    bottom: -14px;
+    margin-bottom: -14px;
+    padding-bottom: 14px !important;
+  }
+}
+
+/* Additions to the existing UI only. Existing shell, tree, drawer and modal styles are untouched. */
+.period-anchor-note {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+  border-left: 2px solid var(--blue);
+  padding: 10px 12px;
+  background: var(--raised);
+  font-size: 12px;
+}
+.period-anchor-note strong {
+  color: var(--blue);
+}
+.event-card.flash {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold) inset;
+}
+.period-shape {
+  margin-left: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #e5d3a0;
+  background: rgba(220, 194, 124, 0.08);
+  border: 1px solid rgba(220, 194, 124, 0.28);
+  cursor: help;
+}
+.period-anchor-badge {
+  position: absolute;
+  top: -18px;
+  right: 0;
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 5px;
+  color: var(--blue);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+}
+.period-history {
+  margin: 14px 0;
+  border-left: 2px solid var(--gold-deep);
+  padding: 4px 16px;
+}
+.period-history time {
+  color: var(--gold);
+  font-size: 12px;
+}
+.period-history p {
+  line-height: 1.95;
+}
+
+/* ---------- v0.15.0 · the period joins the nation bar; one tool cluster; drawer status ---------- */
+.period-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 3px;
+  font-size: 12.5px;
+}
+.period-line strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+.period-line .period-shape {
+  margin-left: 0;
+}
+.period-line .switch-label {
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.period-history-btn {
+  font-size: 12px;
+  color: var(--muted);
+}
+.nation-copy p.period-note {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tag-day {
+  display: none;
+}
+@media (min-width: 761px) {
+  .nation-bar {
+    padding: 9px 18px;
+  }
+  .nation-copy h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 21px;
+  }
+  .nation-copy h2 .control-tag {
+    display: inline;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .routes {
+    width: 244px;
+    bottom: auto;
+  }
+}
+@media (max-width: 760px) {
+  .nation-id {
+    grid-column: 1 / -1;
+  }
+  .gauges {
+    justify-self: start;
+  }
+  .tag-day {
+    display: inline;
+  }
+  .period-line {
+    font-size: 12px;
+  }
+  .stage-tools {
+    left: 8px;
+    right: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .stage-tools [data-action='overview'] {
+    display: none;
+  }
+  .nation-copy p.period-note {
+    display: none;
+  }
+}
+.stage-tools {
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(13, 19, 16, 0.82);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+.stage-tools > button,
+.stage-tools .zoom-controls,
+.stage-tools .legend-pop > summary {
+  height: 32px;
+  box-shadow: none;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.minimap {
+  bottom: 66px;
+}
+.legend-list {
+  bottom: 46px;
+}
+/* Readable small type on the tree. */
+.node-meta {
+  font-size: 11px;
+  color: #c3c9b9;
+  border-color: rgba(220, 194, 124, 0.45);
+}
+.node.locked .node-name,
+.node.unknown .node-name {
+  color: #b9bfae;
+}
+/* Drawer: a completed focus leads with how and when it was completed. */
+.drawer-status {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(238, 212, 141, 0.35);
+  background: linear-gradient(180deg, rgba(76, 64, 30, 0.35), rgba(40, 34, 18, 0.18));
+}
+.status-medal {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #2c240f;
+  background: radial-gradient(circle at 36% 30%, #f3dd99, #a8893f 75%);
+}
+.drawer-status strong {
+  display: block;
+  color: #fff2c8;
+  font-size: 14px;
+}
+.drawer-status small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.drawer-status .done-cause {
+  margin: 6px 0;
+  font-size: 12.5px;
+}
+.drawer-status.bypassed {
+  border-color: rgba(143, 176, 214, 0.35);
+  background: rgba(143, 176, 214, 0.06);
+}
+.drawer-status.bypassed .status-medal {
+  color: var(--blue);
+  background: #1f2832;
+  border: 1px solid var(--blue);
+}
+.chip.static {
+  cursor: default;
+}
+.detail-section.gained {
+  border-top: 0;
+  padding-top: 0;
+}
+.blockers-title {
+  font-size: 12px;
+  color: var(--amber);
+}
+/* Motion; turned off with the system's reduced-motion setting (see above). */
+.tree.entering {
+  animation: tree-in 0.28s ease-out;
+}
+@keyframes tree-in {
+  from {
+    opacity: 0;
+    transform-origin: top center;
+  }
+}
+.node.just-done .node-medal {
+  animation: medal-shine 1.4s ease-out 0.15s;
+}
+@keyframes medal-shine {
+  0% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 5px rgba(238, 212, 141, 0.5);
+  }
+  35% {
+    box-shadow:
+      0 0 0 4px var(--bg),
+      0 0 0 7px #f6e2a6,
+      0 0 36px rgba(246, 226, 166, 0.85);
+  }
+}
+
+/* ---------- v0.15.1 · settings: preset list and card, flat task page, short hints ---------- */
+.modal:focus {
+  outline: none;
+}
+.footer-dirty {
+  margin-right: auto;
+  font-size: 12.5px;
+  color: var(--amber);
+}
+.footer-dirty:not(:empty)::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  vertical-align: 1px;
+}
+.hint-fold > summary {
+  display: inline;
+  list-style: none;
+  cursor: pointer;
+}
+.hint-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.hint-more {
+  margin-left: 6px;
+  color: var(--faint);
+  text-decoration: underline;
+  text-decoration-color: rgba(220, 194, 124, 0.35);
+  text-underline-offset: 3px;
+}
+.hint-fold[open] .hint-more,
+.hint-fold[open] .hint-cut {
+  display: none;
+}
+/* API presets: list on the left, the edited preset as a card with its own save. */
+.api-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.api-list {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(62vh, 560px);
+}
+.api-list-head {
+  padding: 0 4px 6px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-search {
+  margin-bottom: 6px;
+}
+.api-list-scroll {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+}
+.api-item {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  padding: 8px 12px;
+  border-color: transparent;
+  background: transparent;
+  min-width: 0;
+}
+.api-item[hidden] {
+  display: none;
+}
+.api-item b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.api-item small {
+  font-size: 11.5px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.api-item.on {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+.dirty-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+.api-add {
+  margin-top: 6px;
+  border-style: dashed;
+  color: var(--gold);
+}
+.api-card {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  min-width: 0;
+}
+.api-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.api-card-head small {
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-card-head b {
+  font-size: 15px;
+}
+.api-card-tools {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.api-card-tools button {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+.api-card > .confirm-row {
+  margin: 10px 14px 0;
+}
+.api-card-body {
+  padding: 4px 14px 6px;
+}
+.inline-field {
+  display: flex;
+  gap: 8px;
+}
+.inline-field input {
+  flex: 1;
+  min-width: 0;
+}
+.inline-field button {
+  white-space: nowrap;
+}
+.api-advanced {
+  border-top: 1px solid var(--line);
+}
+.api-advanced > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.api-advanced > summary small {
+  margin-left: 10px;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--faint);
+}
+.api-card-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 12px 12px;
+  background: #1d2621;
+}
+.api-card-foot .api-status {
+  margin: 0 auto 0 0;
+  font-size: 12.5px;
+  color: var(--green);
+}
+/* Tasks: the four tasks on the left, one flat page on the right. */
+.preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+}
+.preset-bar .preset-title {
+  margin: 0;
+  cursor: help;
+}
+.preset-bar .preset-title h3 {
+  margin: 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.preset-bar .preset-row {
+  flex: 1;
+  margin: 0;
+}
+.preset-bar .api-status {
+  flex-basis: 100%;
+}
+.task-layout {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.task-layout .task-tabs {
+  position: sticky;
+  top: 0;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin: 0;
+}
+.task-layout .task-tab {
+  padding: 9px 12px;
+  border-color: transparent;
+  background: transparent;
+}
+.task-layout .task-tab small {
+  white-space: normal;
+}
+.task-layout .task-tab.active {
+  background: var(--raised-2);
+  border-color: var(--line-strong);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+.task-editors {
+  min-width: 0;
+}
+.task-editors .task-block {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+.task-editors .task-block.prompts-block {
+  padding-top: 12px;
+}
+@media (max-width: 760px) {
+  .api-layout,
+  .task-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .api-list,
+  .task-layout .task-tabs {
+    position: static;
+    max-height: none;
+  }
+  .api-list-scroll {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(140px, max-content);
+    overflow-x: auto;
+  }
+  .task-layout .task-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- v0.15.2 · task cards and request log ---------- */
+.job-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.job-card2 {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+.job-card2.running {
+  border-color: rgba(220, 194, 124, 0.45);
+}
+.job-card2.failed {
+  border-color: rgba(217, 112, 95, 0.45);
+  background: linear-gradient(180deg, rgba(217, 112, 95, 0.08), rgba(217, 112, 95, 0.02));
+}
+.job-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+}
+.job-card2.success .job-icon {
+  color: #0e1a12;
+  background: var(--green);
+  border-color: var(--green);
+}
+.job-card2.failed .job-icon {
+  color: #1a0f0c;
+  background: var(--red);
+  border-color: var(--red);
+}
+.job-card2.running .job-icon {
+  border-color: var(--gold);
+}
+.job-main {
+  min-width: 0;
+}
+.job-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-weight: 600;
+}
+.job-chip {
+  font-size: 11px;
+  font-weight: 400;
+  padding: 0 7px;
+  line-height: 18px;
+  border-radius: 9px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+}
+.job-sub {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.job-sub b {
+  color: var(--text);
+  font-weight: 600;
+}
+.job-card2.failed .job-sub b {
+  color: #f0a898;
+}
+.job-problems {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #e4cfc9;
+}
+.job-problems code,
+.log-code {
+  font-family: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+}
+.job-problems code {
+  font-size: 12px;
+  color: #f2d79a;
+}
+.job-more > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+.job-note {
+  margin-top: 14px;
+  font-size: 12px;
+}
+.log-entry {
+  margin-top: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.log-entry > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.log-entry > summary::-webkit-details-marker {
+  display: none;
+}
+.log-entry[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.log-result {
+  font-weight: 600;
+  font-size: 13px;
+}
+.log-result.ok {
+  color: var(--green);
+}
+.log-result.failed {
+  color: var(--red);
+}
+.log-title {
+  font-weight: 600;
+}
+.log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-basis: 100%;
+}
+.log-error {
+  margin: 10px 16px 0;
+}
+.log-part2 {
+  border-bottom: 1px solid var(--line);
+}
+.log-part2:last-child {
+  border-bottom: 0;
+}
+.log-part2 > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+.log-part2 > summary::-webkit-details-marker {
+  display: none;
+}
+.log-part2 > summary::before {
+  content: '▸';
+  width: 10px;
+  color: var(--faint);
+}
+.log-part2[open] > summary::before {
+  content: '▾';
+}
+.log-role {
+  font-family: Consolas, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #0f1512;
+  border: 1px solid var(--line-strong);
+  color: var(--blue);
+}
+.log-role.user {
+  color: var(--green);
+}
+.log-role.output,
+.log-role.assistant {
+  color: var(--gold);
+}
+.log-role.think {
+  color: var(--faint);
+}
+.log-count {
+  font-size: 12px;
+  color: var(--faint);
+}
+.log-copy {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 12px;
+}
+.log-code {
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  max-height: 340px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #0b100d;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #cfd5c6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-code .k {
+  color: #e6c97e;
+}
+.log-code .s {
+  color: #9fd3ae;
+}
+.log-code .n {
+  color: #8fb0d6;
+}
+.log-code .b {
+  color: #d9a0c8;
+}
+@media (max-width: 760px) {
+  .job-card2 {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .job-card2 .job-buttons {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+.api-card-foot button,
+.modal-footer button {
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .api-card-foot,
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+  .api-card-foot .api-status,
+  .footer-dirty:not(:empty) {
+    flex-basis: 100%;
+  }
+}
+
+/* ---------- v0.15.3 · one size for the settings window; windows open with a short rise ---------- */
+.modal.modal-settings {
+  height: 90vh;
+}
+.modal.modal-settings .modal-body {
+  flex: 1;
+}
+@media (max-width: 760px) {
+  .modal.modal-settings {
+    height: 94dvh;
+  }
+}
+.modal {
+  animation: modal-in 0.2s ease-out;
+}
+.modal-backdrop:not([hidden]) {
+  animation: backdrop-in 0.2s ease-out;
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* v0.16 世界来函 · the world task's national-focus proposal, reviewed before it is saved.
+ * The cinnabar seal is the one loud element: it marks a letter waiting for review and stamps 准 on
+ * acceptance. Everything else follows the archive's ledger look: hairlines, serif names, quiet text. */
+.letter-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(-4deg);
+}
+.cmd-btn.letter-quiet {
+  color: var(--muted);
+  border-style: dashed;
+}
+.cmd-btn.letter-muted {
+  color: var(--faint);
+}
+.cmd-btn.letter-pending {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.cmd-btn.letter-pending .letter-seal {
+  background: var(--seal);
+  border-color: var(--seal);
+  color: var(--seal-ink);
+  animation: seal-arrive 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+.cmd-btn.letter-alert {
+  border-color: var(--red);
+  color: #f2b3a6;
+}
+@keyframes seal-arrive {
+  from {
+    transform: rotate(-14deg) scale(1.7);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-4deg) scale(1);
+    opacity: 1;
+  }
+}
+.orb-letter {
+  position: absolute;
+  bottom: -2px;
+  left: -4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--seal);
+  color: var(--seal-ink);
+  font-family: var(--serif);
+  font-size: 12px;
+  font-weight: 700;
+  transform: rotate(-6deg);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.orb-letter[hidden] {
+  display: none;
+}
+.status-jobs.letter {
+  color: var(--gold);
+}
+.status-dot.letter {
+  background: var(--seal);
+  border-radius: 2px;
+  transform: rotate(-6deg);
+}
+
+.modal.modal-letter {
+  width: min(1000px, 100%);
+}
+.letter-sheet {
+  display: grid;
+  gap: 18px;
+}
+.letter-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.letter-seal-big {
+  position: relative;
+  flex: none;
+  width: 62px;
+  height: 62px;
+}
+.letter-seal-big .seal-mark,
+.letter-seal-big .seal-stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-family: var(--serif);
+  font-weight: 700;
+}
+.letter-seal-big .seal-mark {
+  border: 2px solid var(--gold-deep);
+  color: var(--gold);
+  font-size: 30px;
+  transform: rotate(-3deg);
+  box-shadow:
+    inset 0 0 0 3px var(--panel),
+    inset 0 0 0 4px rgba(220, 194, 124, 0.25);
+}
+.letter-seal-big .seal-stamp {
+  background: var(--seal);
+  color: var(--seal-ink);
+  font-size: 32px;
+  transform: rotate(-9deg);
+  box-shadow:
+    inset 0 0 0 3px var(--seal),
+    inset 0 0 0 4px rgba(243, 220, 203, 0.55);
+  opacity: 0;
+}
+.letter-seal-big.sealed .seal-stamp {
+  opacity: 1;
+}
+.letter-seal-big.sealed .seal-mark {
+  opacity: 0.25;
+}
+.letter-seal-big.fresh .seal-stamp {
+  animation: seal-press 0.55s cubic-bezier(0.25, 1.1, 0.35, 1) both;
+}
+@keyframes seal-press {
+  0% {
+    transform: rotate(-16deg) scale(1.9);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(-9deg) scale(0.93);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-9deg) scale(1);
+    opacity: 1;
+  }
+}
+.letter-from {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.letter-meta {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.letter-state {
+  padding: 9px 14px;
+  border-left: 2px solid var(--gold-deep);
+  background: rgba(220, 194, 124, 0.05);
+  color: var(--text);
+}
+.letter-state.muted {
+  border-left-color: var(--faint);
+  color: var(--muted);
+}
+.letter-state.alert {
+  border-left-color: var(--red);
+  background: rgba(217, 112, 95, 0.08);
+}
+.letter-state.done {
+  border-left-color: var(--seal);
+}
+.letter-checks {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.letter-check {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.letter-check dt {
+  font-family: var(--serif);
+  color: var(--gold);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.letter-check dt::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  transform: translateY(-1px);
+}
+.letter-check.ok dt::before {
+  background: var(--green);
+}
+.letter-check.unknown dt::before {
+  border: 1.5px solid var(--amber);
+  background: linear-gradient(90deg, var(--amber) 50%, transparent 50%);
+}
+.letter-check dd {
+  margin: 0;
+  color: var(--muted);
+}
+.letter-check ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.letter-check li {
+  font-size: 13px;
+}
+.letter-check li::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 2px;
+  background: var(--faint);
+}
+.letter-check li.ok::before {
+  background: var(--green);
+}
+.letter-check li.warn {
+  color: #f2b3a6;
+}
+.letter-check li.warn::before {
+  background: var(--red);
+}
+.letter-review {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  min-height: 260px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.letter-nations {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  background: var(--ink);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.letter-nation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px 9px 16px;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+  color: var(--muted);
+}
+.letter-nation:hover:not(:disabled) {
+  background: var(--raised);
+  color: var(--text);
+}
+.letter-nation.active {
+  border-left-color: var(--gold);
+  background: var(--panel);
+  color: var(--text);
+}
+.letter-nation-name {
+  flex: 1;
+  font-family: var(--serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.letter-nation-count {
+  min-width: 22px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.letter-nation.active .letter-nation-count {
+  color: var(--gold);
+}
+.letter-detail {
+  padding: 16px 22px 20px;
+  overflow: auto;
+  max-height: 46vh;
+}
+.modal-body .letter-detail h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.letter-shifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 0 0 16px;
+  padding: 0 0 14px;
+  list-style: none;
+  border-bottom: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+}
+.letter-shifts .shift {
+  margin-left: 8px;
+  color: var(--text);
+}
+.letter-shifts b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.letter-shifts i {
+  margin: 0 6px;
+  font-style: normal;
+  color: var(--gold);
+}
+.letter-still {
+  margin-bottom: 14px;
+  color: var(--faint);
+  font-size: 13px;
+}
+.letter-timeline {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.letter-timeline::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 103px;
+  width: 1px;
+  background: var(--line-strong);
+}
+.letter-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 26px;
+  padding: 6px 0;
+}
+.letter-timeline li::before {
+  content: "";
+  position: absolute;
+  left: 99px;
+  top: 12px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold-deep);
+  background: var(--panel);
+}
+.letter-timeline .entry-complete::before {
+  border: 0;
+  border-radius: 1px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+.letter-timeline .entry-event::before {
+  border-color: var(--blue);
+  border-radius: 2px;
+}
+.letter-timeline .entry-update::before {
+  left: 101px;
+  top: 14px;
+  width: 5px;
+  height: 5px;
+  border: 0;
+  background: var(--faint);
+}
+.letter-timeline .entry-fact::before {
+  top: 15px;
+  height: 3px;
+  border: 0;
+  border-radius: 0;
+  background: var(--muted);
+}
+.letter-timeline .entry-transition::before {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 3px var(--gold-deep);
+}
+.letter-timeline time {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.letter-timeline p {
+  line-height: 1.55;
+}
+.letter-timeline small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.letter-timeline .entry-complete p {
+  color: var(--gold);
+}
+.entry-kind {
+  margin-right: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+/*
+ * v0.17 local repair: a marginal slip under the letter's reason. Its rule colour carries the state
+ * (amber can be mended, blue mending, red not passed, faint expired); the seal red stays reserved.
+ */
+.letter-mend {
+  --mend: var(--amber);
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px 14px 18px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--mend);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--mend) 9%, transparent), transparent 62%),
+    var(--raised);
+  overflow: hidden;
+}
+.letter-mend.running {
+  --mend: var(--blue);
+}
+.letter-mend.failed {
+  --mend: var(--red);
+}
+.letter-mend.expired {
+  --mend: var(--faint);
+  background: var(--panel);
+}
+.letter-mend header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.modal-body .letter-mend h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+.letter-mend-state {
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--mend) 55%, transparent);
+  border-radius: 999px;
+  color: var(--mend);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+.letter-mend > p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.65;
+}
+.letter-mend.expired > p {
+  color: var(--muted);
+}
+/* Mending: a hairline sweeps along the top edge instead of a spinner competing with the seal. */
+.letter-mend.running::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 38%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+  animation: mend-sweep 1.6s ease-in-out infinite;
+}
+@keyframes mend-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(280%);
+  }
+}
+.letter-mend .letter-mend-error {
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: rgba(217, 112, 95, 0.1);
+  color: #f2b3a6;
+  font-size: 13px;
+}
+.letter-mend .letter-mend-caution {
+  color: var(--faint);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.letter-mend .letter-mend-caution::before {
+  content: "※";
+  margin-right: 6px;
+  color: var(--gold-deep);
+}
+.letter-error {
+  font-size: 13px;
+}
+.letter-error > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+  list-style: none;
+}
+.letter-error > summary::-webkit-details-marker {
+  display: none;
+}
+.letter-error > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1em;
+  color: var(--gold-deep);
+  transition: transform 0.15s ease;
+}
+.letter-error[open] > summary::before {
+  transform: rotate(90deg);
+}
+.letter-error > summary:hover {
+  color: var(--text);
+}
+.letter-error pre {
+  margin: 8px 0 0;
+  max-height: 168px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--muted);
+  font: 12px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.letter-check.repaired dt::before {
+  border: 1.5px solid var(--blue);
+  border-radius: 2px;
+  transform: translateY(-1px) rotate(45deg) scale(0.85);
+}
+.repair-notes {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: mend;
+  display: grid;
+  gap: 5px;
+}
+.repair-notes li {
+  counter-increment: mend;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.letter-check .repair-notes li::before {
+  content: counter(mend);
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  vertical-align: baseline;
+  color: var(--blue);
+  font-family: var(--serif);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .letter-mend.running::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+.modal-letter .modal-footer {
+  align-items: center;
+}
+.footer-gap {
+  flex: 1;
+}
+.modal-footer .letter-reject {
+  background: none;
+  border-color: transparent;
+  color: #e9a090;
+}
+.modal-footer .letter-reject:hover:not(:disabled) {
+  background: rgba(217, 112, 95, 0.1);
+  border-color: rgba(217, 112, 95, 0.4);
+}
+@media (max-width: 760px) {
+  .cmd-btn.letter-slot .cmd-text {
+    display: none;
+  }
+  .letter-head {
+    gap: 14px;
+  }
+  .letter-seal-big {
+    width: 50px;
+    height: 50px;
+  }
+  .letter-from {
+    font-size: 16px;
+  }
+  .letter-check {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .letter-review {
+    grid-template-columns: 1fr;
+  }
+  .letter-nations {
+    flex-direction: row;
+    padding: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .letter-nation {
+    width: auto;
+    flex: none;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+    padding: 10px 14px;
+  }
+  .letter-nation.active {
+    border-bottom-color: var(--gold);
+  }
+  .letter-detail {
+    max-height: none;
+    padding: 14px 16px 18px;
+  }
+  .letter-timeline::before {
+    left: 79px;
+  }
+  .letter-timeline li {
+    grid-template-columns: 70px 1fr;
+    gap: 22px;
+  }
+  .letter-timeline li::before {
+    left: 75px;
+  }
+  .letter-timeline .entry-update::before {
+    left: 77px;
+  }
+  .modal-letter .modal-footer {
+    flex-wrap: wrap;
+  }
+  .modal-letter .footer-gap {
+    display: none;
+  }
+}
+
+/* v0.16: national focus went back after a proposal was accepted (usually a workflow re-run). */
+.rollback-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  background: rgba(217, 112, 95, 0.1);
+  border-bottom: 1px solid rgba(217, 112, 95, 0.36);
+  color: #f6c6ba;
+  font-size: 13px;
+}
+.rollback-banner .letter-seal {
+  flex: none;
+  color: var(--red);
+}
+.rollback-banner p {
+  flex: 1;
+}
+.rollback-slot[hidden] {
+  display: none;
+}
+/* The latest floor is not ready; the panel shows an earlier AI floor and blocks saves. */
+.readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  background: linear-gradient(90deg, rgba(220, 194, 124, 0.12), rgba(220, 194, 124, 0.03));
+  border-bottom: 1px solid var(--line);
+  color: #e6dcc0;
+  font-size: 13px;
+}
+.readonly-banner .letter-seal {
+  flex: none;
+  color: var(--gold);
+}
+.readonly-banner p {
+  flex: 1;
+  margin: 0;
+}
 `;var escape4=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);function mountApiPanel(controller,host,onSaved){let chatId=controller.platform.chatId(),original=currentApiName(controller.config,chatId),draft=structuredClone(controller.config.apis.find(api=>api.name===original)),savedDraft=structuredClone(draft),models=[],status="",busy=!1,requestVersion=0,deletePending=!1,deepSeekBefore=null,disposed=!1,pending=null,justSaved=!1,advancedOpen=!1,search="",legacyStrict=jobKinds.filter(kind=>controller.config.jobs[kind].strictJson);function read(){for(let field of host.querySelectorAll("[data-api-field]")){let key=field.dataset.apiField;Object.assign(draft,{[key]:key==="includeReasoning"||key==="stream"?field.checked:["maxTokens","temperature"].includes(key)?Number(field.value):field.value})}}function save(update){if(controller.platform.chatId()!==chatId)throw new Error("聊天已切换，请重新开启 API 设置");controller.saveSettings(update(controller.config)),onSaved(update)}function dirty(){return read(),original===null||JSON.stringify(draft)!==JSON.stringify(savedDraft)}function commit(){if(!dirty())return!1;let edited=structuredClone(draft),old=original;return save(config2=>saveApiPreset(config2,old,edited,chatId)),load(edited.name.trim()),!0}function blank(){original=null,deletePending=!1,draft=ApiSchema.parse({name:`连接 ${controller.config.apis.length+1}`,url:"",model:"",proxy:""}),savedDraft=structuredClone(draft),deepSeekBefore=null,models=[],requestVersion++,busy=!1,status="按「保存并选用」建立新预设，并设为目前聊天使用。"}function choose(name){save(config2=>({...structuredClone(config2),apiBindings:{...config2.apiBindings,[chatId]:name}})),load(name),status=`目前聊天使用「${name}」。`}function load(name){original=name,draft=structuredClone(controller.config.apis.find(api=>api.name===name)),savedDraft=structuredClone(draft),models=[],busy=!1,requestVersion++,deletePending=!1,deepSeekBefore=null}function secretNotice(){let location=controller.platform.secretLocation?.();return location==="tavern"?"API 金钥另存于酒馆扩展设置（随账号保存，并以 IndexedDB 备份），不会写入楼层变量、剧情或导出档。":location==="memory"?"离线测试页：保存只留在本页记忆体，重新整理即清除。":"找不到酒馆扩展设置，金钥暂存于此浏览器的 localStorage（未加密）；不写入楼层变量或剧情。"}function render(){let field=(key,label2,type="text",extra="")=>`<label class="field">${label2}<input data-api-field="${key}" type="${type}" value="${escape4(draft[key])}" ${extra}></label>`,textarea=(key,label2,hint,placeholder)=>`<label class="field wide">${label2}<small>${hint}</small><textarea data-api-field="${key}" rows="3" placeholder="${escape4(placeholder)}">${escape4(draft[key])}</textarea></label>`,deep={strict:!1,cot:!1};try{deep=deepSeekOptions(draft)}catch{}let edited=original===null||JSON.stringify(draft)!==JSON.stringify(savedDraft),presets=controller.config.apis,matches=api=>!search||`${api.name} ${api.model} ${api.url}`.toLowerCase().includes(search.toLowerCase()),item=api=>`<button class="api-item ${api.name===original?"on":""}" data-api-action="pick" data-api-pick="${escape4(api.name)}" ${api.name===original?'aria-current="true"':""} ${matches(api)?"":"hidden"}><b>${api.name===controller.config.defaultApi?"★ ":""}${escape4(api.name)}${api.name===original&&edited?'<i class="dirty-dot" title="有修改尚未保存"></i>':""}</b><small>${escape4(api.model||api.url||"跟随酒馆连接")}</small></button>`,list=`<aside class="api-list" aria-label="API 预设"><div class="api-list-head">API 预设 · ${presets.length}</div>${presets.length>8?`<input class="api-search" data-api-search placeholder="搜索名称或模型" value="${escape4(search)}" aria-label="搜索 API 预设">`:""}<div class="api-list-scroll">${original===null?`<button class="api-item on" aria-current="true"><b>${escape4(draft.name)}<i class="dirty-dot" title="尚未保存"></i></b><small>新增预设（尚未保存）</small></button>`:""}${presets.map(item).join("")}</div><button class="api-add" data-api-action="new">＋ 新增预设</button></aside>`,saved=justSaved?' <button class="linkish" data-api-action="new">＋ 再新增一个</button>':"";host.innerHTML=`${legacyStrict.length?`<p class="notice">旧版设置中「${legacyStrict.map(kind=>taskNames[kind]).join("」「")}」在任务设置开启了严格 JSON。此选项已改到这里：请在这些任务使用的 API 预设勾选「严格 JSON 回应」。保存设置后不再提示。</p>`:""}
       <div class="api-layout">${list}<section class="api-card">
       <header class="api-card-head"><small>${original===null?"新增预设":"编辑预设 · 目前聊天使用"}</small><b>${escape4(savedDraft.name)}</b><span class="api-card-tools"><button data-api-action="default" ${original===null?"disabled":""} title="未指定预设的聊天使用这个预设">${original===controller.config.defaultApi?"★ 全域预设":"☆ 设为全域"}</button><button data-api-action="copy" title="复制成新的预设，再修改">复制</button><button class="danger" data-api-action="delete" ${original===null||presets.length===1?"disabled":""}>删除</button></span></header>
@@ -5361,7 +5406,7 @@ thinking:
       <footer class="api-card-foot"><p class="api-status" role="status">${escape4(status)}${saved}</p><button data-api-action="discard">放弃修改</button><button class="primary" data-api-action="save">${original===null?"保存并选用":"保存此预设"}</button></footer>
       </section></div>`}let click=event=>{let button=event.target.closest("[data-api-action]");button&&button.dataset.apiPick!==void 0&&(button.dataset.apiAction="pick"),button&&(async()=>{try{switch(read(),justSaved=!1,button.dataset.apiAction){case"save":{let name=draft.name.trim(),saved=commit();status=saved?`已保存「${name}」。`:"没有需要保存的修改。",justSaved=saved;break}case"copy":{let names=new Set(controller.config.apis.map(api=>api.name)),name=`${draft.name.trim()} 副本`;for(let i=2;names.has(name);i++)name=`${draft.name.trim()} 副本 ${i}`;original=null,deletePending=!1,draft={...structuredClone(draft),name},savedDraft=structuredClone(draft),status=`已复制为「${name}」，修改后按「保存并选用」建立。`;break}case"pick":{let name=button.dataset.apiPick;if(name===original)break;dirty()?pending={name}:choose(name);break}case"discard":deletePending=!1,draft=structuredClone(savedDraft),deepSeekBefore=null,requestVersion++,busy=!1,models=[],status=original===null?"已取消新增。":"已放弃尚未保存的修改。",original===null&&load(currentApiName(controller.config,chatId));break;case"new":dirty()?pending={name:null}:blank();break;case"switch-save":case"switch-discard":case"switch-cancel":{let next=pending;if(pending=null,!next||button.dataset.apiAction==="switch-cancel")break;button.dataset.apiAction==="switch-save"&&commit(),next.name===null?blank():choose(next.name);break}case"default":{let name=original;save(config2=>({...structuredClone(config2),defaultApi:name})),status=`已将「${name}」设为全域预设。`;break}case"delete":deletePending=!0;break;case"cancel-delete":deletePending=!1;break;case"confirm-delete":{let name=original;save(config2=>deleteApiPreset(config2,name)),load(currentApiName(controller.config,chatId)),status="API 预设已删除。";break}case"deepseek":if(deepSeekBefore){let previous2=deepSeekBefore;for(let key of["bodyParams","excludeBodyParams","customPromptPostProcessing","includeReasoning","reasoningEffort"])Object.assign(draft,{[key]:previous2[key]});deepSeekBefore=null}else{let next=applyDeepSeek(draft,!0,!1);deepSeekBefore=structuredClone(draft),draft=next}break;case"models":{let version2=++requestVersion,request=structuredClone(draft);busy=!0,status="正在加载模型…",render();try{let list=await controller.platform.models(request);if(disposed||version2!==requestVersion||controller.platform.chatId()!==chatId)return;read(),draft.url!==request.url||draft.apiKey!==request.apiKey?(models=[],status="连接资料已改变，请重新加载模型。"):(models=list,status=list.length?`已加载 ${list.length} 个模型。`:"未取得模型清单；请确认端点与凭证，或手动输入模型。",!draft.model&&list.length&&(draft.model=list[0]))}catch(error2){if(disposed||version2!==requestVersion)return;read(),models=[],status=`加载模型失败：${redactApiError(error2,[request,draft])}`}busy=!1;break}}}catch(error2){status=redactApiError(error2,[draft,...controller.config.apis])}disposed||render()})()},change=event=>{let input3=event.target;try{if(read(),input3.matches("[data-api-strict]"))draft=setStrictJson(draft,input3.checked);else if(input3.matches("[data-api-model]"))input3.value&&(draft.model=input3.value);else if(input3.matches("[data-api-deep]")){let strict=host.querySelector("[data-api-strict]").checked,cot=host.querySelector('[data-api-deep="cot"]').checked;draft=applyDeepSeek(draft,strict,cot)}else if(input3.dataset.apiField==="model"){let select2=host.querySelector("[data-api-model]");select2&&(select2.value=models.includes(draft.model)?draft.model:"");return}else return}catch(error2){status=redactApiError(error2,[draft,...controller.config.apis])}render()},input2=event=>{let field=event.target;if(field.matches("[data-api-search]")){search=field.value;for(let button of host.querySelectorAll("[data-api-pick]")){let api=controller.config.apis.find(item=>item.name===button.dataset.apiPick);button.hidden=!!api&&!`${api.name} ${api.model} ${api.url}`.toLowerCase().includes(search.toLowerCase())}}},toggle=event=>{event.target.matches(".api-advanced")&&(advancedOpen=event.target.open)};return host.addEventListener("click",click),host.addEventListener("change",change),host.addEventListener("input",input2),host.addEventListener("toggle",toggle,!0),render(),{dirty,commit,dispose(){disposed=!0,requestVersion++,host.removeEventListener("click",click),host.removeEventListener("change",change),host.removeEventListener("input",input2),host.removeEventListener("toggle",toggle,!0)}}}var escape5=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]),labels={identify:"辨识国家",generate:"生成国策树",update:"局势更新",reshape:"重大改树"};function mountSourcePanel(controller,host,getConfig,onChange){let settings=structuredClone(getConfig().sources),target="default",entries=[],books={character:[],all:[]},bookFilter="",entryFilter="",status="",preview="",previewJob="generate",disposed=!1,loading=!1,revision=0,chatId=controller.platform.chatId(),contextConfig=()=>target==="default"?settings.context:settings.overrides[target]?.context??settings.context,bookConfig=()=>target==="default"?settings.worldbook:settings.overrides[target]?.worldbook??settings.worldbook,customContext=()=>target==="default"||!!settings.overrides[target]?.context,customBooks=()=>target==="default"||!!settings.overrides[target]?.worldbook;function read(){for(let input2 of host.querySelectorAll("[data-source-global]")){let key=input2.dataset.sourceGlobal;Object.assign(settings,{[key]:input2.type==="checkbox"?input2.checked:["memoryRecallRecentCount","maxInputCharacters"].includes(key)?Number(input2.value):key==="variables"?input2.value.split(`
 `).map(line=>line.trim()).filter(Boolean):input2.value})}if(customContext()){let context=contextConfig(),count=host.querySelector("[data-source-count]");count&&(context.contextTurnCount=Number(count.value));for(let key of["contextExtractRules","contextExcludeRules"])for(let row of host.querySelectorAll(`[data-rule-list="${key}"] [data-rule-row]`)){let index=Number(row.dataset.ruleRow);context[key][index]={start:row.querySelector('[data-boundary="start"]').value,end:row.querySelector('[data-boundary="end"]').value}}}let extraBooks=host.querySelector("[data-manual-books]");extraBooks&&customBooks()&&(bookConfig().manualSelection=[...new Set(extraBooks.value.split(`
-`).map(line=>line.trim()).filter(Boolean))]),onChange(structuredClone(settings))}function setOverride(kind,key,custom2){let override=settings.overrides[kind]??={};custom2?override[key]??=structuredClone(settings[key]):delete override[key],!override.context&&!override.worldbook&&delete settings.overrides[kind]}function entryList(selected2){let query=entryFilter.toLowerCase();return[...new Set(entries.map(entry=>entry.book))].map(book=>{let rows=entries.map((entry,index)=>({entry,index})).filter(({entry})=>entry.book===book),count=rows.filter(({entry})=>!entryExclusion(entry)&&selectedEntry(entry,selected2)).length;return`<div class="source-group">${escape5(book)} · 已选 ${count}／${rows.length}</div>${rows.map(({entry,index})=>{let excluded=entryExclusion(entry),automatic=!excluded&&settings.autoIncludeTables&&tableEntry(entry),text2=`${entry.book} ${entry.name}`.toLowerCase();return`<label class="source-entry ${entry.enabled?"":"source-disabled"}" data-filter-text="${escape5(text2)}" ${text2.includes(query)?"":"hidden"}><input type="checkbox" data-source-entry="${index}" ${automatic||!excluded&&selectedEntry(entry,selected2)?"checked":""} ${excluded||automatic?"disabled":""}><span>${escape5(entry.name||`条目 ${entry.uid}`)}<small>${escape5(excluded||(automatic?"数据库表格 · 自动纳入":entry.strategy?.type==="constant"?"常驻":"关键字触发"))} · ${entry.content.length.toLocaleString()} 字符${entry.enabled?"":" · 酒馆停用"}</small></span></label>`}).join("")}`}).join("")}function render(){let context=contextConfig(),selection=bookConfig(),ruleEditor=(key,name)=>`<h4>${name}</h4><div data-rule-list="${key}">${context[key].map((rule,index)=>`<div class="source-rule" data-rule-row="${index}"><input aria-label="开始词" data-boundary="start" placeholder="开始词，如 &lt;content" value="${escape5(rule.start)}"><input aria-label="结束词" data-boundary="end" placeholder="结束词，如 &lt;/content&gt;" value="${escape5(rule.end)}"><button data-source-action="delete-rule" data-rule-kind="${key}" data-rule-index="${index}">删除</button></div>`).join("")}</div><button data-source-action="add-rule" data-rule-kind="${key}">＋ 新增${name}</button>`,customized=jobKinds.filter(kind=>settings.overrides[kind]),scope2=target==="default"?`<div class="source-scope"><span>正在编辑：<b>预设</b>（所有任务）</span>${customized.map(kind=>`<button data-source-action="target" data-target="${kind}">编辑「${labels[kind]}」专用</button>`).join("")}</div><small class="muted">要让某项任务使用不同的世界书或上下文，到「任务」分页把该任务的「世界书与上下文」改成「此任务自定义」。</small>`:`<div class="source-scope custom"><span>正在编辑：<b>${labels[target]}</b> 专用</span><label>世界书<select data-source-mode="worldbook"><option value="inherit">沿用预设</option><option value="custom" ${customBooks()?"selected":""}>此任务自定义</option></select></label><label>上下文<select data-source-mode="context"><option value="inherit">沿用预设</option><option value="custom" ${customContext()?"selected":""}>此任务自定义</option></select></label><button data-source-action="target" data-target="default">回到预设</button></div>`;host.innerHTML=`<h3>世界书与上下文</h3><p class="muted">只读取所选来源。常驻条目直接纳入；绿灯条目须命中整理后的上下文／补充提示词，最多递回扫描 10 轮，不自动加入全域世界书。</p>
+`).map(line=>line.trim()).filter(Boolean))]),onChange(structuredClone(settings))}function setOverride(kind,key,custom2){let override=settings.overrides[kind]??={};custom2?override[key]??=structuredClone(settings[key]):delete override[key],!override.context&&!override.worldbook&&delete settings.overrides[kind]}function entryList(selected2){let query=entryFilter.toLowerCase();return[...new Set(entries.map(entry=>entry.book))].map(book=>{let rows=entries.map((entry,index)=>({entry,index})).filter(({entry})=>entry.book===book),count=rows.filter(({entry})=>!entryExclusion(entry)&&selectedEntry(entry,selected2)).length;return`<div class="source-group">${escape5(book)} · 已选 ${count}／${rows.length}</div>${rows.map(({entry,index})=>{let excluded=entryExclusion(entry),automatic=!excluded&&settings.autoIncludeTables&&tableEntry(entry),text2=`${entry.book} ${entry.name}`.toLowerCase();return`<label class="source-entry ${entry.enabled?"":"source-disabled"}" data-filter-text="${escape5(text2)}" ${text2.includes(query)?"":"hidden"}><input type="checkbox" data-source-entry="${index}" ${automatic||!excluded&&selectedEntry(entry,selected2)?"checked":""} ${excluded||automatic?"disabled":""}><span>${escape5(entry.name||`条目 ${entry.uid}`)}<small>${escape5(excluded||(automatic?"数据库表格 · 自动纳入":entry.strategy?.type==="constant"?"常驻":"关键字触发"))} · ${entry.content.length.toLocaleString()} 字符${entry.enabled?"":" · 酒馆停用"}</small></span></label>`}).join("")}`}).join("")}function render(){let context=contextConfig(),selection=bookConfig(),ruleEditor=(key,name)=>`<h4>${name}</h4><div data-rule-list="${key}">${context[key].map((rule,index)=>`<div class="source-rule" data-rule-row="${index}"><input aria-label="开始词" data-boundary="start" placeholder="开始词，如 &lt;content" value="${escape5(rule.start)}"><input aria-label="结束词" data-boundary="end" placeholder="结束词，如 &lt;/content&gt;" value="${escape5(rule.end)}"><button data-source-action="delete-rule" data-rule-kind="${key}" data-rule-index="${index}">删除</button></div>`).join("")}</div><button data-source-action="add-rule" data-rule-kind="${key}">＋ 新增${name}</button>`,customized=jobKinds.filter(kind=>settings.overrides[kind]),scope2=target==="default"?`<div class="source-scope"><span>正在编辑：<b>预设</b>（所有任务）</span>${customized.map(kind=>`<button data-source-action="target" data-target="${kind}">编辑「${labels[kind]}」专用</button>`).join("")}</div><small class="muted">要让某项任务使用不同的世界书或上下文，到「任务」分页把该任务的「世界书与上下文」改成「此任务自定义」。</small>`:`<div class="source-scope custom"><span>正在编辑：<b>${labels[target]}</b> 专用</span><label>世界书<select data-source-mode="worldbook"><option value="inherit">沿用预设</option><option value="custom" ${customBooks()?"selected":""}>此任务自定义</option></select></label><label>上下文<select data-source-mode="context"><option value="inherit">沿用预设</option><option value="custom" ${customContext()?"selected":""}>此任务自定义</option></select></label><button data-source-action="target" data-target="default">回到预设</button></div>`,listKey=list=>list.dataset.entryList===void 0?"books":"entries",scrolled=new Map([...host.querySelectorAll(".source-list")].map(list=>[listKey(list),list.scrollTop]));host.innerHTML=`<h3>世界书与上下文</h3><p class="muted">只读取所选来源。常驻条目直接纳入；绿灯条目须命中整理后的上下文／补充提示词，最多递回扫描 10 轮，不自动加入全域世界书。</p>
       ${scope2}
       <fieldset ${customBooks()?"":"disabled"}><legend>剧情世界书（对应 $1）</legend><label class="field">来源<select data-book-source><option value="character" ${selection.source==="character"?"selected":""}>目前角色绑定</option><option value="manual" ${selection.source==="manual"?"selected":""}>手动选择世界书</option></select></label><small>目前角色绑定：${escape5(books.character.join("、")||"尚未加载／未绑定")}</small>
       ${selection.source==="manual"?`<label class="field">筛选世界书<input data-book-filter value="${escape5(bookFilter)}" placeholder="世界书名称"></label><div class="source-list">${books.all.map(book=>`<label class="check source-book" ${book.toLowerCase().includes(bookFilter.toLowerCase())?"":"hidden"} data-filter-text="${escape5(book.toLowerCase())}"><input type="checkbox" data-source-book="${escape5(book)}" ${selection.manualSelection.includes(book)?"checked":""}>${escape5(book)}</label>`).join("")}</div><label class="field">手动选书（每行一项；空白就是不选书）<textarea data-manual-books>${escape5(selection.manualSelection.join(`
@@ -5374,14 +5419,14 @@ thinking:
       <fieldset><legend>其他来源（对应 $2／$5／$U／$C，预设关闭）</legend><div class="source-toggles"><label class="check"><input type="checkbox" data-source-global="managedEntries" ${settings.managedEntries?"checked":""}>工作流托管条目（$2）<small>角色绑定世界书中的 WorkflowHelper-* 条目，只取酒馆已启用者，按相同扫描规则触发。</small></label><label class="check"><input type="checkbox" data-source-global="summaryIndex" ${settings.summaryIndex?"checked":""}>纪要索引（$5）<small>预设世界书的 TavernDB-ACU-CustomExport-纪要索引；没有时改读数据库插件的纪要表或总体大纲。</small></label><label class="check"><input type="checkbox" data-source-global="persona" ${settings.persona?"checked":""}>使用者设定与主角资料（$U）<small>酒馆 persona 描述，加上角色世界书的「主角信息」导出条目。</small></label><label class="check"><input type="checkbox" data-source-global="characterDescription" ${settings.characterDescription?"checked":""}>角色描述（$C）<small>目前角色卡的 description，经巨集／EJS 处理。</small></label></div><p class="muted">在任务的提示词段写入这些占位符时，即使此处未开启也会读取，并只在提示词段送出。</p></fieldset>
       <fieldset><legend>记忆回溯（对应 $6）与其他来源</legend><label class="field">最近 N 条 AM 纪要<input data-source-global="memoryRecallRecentCount" type="number" min="0" max="1000" value="${settings.memoryRecallRecentCount}"><small>从预设世界书读取 CustomExport-纪要-N／旧总结条目，按 AM 编码选取最近 N 条，附加包裹上下文；0 关闭。独立于剧情条目勾选。</small></label><label class="check"><input data-source-global="includeLatestUser" type="checkbox" ${settings.includeLatestUser?"checked":""}>加入最近使用者输入（对应 $8，预设关闭）</label><div class="form-grid"><label class="field">故事时间路径<input data-source-global="timePath" value="${escape5(settings.timePath)}"><small>相对 stat_data；支持复兴纪元格式。</small></label><label class="field">玩家所在地路径<input data-source-global="locationPath" value="${escape5(settings.locationPath)}"><small>相对 stat_data。快讯条依此判断玩家身在哪一国，那一国未公开的消息会以内部密报显示。</small></label><label class="field">角色卡新闻路径<input data-source-global="newsPath" value="${escape5(settings.newsPath)}"><small>相对 stat_data。快讯条的「本报各版」读取这里，只读不写。</small></label><label class="field">完整请求字符上限<input data-source-global="maxInputCharacters" type="number" min="1000" max="2000000" value="${settings.maxInputCharacters}"><small>含系统提示、Schema、国策状态及来源。超限停止，不截断、不重试；字符不是 Token。</small></label><label class="field wide">额外 MVU 路径（每行一项，预设不送）<textarea data-source-global="variables">${escape5(settings.variables.join(`
 `))}</textarea><small>故事时间仍会在本机读取，不需要把整个「世界」对象送给 API。</small></label><label class="field wide">补充来源需求<textarea data-source-global="extra">${escape5(settings.extra)}</textarea></label></div></fieldset>
-      <div class="api-actions"><label>预览任务<select data-source-preview-job>${jobKinds.map(kind=>`<option value="${kind}" ${kind===previewJob?"selected":""}>${labels[kind]}</option>`).join("")}</select></label><button data-source-action="preview">预览将送出的来源（不呼叫 API）</button></div><p class="api-status" role="status">${escape5(status)}</p>${preview?`<label class="field" data-source-preview>来源预览<textarea readonly rows="15">${escape5(preview)}</textarea></label>`:""}`}async function loadEntries(){let version2=++revision,selection=structuredClone(bookConfig());loading=!0,status="读取世界书…",render();try{let[catalog,rows]=await Promise.all([controller.platform.worldbooks(),controller.platform.sources(selection)]);if(disposed||revision!==version2||controller.platform.chatId()!==chatId)return;read(),books=catalog,entries=rows;let removed=0,enabled=bookConfig().enabledEntries;for(let book of new Set(rows.map(entry=>entry.book))){let ids=enabled[book];if(ids){let present=new Set(rows.filter(entry=>entry.book===book).map(entry=>entry.uid)),kept=ids.filter(uid=>present.has(uid));removed+=ids.length-kept.length,enabled[book]=kept}}status=`已加载 ${rows.length} 个条目${removed?`，移除 ${removed} 个已不存在的勾选`:""}。未手动调整的世界书沿用酒馆启用状态。`,onChange(structuredClone(settings))}finally{revision===version2&&(loading=!1)}render()}let click=event=>{let button=event.target.closest("[data-source-action]");button&&(async()=>{try{if(read(),revision++,preview="",controller.platform.chatId()!==chatId)throw new Error("聊天已切换，请重新开启世界书与上下文设置");let context=contextConfig(),key=button.dataset.ruleKind;switch(button.dataset.sourceAction){case"add-rule":context[key].push({start:"",end:""});break;case"delete-rule":context[key].splice(Number(button.dataset.ruleIndex),1);break;case"load":await loadEntries();return;case"all":case"none":if(!entries.length)throw new Error("请先加载世界书条目，再使用全选／全不选。");for(let book of new Set(entries.map(entry=>entry.book)))bookConfig().enabledEntries[book]=button.dataset.sourceAction==="all"?entries.filter(entry=>entry.book===book&&entry.enabled&&!entryExclusion(entry)).map(entry=>entry.uid):[];break;case"target":target=button.dataset.target,entries=[],status="",await loadEntries();return;case"preview":{let version2=++revision,config2=structuredClone(getConfig());config2.sources=SourcesSchema.parse(settings);let snapshot=await controller.platform.read(config2,previewJob);if(disposed||version2!==revision||controller.platform.chatId()!==chatId)return;let report=snapshot.sourceReport,body=JSON.stringify(snapshot.context,null,2);preview=report?[`来源共 ${report.characters.toLocaleString()} 字符（含自定义或修改过的提示词段）。这里不含内建提示词、Schema 与国策状态；完整请求会在任务送出前再次检查 ${report.limit.toLocaleString()} 字符上限。`,...report.blocks.map(block=>`${block.placeholder?`${block.placeholder} `:""}${block.name}: ${block.placement==="off"?"未开启":`${block.characters.toLocaleString()} 字符${block.placement==="segment"?"（由提示词段送出）":""}`}`),...report.segments.map(segment=>`提示词段「${segment.name}」${segment.role}${segment.kind==="data"?" · 任务资料（JSON 于执行时填入）":segment.kind==="custom"?"":" · 内建"} · ${segment.characters.toLocaleString()} 字符`),...report.notes,...report.history.map(row=>`AI 楼 ${row.id}: ${row.before.toLocaleString()} → ${row.after.toLocaleString()} 字符${row.extractionMissed?"【提取未命中，保留原文】":""}`),...report.entries.map(row=>`${row.book}:${row.uid} ${row.name} · ${row.status} · ${row.characters.toLocaleString()} 字符`),`
+      <div class="api-actions"><label>预览任务<select data-source-preview-job>${jobKinds.map(kind=>`<option value="${kind}" ${kind===previewJob?"selected":""}>${labels[kind]}</option>`).join("")}</select></label><button data-source-action="preview">预览将送出的来源（不呼叫 API）</button></div><p class="api-status" role="status">${escape5(status)}</p>${preview?`<label class="field" data-source-preview>来源预览<textarea readonly rows="15">${escape5(preview)}</textarea></label>`:""}`;for(let list of host.querySelectorAll(".source-list"))list.scrollTop=scrolled.get(listKey(list))??0}async function loadEntries(){let version2=++revision,selection=structuredClone(bookConfig());loading=!0,status="读取世界书…",render();try{let[catalog,rows]=await Promise.all([controller.platform.worldbooks(),controller.platform.sources(selection)]);if(disposed||revision!==version2||controller.platform.chatId()!==chatId)return;read(),books=catalog,entries=rows;let removed=0,enabled=bookConfig().enabledEntries;for(let book of new Set(rows.map(entry=>entry.book))){let ids=enabled[book];if(ids){let present=new Set(rows.filter(entry=>entry.book===book).map(entry=>entry.uid)),kept=ids.filter(uid=>present.has(uid));removed+=ids.length-kept.length,enabled[book]=kept}}status=`已加载 ${rows.length} 个条目${removed?`，移除 ${removed} 个已不存在的勾选`:""}。未手动调整的世界书沿用酒馆启用状态。`,onChange(structuredClone(settings))}finally{revision===version2&&(loading=!1)}render()}let click=event=>{let button=event.target.closest("[data-source-action]");button&&(async()=>{try{if(read(),revision++,preview="",controller.platform.chatId()!==chatId)throw new Error("聊天已切换，请重新开启世界书与上下文设置");let context=contextConfig(),key=button.dataset.ruleKind;switch(button.dataset.sourceAction){case"add-rule":context[key].push({start:"",end:""});break;case"delete-rule":context[key].splice(Number(button.dataset.ruleIndex),1);break;case"load":await loadEntries();return;case"all":case"none":if(!entries.length)throw new Error("请先加载世界书条目，再使用全选／全不选。");for(let book of new Set(entries.map(entry=>entry.book)))bookConfig().enabledEntries[book]=button.dataset.sourceAction==="all"?entries.filter(entry=>entry.book===book&&entry.enabled&&!entryExclusion(entry)).map(entry=>entry.uid):[];break;case"target":target=button.dataset.target,entries=[],status="",await loadEntries();return;case"preview":{let version2=++revision,config2=structuredClone(getConfig());config2.sources=SourcesSchema.parse(settings);let snapshot=await controller.platform.read(config2,previewJob);if(disposed||version2!==revision||controller.platform.chatId()!==chatId)return;let report=snapshot.sourceReport,body=JSON.stringify(snapshot.context,null,2);preview=report?[`来源共 ${report.characters.toLocaleString()} 字符（含自定义或修改过的提示词段）。这里不含内建提示词、Schema 与国策状态；完整请求会在任务送出前再次检查 ${report.limit.toLocaleString()} 字符上限。`,...report.blocks.map(block=>`${block.placeholder?`${block.placeholder} `:""}${block.name}: ${block.placement==="off"?"未开启":`${block.characters.toLocaleString()} 字符${block.placement==="segment"?"（由提示词段送出）":""}`}`),...report.segments.map(segment=>`提示词段「${segment.name}」${segment.role}${segment.kind==="data"?" · 任务资料（JSON 于执行时填入）":segment.kind==="custom"?"":" · 内建"} · ${segment.characters.toLocaleString()} 字符`),...report.notes,...report.history.map(row=>`AI 楼 ${row.id}: ${row.before.toLocaleString()} → ${row.after.toLocaleString()} 字符${row.extractionMissed?"【提取未命中，保留原文】":""}`),...report.entries.map(row=>`${row.book}:${row.uid} ${row.name} · ${row.status} · ${row.characters.toLocaleString()} 字符`),`
 实际来源内容（JSON 部分）：`,body.slice(0,5e4),body.length>5e4?`
 【画面仅显示前 50,000 字符；实际来源未截断】`:"",...(snapshot.prompts??[]).filter(message=>message.kind!=="data").map((message,index)=>`
 提示词段 #${index+1}「${message.name||"未命名段"}」（${message.role}）：
 ${message.content.slice(0,2e4)}${message.content.length>2e4?`
 【仅显示前 20,000 字符】`:""}`)].join(`
-`):body,status=report&&report.characters>report.limit?"来源本身已超过请求上限；请先缩小资料范围。":"预览完成，未呼叫 API。";break}}onChange(structuredClone(settings))}catch(error2){status=error2 instanceof Error?error2.message:String(error2)}disposed||render()})()},change=event=>{let input2=event.target,reload2=!1;if(read(),revision++,preview="",host.querySelector("[data-source-preview]")?.remove(),input2.dataset.sourceMode&&target!=="default")setOverride(target,input2.dataset.sourceMode,input2.value==="custom"),entries=[],reload2=!0;else if(input2.matches("[data-book-source]"))bookConfig().source=input2.value,entries=[],reload2=!0;else if(input2.matches("[data-manual-books]"))entries=[],reload2=!0;else if(input2.dataset.sourceBook!==void 0){let book=input2.dataset.sourceBook;bookConfig().manualSelection=input2.checked?[...new Set([...bookConfig().manualSelection,book])]:bookConfig().manualSelection.filter(name=>name!==book),entries=[],reload2=!0}else if(input2.dataset.sourceEntry!==void 0){let entry=entries[Number(input2.dataset.sourceEntry)],selected2=bookConfig().enabledEntries[entry.book]??entries.filter(row=>row.book===entry.book&&row.enabled&&!entryExclusion(row)).map(row=>row.uid);bookConfig().enabledEntries[entry.book]=input2.checked?[...new Set([...selected2,entry.uid])]:selected2.filter(id=>id!==entry.uid)}else if(input2.matches("[data-source-preview-job]"))previewJob=input2.value;else if(input2.dataset.sourceGlobal!=="autoIncludeTables")return;onChange(structuredClone(settings)),render(),reload2&&loadEntries().catch(error2=>{status=`无法加载条目：${error2 instanceof Error?error2.message:String(error2)}`,render()})},filter=event=>{let input2=event.target,isBook=input2.matches("[data-book-filter]");if(!(!isBook&&!input2.matches("[data-entry-filter]"))){isBook?bookFilter=input2.value:entryFilter=input2.value;for(let row of host.querySelectorAll(isBook?".source-book":".source-entry"))row.hidden=!row.dataset.filterText.includes(input2.value.toLowerCase())}};host.addEventListener("click",click),host.addEventListener("change",change),host.addEventListener("input",filter),render(),loadEntries().catch(error2=>{disposed||(loading=!1,status=`无法加载世界书：${error2 instanceof Error?error2.message:String(error2)}`,read(),render())});let reload=()=>void loadEntries().catch(error2=>{disposed||(status=`无法加载条目：${error2 instanceof Error?error2.message:String(error2)}`,render())});return{read,setMode(kind,key,custom2){read(),setOverride(kind,key,custom2),onChange(structuredClone(settings)),(target===kind||target==="default")&&(entries=target===kind?[]:entries,render(),target===kind&&reload())},focus(kind){read();let next=settings.overrides[kind]?kind:"default";next!==target&&(target=next,entries=[],status="",render(),reload())},dispose(){disposed=!0,revision++,host.removeEventListener("click",click),host.removeEventListener("change",change),host.removeEventListener("input",filter)}}}var escape6=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]),statuses={idle:"尚未开始",active:"进行中",paused:"已暂停",waiting:"等待条件",completed:"已完成",terminated:"已终止"},jobNames=taskNames;var checked=value=>value?"checked":"",NODE_W=156,NODE_H=104,GRID_X=184,GRID_Y=136,MEDAL=58,ORIGIN_X=28,ORIGIN_Y=70,selected=value=>value?"selected":"";function mutexPath(a,b){let reach=NODE_W/2+MEDAL/2+6,midA=a.y+MEDAL/2,midB=b.y+MEDAL/2;if(b.x>=a.x+NODE_W){let x1=a.x+reach,x2=b.x+NODE_W-reach;if(a.y===b.y)return`M${x1} ${midA}H${x2}`;let bend=Math.max(24,(x2-x1)/2);return`M${x1} ${midA}C${x1+bend} ${midA} ${x2-bend} ${midB} ${x2} ${midB}`}let side=Math.max(a.x,b.x)+reach+22;return`M${a.x+reach} ${midA}H${side}V${midB}H${b.x+reach}`}function mountUI(controller,doc2,preview){let host=doc2.createElement("div");host.lang="zh-Hans",host.id="national-focus-root",doc2.body.append(host);let root=host.attachShadow({mode:"open"});root.innerHTML=`<style>${style_default}</style><button class="orb" title="开启国策树" aria-label="开启国策树">${icon("eagle")}<span class="count" hidden></span><span class="orb-letter" hidden aria-hidden="true">函</span></button><section class="shell" aria-label="国策树面板" hidden></section><div class="modal-backdrop" hidden></div>`;let shell=root.querySelector(".shell"),orb=root.querySelector(".orb"),backdrop=root.querySelector(".modal-backdrop"),rendered,countryId="",nodeId="",query="",branch="",collapsed=new Set,positions=new Map,centeredCountry="",drawerDrawn=!1,seenStates=new Map,shownTab="",tabsObserver,zoom=.85,pan={x:45,y:45},detailsOpen=!1,routesOpen=(doc2.defaultView?.innerWidth??1200)>760,nationMore=!1,focusSeen=new Map,openPops=new Set,open2=controller.platform.demo,modal="",previousFocus=null,draft=structuredClone(controller.config),settingsTab="general",removing="",importing=null,treeNotice="",failuresSeen=new Set,lockConfirm="",eventFilter="all",eventCountry="",letterNation="",demoLetter=null,demoRollback=null,demoRepair=null,letterSealedAt=0,letterKey="",unsub=()=>{},treeSize={width:1600,height:1e3},orbDragged=!1,apiPanel,sourcePanel,taskPanel,orbPointer=null,view=doc2.defaultView,ORB_KEY="national-focus.orb.v1";function loadOrb(){try{let raw=JSON.parse(view.localStorage.getItem(ORB_KEY)??"{}");return raw&&typeof raw=="object"?raw:{}}catch{return{}}}function saveOrb(){try{view.localStorage.setItem(ORB_KEY,JSON.stringify({...orbAt,collapsed:hudCollapsed}))}catch{}}let stored=loadOrb(),orbAt=Number.isFinite(stored.left)&&Number.isFinite(stored.top)?{left:stored.left,top:stored.top}:null,hudCollapsed=stored.collapsed===!0,orbSize=()=>orb.offsetWidth||60;function orbBox(){let size=orbSize(),width=doc2.documentElement.clientWidth,height=doc2.documentElement.clientHeight,at=orbAt??{left:width-24-size,top:height-24-size};return{left:Math.max(0,Math.min(width-size,at.left)),top:Math.max(0,Math.min(height-size,at.top)),size}}function applyOrb(){if(!orbAt)return;let box=orbBox();Object.assign(orb.style,{right:"auto",bottom:"auto",left:`${box.left}px`,top:`${box.top}px`})}applyOrb();let dragHandle=null;function beginDrag(event,handle){let box=orbBox();dragHandle=handle,orbPointer={x:event.clientX,y:event.clientY,left:box.left,top:box.top},orbDragged=!1,handle.setPointerCapture(event.pointerId)}function dragMove(event){if(!orbPointer)return;let dx=event.clientX-orbPointer.x,dy=event.clientY-orbPointer.y;Math.hypot(dx,dy)>6&&(orbDragged=!0),orbDragged&&(orbAt={left:orbPointer.left+dx,top:orbPointer.top+dy},orbAt={left:orbBox().left,top:orbBox().top},applyOrb(),hud.place())}function dragEnd(cancelled){orbPointer&&orbDragged&&saveOrb(),orbPointer=null,dragHandle!==orb?orbDragged=!1:cancelled&&(orbDragged=!0),dragHandle=null}orb.style.touchAction="none",orb.addEventListener("pointerdown",event=>beginDrag(event,orb));let hud=mountHud({root,doc:doc2,controller,names:taskNames,message:job=>jobMessage(job),anchor:orbBox,drag:beginDrag,openLog:()=>showJobs(),collapsed:hudCollapsed,onCollapse:value=>{hudCollapsed=value,saveOrb()}});for(let handle of[orb,hud.element.querySelector(".hud-head")])handle.style.touchAction="none",handle.addEventListener("pointermove",dragMove),handle.addEventListener("pointerup",()=>dragEnd(!1)),handle.addEventListener("pointercancel",()=>dragEnd(!0));let onResize=()=>applyOrb(),clock=setInterval(()=>{if(!open2||!controller.jobs.some(job=>job.state==="running"))return;let status=shell.querySelector(".status-jobs");status&&(status.outerHTML=renderTaskSummary()),updateModalJobs();for(let span2 of backdrop.querySelectorAll(".job-elapsed[data-started]"))span2.textContent=`已执行 ${elapsed(Date.now()-Number(span2.dataset.started))}`},1e3);view.addEventListener("resize",onResize);function jobMessage(job){return job.message}function currentCountry(){let state=controller.state;if(state)return state.countries[countryId]||(countryId=Object.keys(state.countries)[0]??""),state.countries[countryId]}async function action(operation){try{await operation()}catch(error2){controller.report(error2)}}function openDetails(){detailsOpen=!0,(shell.querySelector(".stage")?.clientWidth??0)<1200&&(routesOpen=!1)}function branchStats(country){return[...new Set(Object.values(country.nodes).map(n=>n.branch))].map(name=>{let members2=Object.values(country.nodes).filter(n=>n.branch===name);return{name,total:members2.length,done:members2.filter(n=>country.progress[n.id].status==="completed").length,active:members2.some(n=>n.id===country.current)}})}function render(jobsOnly=!1){shell.hidden=!open2,orb.hidden=open2;let busy=controller.jobs.filter(j=>["running","queued"].includes(j.state)).length,badge=root.querySelector(".count");badge.hidden=busy===0,badge.textContent=String(busy);let letter=letterLook(reception());if(root.querySelector(".orb-letter").hidden=!letter||letter.tone!=="pending",hud.suppress(open2),hud.update(),!open2)return;let country=currentCountry(),state=controller.state;if(jobsOnly&&rendered?.state===state&&rendered.config===controller.config&&rendered.error===controller.error){let taskButton=shell.querySelector('.command [data-action="jobs"]');taskButton&&(taskButton.outerHTML=renderTaskButton(busy));let status=shell.querySelector(".status-jobs");status&&(status.outerHTML=renderTaskSummary());let seal=shell.querySelector(".letter-slot");seal&&(seal.outerHTML=renderLetterButton());let rollback=shell.querySelector(".rollback-slot");rollback&&(rollback.outerHTML=renderRollback()),refreshLetter();let note=shell.querySelector(".period-note");if(country&&note){let text2=periodNote(country,controller.jobs);note.textContent=text2,note.title=text2}updateTaskWindows();return}let countries=state?Object.values(state.countries):[];country&&centeredCountry&&centeredCountry!==`${country.id}:${country.period.number}`&&(query="",branch="",collapsed.clear()),country&&!country.nodes[nodeId]&&(nodeId=country.current||Object.keys(country.nodes)[0]);let controlLabel=c=>c.enabled?c.calibration?"待校准":c.control==="player"?"玩家选策":"AI 演化":"已停用",tabs=countries.map(c=>`<button class="nation-tab ${c.id===countryId?"active":""} ${c.control}" data-country="${escape6(c.id)}" title="${escape6(c.name)}" aria-pressed="${c.id===countryId}"><span class="tab-crest">${icon(c.control==="player"?"eagle":"crown")}</span><span class="tab-copy"><strong>${escape6(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`).join(""),command=`<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map(c=>`<option value="${escape6(c.id)}" ${selected(c.id===countryId)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo?'<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>':""}${dateChip(state)}${renderLetterButton()}${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`,error2=controller.error?`<div class="error-banner" role="alert"><span>${escape6(controller.error)}</span><button data-action="refresh">重新读取</button></div>`:"",body;if(country&&state){let current=country.current?country.nodes[country.current]:void 0,currentProgress=current?country.progress[current.id]:void 0,percent=current&&currentProgress?Math.min(100,Math.round(currentProgress.days/current.days*100)):0,daysText=n=>Number.isInteger(n)?String(n):n.toFixed(1),focusKey=current&&currentProgress?`${current.id}:${currentProgress.status}`:"",seen=focusSeen.get(country.id);(!seen||seen.key!==focusKey)&&focusSeen.set(country.id,{key:focusKey,at:seen?Date.now():0});let flareAge=Date.now()-(focusSeen.get(country.id)?.at??0),flaring=focusKey!==""&&flareAge<2200,focusGauge;if(current&&currentProgress){let status=currentProgress.status,left=daysText(Math.max(0,current.days-currentProgress.days)),days=`<small>余</small><strong>${left}</strong><small>日</small>`,num=status==="waiting"?'<span class="focus-word">待成果</span>':status==="paused"?`<span class="focus-word">暂停 ·</span>${days}`:status==="active"?days:`<span class="focus-word">${statuses[status]}</span>`,detail=`${current.name} · ${status==="waiting"?"工期已满，等待成果":statuses[status]} · ${daysText(currentProgress.days)} / ${current.days} 日${status==="waiting"?"":` · 尚余 ${left} 日`}`;focusGauge=`<button class="gauge focus-gauge ${status}${flaring?" flare":""}"${flaring?` style="--flare-at:-${flareAge}ms"`:""} data-action="open-current" title="${escape6(detail)}" aria-label="主国策：${escape6(detail)}，查看详情"><span class="gauge-head"><small class="focus-label"><i class="focus-dot"></i>主国策</small><span class="focus-name">${escape6(current.name)}</span><span class="focus-num">${num}</span></span><span class="gauge-track"><i style="width:${percent}%"></i></span></button>`}else focusGauge=`<div class="gauge focus-gauge empty" title="${country.control==="player"?"在树上点击可开始的国策":"下次局势更新时依情势选策"}"><span class="gauge-head"><small class="focus-label"><i class="focus-dot"></i>主国策</small><span class="focus-name">${country.control==="player"?"尚未选定":"AI 评估中"}</span><span class="focus-num"></span></span><span class="gauge-track"></span></div>`;let gauge=(label2,value,kind)=>`<div class="gauge ${kind}" role="meter" aria-label="${label2}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><div class="gauge-head"><small>${label2}</small><strong>${value}</strong></div><div class="gauge-track"><i style="width:${value}%"></i></div></div>`,stats=branchStats(country),total=Object.keys(country.nodes).length,doneAll=stats.reduce((sum,b)=>sum+b.done,0),routes=`<aside class="routes ${routesOpen?"open":""}" aria-label="路线导览"><div class="routes-head"><strong>路线</strong><small>${doneAll} / ${total} 完成</small><button class="ghost" data-action="routes" aria-label="收起路线面板">‹</button></div><div class="search-row"><label><span class="sr">搜索国策</span><input id="focus-search" placeholder="搜索国策名称或内容" value="${escape6(query)}"></label><button data-action="search-next">下一项</button></div><ul class="route-list">${stats.map(b=>`<li class="${b.name===branch?"active":""} ${collapsed.has(b.name)?"folded":""}"><button class="route-jump" data-jump-branch="${escape6(b.name)}"><span class="route-name">${b.active?'<i class="route-live" title="主国策所在路线"></i>':""}${escape6(b.name)}</span><span class="route-count">${b.done}/${b.total}</span><span class="route-bar"><i style="width:${Math.round(b.done/b.total*100)}%"></i></span></button><button class="route-fold" data-fold-branch="${escape6(b.name)}" aria-label="${collapsed.has(b.name)?"展开":"收合"}${escape6(b.name)}" aria-expanded="${!collapsed.has(b.name)}" title="${collapsed.has(b.name)?"展开路线":"收合路线"}">${collapsed.has(b.name)?"＋":"−"}</button></li>`).join("")}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;body=`<section class="nation-bar ${nationMore?"more-open":""}"><div class="nation-id"><span class="nation-crest">${icon(country.control==="player"?"eagle":"crown")}</span><div class="nation-copy"><h2 title="${escape6(country.description)}">${escape6(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape6(stateTime(state,!1))}</span></small></h2>${periodLine(country,controller.jobs)}</div></div><div class="gauges">${gauge("稳定度",country.stability,"stability")}${gauge("战争支持度",country.warSupport,"war")}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control==="player")}>玩家选策</option><option value="ai" ${selected(country.control==="ai")}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
-<section class="stage ${detailsOpen?"with-drawer":""}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen?"":`<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has("legend")?"open":""}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current?"":"disabled"} title="定位主国策">◎ 主国策</button>${country.relations?.length||country.branches.some(b=>b.core)?'<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>':""}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom*100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo?`<details class="demo-pop" data-pop="demo" ${openPops.has("demo")?"open":""}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-letter">世界来函：待审</button><button data-action="demo-letter-wait">世界来函：推演中</button><button data-action="demo-letter-over">世界来函：被覆写</button><button data-action="demo-letter-broken">世界来函：可修复</button><button data-action="demo-letter-mend-failed">世界来函：修复未通过</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample?'<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>':""}<button data-action="demo-reset">重设示范</button></details>`:""}<aside class="drawer ${drawerDrawn?"open":""}" aria-label="国策详情" ${detailsOpen?"":'aria-hidden="true"'}>${detailsOpen||drawerDrawn?renderDetails(country,country.nodes[nodeId]):""}</aside></section>`}else body=`<section class="empty"><div class="empty-card">${icon("eagle")}<h2>${state?"为这个世界选择方向":"连接你的故事"}</h2><p>${state?"先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。":"国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。"}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;let tabsScroll=shell.querySelector(".nation-tabs")?.scrollLeft??0;shell.innerHTML=`${command}${error2}${renderRollback()}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country&&state?`${Object.keys(country.nodes).length} 项国策`:""}</span><button class="linkish" data-action="events">事件记录</button></footer>`,bindNationTabs(tabsScroll);let drawer=shell.querySelector(".drawer");if(drawer&&detailsOpen!==drawerDrawn&&(drawer.offsetWidth,drawer.classList.toggle("open",detailsOpen),detailsOpen||drawer.addEventListener("transitionend",()=>drawer.replaceChildren(),{once:!0})),drawerDrawn=detailsOpen,country&&(drawTree(country),bindCanvas(),bindMinimap(),centeredCountry!==`${country.id}:${country.period.number}`&&(centeredCountry=`${country.id}:${country.period.number}`,shell.querySelector(".tree")?.classList.add("entering"),overview())),modal==="period-history"&&country){let body2=backdrop.querySelector(".modal-body");body2&&(body2.innerHTML=historyBody(country))}rendered={state,config:controller.config,error:controller.error},updateTaskWindows()}function updateTaskWindows(){modal==="jobs"&&showJobs(),modal==="countries"&&showCountries(!1),updateModalJobs()}function dateChip(state){if(!state)return'<div class="date-chip"><strong>—</strong></div>';let label2=stateTime(state,!1);return`<div class="date-chip" title="${escape6(label2)}"><small>故事时间</small><strong>${escape6(label2)}</strong></div>`}function renderTaskButton(busy){let failures=unseenFailures().length;return`<button class="cmd-btn ${busy?"busy":""}" data-action="jobs" title="任务" aria-label="任务${busy?`，${busy} 项进行中`:""}${failures?`，${failures} 项失败`:""}"><span class="cmd-icon">${busy?'<i class="spinner"></i>':"☰"}</span><span class="cmd-text">任务${busy?` ${busy}`:""}</span>${failures?'<i class="alert-dot" aria-hidden="true"></i>':""}</button>`}function renderTaskSummary(){let summary=taskSummary();return`<button class="linkish status-jobs ${summary.state}" data-action="${summary.state==="letter"?"letter":"jobs"}"><i class="status-dot ${summary.state}"></i>${escape6(summary.text)}</button>`}function renderRollback(){let notice=controller.platform.demo&&demoRollback?demoRollback:controller.rollbackNotice;return notice?`<div class="rollback-slot rollback-banner" role="alert"><span class="letter-seal" aria-hidden="true">函</span><p>侦测到国策状态回退，可能由工作流重跑造成；第 ${notice.messageId} 楼接收提案后的修改可能已被覆盖。</p><button data-action="rollback-dismiss">知道了</button></div>`:'<div class="rollback-slot" hidden></div>'}function reception(){return controller.platform.demo&&demoLetter?demoLetter:controller.externalProposal}function repairState(){return controller.platform.demo&&demoLetter?demoRepair:controller.proposalRepair}function letterLook(r){switch(r.status){case"waiting":return{tone:"quiet",label:"世界推演中"};case"pending":return{tone:"pending",label:"国策提案待审"};case"overwritten":return{tone:"alert",label:"提案需重新接收"};case"expired":case"unavailable":return{tone:"muted",label:"提案未能接收"};case"rejected":return r.reason==="user_rejected"?null:{tone:"muted",label:"提案未能接收"};default:return null}}function renderLetterButton(){let r=reception(),look=letterLook(r);if(!look)return'<span class="letter-slot" hidden></span>';let why=letterReason(r)||look.label;return`<button class="cmd-btn letter-slot letter-${look.tone}" data-action="letter" title="${escape6(why)}" aria-label="世界来函：${escape6(look.label)}"><span class="letter-seal" aria-hidden="true">函</span><span class="cmd-text">${escape6(look.label)}</span></button>`}function unseenFailures(){return controller.jobs.filter(job=>job.state==="failed"&&!failuresSeen.has(job.id))}function taskSummary(){let active=controller.jobs.filter(job=>["running","queued"].includes(job.state));if(active.length){let job=active.find(item=>item.state==="running")??active[0],name=`${jobNames[job.kind]??job.kind}${job.label?`（${job.label}）`:""}`,more=active.length>1?`，另有 ${active.length-1} 项`:"",time4=job.state==="running"&&job.started?` · 已执行 ${elapsed(Date.now()-job.started)}`:"";return{text:`${name}：${jobMessage(job)}${time4}${more}`,state:"busy"}}let failed=unseenFailures().length;if(failed)return{text:`${failed} 项任务失败，点此查看`,state:"failed"};let letter=reception().status;if(letter==="pending"||letter==="overwritten")return{text:letter==="pending"?"世界来函附上国策提案，点此审阅":"提案接收后被覆写，点此重新接收",state:"letter"};let wait=controller.scheduleCoordination.status;if(wait==="prediction_wait")return{text:"预期世界排程到期，暂候国策资料登记",state:"busy"};if(wait==="proposal_wait")return{text:"已让给世界推演，等待国策提案",state:"busy"};let last=controller.jobs.find(job=>job.state==="success");return last?{text:`上次完成：${jobNames[last.kind]??last.kind} · ${last.time}`,state:""}:{text:"任务待命",state:""}}function effectText(e){return(e.when?.length?`若${e.when.map(r=>r.label).join("且")}：`:"")+effectBody(e)}function effectBody(e){return e.kind==="capability"?`${e.active?"建立／恢复":"失效"}：${e.name}`:e.kind==="commitment"?`承诺：${e.name}`:`${e.kind==="stability"?"稳定度":"战争支持度"} ${e.value>=0?"+":""}${e.value}`}function renderDetails(country,node2){if(!node2)return'<p class="muted">点击国策查看详情。</p>';let progress=country.progress[node2.id],reasons=blockers(country,node2),isCurrent=country.current===node2.id,percent=Math.min(100,Math.round(progress.days/node2.days*100)),list=items=>items.length?`<ul>${items.map(item=>`<li>${escape6(item)}</li>`).join("")}</ul>`:'<p class="muted">无</p>',route=country.branches.find(b=>b.name===node2.branch),stateClass=progress.status==="idle"&&reasons.length?"locked":progress.status==="idle"?"available":progress.status,stateLabel=stateClass==="locked"?"条件未满":stateClass==="available"?"可开始":statuses[progress.status],conditions=[...node2.requirements.map(r=>["启动",r.label]),...node2.sustain.map(r=>["持续",r.label]),...node2.outcomes.map(r=>["成果",r.label])],locking=!isCurrent&&node2.mutex?.lock==="start"&&!country.locks[node2.mutex.group]&&progress.status==="idle",rivals=locking?[...mutexRoutes(Object.values(country.nodes)).get(node2.mutex.group)??[]].filter(([route2])=>route2!==node2.mutex.route).flatMap(([,route2])=>route2.heads.map(head=>head.name)):[],startable=!(reasons.length||country.current||progress.status==="completed"),switchable=!isCurrent&&!!country.current&&!reasons.length&&progress.status!=="completed",running=country.current?country.nodes[country.current]:void 0,verb=switchable?"改选":"开始",act=switchable?"switch":"start",startButton=isCurrent?'<button data-action="pause">暂停目前国策</button>':locking&&(startable||switchable)?lockConfirm===node2.id?`<div class="lock-confirm" role="alert"><p>${verb}后会立即锁定路线，以下路线将无法再选：<strong>${rivals.map(escape6).join("、")}</strong></p><div class="row"><button class="primary" data-action="${act}">确认${verb}</button><button data-action="lock-cancel">取消</button></div></div>`:`<button class="primary" data-action="lock-ask">${verb}并锁定路线</button>`:switchable?'<button class="primary" data-action="switch">改选此国策</button>':`<button class="primary" data-action="start" ${startable?"":"disabled"}>${progress.status==="paused"?"恢复国策":progress.status==="completed"?"国策已完成":"开始此国策"}</button>`,done=progress.status==="completed",effects=`<section class="detail-section ${done?"gained":""}"><h4>${done?"已取得":"完成效果"}</h4>${list(node2.effects.map(e=>effectText(e)+(progress.by?.mode==="bypassed"&&done?"（已略过，未生效）":e.when?.length&&done?isHistoricalEvidence(progress.evidence)?"（历史承接，实际效果未记录）":progress.applied.includes(e.id)?"（已生效）":"（条件未成立，未生效）":"")))}</section>`,action2=done?doneStatus(country,node2,progress):country.control==="player"?`<div class="drawer-action ${reasons.length?"blocked":""}">${reasons.length?`<strong class="blockers-title">尚未满足</strong><ul class="blockers">${reasons.map(r=>`<li>${escape6(r)}</li>`).join("")}</ul>`:""}${startButton}${switchable&&running?`<small>会暂停「${escape6(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之后可恢复），${progress.status==="paused"?"恢复":"开始"}此国策。</small>`:""}</div>`:'<div class="drawer-action"><small>AI 依情势选择后续国策；切换为「玩家选策」即可介入。</small></div>';return`<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="关闭详情">×</button><span class="drawer-emblem">${icon(node2.icon)}</span><div><span class="drawer-branch">${escape6(node2.branch)}</span><h3>${escape6(node2.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node2.days} 日</span></div></header>
+`):body,status=report&&report.characters>report.limit?"来源本身已超过请求上限；请先缩小资料范围。":"预览完成，未呼叫 API。";break}}onChange(structuredClone(settings))}catch(error2){status=error2 instanceof Error?error2.message:String(error2)}disposed||render()})()},change=event=>{let input2=event.target,reload2=!1;if(read(),revision++,preview="",host.querySelector("[data-source-preview]")?.remove(),input2.dataset.sourceMode&&target!=="default")setOverride(target,input2.dataset.sourceMode,input2.value==="custom"),entries=[],reload2=!0;else if(input2.matches("[data-book-source]"))bookConfig().source=input2.value,entries=[],reload2=!0;else if(input2.matches("[data-manual-books]"))entries=[],reload2=!0;else if(input2.dataset.sourceBook!==void 0){let book=input2.dataset.sourceBook;bookConfig().manualSelection=input2.checked?[...new Set([...bookConfig().manualSelection,book])]:bookConfig().manualSelection.filter(name=>name!==book),entries=[],reload2=!0}else if(input2.dataset.sourceEntry!==void 0){let entry=entries[Number(input2.dataset.sourceEntry)],selected2=bookConfig().enabledEntries[entry.book]??entries.filter(row=>row.book===entry.book&&row.enabled&&!entryExclusion(row)).map(row=>row.uid);bookConfig().enabledEntries[entry.book]=input2.checked?[...new Set([...selected2,entry.uid])]:selected2.filter(id=>id!==entry.uid)}else if(input2.matches("[data-source-preview-job]"))previewJob=input2.value;else if(input2.dataset.sourceGlobal!=="autoIncludeTables")return;onChange(structuredClone(settings)),render(),reload2&&loadEntries().catch(error2=>{status=`无法加载条目：${error2 instanceof Error?error2.message:String(error2)}`,render()})},filter=event=>{let input2=event.target,isBook=input2.matches("[data-book-filter]");if(!(!isBook&&!input2.matches("[data-entry-filter]"))){isBook?bookFilter=input2.value:entryFilter=input2.value;for(let row of host.querySelectorAll(isBook?".source-book":".source-entry"))row.hidden=!row.dataset.filterText.includes(input2.value.toLowerCase())}};host.addEventListener("click",click),host.addEventListener("change",change),host.addEventListener("input",filter),render(),loadEntries().catch(error2=>{disposed||(loading=!1,status=`无法加载世界书：${error2 instanceof Error?error2.message:String(error2)}`,read(),render())});let reload=()=>void loadEntries().catch(error2=>{disposed||(status=`无法加载条目：${error2 instanceof Error?error2.message:String(error2)}`,render())});return{read,setMode(kind,key,custom2){read(),setOverride(kind,key,custom2),onChange(structuredClone(settings)),(target===kind||target==="default")&&(entries=target===kind?[]:entries,render(),target===kind&&reload())},focus(kind){read();let next=settings.overrides[kind]?kind:"default";next!==target&&(target=next,entries=[],status="",render(),reload())},dispose(){disposed=!0,revision++,host.removeEventListener("click",click),host.removeEventListener("change",change),host.removeEventListener("input",filter)}}}var escape6=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]),statuses={idle:"尚未开始",active:"进行中",paused:"已暂停",waiting:"等待条件",completed:"已完成",terminated:"已终止"},jobNames=taskNames;var checked=value=>value?"checked":"",NODE_W=156,NODE_H=104,GRID_X=184,GRID_Y=136,MEDAL=58,ORIGIN_X=28,ORIGIN_Y=70,selected=value=>value?"selected":"";function mutexPath(a,b){let reach=NODE_W/2+MEDAL/2+6,midA=a.y+MEDAL/2,midB=b.y+MEDAL/2;if(b.x>=a.x+NODE_W){let x1=a.x+reach,x2=b.x+NODE_W-reach;if(a.y===b.y)return`M${x1} ${midA}H${x2}`;let bend=Math.max(24,(x2-x1)/2);return`M${x1} ${midA}C${x1+bend} ${midA} ${x2-bend} ${midB} ${x2} ${midB}`}let side=Math.max(a.x,b.x)+reach+22;return`M${a.x+reach} ${midA}H${side}V${midB}H${b.x+reach}`}function mountUI(controller,doc2,preview){let host=doc2.createElement("div");host.lang="zh-Hans",host.id="national-focus-root",doc2.body.append(host);let root=host.attachShadow({mode:"open"});root.innerHTML=`<style>${style_default}</style><button class="orb" title="开启国策树" aria-label="开启国策树">${icon("eagle")}<span class="count" hidden></span><span class="orb-letter" hidden aria-hidden="true">函</span></button><section class="shell" aria-label="国策树面板" hidden></section><div class="modal-backdrop" hidden></div>`;let shell=root.querySelector(".shell"),orb=root.querySelector(".orb"),backdrop=root.querySelector(".modal-backdrop"),rendered,countryId="",nodeId="",query="",branch="",collapsed=new Set,positions=new Map,centeredCountry="",drawerDrawn=!1,seenStates=new Map,shownTab="",tabsObserver,zoom=.85,pan={x:45,y:45},detailsOpen=!1,routesOpen=(doc2.defaultView?.innerWidth??1200)>760,nationMore=!1,focusSeen=new Map,openPops=new Set,open2=controller.platform.demo,modal="",previousFocus=null,draft=structuredClone(controller.config),settingsTab="general",removing="",importing=null,treeNotice="",failuresSeen=new Set,lockConfirm="",eventFilter="all",eventCountry="",letterNation="",demoLetter=null,demoRollback=null,demoRepair=null,letterSealedAt=0,letterKey="",unsub=()=>{},treeSize={width:1600,height:1e3},orbDragged=!1,apiPanel,sourcePanel,taskPanel,orbPointer=null,view=doc2.defaultView,ORB_KEY="national-focus.orb.v1";function loadOrb(){try{let raw=JSON.parse(view.localStorage.getItem(ORB_KEY)??"{}");return raw&&typeof raw=="object"?raw:{}}catch{return{}}}function saveOrb(){try{view.localStorage.setItem(ORB_KEY,JSON.stringify({...orbAt,collapsed:hudCollapsed}))}catch{}}let stored=loadOrb(),orbAt=Number.isFinite(stored.left)&&Number.isFinite(stored.top)?{left:stored.left,top:stored.top}:null,hudCollapsed=stored.collapsed===!0,orbSize=()=>orb.offsetWidth||60;function orbBox(){let size=orbSize(),width=doc2.documentElement.clientWidth,height=doc2.documentElement.clientHeight,at=orbAt??{left:width-24-size,top:height-24-size};return{left:Math.max(0,Math.min(width-size,at.left)),top:Math.max(0,Math.min(height-size,at.top)),size}}function applyOrb(){if(!orbAt)return;let box=orbBox();Object.assign(orb.style,{right:"auto",bottom:"auto",left:`${box.left}px`,top:`${box.top}px`})}applyOrb();let dragHandle=null;function beginDrag(event,handle){let box=orbBox();dragHandle=handle,orbPointer={x:event.clientX,y:event.clientY,left:box.left,top:box.top},orbDragged=!1,handle.setPointerCapture(event.pointerId)}function dragMove(event){if(!orbPointer)return;let dx=event.clientX-orbPointer.x,dy=event.clientY-orbPointer.y;Math.hypot(dx,dy)>6&&(orbDragged=!0),orbDragged&&(orbAt={left:orbPointer.left+dx,top:orbPointer.top+dy},orbAt={left:orbBox().left,top:orbBox().top},applyOrb(),hud.place())}function dragEnd(cancelled){orbPointer&&orbDragged&&saveOrb(),orbPointer=null,dragHandle!==orb?orbDragged=!1:cancelled&&(orbDragged=!0),dragHandle=null}orb.style.touchAction="none",orb.addEventListener("pointerdown",event=>beginDrag(event,orb));let hud=mountHud({root,doc:doc2,controller,names:taskNames,message:job=>jobMessage(job),anchor:orbBox,drag:beginDrag,openLog:()=>showJobs(),collapsed:hudCollapsed,onCollapse:value=>{hudCollapsed=value,saveOrb()}});for(let handle of[orb,hud.element.querySelector(".hud-head")])handle.style.touchAction="none",handle.addEventListener("pointermove",dragMove),handle.addEventListener("pointerup",()=>dragEnd(!1)),handle.addEventListener("pointercancel",()=>dragEnd(!0));let onResize=()=>applyOrb(),clock=setInterval(()=>{if(!open2||!controller.jobs.some(job=>job.state==="running"))return;let status=shell.querySelector(".status-jobs");status&&(status.outerHTML=renderTaskSummary()),updateModalJobs();for(let span2 of backdrop.querySelectorAll(".job-elapsed[data-started]"))span2.textContent=`已执行 ${elapsed(Date.now()-Number(span2.dataset.started))}`},1e3);view.addEventListener("resize",onResize);function jobMessage(job){return job.message}function currentCountry(){let state=controller.state;if(state)return state.countries[countryId]||(countryId=Object.keys(state.countries)[0]??""),state.countries[countryId]}async function action(operation){try{await operation()}catch(error2){controller.report(error2)}}function openDetails(){detailsOpen=!0,(shell.querySelector(".stage")?.clientWidth??0)<1200&&(routesOpen=!1)}function branchStats(country){return[...new Set(Object.values(country.nodes).map(n=>n.branch))].map(name=>{let members2=Object.values(country.nodes).filter(n=>n.branch===name);return{name,total:members2.length,done:members2.filter(n=>country.progress[n.id].status==="completed").length,active:members2.some(n=>n.id===country.current)}})}function render(jobsOnly=!1){shell.hidden=!open2,orb.hidden=open2;let busy=controller.jobs.filter(j=>["running","queued"].includes(j.state)).length,badge=root.querySelector(".count");badge.hidden=busy===0,badge.textContent=String(busy);let letter=letterLook(reception());if(root.querySelector(".orb-letter").hidden=!letter||letter.tone!=="pending",hud.suppress(open2),hud.update(),!open2)return;let country=currentCountry(),state=controller.state;if(jobsOnly&&rendered?.state===state&&rendered.config===controller.config&&rendered.error===controller.error){let taskButton=shell.querySelector('.command [data-action="jobs"]');taskButton&&(taskButton.outerHTML=renderTaskButton(busy));let status=shell.querySelector(".status-jobs");status&&(status.outerHTML=renderTaskSummary());let seal=shell.querySelector(".letter-slot");seal&&(seal.outerHTML=renderLetterButton());let rollback=shell.querySelector(".rollback-slot");rollback&&(rollback.outerHTML=renderRollback()),refreshLetter();let note=shell.querySelector(".period-note");if(country&&note){let text2=periodNote(country,controller.jobs);note.textContent=text2,note.title=text2}updateTaskWindows();return}let countries=state?Object.values(state.countries):[];country&&centeredCountry&&centeredCountry!==`${country.id}:${country.period.number}`&&(query="",branch="",collapsed.clear()),country&&!country.nodes[nodeId]&&(nodeId=country.current||Object.keys(country.nodes)[0]);let controlLabel=c=>c.enabled?c.calibration?"待校准":c.control==="player"?"玩家选策":"AI 演化":"已停用",tabs=countries.map(c=>`<button class="nation-tab ${c.id===countryId?"active":""} ${c.control}" data-country="${escape6(c.id)}" title="${escape6(c.name)}" aria-pressed="${c.id===countryId}"><span class="tab-crest">${icon(c.control==="player"?"eagle":"crown")}</span><span class="tab-copy"><strong>${escape6(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`).join(""),command=`<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon("eagle")}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map(c=>`<option value="${escape6(c.id)}" ${selected(c.id===countryId)}>${escape6(c.name)}</option>`).join("")}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo?'<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>':""}${dateChip(state)}${renderLetterButton()}${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`,error2=controller.error?`<div class="error-banner" role="alert"><span>${escape6(controller.error)}</span><button data-action="refresh">重新读取</button></div>`:"",readOnly=controller.readOnly?`<div class="readonly-banner" role="status" title="${escape6(controller.readOnly.reason)}"><span class="letter-seal" aria-hidden="true">阅</span><p>只读：显示第 ${controller.readOnly.messageId} 楼（最近一则 AI 回复）的国策。本楼 AI 回复完成后，才能选择国策或更新局势。</p></div>`:"",body;if(country&&state){let current=country.current?country.nodes[country.current]:void 0,currentProgress=current?country.progress[current.id]:void 0,percent=current&&currentProgress?Math.min(100,Math.round(currentProgress.days/current.days*100)):0,daysText=n=>Number.isInteger(n)?String(n):n.toFixed(1),focusKey=current&&currentProgress?`${current.id}:${currentProgress.status}`:"",seen=focusSeen.get(country.id);(!seen||seen.key!==focusKey)&&focusSeen.set(country.id,{key:focusKey,at:seen?Date.now():0});let flareAge=Date.now()-(focusSeen.get(country.id)?.at??0),flaring=focusKey!==""&&flareAge<2200,focusGauge;if(current&&currentProgress){let status=currentProgress.status,left=daysText(Math.max(0,current.days-currentProgress.days)),days=`<small>余</small><strong>${left}</strong><small>日</small>`,num=status==="waiting"?'<span class="focus-word">待成果</span>':status==="paused"?`<span class="focus-word">暂停 ·</span>${days}`:status==="active"?days:`<span class="focus-word">${statuses[status]}</span>`,detail=`${current.name} · ${status==="waiting"?"工期已满，等待成果":statuses[status]} · ${daysText(currentProgress.days)} / ${current.days} 日${status==="waiting"?"":` · 尚余 ${left} 日`}`;focusGauge=`<button class="gauge focus-gauge ${status}${flaring?" flare":""}"${flaring?` style="--flare-at:-${flareAge}ms"`:""} data-action="open-current" title="${escape6(detail)}" aria-label="主国策：${escape6(detail)}，查看详情"><span class="gauge-head"><small class="focus-label"><i class="focus-dot"></i>主国策</small><span class="focus-name">${escape6(current.name)}</span><span class="focus-num">${num}</span></span><span class="gauge-track"><i style="width:${percent}%"></i></span></button>`}else focusGauge=`<div class="gauge focus-gauge empty" title="${country.control==="player"?"在树上点击可开始的国策":"下次局势更新时依情势选策"}"><span class="gauge-head"><small class="focus-label"><i class="focus-dot"></i>主国策</small><span class="focus-name">${country.control==="player"?"尚未选定":"AI 评估中"}</span><span class="focus-num"></span></span><span class="gauge-track"></span></div>`;let gauge=(label2,value,kind)=>`<div class="gauge ${kind}" role="meter" aria-label="${label2}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><div class="gauge-head"><small>${label2}</small><strong>${value}</strong></div><div class="gauge-track"><i style="width:${value}%"></i></div></div>`,stats=branchStats(country),total=Object.keys(country.nodes).length,doneAll=stats.reduce((sum,b)=>sum+b.done,0),routes=`<aside class="routes ${routesOpen?"open":""}" aria-label="路线导览"><div class="routes-head"><strong>路线</strong><small>${doneAll} / ${total} 完成</small><button class="ghost" data-action="routes" aria-label="收起路线面板">‹</button></div><div class="search-row"><label><span class="sr">搜索国策</span><input id="focus-search" placeholder="搜索国策名称或内容" value="${escape6(query)}"></label><button data-action="search-next">下一项</button></div><ul class="route-list">${stats.map(b=>`<li class="${b.name===branch?"active":""} ${collapsed.has(b.name)?"folded":""}"><button class="route-jump" data-jump-branch="${escape6(b.name)}"><span class="route-name">${b.active?'<i class="route-live" title="主国策所在路线"></i>':""}${escape6(b.name)}</span><span class="route-count">${b.done}/${b.total}</span><span class="route-bar"><i style="width:${Math.round(b.done/b.total*100)}%"></i></span></button><button class="route-fold" data-fold-branch="${escape6(b.name)}" aria-label="${collapsed.has(b.name)?"展开":"收合"}${escape6(b.name)}" aria-expanded="${!collapsed.has(b.name)}" title="${collapsed.has(b.name)?"展开路线":"收合路线"}">${collapsed.has(b.name)?"＋":"−"}</button></li>`).join("")}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;body=`<section class="nation-bar ${nationMore?"more-open":""}"><div class="nation-id"><span class="nation-crest">${icon(country.control==="player"?"eagle":"crown")}</span><div class="nation-copy"><h2 title="${escape6(country.description)}">${escape6(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape6(stateTime(state,!1))}</span></small></h2>${periodLine(country,controller.jobs)}</div></div><div class="gauges">${gauge("稳定度",country.stability,"stability")}${gauge("战争支持度",country.warSupport,"war")}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control==="player")}>玩家选策</option><option value="ai" ${selected(country.control==="ai")}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
+<section class="stage ${detailsOpen?"with-drawer":""}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen?"":`<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has("legend")?"open":""}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current?"":"disabled"} title="定位主国策">◎ 主国策</button>${country.relations?.length||country.branches.some(b=>b.core)?'<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>':""}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom*100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo?`<details class="demo-pop" data-pop="demo" ${openPops.has("demo")?"open":""}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-letter">世界来函：待审</button><button data-action="demo-letter-wait">世界来函：推演中</button><button data-action="demo-letter-over">世界来函：被覆写</button><button data-action="demo-letter-broken">世界来函：可修复</button><button data-action="demo-letter-mend-failed">世界来函：修复未通过</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample?'<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>':""}<button data-action="demo-reset">重设示范</button></details>`:""}<aside class="drawer ${drawerDrawn?"open":""}" aria-label="国策详情" ${detailsOpen?"":'aria-hidden="true"'}>${detailsOpen||drawerDrawn?renderDetails(country,country.nodes[nodeId]):""}</aside></section>`}else body=`<section class="empty"><div class="empty-card">${icon("eagle")}<h2>${state?"为这个世界选择方向":"连接你的故事"}</h2><p>${state?"先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。":"国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。"}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;let tabsScroll=shell.querySelector(".nation-tabs")?.scrollLeft??0;if(shell.innerHTML=`${command}${error2}${readOnly}${renderRollback()}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country&&state?`${Object.keys(country.nodes).length} 项国策`:""}</span><button class="linkish" data-action="events">事件记录</button></footer>`,bindNationTabs(tabsScroll),controller.readOnly)for(let control of shell.querySelectorAll('[data-action="update"], [data-action="start"], [data-action="pause"], [data-action="switch"], [data-action="lock-ask"], #country-control'))control.disabled=!0,control.title="只读：等本楼 AI 回复完成";let drawer=shell.querySelector(".drawer");if(drawer&&detailsOpen!==drawerDrawn&&(drawer.offsetWidth,drawer.classList.toggle("open",detailsOpen),detailsOpen||drawer.addEventListener("transitionend",()=>drawer.replaceChildren(),{once:!0})),drawerDrawn=detailsOpen,country&&(drawTree(country),bindCanvas(),bindMinimap(),centeredCountry!==`${country.id}:${country.period.number}`&&(centeredCountry=`${country.id}:${country.period.number}`,shell.querySelector(".tree")?.classList.add("entering"),overview())),modal==="period-history"&&country){let body2=backdrop.querySelector(".modal-body");body2&&(body2.innerHTML=historyBody(country))}rendered={state,config:controller.config,error:controller.error},updateTaskWindows()}function updateTaskWindows(){modal==="jobs"&&showJobs(),modal==="countries"&&showCountries(!1),updateModalJobs()}function dateChip(state){if(!state)return'<div class="date-chip"><strong>—</strong></div>';let label2=stateTime(state,!1);return`<div class="date-chip" title="${escape6(label2)}"><small>故事时间</small><strong>${escape6(label2)}</strong></div>`}function renderTaskButton(busy){let failures=unseenFailures().length;return`<button class="cmd-btn ${busy?"busy":""}" data-action="jobs" title="任务" aria-label="任务${busy?`，${busy} 项进行中`:""}${failures?`，${failures} 项失败`:""}"><span class="cmd-icon">${busy?'<i class="spinner"></i>':"☰"}</span><span class="cmd-text">任务${busy?` ${busy}`:""}</span>${failures?'<i class="alert-dot" aria-hidden="true"></i>':""}</button>`}function renderTaskSummary(){let summary=taskSummary();return`<button class="linkish status-jobs ${summary.state}" data-action="${summary.state==="letter"?"letter":"jobs"}"><i class="status-dot ${summary.state}"></i>${escape6(summary.text)}</button>`}function renderRollback(){let notice=controller.platform.demo&&demoRollback?demoRollback:controller.rollbackNotice;return notice?`<div class="rollback-slot rollback-banner" role="alert"><span class="letter-seal" aria-hidden="true">函</span><p>侦测到国策状态回退，可能由工作流重跑造成；第 ${notice.messageId} 楼接收提案后的修改可能已被覆盖。</p><button data-action="rollback-dismiss">知道了</button></div>`:'<div class="rollback-slot" hidden></div>'}function reception(){return controller.platform.demo&&demoLetter?demoLetter:controller.externalProposal}function repairState(){return controller.platform.demo&&demoLetter?demoRepair:controller.proposalRepair}function letterLook(r){switch(r.status){case"waiting":return{tone:"quiet",label:"世界推演中"};case"pending":return{tone:"pending",label:"国策提案待审"};case"overwritten":return{tone:"alert",label:"提案需重新接收"};case"expired":case"unavailable":return{tone:"muted",label:"提案未能接收"};case"rejected":return r.reason==="user_rejected"?null:{tone:"muted",label:"提案未能接收"};default:return null}}function renderLetterButton(){let r=reception(),look=letterLook(r);if(!look)return'<span class="letter-slot" hidden></span>';let why=letterReason(r)||look.label;return`<button class="cmd-btn letter-slot letter-${look.tone}" data-action="letter" title="${escape6(why)}" aria-label="世界来函：${escape6(look.label)}"><span class="letter-seal" aria-hidden="true">函</span><span class="cmd-text">${escape6(look.label)}</span></button>`}function unseenFailures(){return controller.jobs.filter(job=>job.state==="failed"&&!failuresSeen.has(job.id))}function taskSummary(){let active=controller.jobs.filter(job=>["running","queued"].includes(job.state));if(active.length){let job=active.find(item=>item.state==="running")??active[0],name=`${jobNames[job.kind]??job.kind}${job.label?`（${job.label}）`:""}`,more=active.length>1?`，另有 ${active.length-1} 项`:"",time4=job.state==="running"&&job.started?` · 已执行 ${elapsed(Date.now()-job.started)}`:"";return{text:`${name}：${jobMessage(job)}${time4}${more}`,state:"busy"}}let failed=unseenFailures().length;if(failed)return{text:`${failed} 项任务失败，点此查看`,state:"failed"};let letter=reception().status;if(letter==="pending"||letter==="overwritten")return{text:letter==="pending"?"世界来函附上国策提案，点此审阅":"提案接收后被覆写，点此重新接收",state:"letter"};let wait=controller.scheduleCoordination.status;if(wait==="prediction_wait")return{text:"预期世界排程到期，暂候国策资料登记",state:"busy"};if(wait==="proposal_wait")return{text:"已让给世界推演，等待国策提案",state:"busy"};let last=controller.jobs.find(job=>job.state==="success");return last?{text:`上次完成：${jobNames[last.kind]??last.kind} · ${last.time}`,state:""}:{text:"任务待命",state:""}}function effectText(e){return(e.when?.length?`若${e.when.map(r=>r.label).join("且")}：`:"")+effectBody(e)}function effectBody(e){return e.kind==="capability"?`${e.active?"建立／恢复":"失效"}：${e.name}`:e.kind==="commitment"?`承诺：${e.name}`:`${e.kind==="stability"?"稳定度":"战争支持度"} ${e.value>=0?"+":""}${e.value}`}function renderDetails(country,node2){if(!node2)return'<p class="muted">点击国策查看详情。</p>';let progress=country.progress[node2.id],reasons=blockers(country,node2),isCurrent=country.current===node2.id,percent=Math.min(100,Math.round(progress.days/node2.days*100)),list=items=>items.length?`<ul>${items.map(item=>`<li>${escape6(item)}</li>`).join("")}</ul>`:'<p class="muted">无</p>',route=country.branches.find(b=>b.name===node2.branch),stateClass=progress.status==="idle"&&reasons.length?"locked":progress.status==="idle"?"available":progress.status,stateLabel=stateClass==="locked"?"条件未满":stateClass==="available"?"可开始":statuses[progress.status],conditions=[...node2.requirements.map(r=>["启动",r.label]),...node2.sustain.map(r=>["持续",r.label]),...node2.outcomes.map(r=>["成果",r.label])],locking=!isCurrent&&node2.mutex?.lock==="start"&&!country.locks[node2.mutex.group]&&progress.status==="idle",rivals=locking?[...mutexRoutes(Object.values(country.nodes)).get(node2.mutex.group)??[]].filter(([route2])=>route2!==node2.mutex.route).flatMap(([,route2])=>route2.heads.map(head=>head.name)):[],startable=!(reasons.length||country.current||progress.status==="completed"),switchable=!isCurrent&&!!country.current&&!reasons.length&&progress.status!=="completed",running=country.current?country.nodes[country.current]:void 0,verb=switchable?"改选":"开始",act=switchable?"switch":"start",startButton=isCurrent?'<button data-action="pause">暂停目前国策</button>':locking&&(startable||switchable)?lockConfirm===node2.id?`<div class="lock-confirm" role="alert"><p>${verb}后会立即锁定路线，以下路线将无法再选：<strong>${rivals.map(escape6).join("、")}</strong></p><div class="row"><button class="primary" data-action="${act}">确认${verb}</button><button data-action="lock-cancel">取消</button></div></div>`:`<button class="primary" data-action="lock-ask">${verb}并锁定路线</button>`:switchable?'<button class="primary" data-action="switch">改选此国策</button>':`<button class="primary" data-action="start" ${startable?"":"disabled"}>${progress.status==="paused"?"恢复国策":progress.status==="completed"?"国策已完成":"开始此国策"}</button>`,done=progress.status==="completed",effects=`<section class="detail-section ${done?"gained":""}"><h4>${done?"已取得":"完成效果"}</h4>${list(node2.effects.map(e=>effectText(e)+(progress.by?.mode==="bypassed"&&done?"（已略过，未生效）":e.when?.length&&done?isHistoricalEvidence(progress.evidence)?"（历史承接，实际效果未记录）":progress.applied.includes(e.id)?"（已生效）":"（条件未成立，未生效）":"")))}</section>`,action2=done?doneStatus(country,node2,progress):country.control==="player"?`<div class="drawer-action ${reasons.length?"blocked":""}">${reasons.length?`<strong class="blockers-title">尚未满足</strong><ul class="blockers">${reasons.map(r=>`<li>${escape6(r)}</li>`).join("")}</ul>`:""}${startButton}${switchable&&running?`<small>会暂停「${escape6(running.name)}」（已投入 ${country.progress[running.id].days.toFixed(1)} 日，之后可恢复），${progress.status==="paused"?"恢复":"开始"}此国策。</small>`:""}</div>`:'<div class="drawer-action"><small>AI 依情势选择后续国策；切换为「玩家选策」即可介入。</small></div>';return`<header class="drawer-head ${stateClass}"><button class="ghost drawer-close" data-action="detail-close" aria-label="关闭详情">×</button><span class="drawer-emblem">${icon(node2.icon)}</span><div><span class="drawer-branch">${escape6(node2.branch)}</span><h3>${escape6(node2.name)}</h3><span class="state-pill ${stateClass}">${stateLabel}</span><span class="days-pill">${node2.days} 日</span></div></header>
       <div class="drawer-body">${anchorNotice(country,node2)}${progress.started!==null&&progress.status!=="completed"?`<div class="drawer-progress"><div class="row between"><small>有效工期</small><strong>${progress.days.toFixed(1)} / ${node2.days} 日</strong></div><div class="bar"><i style="width:${percent}%"></i></div>${progress.evidence&&!progress.by?`<small>${escape6(progress.evidence)}</small>`:""}</div>`:""}
       ${action2}
       ${done?effects:""}
@@ -5393,7 +5438,7 @@ ${message.content.slice(0,2e4)}${message.content.length>2e4?`
       ${node2.mutex?mutexNote(country,node2):""}
       <section class="detail-section"><h4>投入与工期</h4>${list(node2.investments)}${node2.durationReason?`<details class="fold"><summary>工期理由</summary><p class="reason">${escape6(node2.durationReason)}</p></details>`:""}</section>
       ${route?`<section class="detail-section"><h4>路线抉择 · ${escape6(route.name)}</h4><p>${escape6(route.purpose)}</p><dl class="route-facts"><dt>支持者</dt><dd>${escape6(route.supporters)}</dd><dt>阻力</dt><dd>${escape6(route.opposition)}</dd><dt>取舍</dt><dd>${escape6(route.tradeoff)}</dd><dt>终点</dt><dd>${escape6(route.destination)}</dd></dl></section>`:""}
-      ${node2.reason?`<details class="detail-section fold"><summary><h4>设计依据</h4></summary><p class="reason">${escape6(node2.reason)}</p></details>`:""}</div>`}function doneStatus(country,node2,progress){let by=progress.by,when=progress.completed===null?"":` · ${storyTime(progress.completed)}`,missed=node2.effects.some(e=>e.when?.length&&!progress.applied.includes(e.id)),how=by?by.mode==="achieved"?"由事件直接达成，不经工期 · 效果已生效":"结果已由他方或局势造成，直接略过 · 效果未生效":isHistoricalEvidence(progress.evidence)?"历史承接：生成时已经完成":`依工期完成（${node2.days} 日）· ${missed?"部分效果的条件未成立":"效果已生效"}`,cause=by?`<p class="done-cause">${escape6(by.reason)}</p>${country&&controller.state?.events[by.event]?`<button class="chip" data-show-event="${escape6(by.event)}" title="在事件记录中查看">${escape6(by.title)}</button>`:`<span class="chip static">「${escape6(by.title)}」</span>`}`:"";return`<div class="drawer-status ${by?by.mode:"done"}"><span class="status-medal" aria-hidden="true">${by?.mode==="bypassed"?"⤼":"✓"}</span><div><strong>${by?by.mode==="achieved"?"事件达成":"已略过":"已完成"}${when}</strong><small>${how}</small>${cause}</div></div>`}function mutexNote(country,node2){let routes=mutexRoutes(Object.values(country.nodes)).get(node2.mutex.group),own2=routes.get(node2.mutex.route),head=own2.heads.includes(node2),others=[...routes].filter(([route])=>route!==node2.mutex.route),chips=list=>list.map(n=>`<button class="chip" data-goto="${escape6(n.id)}">${escape6(n.name)}</button>`).join(""),lock=node2.mutex.lock==="start"?"开始路线起点时即作出不可撤回的承诺":"完成路线起点后锁定其他路线";return`<section class="detail-section mutex-note"><h4>互斥路线</h4><p>${escape6(node2.mutex.reason)}</p>${others.length?`<p class="mutex-rivals"><small>${head?"本国策是这条路线的起点，与以下路线互斥：":`本国策属于「${escape6(own2.heads.map(n=>n.name).join("／"))}」开启的路线，与以下路线互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([,route])=>chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>`:"<small>这个互斥组没有其他路线，实际上不会锁定任何国策（旧版生成的资料）。</small>"}</section>`}function nodeState(country,node2){let p=country.progress[node2.id];if(p.status!=="idle")return p.status;let lock=node2.mutex?country.locks[node2.mutex.group]:void 0;return lock&&lock.route!==node2.mutex.route?"sealed":blockers(country,node2).length?"locked":"available"}function drawTree(country){let tree=shell.querySelector(".tree"),nodes=Object.values(country.nodes);positions=new Map(layoutTree(nodes,coreBranch(country)).map(n=>[n.id,{x:n.x*GRID_X/2+ORIGIN_X,y:n.y*GRID_Y+ORIGIN_Y}]));let pos=node2=>positions.get(node2.id),summaries=new Map,spans=new Map;for(let b of new Set(nodes.map(n=>n.branch))){let members2=nodes.filter(n=>n.branch===b);summaries.set(b,{x:Math.min(...members2.map(n=>pos(n).x)),y:Math.min(...members2.map(n=>pos(n).y))}),spans.set(b,{left:Math.min(...members2.map(n=>pos(n).x)),right:Math.max(...members2.map(n=>pos(n).x))+NODE_W})}let endpoint=node2=>collapsed.has(node2.branch)?summaries.get(node2.branch):pos(node2),drawn=nodes.filter(n=>!collapsed.has(n.branch)),points=[...drawn.map(pos),...[...summaries].filter(([b])=>collapsed.has(b)).map(([,p])=>p)];treeSize={width:Math.max(...points.map(p=>p.x))+NODE_W+ORIGIN_X,height:Math.max(...points.map(p=>p.y))+NODE_H+48},tree.style.width=`${treeSize.width}px`,tree.style.height=`${treeSize.height}px`;let states=new Map(nodes.map(n=>[n.id,nodeState(country,n)])),previous2=seenStates.get(country.id),fresh=new Set(previous2?nodes.filter(n=>states.get(n.id)==="completed"&&previous2.get(n.id)!=="completed").map(n=>n.id):[]);seenStates.set(country.id,states);let lines=[],edgeKeys=new Set,groups=mutexRoutes(nodes),heads=new Set,mutexLines=[];for(let routes of groups.values()){if(routes.size<2)continue;let leaders=[];for(let route of routes.values()){route.heads.forEach(head=>heads.add(head.id));let shown=route.heads.filter(head=>!collapsed.has(head.branch));shown.length&&leaders.push(shown.reduce((a,b)=>pos(a).y<pos(b).y||pos(a).y===pos(b).y&&pos(a).x<pos(b).x?a:b))}leaders.sort((a,b)=>pos(a).x-pos(b).x||pos(a).y-pos(b).y);for(let i=1;i<leaders.length;i++)mutexLines.push(`<path class="connector mutex" d="${mutexPath(pos(leaders[i-1]),pos(leaders[i]))}"/>`)}for(let node2 of nodes){let target=endpoint(node2);for(let parent of node2.prerequisites.flat()){let parentNode=country.nodes[parent];if(node2.branch===parentNode.branch&&collapsed.has(node2.branch))continue;let from=endpoint(parentNode),edgeKey=`${from.x},${from.y}:${target.x},${target.y}`;if(edgeKeys.has(edgeKey))continue;edgeKeys.add(edgeKey);let completed=!collapsed.has(node2.branch)&&!collapsed.has(parentNode.branch)&&states.get(parent)==="completed",x1=from.x+NODE_W/2,y1=from.y+NODE_H,x2=target.x+NODE_W/2,y2=target.y,middle=y1+Math.max(14,(y2-y1)/2),radius=Math.min(10,Math.abs(x2-x1)/2,Math.abs(y2-middle)),direction=x2>x1?1:-1,d=x1===x2?`M${x1} ${y1}V${y2}`:`M${x1} ${y1}V${middle-radius}Q${x1} ${middle} ${x1+direction*radius} ${middle}H${x2-direction*radius}Q${x2} ${middle} ${x2} ${middle+radius}V${y2}`;lines.push(`<path class="connector ${completed?"done":""} ${node2.prerequisites.some(g=>g.length>1&&g.includes(parent))?"alternative":""} ${node2.branch!==parentNode.branch?"cross-branch":""}" d="${d}"/>`)}}lines.push(...mutexLines);let meta3=(node2,stateClass)=>{let p=country.progress[node2.id];return stateClass==="completed"?p.by?p.by.mode==="achieved"?"✓ 事件达成":"✓ 已略过":"✓ 已完成":stateClass==="active"?`${p.days.toFixed(0)} / ${node2.days} 日`:stateClass==="waiting"?"等待成果":stateClass==="paused"?`Ⅱ ${p.days.toFixed(0)} / ${node2.days} 日`:stateClass==="sealed"?"路线已锁定":stateClass==="terminated"?"已终止":`${node2.days} 日`};tree.innerHTML=`<svg class="connectors" width="${treeSize.width}" height="${treeSize.height}" aria-hidden="true">${lines.join("")}</svg>${[...spans].filter(([b])=>!collapsed.has(b)).map(([label2,span2])=>`<div class="branch-banner ${label2===branch?"active":""}" style="left:${span2.left}px;width:${span2.right-span2.left}px"><span>${escape6(label2)}</span></div>`).join("")}${[...summaries].filter(([b])=>collapsed.has(b)).map(([b,p])=>`<button class="branch-summary" data-jump-branch="${escape6(b)}" style="left:${p.x}px;top:${p.y}px;width:${NODE_W}px"><strong>${escape6(b)}</strong><span>${nodes.filter(n=>n.branch===b).length} 项国策已收合 · 点击展开</span></button>`).join("")}${drawn.map(node2=>{let p=country.progress[node2.id],stateClass=states.get(node2.id),position=pos(node2),dim=query&&!`${node2.name} ${node2.description}`.includes(query)||branch&&node2.branch!==branch,isCurrent=country.current===node2.id,ring=p.started!==null&&stateClass!=="completed"?Math.min(100,p.days/node2.days*100):0;return`<button class="node ${stateClass} ${fresh.has(node2.id)?"just-done":""} ${nodeId===node2.id&&detailsOpen?"selected":""} ${dim?"dim":""} ${isCurrent?"current":""}" data-node="${escape6(node2.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape6(node2.name)}（${escape6(meta3(node2,stateClass))}${p.by&&stateClass==="completed"?`：「${escape6(p.by.title)}」`:""}）" aria-label="${escape6(node2.name)}，${escape6(meta3(node2,stateClass))}"><span class="node-medal" style="--p:${ring}">${icon(node2.icon)}<span class="node-meta">${escape6(meta3(node2,stateClass))}</span>${node2.impact==="pivotal"?'<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>':""}${heads.has(node2.id)?'<span class="node-flag" title="互斥路线的分歧点">⇋</span>':""}</span><span class="node-plate"><span class="node-name">${escape6(node2.name)}</span></span>${anchorBadge(country,node2)}</button>`}).join("")}`;let minimap=shell.querySelector(".minimap-svg");minimap&&(minimap.setAttribute("viewBox",`0 0 ${treeSize.width} ${treeSize.height}`),minimap.innerHTML=`${drawn.map(node2=>{let p=pos(node2);return`<rect class="mm ${states.get(node2.id)} ${country.current===node2.id?"current":""}" x="${p.x}" y="${p.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/>`}).join("")}${[...summaries].filter(([b])=>collapsed.has(b)).map(([,p])=>`<rect class="mm folded" x="${p.x}" y="${p.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/>`).join("")}<rect class="mm-view" x="0" y="0" width="0" height="0"/>`);let searchButton=shell.querySelector('[data-action="search-next"]');if(searchButton){let count=query?nodes.filter(n=>`${n.name} ${n.description}`.includes(query)).length:0;searchButton.textContent=query?`下一项 (${count})`:"下一项",searchButton.disabled=count===0}transform2()}function locateNode(id){let country=currentCountry(),canvas=shell.querySelector(".canvas"),node2=country?.nodes[id];if(!canvas||!node2)return;collapsed.delete(node2.branch)&&(render(),canvas=shell.querySelector(".canvas"));let p=positions.get(id);zoom=Math.max(zoom,.8),pan={x:viewCenterX(canvas)-(p.x+NODE_W/2)*zoom,y:canvas.clientHeight/2-(p.y+NODE_H/2)*zoom},transform2()}function insets(canvas){let rect=canvas.getBoundingClientRect(),routes=shell.querySelector(".routes.open"),drawer=shell.querySelector(".drawer.open"),wide=rect.width>760,left=wide&&routes?routes.getBoundingClientRect().right-rect.left:0,right=wide&&drawer?drawer.offsetWidth:0;return{left,right,width:rect.width}}function viewCenterX(canvas){let{left,right,width}=insets(canvas);return left+(width-left-right)/2}function overview(){let canvas=shell.querySelector(".canvas"),country=currentCountry();if(!canvas||!country||!positions.size)return;let{left,right,width}=insets(canvas),xs=[...positions.values()].map(p=>p.x),ys=[...positions.values()].map(p=>p.y),minX=Math.min(...xs),span2=Math.max(...xs)+NODE_W-minX,free=width-left-right-48,scale=Math.min(.85,free/span2);if(scale<.6){zoom=.8,locateNode(country.current||nodeId);return}zoom=scale,pan={x:left+24+(free-span2*scale)/2-minX*scale,y:14-(Math.min(...ys)-ORIGIN_Y)*scale},transform2()}function jumpBranch(value){if(branch=value,collapsed.delete(value),render(),!value){fit();return}let country=currentCountry(),canvas=shell.querySelector(".canvas");if(!country||!canvas)return;let points=Object.values(country.nodes).filter(n=>n.branch===value).map(n=>positions.get(n.id));if(!points.length)return;let left=Math.min(...points.map(p=>p.x)),top=Math.min(...points.map(p=>p.y))-50,width=Math.max(...points.map(p=>p.x))-left+NODE_W,height=Math.max(...points.map(p=>p.y))-top+NODE_H;zoom=Math.max(.05,Math.min(1,(canvas.clientWidth-80)/width,(canvas.clientHeight-60)/height)),pan={x:viewCenterX(canvas)-(left+width/2)*zoom,y:30-top*zoom},transform2()}function transform2(){let tree=shell.querySelector(".tree");tree&&(tree.style.transform=`translate(${pan.x}px,${pan.y}px) scale(${zoom})`);let label2=shell.querySelector(".zoom-value");label2&&(label2.textContent=`${zoom<.1?(zoom*100).toFixed(1):Math.round(zoom*100)}%`);let canvas=shell.querySelector(".canvas"),view2=shell.querySelector(".mm-view");canvas&&view2&&(view2.setAttribute("x",String(-pan.x/zoom)),view2.setAttribute("y",String(-pan.y/zoom)),view2.setAttribute("width",String(canvas.clientWidth/zoom)),view2.setAttribute("height",String(canvas.clientHeight/zoom)))}function zoomAt(next,x,y){let clamped=Math.max(.02,Math.min(2,next));pan={x:x-(x-pan.x)*clamped/zoom,y:y-(y-pan.y)*clamped/zoom},zoom=clamped,transform2()}function fit(){let canvas=shell.querySelector(".canvas");canvas&&(zoom=Math.max(.02,Math.min(1,(canvas.clientWidth-60)/treeSize.width,(canvas.clientHeight-40)/treeSize.height)),pan={x:viewCenterX(canvas)-treeSize.width*zoom/2,y:20},transform2())}function bindMinimap(){let map3=shell.querySelector(".minimap"),canvas=shell.querySelector(".canvas");if(!map3||!canvas)return;let dragging=!1,move=event=>{let rect=map3.getBoundingClientRect(),scale=Math.max(treeSize.width/rect.width,treeSize.height/rect.height),offsetX=(rect.width-treeSize.width/scale)/2,offsetY=(rect.height-treeSize.height/scale)/2,x=(event.clientX-rect.left-offsetX)*scale,y=(event.clientY-rect.top-offsetY)*scale;pan={x:canvas.clientWidth/2-x*zoom,y:canvas.clientHeight/2-y*zoom},transform2()};map3.addEventListener("pointerdown",event=>{dragging=!0,map3.setPointerCapture(event.pointerId),move(event)}),map3.addEventListener("pointermove",event=>dragging&&move(event)),map3.addEventListener("pointerup",()=>{dragging=!1}),map3.addEventListener("pointercancel",()=>{dragging=!1})}function bindNationTabs(scrollLeft){let scroller=shell.querySelector(".nation-scroller"),tabs=scroller?.querySelector(".nation-tabs");if(!scroller||!tabs)return;let edges=()=>{let max=tabs.scrollWidth-tabs.clientWidth;scroller.classList.toggle("can-left",tabs.scrollLeft>1),scroller.classList.toggle("can-right",tabs.scrollLeft<max-1)};tabs.scrollLeft=scrollLeft;let active=tabs.querySelector(".nation-tab.active");if(active&&shownTab!==countryId){shownTab=countryId;let margin=32;active.offsetLeft<tabs.scrollLeft+margin?tabs.scrollLeft=active.offsetLeft-margin:active.offsetLeft+active.offsetWidth>tabs.scrollLeft+tabs.clientWidth-margin&&(tabs.scrollLeft=active.offsetLeft+active.offsetWidth-tabs.clientWidth+margin)}edges(),tabs.addEventListener("scroll",edges,{passive:!0}),tabsObserver?.disconnect(),typeof ResizeObserver<"u"&&(tabsObserver=new ResizeObserver(edges),tabsObserver.observe(tabs)),tabs.addEventListener("wheel",event=>{if(tabs.scrollWidth<=tabs.clientWidth)return;let delta=Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY;event.preventDefault(),tabs.scrollLeft+=event.deltaMode===1?delta*40:delta},{passive:!1});for(let arrow of scroller.querySelectorAll("[data-tabs-scroll]"))arrow.addEventListener("click",()=>{tabs.scrollBy({left:Number(arrow.dataset.tabsScroll)*tabs.clientWidth*.7,behavior:"smooth"})})}function bindCanvas(){let canvas=shell.querySelector(".canvas");for(let layer of[canvas,shell.querySelector(".stage")])layer?.addEventListener("scroll",()=>{layer.scrollLeft=0,layer.scrollTop=0});let pointers=new Map,moved=!1,startNode="";canvas.addEventListener("wheel",event=>{event.preventDefault();let rect=canvas.getBoundingClientRect();zoomAt(zoom*Math.exp(-event.deltaY*.0015),event.clientX-rect.left,event.clientY-rect.top)},{passive:!1}),canvas.addEventListener("pointerdown",event=>{event.button!==0||event.target.closest(".branch-summary")||(moved=pointers.size>0,startNode=event.target.closest("[data-node]")?.dataset.node??"",pointers.set(event.pointerId,{x:event.clientX,y:event.clientY}),canvas.setPointerCapture(event.pointerId))}),canvas.addEventListener("pointermove",event=>{let old=pointers.get(event.pointerId);if(!old)return;let next={x:event.clientX,y:event.clientY};if(Math.hypot(next.x-old.x,next.y-old.y)>2&&(moved=!0),pointers.size===1)pan.x+=next.x-old.x,pan.y+=next.y-old.y;else{let other=[...pointers.entries()].find(([id])=>id!==event.pointerId)[1],beforeDistance=Math.hypot(old.x-other.x,old.y-other.y),afterDistance=Math.hypot(next.x-other.x,next.y-other.y),rect=canvas.getBoundingClientRect();beforeDistance>1&&(zoomAt(zoom*afterDistance/beforeDistance,(other.x+old.x)/2-rect.left,(other.y+old.y)/2-rect.top),pan.x+=(next.x-old.x)/2,pan.y+=(next.y-old.y)/2)}pointers.set(event.pointerId,next),transform2()}),canvas.addEventListener("pointerup",event=>{pointers.has(event.pointerId)&&(pointers.delete(event.pointerId),canvas.releasePointerCapture(event.pointerId),!moved&&startNode&&(nodeId=startNode,openDetails(),render()))}),canvas.addEventListener("pointercancel",event=>{pointers.delete(event.pointerId)}),canvas.addEventListener("keydown",event=>{if(event.target.closest("[data-node]"))return;let delta={ArrowLeft:[40,0],ArrowRight:[-40,0],ArrowUp:[0,40],ArrowDown:[0,-40]};delta[event.key]&&(event.preventDefault(),pan.x+=delta[event.key][0],pan.y+=delta[event.key][1],transform2())})}function openModal(name,title,body,footer=""){modal||(previousFocus=root.activeElement),apiPanel?.dispose(),apiPanel=void 0,sourcePanel?.dispose(),sourcePanel=void 0,taskPanel?.dispose(),taskPanel=void 0,modal=name,backdrop.hidden=!1,backdrop.innerHTML=`<section class="modal modal-${name}" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><header class="modal-header"><h2 id="modal-title">${escape6(title)}</h2><span class="modal-task-status" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer?`<footer class="modal-footer">${footer}</footer>`:""}</section>`,backdrop.querySelector(".modal")?.focus(),updateModalJobs()}function updateModalJobs(){let pill=backdrop.querySelector(".modal-task-status");if(!pill)return;let summary=taskSummary();pill.hidden=!summary.state||modal==="jobs"||summary.state==="letter",pill.className=`modal-task-status ${summary.state}`;let html=`<i class="status-dot ${summary.state==="busy"?"busy":"failed"}"></i>${escape6(summary.text.replace("，点此查看",""))}`;pill.innerHTML!==html&&(pill.innerHTML=html)}function closeModal(){removing="",importing=null,treeNotice="",apiPanel?.dispose(),apiPanel=void 0,sourcePanel?.dispose(),sourcePanel=void 0,taskPanel?.dispose(),taskPanel=void 0,hintObserver?.disconnect(),hintObserver=void 0,backdrop.hidden=!0,backdrop.innerHTML="",modal="",previousFocus?.focus()}function importPanel(){if(!importing)return"";let existing=importing.entries.filter(entry=>controller.state?.countries[entry.tree.id]),withStatus=importing.entries.some(entry=>entry.status);return`<div class="import-panel"><h4>准备导入：${escape6(importing.file)}</h4><ul>${importing.entries.map(entry=>`<li><strong>${escape6(entry.tree.name)}</strong> <code>${escape6(entry.tree.id)}</code> · ${entry.tree.nodes.length} 项国策 · ${new Set(entry.tree.nodes.map(n=>n.branch)).size} 支分支${entry.status?" · 含进度":""}${controller.state?.countries[entry.tree.id]?' · <span class="warn">将取代现有国家</span>':""}</li>`).join("")}</ul><label class="check"><input type="checkbox" data-import-progress ${withStatus?"":"disabled"} ${checked(importing.withProgress&&withStatus)}>连同进度<small>保留文件中的进度、能力与锁定；导入后需执行「更新局势」从目前故事日校准。事件不导入。</small></label>${existing.length?`<label class="check"><input type="checkbox" data-import-replace ${checked(importing.replace)}>取代同 id 的国家（${existing.map(e=>escape6(e.tree.name)).join("、")}）<small>原有的国策树与进度会先删除。</small></label>`:""}<div class="tree-io-actions"><button class="primary" data-tree="import-confirm" ${existing.length&&!importing.replace?"disabled":""}>确认导入</button><button data-tree="import-cancel">取消</button></div></div>`}function download(name,text2){let link=doc2.createElement("a");link.href=URL.createObjectURL(new Blob([text2],{type:"application/json"})),link.download=name,doc2.body.append(link),link.click(),link.remove(),setTimeout(()=>URL.revokeObjectURL(link.href),1e3)}let stamp2=()=>new Date().toISOString().slice(0,10);function showCountries(focus=!0){let countries=controller.state?Object.values(controller.state.countries):[],busyJobs=controller.jobs.some(j=>["running","queued"].includes(j.state)),identifying=controller.jobs.some(j=>j.kind==="identify"&&["running","queued"].includes(j.state)),selectedCandidates=[...backdrop.querySelectorAll("[data-candidate]:checked")].map(e=>e.dataset.candidate),body=`${countries.length?`<h3>已建立的国家</h3>${countries.map(c=>`<div class="candidate country-row"><strong class="country-name">${escape6(c.name)}</strong>${periodControl(c)}<label class="switch-label"><input type="checkbox" data-enable="${escape6(c.id)}" ${checked(c.enabled)}>启用</label>${c.control==="player"?`<label class="switch-label" title="故事时间一次跳过很多天时，由 AI 替这个国家接著选下一项国策"><input type="checkbox" data-delegate="${escape6(c.id)}" ${checked(c.skipDelegate)}>时间跳跃时由 AI 代选</label>`:'<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${removing===c.id?`<div class="remove-confirm" role="alert"><small>删除「${escape6(c.name)}」的国策树、进度与只涉及此国的事件？会写入目前楼层；之后可从候选清单重新生成。</small><button class="danger" data-remove-confirm="${escape6(c.id)}">确认删除</button><button data-remove-cancel>取消</button></div>`:`<button data-tree-export="${escape6(c.id)}">导出</button><button class="danger" data-remove-country="${escape6(c.id)}" ${busyJobs?'disabled title="有任务进行中，请等任务结束后再删除"':""}>删除国策树</button>`}</div>`).join("")}${countries.some(c=>!c.enabled)?'<small class="muted">重新启用后，下一次局势更新会先校准现况；停用期间不累积工期。</small>':""}<div class="separator"></div>`:""}<h3>新增国家</h3><p class="muted">先从本局资料辨识国家，再勾选要生成国策树的对象。</p><button data-modal="identify" ${identifying?"disabled":""}>${identifying?"正在辨识…":"从目前资料辨识国家"}</button>${controller.candidates.map(c=>`<label class="candidate"><input type="checkbox" data-candidate="${escape6(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape6(c.name)}</strong><p>${escape6(c.description)}</p><small>${escape6(c.evidence)}</small></span></label>`).join("")}${controller.candidates.length?"":'<p class="muted">尚无待启用的候选国家。</p>'}<div class="separator"></div><details class="tree-io" ${importing||treeNotice?"open":""}><summary>国策树文件：导入与导出</summary><div class="tree-io-actions"><button data-tree="import" title="加载手写、submod 或其他聊天导出的国策树">导入国策树</button><button data-tree="export-all" ${countries.length?"":"disabled"} title="含完整进度，可用来备份或回报问题">导出全部</button><button data-tree="copy-all" ${countries.length?"":"disabled"}>复制全部 JSON</button><button data-tree="template">下载范本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice?`<p class="api-status">${escape6(treeNotice)}</p>`:""}${importPanel()}</details>`,footer=`<button data-modal="close">返回</button><button class="primary" data-modal="enable" ${selectedCandidates.length?"":"disabled"}>生成并启用选取国家</button>`;if(!focus&&modal==="countries"){let section=backdrop.querySelector(".modal-body");section&&(section.innerHTML=`${body}<div class="modal-error" role="alert"></div>`);let foot=backdrop.querySelector(".modal-footer");foot&&(foot.innerHTML=footer)}else openModal("countries","管理国家",body,footer)}function splitProblems(text2){let colon=text2.indexOf("：");if(colon<0||colon>48)return{head:text2,problems:[]};let problems=text2.slice(colon+1).split("；").map(item=>item.trim()).filter(Boolean);return problems.length>1||text2.length>90?{head:text2.slice(0,colon),problems}:{head:text2,problems:[]}}let codeText=text2=>escape6(text2).replace(/([A-Za-z_][\w.]*\[\d+\][\w.[\]]*|\b[a-z]+_[\w]+\b)/g,"<code>$1</code>"),jobIcons={running:'<i class="spinner"></i>',queued:"…",success:"✓",failed:"!",cancelled:"–"};function showJobs(){for(let job of controller.jobs)job.state==="failed"&&failuresSeen.add(job.id);let busy=controller.jobs.some(j=>["running","queued"].includes(j.state)),rows=controller.jobs.map(j=>{let text2=jobMessage(j),meta3=[j.state==="running"&&j.started?`<span class="job-elapsed" data-started="${j.started}">已执行 ${elapsed(Date.now()-j.started)}</span>`:j.started&&j.finished?`用时 ${elapsed(j.finished-j.started)}`:"",j.inputCharacters!==void 0?`请求 ${j.inputCharacters.toLocaleString()} 字符`:""].filter(Boolean).join(" · "),{head,problems}=j.state==="failed"?splitProblems(text2):{head:text2,problems:[]},list=problems.length?`<ul class="job-problems">${problems.slice(0,3).map(item=>`<li>${codeText(item)}</li>`).join("")}</ul>${problems.length>3?`<details class="job-more"><summary>另有 ${problems.length-3} 个问题</summary><ul class="job-problems">${problems.slice(3).map(item=>`<li>${codeText(item)}</li>`).join("")}</ul></details>`:""}`:"",chips=[j.route,j.time].filter(Boolean).map(chip=>`<span class="job-chip">${escape6(chip)}</span>`);return`<article class="job-card2 ${j.state}"><span class="job-icon" aria-hidden="true">${jobIcons[j.state]??""}</span><div class="job-main"><div class="job-name">${escape6(jobNames[j.kind]??j.kind)}${j.label?` · ${escape6(j.label)}`:""}${chips.join("")}</div><div class="job-sub"><b>${escape6(problems.length?`${head} · ${problems.length} 个问题`:head)}</b>${meta3?` · ${meta3}`:""}</div>${list}</div><div class="job-buttons">${["running","queued"].includes(j.state)?`<button data-cancel="${j.id}">取消</button>`:""}${j.state==="failed"?`<button class="primary" data-retry="${j.id}">重试</button>`:""}${controller.logs.some(log=>log.jobId===j.id)?`<button data-log="${j.id}">请求记录</button>`:""}</div></article>`}).join(""),body=`<div class="job-actions"><button data-modal="run-reshape" title="剧情大幅改变时，修改尚未开始的国策">评估重大改树</button><button class="danger" data-modal="cancel-all" ${busy?"":"disabled"}>取消全部任务</button></div>${rows?`<div class="job-list">${rows}</div>`:'<p class="muted">尚无任务记录。正文与一般变数更新完成后，国策任务会在背景执行，不会锁住聊天；进度显示在悬浮球上方。</p>'}${controller.config.runLog?'<p class="muted job-note">执行记录已开启：请求内容只保存在此页记忆体，重新整理即清除。</p>':""}`;modal==="jobs"?backdrop.querySelector(".modal-body").innerHTML=body:openModal("jobs","任务",body,'<button data-modal="close">返回</button>')}function highlightJson(raw){let trimmed=raw.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g,""),first=trimmed.indexOf("{"),last=trimmed.lastIndexOf("}"),value;try{value=JSON.parse(first>=0&&last>first?trimmed.slice(first,last+1):trimmed)}catch{return escape6(raw)}let pretty=JSON.stringify(value,null,2),token=/("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g,out="",at=0;for(let match of pretty.matchAll(token))out+=escape6(pretty.slice(at,match.index)),out+=match[1]?match[2]?`<span class="k">${escape6(match[1])}</span>${escape6(match[2])}`:`<span class="s">${escape6(match[1])}</span>`:`<span class="${/^[tfn]/.test(match[0])?"b":"n"}">${escape6(match[0])}</span>`,at=match.index+match[0].length;return out+escape6(pretty.slice(at))}let logTexts=[];function fillLogPart(part){let code=part.querySelector("pre[data-log-text]");if(!code||code.dataset.filled)return;let item=logTexts[Number(code.dataset.logText)];code.innerHTML=item.json?highlightJson(item.text):escape6(item.text),code.dataset.filled="1"}function showLog(jobId){let entries=controller.logs.filter(log=>log.jobId===jobId).reverse();logTexts=[];let part=(role,label2,text2,json2=!1,open3=!1)=>{if(!text2)return"";logTexts.push({text:text2,json:json2});let index=logTexts.length-1;return`<details class="log-part2" ${open3?"open":""}><summary><span class="log-role ${role.toLowerCase()}">${role}</span>${escape6(label2)}<span class="log-count">${text2.length.toLocaleString()} 字符</span><button class="log-copy" data-copy="${index}">复制</button></summary><pre class="log-code" data-log-text="${index}"></pre></details>`};openModal("log","请求记录",`<p class="muted">只供调试，不含 API 金钥。</p>${entries.map((log,i)=>{let sent=log.messages.reduce((sum,message)=>sum+message.content.length,0),chips=[log.route,`第 ${log.attempt} 次`,`${(log.durationMs/1e3).toFixed(1)} 秒`,`送出 ${sent.toLocaleString()} 字符`,`回应 ${log.output.length.toLocaleString()} 字符`,log.time].map(chip=>`<span class="job-chip">${escape6(chip)}</span>`).join("");return`<details class="log-entry" ${i===0?"open":""}><summary><span class="log-result ${log.error?"failed":"ok"}">${log.error?"✕ 失败":"✓ 格式通过"}</span><span class="log-title">${escape6(jobNames[log.kind]??log.kind)}${log.stage?` · ${escape6(log.stage)}`:""}</span><span class="log-chips">${chips}</span></summary>${log.error?`<p class="modal-error log-error">${escape6(log.error)}</p>`:""}${log.messages.map((message,index)=>part(message.role==="assistant"?"ASSISTANT":message.role.toUpperCase(),`#${index+1}${message.name?` ${message.name}`:""}`,message.content)).join("")}${part("THINK","推理内容",log.reasoning)}${part("OUTPUT","模型回应",log.output,!0,i===0)}</details>`}).join("")}`,'<button data-modal="jobs">返回任务</button>');for(let open3 of backdrop.querySelectorAll(".log-part2[open]"))fillLogPart(open3)}let newsKicker=event=>event.source.kind==="focus"?"国策事件":event.importance==="world"?"世界新闻":event.scope==="front"?"身边的消息":"各国动态";function newsEffects(state,event){let parts=event.changes.filter(change=>change.effects.length).map(change=>`${state.countries[change.country]?.name??change.country}：${change.effects.map(effectText).join("、")}`);return parts.length?parts.join("；"):"无直接影响"}function showRelations(){let country=controller.state?.countries[countryId];if(!country)return;let core=country.branches.find(b=>b.core),relations=country.relations??[],branchOf=id=>country.nodes[id]?.branch??"",reached=[...new Set(relations.filter(r=>core&&[branchOf(r.from),branchOf(r.to)].includes(core.name)).map(r=>branchOf(r.from)===core.name?branchOf(r.to):branchOf(r.from)).filter(name=>name!==core?.name))],focus=id=>`<button class="chip" data-goto="${escape6(id)}">${escape6(country.nodes[id]?.name??id)}</button><small class="rel-branch">${escape6(branchOf(id))}</small>`,independent=country.branches.filter(b=>b.independent);openModal("relations",`国策关系 · ${country.name}`,`<p class="muted">国策之间如何互相影响；每条关系下方列出实现它的规则。点国策名称可在树上定位。</p>
+      ${node2.reason?`<details class="detail-section fold"><summary><h4>设计依据</h4></summary><p class="reason">${escape6(node2.reason)}</p></details>`:""}</div>`}function doneStatus(country,node2,progress){let by=progress.by,when=progress.completed===null?"":` · ${storyTime(progress.completed)}`,missed=node2.effects.some(e=>e.when?.length&&!progress.applied.includes(e.id)),how=by?by.mode==="achieved"?"由事件直接达成，不经工期 · 效果已生效":"结果已由他方或局势造成，直接略过 · 效果未生效":isHistoricalEvidence(progress.evidence)?"历史承接：生成时已经完成":`依工期完成（${node2.days} 日）· ${missed?"部分效果的条件未成立":"效果已生效"}`,cause=by?`<p class="done-cause">${escape6(by.reason)}</p>${country&&controller.state?.events[by.event]?`<button class="chip" data-show-event="${escape6(by.event)}" title="在事件记录中查看">${escape6(by.title)}</button>`:`<span class="chip static">「${escape6(by.title)}」</span>`}`:"";return`<div class="drawer-status ${by?by.mode:"done"}"><span class="status-medal" aria-hidden="true">${by?.mode==="bypassed"?"⤼":"✓"}</span><div><strong>${by?by.mode==="achieved"?"事件达成":"已略过":"已完成"}${when}</strong><small>${how}</small>${cause}</div></div>`}function mutexNote(country,node2){let routes=mutexRoutes(Object.values(country.nodes)).get(node2.mutex.group),own2=routes.get(node2.mutex.route),head=own2.heads.includes(node2),others=[...routes].filter(([route])=>route!==node2.mutex.route),chips=list=>list.map(n=>`<button class="chip" data-goto="${escape6(n.id)}">${escape6(n.name)}</button>`).join(""),lock=node2.mutex.lock==="start"?"开始路线起点时即作出不可撤回的承诺":"完成路线起点后锁定其他路线";return`<section class="detail-section mutex-note"><h4>互斥路线</h4><p>${escape6(node2.mutex.reason)}</p>${others.length?`<p class="mutex-rivals"><small>${head?"本国策是这条路线的起点，与以下路线互斥：":`本国策属于「${escape6(own2.heads.map(n=>n.name).join("／"))}」开启的路线，与以下路线互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([,route])=>chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>`:"<small>这个互斥组没有其他路线，实际上不会锁定任何国策（旧版生成的资料）。</small>"}</section>`}function nodeState(country,node2){let p=country.progress[node2.id];if(p.status!=="idle")return p.status;let lock=node2.mutex?country.locks[node2.mutex.group]:void 0;return lock&&lock.route!==node2.mutex.route?"sealed":blockers(country,node2).length?"locked":"available"}function drawTree(country){let tree=shell.querySelector(".tree"),nodes=Object.values(country.nodes);positions=new Map(layoutTree(nodes,coreBranch(country)).map(n=>[n.id,{x:n.x*GRID_X/2+ORIGIN_X,y:n.y*GRID_Y+ORIGIN_Y}]));let pos=node2=>positions.get(node2.id),summaries=new Map,spans=new Map;for(let b of new Set(nodes.map(n=>n.branch))){let members2=nodes.filter(n=>n.branch===b);summaries.set(b,{x:Math.min(...members2.map(n=>pos(n).x)),y:Math.min(...members2.map(n=>pos(n).y))}),spans.set(b,{left:Math.min(...members2.map(n=>pos(n).x)),right:Math.max(...members2.map(n=>pos(n).x))+NODE_W})}let endpoint=node2=>collapsed.has(node2.branch)?summaries.get(node2.branch):pos(node2),drawn=nodes.filter(n=>!collapsed.has(n.branch)),points=[...drawn.map(pos),...[...summaries].filter(([b])=>collapsed.has(b)).map(([,p])=>p)];treeSize={width:Math.max(...points.map(p=>p.x))+NODE_W+ORIGIN_X,height:Math.max(...points.map(p=>p.y))+NODE_H+48},tree.style.width=`${treeSize.width}px`,tree.style.height=`${treeSize.height}px`;let states=new Map(nodes.map(n=>[n.id,nodeState(country,n)])),previous2=seenStates.get(country.id),fresh=new Set(previous2?nodes.filter(n=>states.get(n.id)==="completed"&&previous2.get(n.id)!=="completed").map(n=>n.id):[]);seenStates.set(country.id,states);let lines=[],edgeKeys=new Set,groups=mutexRoutes(nodes),heads=new Set,mutexLines=[];for(let routes of groups.values()){if(routes.size<2)continue;let leaders=[];for(let route of routes.values()){route.heads.forEach(head=>heads.add(head.id));let shown=route.heads.filter(head=>!collapsed.has(head.branch));shown.length&&leaders.push(shown.reduce((a,b)=>pos(a).y<pos(b).y||pos(a).y===pos(b).y&&pos(a).x<pos(b).x?a:b))}leaders.sort((a,b)=>pos(a).x-pos(b).x||pos(a).y-pos(b).y);for(let i=1;i<leaders.length;i++)mutexLines.push(`<path class="connector mutex" d="${mutexPath(pos(leaders[i-1]),pos(leaders[i]))}"/>`)}for(let node2 of nodes){let target=endpoint(node2);for(let parent of node2.prerequisites.flat()){let parentNode=country.nodes[parent];if(node2.branch===parentNode.branch&&collapsed.has(node2.branch))continue;let from=endpoint(parentNode),edgeKey=`${from.x},${from.y}:${target.x},${target.y}`;if(edgeKeys.has(edgeKey))continue;edgeKeys.add(edgeKey);let completed=!collapsed.has(node2.branch)&&!collapsed.has(parentNode.branch)&&states.get(parent)==="completed",x1=from.x+NODE_W/2,y1=from.y+NODE_H,x2=target.x+NODE_W/2,y2=target.y,middle=y1+Math.max(14,(y2-y1)/2),radius=Math.min(10,Math.abs(x2-x1)/2,Math.abs(y2-middle)),direction=x2>x1?1:-1,d=x1===x2?`M${x1} ${y1}V${y2}`:`M${x1} ${y1}V${middle-radius}Q${x1} ${middle} ${x1+direction*radius} ${middle}H${x2-direction*radius}Q${x2} ${middle} ${x2} ${middle+radius}V${y2}`;lines.push(`<path class="connector ${completed?"done":""} ${node2.prerequisites.some(g=>g.length>1&&g.includes(parent))?"alternative":""} ${node2.branch!==parentNode.branch?"cross-branch":""}" d="${d}"/>`)}}lines.push(...mutexLines);let meta3=(node2,stateClass)=>{let p=country.progress[node2.id];return stateClass==="completed"?p.by?p.by.mode==="achieved"?"✓ 事件达成":"✓ 已略过":"✓ 已完成":stateClass==="active"?`${p.days.toFixed(0)} / ${node2.days} 日`:stateClass==="waiting"?"等待成果":stateClass==="paused"?`Ⅱ ${p.days.toFixed(0)} / ${node2.days} 日`:stateClass==="sealed"?"路线已锁定":stateClass==="terminated"?"已终止":`${node2.days} 日`};tree.innerHTML=`<svg class="connectors" width="${treeSize.width}" height="${treeSize.height}" aria-hidden="true">${lines.join("")}</svg>${[...spans].filter(([b])=>!collapsed.has(b)).map(([label2,span2])=>`<div class="branch-banner ${label2===branch?"active":""}" style="left:${span2.left}px;width:${span2.right-span2.left}px"><span>${escape6(label2)}</span></div>`).join("")}${[...summaries].filter(([b])=>collapsed.has(b)).map(([b,p])=>`<button class="branch-summary" data-jump-branch="${escape6(b)}" style="left:${p.x}px;top:${p.y}px;width:${NODE_W}px"><strong>${escape6(b)}</strong><span>${nodes.filter(n=>n.branch===b).length} 项国策已收合 · 点击展开</span></button>`).join("")}${drawn.map(node2=>{let p=country.progress[node2.id],stateClass=states.get(node2.id),position=pos(node2),dim=query&&!`${node2.name} ${node2.description}`.includes(query)||branch&&node2.branch!==branch,isCurrent=country.current===node2.id,ring=p.started!==null&&stateClass!=="completed"?Math.min(100,p.days/node2.days*100):0;return`<button class="node ${stateClass} ${fresh.has(node2.id)?"just-done":""} ${nodeId===node2.id&&detailsOpen?"selected":""} ${dim?"dim":""} ${isCurrent?"current":""}" data-node="${escape6(node2.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape6(node2.name)}（${escape6(meta3(node2,stateClass))}${p.by&&stateClass==="completed"?`：「${escape6(p.by.title)}」`:""}）" aria-label="${escape6(node2.name)}，${escape6(meta3(node2,stateClass))}"><span class="node-medal" style="--p:${ring}">${icon(node2.icon)}<span class="node-meta">${escape6(meta3(node2,stateClass))}</span>${node2.impact==="pivotal"?'<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>':""}${heads.has(node2.id)?'<span class="node-flag" title="互斥路线的分歧点">⇋</span>':""}</span><span class="node-plate"><span class="node-name">${escape6(node2.name)}</span></span>${anchorBadge(country,node2)}</button>`}).join("")}`;let minimap=shell.querySelector(".minimap-svg");minimap&&(minimap.setAttribute("viewBox",`0 0 ${treeSize.width} ${treeSize.height}`),minimap.innerHTML=`${drawn.map(node2=>{let p=pos(node2);return`<rect class="mm ${states.get(node2.id)} ${country.current===node2.id?"current":""}" x="${p.x}" y="${p.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/>`}).join("")}${[...summaries].filter(([b])=>collapsed.has(b)).map(([,p])=>`<rect class="mm folded" x="${p.x}" y="${p.y}" width="${NODE_W}" height="${NODE_H}" rx="10"/>`).join("")}<rect class="mm-view" x="0" y="0" width="0" height="0"/>`);let searchButton=shell.querySelector('[data-action="search-next"]');if(searchButton){let count=query?nodes.filter(n=>`${n.name} ${n.description}`.includes(query)).length:0;searchButton.textContent=query?`下一项 (${count})`:"下一项",searchButton.disabled=count===0}transform2()}function locateNode(id){let country=currentCountry(),canvas=shell.querySelector(".canvas"),node2=country?.nodes[id];if(!canvas||!node2)return;collapsed.delete(node2.branch)&&(render(),canvas=shell.querySelector(".canvas"));let p=positions.get(id);zoom=Math.max(zoom,.8),pan={x:viewCenterX(canvas)-(p.x+NODE_W/2)*zoom,y:canvas.clientHeight/2-(p.y+NODE_H/2)*zoom},transform2()}function insets(canvas){let rect=canvas.getBoundingClientRect(),routes=shell.querySelector(".routes.open"),drawer=shell.querySelector(".drawer.open"),wide=rect.width>760,left=wide&&routes?routes.getBoundingClientRect().right-rect.left:0,right=wide&&drawer?drawer.offsetWidth:0;return{left,right,width:rect.width}}function viewCenterX(canvas){let{left,right,width}=insets(canvas);return left+(width-left-right)/2}function overview(){let canvas=shell.querySelector(".canvas"),country=currentCountry();if(!canvas||!country||!positions.size)return;let{left,right,width}=insets(canvas),xs=[...positions.values()].map(p=>p.x),ys=[...positions.values()].map(p=>p.y),minX=Math.min(...xs),span2=Math.max(...xs)+NODE_W-minX,free=width-left-right-48,scale=Math.min(.85,free/span2);if(scale<.6){zoom=.8,locateNode(country.current||nodeId);return}zoom=scale,pan={x:left+24+(free-span2*scale)/2-minX*scale,y:14-(Math.min(...ys)-ORIGIN_Y)*scale},transform2()}function jumpBranch(value){if(branch=value,collapsed.delete(value),render(),!value){fit();return}let country=currentCountry(),canvas=shell.querySelector(".canvas");if(!country||!canvas)return;let points=Object.values(country.nodes).filter(n=>n.branch===value).map(n=>positions.get(n.id));if(!points.length)return;let left=Math.min(...points.map(p=>p.x)),top=Math.min(...points.map(p=>p.y))-50,width=Math.max(...points.map(p=>p.x))-left+NODE_W,height=Math.max(...points.map(p=>p.y))-top+NODE_H;zoom=Math.max(.05,Math.min(1,(canvas.clientWidth-80)/width,(canvas.clientHeight-60)/height)),pan={x:viewCenterX(canvas)-(left+width/2)*zoom,y:30-top*zoom},transform2()}function transform2(){let tree=shell.querySelector(".tree");tree&&(tree.style.transform=`translate(${pan.x}px,${pan.y}px) scale(${zoom})`);let label2=shell.querySelector(".zoom-value");label2&&(label2.textContent=`${zoom<.1?(zoom*100).toFixed(1):Math.round(zoom*100)}%`);let canvas=shell.querySelector(".canvas"),view2=shell.querySelector(".mm-view");canvas&&view2&&(view2.setAttribute("x",String(-pan.x/zoom)),view2.setAttribute("y",String(-pan.y/zoom)),view2.setAttribute("width",String(canvas.clientWidth/zoom)),view2.setAttribute("height",String(canvas.clientHeight/zoom)))}function zoomAt(next,x,y){let clamped=Math.max(.02,Math.min(2,next));pan={x:x-(x-pan.x)*clamped/zoom,y:y-(y-pan.y)*clamped/zoom},zoom=clamped,transform2()}function fit(){let canvas=shell.querySelector(".canvas");canvas&&(zoom=Math.max(.02,Math.min(1,(canvas.clientWidth-60)/treeSize.width,(canvas.clientHeight-40)/treeSize.height)),pan={x:viewCenterX(canvas)-treeSize.width*zoom/2,y:20},transform2())}function bindMinimap(){let map3=shell.querySelector(".minimap"),canvas=shell.querySelector(".canvas");if(!map3||!canvas)return;let dragging=!1,move=event=>{let rect=map3.getBoundingClientRect(),scale=Math.max(treeSize.width/rect.width,treeSize.height/rect.height),offsetX=(rect.width-treeSize.width/scale)/2,offsetY=(rect.height-treeSize.height/scale)/2,x=(event.clientX-rect.left-offsetX)*scale,y=(event.clientY-rect.top-offsetY)*scale;pan={x:canvas.clientWidth/2-x*zoom,y:canvas.clientHeight/2-y*zoom},transform2()};map3.addEventListener("pointerdown",event=>{dragging=!0,map3.setPointerCapture(event.pointerId),move(event)}),map3.addEventListener("pointermove",event=>dragging&&move(event)),map3.addEventListener("pointerup",()=>{dragging=!1}),map3.addEventListener("pointercancel",()=>{dragging=!1})}function bindNationTabs(scrollLeft){let scroller=shell.querySelector(".nation-scroller"),tabs=scroller?.querySelector(".nation-tabs");if(!scroller||!tabs)return;let edges=()=>{let max=tabs.scrollWidth-tabs.clientWidth;scroller.classList.toggle("can-left",tabs.scrollLeft>1),scroller.classList.toggle("can-right",tabs.scrollLeft<max-1)};tabs.scrollLeft=scrollLeft;let active=tabs.querySelector(".nation-tab.active");if(active&&shownTab!==countryId){shownTab=countryId;let margin=32;active.offsetLeft<tabs.scrollLeft+margin?tabs.scrollLeft=active.offsetLeft-margin:active.offsetLeft+active.offsetWidth>tabs.scrollLeft+tabs.clientWidth-margin&&(tabs.scrollLeft=active.offsetLeft+active.offsetWidth-tabs.clientWidth+margin)}edges(),tabs.addEventListener("scroll",edges,{passive:!0}),tabsObserver?.disconnect(),typeof ResizeObserver<"u"&&(tabsObserver=new ResizeObserver(edges),tabsObserver.observe(tabs)),tabs.addEventListener("wheel",event=>{if(tabs.scrollWidth<=tabs.clientWidth)return;let delta=Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY;event.preventDefault(),tabs.scrollLeft+=event.deltaMode===1?delta*40:delta},{passive:!1});for(let arrow of scroller.querySelectorAll("[data-tabs-scroll]"))arrow.addEventListener("click",()=>{tabs.scrollBy({left:Number(arrow.dataset.tabsScroll)*tabs.clientWidth*.7,behavior:"smooth"})})}function bindCanvas(){let canvas=shell.querySelector(".canvas");for(let layer of[canvas,shell.querySelector(".stage")])layer?.addEventListener("scroll",()=>{layer.scrollLeft=0,layer.scrollTop=0});let pointers=new Map,moved=!1,startNode="";canvas.addEventListener("wheel",event=>{event.preventDefault();let rect=canvas.getBoundingClientRect();zoomAt(zoom*Math.exp(-event.deltaY*.0015),event.clientX-rect.left,event.clientY-rect.top)},{passive:!1}),canvas.addEventListener("pointerdown",event=>{event.button!==0||event.target.closest(".branch-summary")||(moved=pointers.size>0,startNode=event.target.closest("[data-node]")?.dataset.node??"",pointers.set(event.pointerId,{x:event.clientX,y:event.clientY}),canvas.setPointerCapture(event.pointerId))}),canvas.addEventListener("pointermove",event=>{let old=pointers.get(event.pointerId);if(!old)return;let next={x:event.clientX,y:event.clientY};if(Math.hypot(next.x-old.x,next.y-old.y)>2&&(moved=!0),pointers.size===1)pan.x+=next.x-old.x,pan.y+=next.y-old.y;else{let other=[...pointers.entries()].find(([id])=>id!==event.pointerId)[1],beforeDistance=Math.hypot(old.x-other.x,old.y-other.y),afterDistance=Math.hypot(next.x-other.x,next.y-other.y),rect=canvas.getBoundingClientRect();beforeDistance>1&&(zoomAt(zoom*afterDistance/beforeDistance,(other.x+old.x)/2-rect.left,(other.y+old.y)/2-rect.top),pan.x+=(next.x-old.x)/2,pan.y+=(next.y-old.y)/2)}pointers.set(event.pointerId,next),transform2()}),canvas.addEventListener("pointerup",event=>{pointers.has(event.pointerId)&&(pointers.delete(event.pointerId),canvas.releasePointerCapture(event.pointerId),!moved&&startNode&&(nodeId=startNode,openDetails(),render()))}),canvas.addEventListener("pointercancel",event=>{pointers.delete(event.pointerId)}),canvas.addEventListener("keydown",event=>{if(event.target.closest("[data-node]"))return;let delta={ArrowLeft:[40,0],ArrowRight:[-40,0],ArrowUp:[0,40],ArrowDown:[0,-40]};delta[event.key]&&(event.preventDefault(),pan.x+=delta[event.key][0],pan.y+=delta[event.key][1],transform2())})}function openModal(name,title,body,footer=""){modal||(previousFocus=root.activeElement),apiPanel?.dispose(),apiPanel=void 0,sourcePanel?.dispose(),sourcePanel=void 0,taskPanel?.dispose(),taskPanel=void 0,modal=name,backdrop.hidden=!1,backdrop.innerHTML=`<section class="modal modal-${name}" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><header class="modal-header"><h2 id="modal-title">${escape6(title)}</h2><span class="modal-task-status" role="status" hidden></span><button data-modal="close" aria-label="关闭对话框">×</button></header><div class="modal-body">${body}<div class="modal-error" role="alert"></div></div>${footer?`<footer class="modal-footer">${footer}</footer>`:""}</section>`,backdrop.querySelector(".modal")?.focus(),updateModalJobs()}function updateModalJobs(){let pill=backdrop.querySelector(".modal-task-status");if(!pill)return;let summary=taskSummary();pill.hidden=!summary.state||modal==="jobs"||summary.state==="letter",pill.className=`modal-task-status ${summary.state}`;let html=`<i class="status-dot ${summary.state==="busy"?"busy":"failed"}"></i>${escape6(summary.text.replace("，点此查看",""))}`;pill.innerHTML!==html&&(pill.innerHTML=html)}function closeModal(){removing="",importing=null,treeNotice="",apiPanel?.dispose(),apiPanel=void 0,sourcePanel?.dispose(),sourcePanel=void 0,taskPanel?.dispose(),taskPanel=void 0,hintObserver?.disconnect(),hintObserver=void 0,backdrop.hidden=!0,backdrop.innerHTML="",modal="",previousFocus?.focus()}function importPanel(){if(!importing)return"";let existing=importing.entries.filter(entry=>controller.state?.countries[entry.tree.id]),withStatus=importing.entries.some(entry=>entry.status);return`<div class="import-panel"><h4>准备导入：${escape6(importing.file)}</h4><ul>${importing.entries.map(entry=>`<li><strong>${escape6(entry.tree.name)}</strong> <code>${escape6(entry.tree.id)}</code> · ${entry.tree.nodes.length} 项国策 · ${new Set(entry.tree.nodes.map(n=>n.branch)).size} 支分支${entry.status?" · 含进度":""}${controller.state?.countries[entry.tree.id]?' · <span class="warn">将取代现有国家</span>':""}</li>`).join("")}</ul><label class="check"><input type="checkbox" data-import-progress ${withStatus?"":"disabled"} ${checked(importing.withProgress&&withStatus)}>连同进度<small>保留文件中的进度、能力与锁定；导入后需执行「更新局势」从目前故事日校准。事件不导入。</small></label>${existing.length?`<label class="check"><input type="checkbox" data-import-replace ${checked(importing.replace)}>取代同 id 的国家（${existing.map(e=>escape6(e.tree.name)).join("、")}）<small>原有的国策树与进度会先删除。</small></label>`:""}<div class="tree-io-actions"><button class="primary" data-tree="import-confirm" ${existing.length&&!importing.replace?"disabled":""}>确认导入</button><button data-tree="import-cancel">取消</button></div></div>`}function download(name,text2){let link=doc2.createElement("a");link.href=URL.createObjectURL(new Blob([text2],{type:"application/json"})),link.download=name,doc2.body.append(link),link.click(),link.remove(),setTimeout(()=>URL.revokeObjectURL(link.href),1e3)}let stamp2=()=>new Date().toISOString().slice(0,10);function showCountries(focus=!0){let countries=controller.state?Object.values(controller.state.countries):[],busyJobs=controller.jobs.some(j=>["running","queued"].includes(j.state)),identifying=controller.jobs.some(j=>j.kind==="identify"&&["running","queued"].includes(j.state)),selectedCandidates=[...backdrop.querySelectorAll("[data-candidate]:checked")].map(e=>e.dataset.candidate),body=`${countries.length?`<h3>已建立的国家</h3>${countries.map(c=>`<div class="candidate country-row"><strong class="country-name">${escape6(c.name)}</strong>${periodControl(c)}<label class="switch-label"><input type="checkbox" data-enable="${escape6(c.id)}" ${checked(c.enabled)}>启用</label>${c.control==="player"?`<label class="switch-label" title="故事时间一次跳过很多天时，由 AI 替这个国家接著选下一项国策"><input type="checkbox" data-delegate="${escape6(c.id)}" ${checked(c.skipDelegate)}>时间跳跃时由 AI 代选</label>`:'<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${removing===c.id?`<div class="remove-confirm" role="alert"><small>删除「${escape6(c.name)}」的国策树、进度与只涉及此国的事件？会写入目前楼层；之后可从候选清单重新生成。</small><button class="danger" data-remove-confirm="${escape6(c.id)}">确认删除</button><button data-remove-cancel>取消</button></div>`:`<button data-tree-export="${escape6(c.id)}">导出</button><button class="danger" data-remove-country="${escape6(c.id)}" ${busyJobs?'disabled title="有任务进行中，请等任务结束后再删除"':""}>删除国策树</button>`}</div>`).join("")}${countries.some(c=>!c.enabled)?'<small class="muted">重新启用后，下一次局势更新会先校准现况；停用期间不累积工期。</small>':""}<div class="separator"></div>`:""}<h3>新增国家</h3><p class="muted">先从本局资料辨识国家，再勾选要生成国策树的对象。</p><button data-modal="identify" ${identifying?"disabled":""}>${identifying?"正在辨识…":"从目前资料辨识国家"}</button>${controller.candidates.length>1?'<div class="candidate-tools"><button data-candidate-all="all">全选</button><button data-candidate-all="none">全不选</button></div>':""}${controller.candidates.map(c=>`<label class="candidate"><input type="checkbox" data-candidate="${escape6(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape6(c.name)}</strong><p>${escape6(c.description)}</p><small>${escape6(c.evidence)}</small></span></label>`).join("")}${controller.candidates.length?"":'<p class="muted">尚无待启用的候选国家。</p>'}<div class="separator"></div><details class="tree-io" ${importing||treeNotice?"open":""}><summary>国策树文件：导入与导出</summary><div class="tree-io-actions"><button data-tree="import" title="加载手写、submod 或其他聊天导出的国策树">导入国策树</button><button data-tree="export-all" ${countries.length?"":"disabled"} title="含完整进度，可用来备份或回报问题">导出全部</button><button data-tree="copy-all" ${countries.length?"":"disabled"}>复制全部 JSON</button><button data-tree="template">下载范本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice?`<p class="api-status">${escape6(treeNotice)}</p>`:""}${importPanel()}</details>`,footer=`<button data-modal="close">返回</button><button class="primary" data-modal="enable" ${selectedCandidates.length?"":"disabled"}>生成并启用选取国家</button>`;if(!focus&&modal==="countries"){let section=backdrop.querySelector(".modal-body");section&&(section.innerHTML=`${body}<div class="modal-error" role="alert"></div>`);let foot=backdrop.querySelector(".modal-footer");foot&&(foot.innerHTML=footer)}else openModal("countries","管理国家",body,footer)}function splitProblems(text2){let colon=text2.indexOf("：");if(colon<0||colon>48)return{head:text2,problems:[]};let problems=text2.slice(colon+1).split("；").map(item=>item.trim()).filter(Boolean);return problems.length>1||text2.length>90?{head:text2.slice(0,colon),problems}:{head:text2,problems:[]}}let codeText=text2=>escape6(text2).replace(/([A-Za-z_][\w.]*\[\d+\][\w.[\]]*|\b[a-z]+_[\w]+\b)/g,"<code>$1</code>"),jobIcons={running:'<i class="spinner"></i>',queued:"…",success:"✓",failed:"!",cancelled:"–"};function showJobs(){for(let job of controller.jobs)job.state==="failed"&&failuresSeen.add(job.id);let busy=controller.jobs.some(j=>["running","queued"].includes(j.state)),rows=controller.jobs.map(j=>{let text2=jobMessage(j),meta3=[j.state==="running"&&j.started?`<span class="job-elapsed" data-started="${j.started}">已执行 ${elapsed(Date.now()-j.started)}</span>`:j.started&&j.finished?`用时 ${elapsed(j.finished-j.started)}`:"",j.inputCharacters!==void 0?`请求 ${j.inputCharacters.toLocaleString()} 字符`:""].filter(Boolean).join(" · "),{head,problems}=j.state==="failed"?splitProblems(text2):{head:text2,problems:[]},list=problems.length?`<ul class="job-problems">${problems.slice(0,3).map(item=>`<li>${codeText(item)}</li>`).join("")}</ul>${problems.length>3?`<details class="job-more"><summary>另有 ${problems.length-3} 个问题</summary><ul class="job-problems">${problems.slice(3).map(item=>`<li>${codeText(item)}</li>`).join("")}</ul></details>`:""}`:"",chips=[j.route,j.time].filter(Boolean).map(chip=>`<span class="job-chip">${escape6(chip)}</span>`);return`<article class="job-card2 ${j.state}"><span class="job-icon" aria-hidden="true">${jobIcons[j.state]??""}</span><div class="job-main"><div class="job-name">${escape6(jobNames[j.kind]??j.kind)}${j.label?` · ${escape6(j.label)}`:""}${chips.join("")}</div><div class="job-sub"><b>${escape6(problems.length?`${head} · ${problems.length} 个问题`:head)}</b>${meta3?` · ${meta3}`:""}</div>${list}</div><div class="job-buttons">${["running","queued"].includes(j.state)?`<button data-cancel="${j.id}">取消</button>`:""}${j.state==="failed"?`<button class="primary" data-retry="${j.id}">重试</button>`:""}${controller.logs.some(log=>log.jobId===j.id)?`<button data-log="${j.id}">请求记录</button>`:""}</div></article>`}).join(""),body=`<div class="job-actions"><button data-modal="run-reshape" title="剧情大幅改变时，修改尚未开始的国策">评估重大改树</button><button class="danger" data-modal="cancel-all" ${busy?"":"disabled"}>取消全部任务</button></div>${rows?`<div class="job-list">${rows}</div>`:'<p class="muted">尚无任务记录。正文与一般变数更新完成后，国策任务会在背景执行，不会锁住聊天；进度显示在悬浮球上方。</p>'}${controller.config.runLog?'<p class="muted job-note">执行记录已开启：请求内容只保存在此页记忆体，重新整理即清除。</p>':""}`;modal==="jobs"?backdrop.querySelector(".modal-body").innerHTML=body:openModal("jobs","任务",body,'<button data-modal="close">返回</button>')}function highlightJson(raw){let trimmed=raw.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g,""),first=trimmed.indexOf("{"),last=trimmed.lastIndexOf("}"),value;try{value=JSON.parse(first>=0&&last>first?trimmed.slice(first,last+1):trimmed)}catch{return escape6(raw)}let pretty=JSON.stringify(value,null,2),token=/("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g,out="",at=0;for(let match of pretty.matchAll(token))out+=escape6(pretty.slice(at,match.index)),out+=match[1]?match[2]?`<span class="k">${escape6(match[1])}</span>${escape6(match[2])}`:`<span class="s">${escape6(match[1])}</span>`:`<span class="${/^[tfn]/.test(match[0])?"b":"n"}">${escape6(match[0])}</span>`,at=match.index+match[0].length;return out+escape6(pretty.slice(at))}let logTexts=[];function fillLogPart(part){let code=part.querySelector("pre[data-log-text]");if(!code||code.dataset.filled)return;let item=logTexts[Number(code.dataset.logText)];code.innerHTML=item.json?highlightJson(item.text):escape6(item.text),code.dataset.filled="1"}function showLog(jobId){let entries=controller.logs.filter(log=>log.jobId===jobId).reverse();logTexts=[];let part=(role,label2,text2,json2=!1,open3=!1)=>{if(!text2)return"";logTexts.push({text:text2,json:json2});let index=logTexts.length-1;return`<details class="log-part2" ${open3?"open":""}><summary><span class="log-role ${role.toLowerCase()}">${role}</span>${escape6(label2)}<span class="log-count">${text2.length.toLocaleString()} 字符</span><button class="log-copy" data-copy="${index}">复制</button></summary><pre class="log-code" data-log-text="${index}"></pre></details>`};openModal("log","请求记录",`<p class="muted">只供调试，不含 API 金钥。</p>${entries.map((log,i)=>{let sent=log.messages.reduce((sum,message)=>sum+message.content.length,0),chips=[log.route,`第 ${log.attempt} 次`,`${(log.durationMs/1e3).toFixed(1)} 秒`,`送出 ${sent.toLocaleString()} 字符`,`回应 ${log.output.length.toLocaleString()} 字符`,log.time].map(chip=>`<span class="job-chip">${escape6(chip)}</span>`).join("");return`<details class="log-entry" ${i===0?"open":""}><summary><span class="log-result ${log.error?"failed":"ok"}">${log.error?"✕ 失败":"✓ 格式通过"}</span><span class="log-title">${escape6(jobNames[log.kind]??log.kind)}${log.stage?` · ${escape6(log.stage)}`:""}</span><span class="log-chips">${chips}</span></summary>${log.error?`<p class="modal-error log-error">${escape6(log.error)}</p>`:""}${log.messages.map((message,index)=>part(message.role==="assistant"?"ASSISTANT":message.role.toUpperCase(),`#${index+1}${message.name?` ${message.name}`:""}`,message.content)).join("")}${part("THINK","推理内容",log.reasoning)}${part("OUTPUT","模型回应",log.output,!0,i===0)}</details>`}).join("")}`,'<button data-modal="jobs">返回任务</button>');for(let open3 of backdrop.querySelectorAll(".log-part2[open]"))fillLogPart(open3)}let newsKicker=event=>event.source.kind==="focus"?"国策事件":event.importance==="world"?"世界新闻":event.scope==="front"?"身边的消息":"各国动态";function newsEffects(state,event){let parts=event.changes.filter(change=>change.effects.length).map(change=>`${state.countries[change.country]?.name??change.country}：${change.effects.map(effectText).join("、")}`);return parts.length?parts.join("；"):"无直接影响"}function showRelations(){let country=controller.state?.countries[countryId];if(!country)return;let core=country.branches.find(b=>b.core),relations=country.relations??[],branchOf=id=>country.nodes[id]?.branch??"",reached=[...new Set(relations.filter(r=>core&&[branchOf(r.from),branchOf(r.to)].includes(core.name)).map(r=>branchOf(r.from)===core.name?branchOf(r.to):branchOf(r.from)).filter(name=>name!==core?.name))],focus=id=>`<button class="chip" data-goto="${escape6(id)}">${escape6(country.nodes[id]?.name??id)}</button><small class="rel-branch">${escape6(branchOf(id))}</small>`,independent=country.branches.filter(b=>b.independent);openModal("relations",`国策关系 · ${country.name}`,`<p class="muted">国策之间如何互相影响；每条关系下方列出实现它的规则。点国策名称可在树上定位。</p>
       ${core?`<section class="rel-core"><h3>核心分支：${escape6(core.name)}</h3>${core.coreReason?`<p>${escape6(core.coreReason)}</p>`:""}<small>影响的其他分支：${reached.length?reached.map(escape6).join("、"):"无"}</small></section>`:""}
       ${relations.length?`<ul class="rel-list">${relations.map(r=>`<li class="rel-card"><span class="tag">${escape6(relationKindNames[r.kind]??r.kind)}</span><div class="rel-pair">${focus(r.from)}<span class="rel-arrow" title="关联；实际方向见下方规则">↔</span>${focus(r.to)}</div><p>${escape6(r.change)}</p>${r.via.length?`<ul class="rel-via">${r.via.map(v=>`<li>${escape6(v)}</li>`).join("")}</ul>`:""}</li>`).join("")}</ul>`:"<p>这棵国策树没有记录关系。较旧版本生成的树、小型树与导入的树可能没有关系表。</p>"}
       ${independent.length?`<section class="rel-independent"><h3>独立推进的分支</h3><dl>${independent.map(b=>`<dt>${escape6(b.name)}</dt><dd>${escape6(b.independent??"")}</dd>`).join("")}</dl></section>`:""}`,'<button data-modal="close">返回</button>')}function letterState(r){return JSON.stringify([r.status,r.reason,r.detail,r.proposal?.id,r.source?.nonce,r.evidence,letterNation,repairState()])}function repairNotes(reason){let lines=reason.split(/\n+/).map(line=>line.replace(/^\s*(?:[-*•]|\d+[.、)）])\s*/,"").trim());return(lines.length>1?lines:reason.split(/[；;]\s*/).map(line=>line.trim())).filter(Boolean).slice(0,12)}function letterView(r){let state=controller.state,digest=state&&r.preview&&r.proposal?letterDigest(state,r.preview,r.proposal):[];digest.length&&!digest.some(c=>c.id===letterNation)&&(letterNation=digest[0].id);let sealed=r.status==="accepted",fresh=sealed&&Date.now()-letterSealedAt<1400,reviewable=r.status==="pending"||r.status==="overwritten"||sealed,mendable=!reviewable&&repairState()&&repairState().status!=="expired",intro=r.origin==="repair"?"这份国策提案由本地修复产生，世界资料保持原样":mendable?"世界推演已经写入，附带的国策提案没通过检查":r.status==="waiting"?"阿斯塔利亚的世界正在推演":reviewable?"阿斯塔利亚的世界推演附上一份国策提案":"这一次没有可接收的国策提案",meta3=[r.source?`推演至 ${storyTime(r.source.now,!0)}`:"",digest.length?`涉及 ${digest.length} 国`:"",r.source?`第 ${r.source.messageId} 楼`:""].filter(Boolean).join("，"),head=`<div class="letter-head"><div class="letter-seal-big${sealed?" sealed":""}${fresh?" fresh":""}" aria-hidden="true"><span class="seal-mark">函</span><span class="seal-stamp">准</span></div><div class="letter-intro"><p class="letter-from">${intro}</p>${meta3?`<p class="letter-meta">${escape6(meta3)}</p>`:""}</div></div>`,note=sealed?'<p class="letter-state done">提案已接收，国策已保存到这一楼。</p>':letterReason(r)?`<p class="letter-state ${r.status==="overwritten"?"alert":r.status==="waiting"?"":"muted"}">${escape6(letterReason(r))}</p>`:"",review="";if(reviewable&&r.proposal){let lines=evidenceLines(r.evidence).map(line=>`<li class="${line.tone}">${escape6(line.text)}</li>`).join(""),notes=r.origin==="repair"?repairNotes(r.proposal.reason):[],checks=`<dl class="letter-checks">${notes.length?`<div class="letter-check repaired"><dt>本地修复</dt><dd>依同一次世界结果改写，世界资料没有改动。<ol class="repair-notes">${notes.map(n=>`<li>${escape6(n)}</li>`).join("")}</ol></dd></div>`:""}<div class="letter-check ok"><dt>国策规则</dt><dd>提案已通过国策引擎的验证，可以套用。</dd></div><div class="letter-check unknown"><dt>世界写入</dt><dd>程序无法确认世界资料是否完整写入，请参考这次的执行纪录：<ul>${lines}</ul></dd></div></dl>`,nation=digest.find(c=>c.id===letterNation),tabs=digest.map(c=>`<button role="tab" class="letter-nation${c.id===letterNation?" active":""}" aria-selected="${c.id===letterNation}" data-letter-nation="${escape6(c.id)}"><span class="letter-nation-name">${escape6(c.name)}</span><span class="letter-nation-count" aria-label="${c.entries.length} 项变化">${c.entries.length}</span></button>`).join(""),detail2='<p class="muted">这份提案没有改变任何国家。</p>';if(nation){let shift=(label2,[from,to])=>from===to?"":`<li>${label2}<span class="shift"><b>${from}</b><i aria-label="变为">→</i><b>${to}</b></span></li>`,named=(label2,[from,to])=>from===to?"":`<li>${label2}<span class="shift"><b>${escape6(from||"暂无")}</b><i aria-label="变为">→</i><b>${escape6(to||"暂无")}</b></span></li>`,shifts=shift("稳定度",nation.stability)+shift("战争支持度",nation.warSupport)+named("主国策",nation.focus)+(nation.gained.length?`<li>新增能力<span class="shift">${escape6(nation.gained.join("、"))}</span></li>`:"")+(nation.lost.length?`<li>失去能力<span class="shift">${escape6(nation.lost.join("、"))}</span></li>`:""),kinds={start:"",complete:"",event:"事件",update:"进展",fact:"事实",transition:"换期"},entries=nation.entries.map(entry=>`<li class="entry-${entry.kind}"><time>${escape6(storyTime(entry.day))}</time><p>${kinds[entry.kind]?`<span class="entry-kind">${kinds[entry.kind]}</span>`:""}${escape6(entry.title)}${entry.note?`<small>${escape6(entry.note)}</small>`:""}</p></li>`).join("");detail2=`<h3>${escape6(nation.name)}</h3>${shifts?`<ul class="letter-shifts">${shifts}</ul>`:'<p class="letter-still">数值、主国策与能力都不变。</p>'}${entries?`<ol class="letter-timeline">${entries}</ol>`:'<p class="muted">这段时间没有新的进展。</p>'}`}review=`${checks}<div class="letter-review"><div class="letter-nations" role="tablist" aria-label="涉及的国家">${tabs}</div><section class="letter-detail" role="tabpanel">${detail2}</section></div>`}!reviewable&&r.evidence&&(review=`<dl class="letter-checks"><div class="letter-check unknown"><dt>世界写入纪录</dt><dd><ul>${evidenceLines(r.evidence).map(line=>`<li class="${line.tone}">${escape6(line.text)}</li>`).join("")}</ul></dd></div></dl>`);let repair=reviewable?null:repairState(),detail=r.detail?`<details class="letter-error"><summary>检查错误</summary><pre>${escape6(r.detail)}</pre></details>`:"",mend="";if(repair){let look={available:["可修复","可以依这次的世界结果在本地修复提案，不必重跑工作流；修复结果仍要你审阅接收。"],running:["修复中","正在用局势更新的 API 依这次世界结果改写提案，世界资料不会改动。"],failed:["未通过","修复结果仍不合法，材料还在，可以再试一次。"],expired:["已过期","楼层、分支或国策资料已经变动，这份材料不能再使用。"]}[repair.status],failure2=repair.status==="failed"&&repair.error?`<p class="letter-mend-error">${escape6(repair.error)}</p>`:"",caution=repair.status==="expired"||repair.status==="running"?"":'<p class="letter-mend-caution">改用局势更新会放弃这份材料，由国策从正文重新推演，方向可能与世界不同。</p>',stored2=repair.storageError?`<p class="letter-mend-caution">${escape6(repair.storageError)}</p>`:"";mend=`<section class="letter-mend ${repair.status}" aria-live="polite"><header><h3>本地修复</h3><span class="letter-mend-state">${look[0]}</span></header><p>${look[1]}</p>${failure2}${caution}${stored2}${detail}</section>`}let diagnostic=repair?"":detail,mendButton=repair&&repair.status!=="expired"?`<button class="primary" data-action="letter-repair" ${repair.status==="running"?'disabled aria-busy="true"':""}>${repair.status==="running"?"修复中…":repair.status==="failed"?"重试修复":"本地修复提案"}</button>`:"",remedy=`<button data-action="update" title="放弃这份提案，改由国策自己推进到这一楼"${repair?.status==="running"?" disabled":""}>改用局势更新</button>`,footer=r.status==="pending"||r.status==="overwritten"?`<button class="letter-reject" data-action="letter-reject">驳回</button><span class="footer-gap"></span>${remedy}<button class="primary" data-action="letter-accept">${r.status==="overwritten"?"重新接收":"接收提案"}</button>`:sealed?'<button class="primary" data-modal="close">完成</button>':r.status==="waiting"?'<button data-modal="close">返回</button>':mendButton?`<button data-modal="close">返回</button><span class="footer-gap"></span>${remedy}${mendButton}`:`${remedy}<button data-modal="close">返回</button>`;return{body:`<div class="letter-sheet">${head}${note}${mend}${diagnostic}${review}</div>`,footer}}function showLetter(){let r=reception(),{body,footer}=letterView(r);if(letterKey=letterState(r),modal==="letter"){let content=backdrop.querySelector(".modal-body"),actions=backdrop.querySelector(".modal-footer");if(content&&actions){content.innerHTML=`${body}<div class="modal-error" role="alert"></div>`,actions.innerHTML=footer;return}}openModal("letter","世界来函",body,footer)}function refreshLetter(){modal==="letter"&&letterState(reception())!==letterKey&&showLetter()}function demoLetterSample(status){let state=controller.state;if(!state)return null;let now=state.day+21,source={chatId:"demo",messageId:128,swipeId:0,now,nonce:"focus_demo"};if(status==="waiting")return{status,reason:"waiting_workflow",source};let preview2=structuredClone(state),countries=Object.values(preview2.countries).filter(c=>c.enabled);countries.forEach((c,i)=>{c.stability=Math.max(0,Math.min(100,c.stability+(i%2?-4:3))),c.warSupport=Math.max(0,Math.min(100,c.warSupport+(i===0?5:0))),c.current&&c.progress[c.current]&&Object.assign(c.progress[c.current],{status:"completed",completed:state.day+9,days:c.nodes[c.current].days});let next=Object.values(c.nodes).find(n=>c.progress[n.id]?.status==="idle");next&&(Object.assign(c.progress[next.id],{status:"active",started:state.day+9}),c.current=next.id)});let first=countries[0];first&&(preview2.events.demo_letter_event=EventSchema.parse({id:"demo_letter_event",at:state.day+14,countries:[first.id],title:"边境关卡重开",description:"商队恢复通行。",evidence:"世界局势：边境商路重新开放",origin:"background",public:!0,changes:[],headline:"边境关卡重开，商队恢复通行"}));let proposal=ProposalSchema.parse({id:"demo_letter",until:now,reason:"离线示范",steps:first?[{at:state.day+4,facts:[{country:first.id,id:"demo_fact",value:!0,evidence:"边境商队回报关卡已重开",origin:"background"}],events:[],selections:[],publications:[],eventUpdates:[]}]:[],edits:[],calibrations:[],transitions:[]});return{status,reason:status==="overwritten"?"overwritten":void 0,source,proposal,preview:preview2,evidence:{taskId:"demo",rootId:"demo",at:Date.now(),success:!0,skipped:!1,changed:!0,patch:{known:!0,operationCount:14,issues:[],failedFragments:[],unassigned:0}}}}function showEvents(){let state=controller.state,all2=state?Object.values(state.events).sort((a,b)=>b.at-a.at):[],events=all2.filter(e=>(!eventCountry||e.countries.includes(eventCountry))&&(eventFilter==="all"||eventFilter==="ongoing"&&e.status==="ongoing"||eventFilter==="resolved"&&e.status==="resolved"||eventFilter==="secret"&&!e.public)),filters=[["all","全部"],["ongoing","进行中"],["resolved","已结束"],["secret","未公开"]],names=e=>e.countries.map(id=>state?.countries[id]?.name??id).join("、"),toolbar=`<div class="event-filters">${filters.map(([id,label2])=>`<button class="chip ${eventFilter===id?"active":""}" data-event-filter="${id}" aria-pressed="${eventFilter===id}">${label2}</button>`).join("")}<select data-event-country aria-label="依国家筛选"><option value="">所有国家</option>${Object.values(state?.countries??{}).map(c=>`<option value="${escape6(c.id)}" ${selected(c.id===eventCountry)}>${escape6(c.name)}</option>`).join("")}</select><small>${events.length} / ${all2.length} 件</small></div>`,cards=events.map(e=>`<article class="event-card" data-event-id="${escape6(e.id)}"><span class="tag">${storyTime(e.at,!0)} · ${newsKicker(e)} · ${escape6(names(e))}${e.public?"":" · 未公开"}${e.status==="ongoing"?" · 仍在发展":e.result?` · ${resultNames[e.result]}`:""}</span><h3>${escape6(e.headline||e.title)}</h3><p>${escape6(e.description)}</p>${e.current?`<p class="event-current"><b>现况</b> ${escape6(e.current)}</p>`:""}${e.steps?.length?`<ul class="event-steps">${e.steps.map(st=>`<li class="${st.state}">${escape6(st.text)}${st.when?` <small>${escape6(st.when)}</small>`:""}</li>`).join("")}</ul>`:""}${e.timeline.length>1?`<ol class="event-timeline">${e.timeline.map(t=>`<li><b>${storyTime(t.at)}</b> ${escape6(t.text)}</li>`).join("")}</ol>`:""}${e.changes.some(c=>c.effects.length)&&state?`<small class="event-effects">效果：${escape6(newsEffects(state,e))}</small>`:""}<small>${escape6(e.evidence)}</small></article>`).join(""),body=`${all2.length?toolbar:""}${cards||`<p class="muted">${all2.length?"没有符合筛选的事件。":"目前没有事件。局势更新会记录各国发生的事，包括未公开的。"}</p>`}`;modal==="events"?backdrop.querySelector(".modal-body").innerHTML=`${body}<div class="modal-error" role="alert"></div>`:openModal("events","国家事件记录",body,'<button data-modal="close">返回</button>')}function optionList(values,value){return values.map(([id,label2])=>`<option value="${escape6(id)}" ${selected(id===value)}>${escape6(label2)}</option>`).join("")}let settingsFooter='<span class="footer-dirty" role="status"></span><button data-modal="close">取消</button><button class="primary" data-modal="save-settings">保存设置</button>',dirtyCheck=0;function showDirty(){cancelAnimationFrame(dirtyCheck),dirtyCheck=requestAnimationFrame(()=>{let note=backdrop.querySelector(".footer-dirty");if(!note||modal!=="settings")return;let preset=!!apiPanel?.dirty();note.textContent=preset?"API 预设有修改尚未保存（保存设置时会一并保存）":settingsDirty()?"有修改尚未保存":""})}let hintObserver;function foldHints(scope2){for(let hint of scope2.querySelectorAll(".settings-section small, .settings-section .block-note, .settings-section p.muted")){if(hint.dataset.folded||hint.children.length||hint.closest('.task-tab, .task-head, .api-list, .api-card-head, [role="status"], .hint-fold'))continue;let text2=(hint.textContent??"").trim();if(text2.length<=46){hint.dataset.folded="short";continue}let cut=text2.search(/[。；]/);hint.dataset.folded="long",hint.innerHTML=cut>0&&cut<46?`<details class="hint-fold"><summary>${escape6(text2.slice(0,cut+1))}<span class="hint-more">说明</span></summary>${escape6(text2.slice(cut+1))}</details>`:`<details class="hint-fold"><summary><span class="hint-cut">${escape6(text2.slice(0,40))}…</span><span class="hint-more">说明</span></summary>${escape6(text2)}</details>`}}function settingsDirty(){if(modal!=="settings")return!1;readSettingsDraft();let size=backdrop.querySelector('[data-setting="size"]')?.value,pace=backdrop.querySelector('[data-setting="pace"]')?.value,state=controller.state,same=(a,b)=>{try{return JSON.stringify(ConfigSchema.parse(structuredClone(a)))===JSON.stringify(ConfigSchema.parse(structuredClone(b)))}catch{return!1}};return!!apiPanel?.dirty()||!same(draft,controller.config)||!!(state&&(size&&size!==state.settings.size||pace&&pace!==state.settings.pace))}function requestClose(){if(settingsDirty()){let footer=backdrop.querySelector(".modal-footer");footer&&(footer.innerHTML='<span class="unsaved">有未保存的修改</span><button data-modal="keep-editing">继续编辑</button><button class="danger" data-modal="discard">放弃修改</button><button class="primary" data-modal="save-settings">保存并关闭</button>',footer.querySelector('[data-modal="keep-editing"]')?.focus());return}closeModal()}function renderSettings(taskState){let state=controller.state;openModal("settings","国策设置",`<div class="tabs">${[["general","一般"],["apis","API 连接"],["jobs","任务"],["sources","世界书与上下文"]].map(([id,name])=>`<button data-settings-tab="${id}" class="${settingsTab===id?"active":""}">${name}</button>`).join("")}</div>
@@ -5404,7 +5449,7 @@ ${message.content.slice(0,2e4)}${message.content.length>2e4?`
 删除北境王国「对南方施压」的选策：前置「整编边军」尚未完成，世界资料中的施压行动改记为事件。
 事件 ev_border_tariff 已结束，原提案对它的推进改为新事件。`),demoLetter=repaired,demoRepair=null}else await controller.repairProposal();showLetter(),render(!0);break;case"rollback-dismiss":controller.platform.demo&&demoRollback?demoRollback=null:controller.dismissRollback(),render(!0);break;case"letter-accept":{target.disabled=!0,target.textContent="接收中…";let accepted;controller.platform.demo&&demoLetter?(demoLetter={...demoLetter,status:"accepted",reason:void 0},accepted=!0):accepted=await controller.accept(),accepted&&(letterSealedAt=Date.now()),showLetter(),render(!0);break}case"letter-reject":controller.platform.demo&&demoLetter?demoLetter={...demoLetter,status:"rejected",reason:"user_rejected"}:controller.reject(),closeModal(),render();break;case"demo-rollback":demoRollback={chatId:"demo",messageId:128,swipeId:0,proposalId:"demo_letter",detectedAt:Date.now(),receiptMissing:!0,returnedToBefore:!0},render();break;case"demo-letter":case"demo-letter-wait":case"demo-letter-over":demoLetter=demoLetterSample(name==="demo-letter"?"pending":name==="demo-letter-wait"?"waiting":"overwritten"),demoRepair=null,letterNation="",render(),showLetter();break;case"demo-letter-broken":case"demo-letter-mend-failed":{let sample=demoLetterSample("pending");demoLetter=sample&&{status:"rejected",reason:"invalid_rules",detail:`选策国家不可用：北境王国「对南方施压」的前置「整编边军」尚未完成
   at steps[1].selections[0]
-事件 ev_border_tariff 已结束，不能再推进`,source:sample.source,evidence:sample.evidence},demoRepair=name==="demo-letter-broken"?{status:"available"}:{status:"failed",error:"修复结果仍违反国策规则：互斥路线「南进」已被锁定"},letterNation="",render(),showLetter();break}case"events":showEvents();break;case"relations":showRelations();break;case"refresh":await controller.refresh();break;case"update":await controller.run("update");break;case"lock-ask":lockConfirm=nodeId,render();break;case"lock-cancel":lockConfirm="",render();break;case"start":lockConfirm="",await controller.mutate(state=>startFocus(state,countryId,nodeId),!0);break;case"pause":await controller.mutate(state=>pauseFocus(state,countryId),!0);break;case"switch":lockConfirm="",await controller.mutate(state=>startFocus(pauseFocus(state,countryId),countryId,nodeId),!0);break;case"fit":fit();break;case"overview":overview();break;case"locate-current":{let country=currentCountry();country?.current&&(nodeId=country.current,render(),locateNode(nodeId));break}case"search-next":{let country=currentCountry(),matches=Object.values(country?.nodes??{}).filter(n=>`${n.name} ${n.description}`.includes(query));matches.length&&(nodeId=matches[(matches.findIndex(n=>n.id===nodeId)+1)%matches.length].id,branch="",openDetails(),render(),locateNode(nodeId));break}case"isolate":{let country=currentCountry();if(country){let chosen=branch||country.nodes[nodeId]?.branch;for(let b of new Set(Object.values(country.nodes).map(n=>n.branch)))b!==chosen&&collapsed.add(b);jumpBranch(chosen)}break}case"expand-all":collapsed.clear(),branch="",render(),fit();break;case"zoom-in":case"zoom-out":{let canvas=shell.querySelector(".canvas");zoomAt(zoom*(name==="zoom-in"?1.2:1/1.2),canvas.clientWidth/2,canvas.clientHeight/2);break}case"demo-days":await preview?.advance(7);break;case"demo-period-crisis":await preview?.periodSample?.(!1);break;case"demo-period-complete":await preview?.periodSample?.(!0);break;case"demo-period-next":await preview?.nextPeriod?.();break;case"demo-outcome":await preview?.outcome();break;case"demo-news":await preview?.news(),showEvents();break;case"demo-reset":preview?.reset();break}})};root.addEventListener("click",clickHandler),root.addEventListener("toggle",event=>{let pop=event.target.dataset?.pop;pop&&(event.target.open?openPops.add(pop):openPops.delete(pop))},!0),root.addEventListener("input",event=>{let target=event.target;if(target.id==="focus-search"){query=target.value;let country=currentCountry();country&&controller.state&&drawTree(country)}}),root.addEventListener("change",event=>{let input2=event.target;if(input2.dataset.treeFile!==void 0){let file2=input2.files?.[0];input2.value="",file2&&file2.text().then(text2=>{let raw;try{raw=JSON.parse(text2)}catch{throw new Error("文件不是有效的 JSON")}importing={file:file2.name,entries:parseTreeFile(raw),withProgress:!1,replace:!1},treeNotice="",showCountries(!1)}).catch(error2=>{let element=backdrop.querySelector(".modal-error");element&&(element.textContent=`导入失败：${error2 instanceof Error?error2.message:String(error2)}`)});return}if(input2.dataset.importProgress!==void 0&&importing){importing.withProgress=input2.checked;return}if(input2.dataset.importReplace!==void 0&&importing){importing.replace=input2.checked,showCountries(!1);return}if(input2.id==="country-picker"&&(input2.value==="__manage"?(input2.value=countryId,showCountries()):(countryId=input2.value,nodeId="",query="",branch="",collapsed.clear(),centeredCountry="",detailsOpen=!1,render())),input2.dataset.eventCountry!==void 0){eventCountry=input2.value,showEvents();return}if(input2.dataset.candidate!==void 0){let enable=backdrop.querySelector('[data-modal="enable"]');enable&&(enable.disabled=!backdrop.querySelector("[data-candidate]:checked"));return}if(input2.id==="country-control"&&action(()=>controller.mutate(state=>changeCountry(state,countryId,{control:input2.value}),!0)),input2.dataset.periodAuto){action(()=>controller.mutate(state=>changeCountry(state,input2.dataset.periodAuto,{autoPeriod:input2.checked})));return}for(let key of["enable","delegate"]){let id=input2.dataset[key];id&&action(()=>controller.mutate(state=>changeCountry(state,id,key==="enable"?{enabled:input2.checked}:{skipDelegate:input2.checked}),!0))}}),backdrop.addEventListener("click",event=>{let button=event.target.closest("[data-copy]");if(!button)return;event.preventDefault(),event.stopPropagation();let text2=logTexts[Number(button.dataset.copy)]?.text??"",done=()=>{button.textContent="已复制",setTimeout(()=>button.textContent="复制",1500)},fallback=()=>{let area=document.createElement("textarea");area.value=text2,backdrop.append(area),area.select(),document.execCommand("copy"),area.remove(),done()};navigator.clipboard?.writeText?navigator.clipboard.writeText(text2).then(done,fallback):fallback()},!0),backdrop.addEventListener("toggle",event=>{let part=event.target;part.matches(".log-part2")&&part.open&&fillLogPart(part)},!0);for(let type of["input","change","click"])backdrop.addEventListener(type,()=>{modal==="settings"&&setTimeout(showDirty)});backdrop.addEventListener("click",event=>{let target=event.target.closest("button");target&&(async()=>{try{if(target.dataset.treeExport){let id=target.dataset.treeExport;download(`国策树-${controller.state.countries[id].name}-${stamp2()}.json`,exportTrees(controller.state,[id]));return}switch(target.dataset.tree){case"import":backdrop.querySelector("[data-tree-file]")?.click();return;case"export-all":download(`国策树-全部-${stamp2()}.json`,exportTrees(controller.state));return;case"copy-all":{let text2=exportTrees(controller.state);try{await navigator.clipboard.writeText(text2),treeNotice=`已复制 ${text2.length.toLocaleString()} 字符的 JSON。`}catch{throw new Error("浏览器不允许复制到剪贴板，请改用「导出全部」下载文件。")}showCountries(!1);return}case"template":download("国策树范本.json",treeTemplate());return;case"import-cancel":importing=null,showCountries(!1);return;case"import-confirm":{let pending=importing;await controller.importTrees(pending.entries,{withProgress:pending.withProgress&&pending.entries.some(entry=>entry.status),replace:pending.replace}),importing=null,treeNotice=`已导入 ${pending.entries.map(entry=>`「${entry.tree.name}」`).join("、")}。${pending.withProgress?"请执行「更新局势」校准进度。":""}`,countryId=pending.entries[0].tree.id,nodeId="",centeredCountry="",showCountries(!1);return}}if(target.dataset.removeCountry!==void 0){removing=target.dataset.removeCountry,showCountries(!1);return}if(target.dataset.removeCancel!==void 0){removing="",showCountries(!1);return}if(target.dataset.removeConfirm){let id=target.dataset.removeConfirm;removing="",await controller.removeCountry(id),countryId===id&&(countryId="",nodeId="",detailsOpen=!1),showCountries(!1);return}if(target.dataset.cancel){controller.cancel(target.dataset.cancel);return}if(target.dataset.log){showLog(target.dataset.log);return}if(target.dataset.settingsTab){switchSettingsTab(target.dataset.settingsTab);return}if(target.dataset.retry){let job=controller.jobs.find(j=>j.id===target.dataset.retry);job&&(job.kind==="repair"?(await controller.repairProposal(),showLetter()):await controller.run(job.kind,job.candidate,job.periodWork));return}if(target.dataset.eventFilter){eventFilter=target.dataset.eventFilter,showEvents();return}switch(target.dataset.modal){case"close":requestClose();break;case"keep-editing":{let footer=backdrop.querySelector(".modal-footer");footer&&(footer.innerHTML=settingsFooter);break}case"discard":closeModal();break;case"jobs":showJobs();break;case"identify":await controller.run("identify");break;case"enable":{let ids=[...backdrop.querySelectorAll("[data-candidate]:checked")].map(e=>e.dataset.candidate),candidates=controller.candidates.filter(c=>ids.includes(c.id));if(!candidates.length)throw new Error("请先勾选候选国家");closeModal(),await controller.enable(candidates);break}case"run-update":await controller.run("update");break;case"run-reshape":await controller.run("reshape");break;case"cancel-all":controller.cancelAll();break;case"save-settings":{readSettingsDraft();let size=backdrop.querySelector('[data-setting="size"]').value,pace=backdrop.querySelector('[data-setting="pace"]').value;try{apiPanel?.commit()}catch(error2){throw switchSettingsTab("apis"),error2}for(let kind of jobKinds)draft.jobs[kind].strictJson=!1;controller.saveSettings(draft),await controller.refresh(),controller.state&&(controller.state.settings.size!==size||controller.state.settings.pace!==pace)&&await controller.mutate(state=>(Object.assign(state.settings,{size,pace}),state.revision++,state)),closeModal();break}}}catch(error2){let message=error2 instanceof Error?error2.message:String(error2),element=backdrop.querySelector(".modal-error");element?element.textContent=message:controller.report(error2)}})()}),root.addEventListener("keydown",event=>{let key=event;if(key.key==="Escape"&&(modal?requestClose():detailsOpen?(detailsOpen=!1,render()):(open2=!1,render())),key.key==="Tab"&&modal){let focusable=[...backdrop.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled)")].filter(e=>!e.closest("[hidden]")),first=focusable[0],last=focusable.at(-1);key.shiftKey&&root.activeElement===first&&(key.preventDefault(),last?.focus()),!key.shiftKey&&root.activeElement===last&&(key.preventDefault(),first?.focus())}}),unsub=controller.subscribe(()=>{render(!0)});let stopNews=controller.platform.onNewsRequest?.((_messageId,action2)=>{modal&&closeModal(),open2=!0,render(),action2==="events"&&showEvents()})??(()=>{});return render(),()=>{unsub(),apiPanel?.dispose(),apiPanel=void 0,sourcePanel?.dispose(),sourcePanel=void 0,taskPanel?.dispose(),taskPanel=void 0,hud.dispose(),stopNews(),tabsObserver?.disconnect(),clearInterval(clock),view.removeEventListener("resize",onResize),host.remove()}}var scope=globalThis,doc=window.parent.document,previous=window.parent;previous.nationalFocusDispose?.();try{let platform=new TavernPlatform(scope,window.parent.localStorage),controller=new FocusController(platform),removeUI=mountUI(controller,doc),chatId=scope.SillyTavern.getCurrentChatId(),chatListener=scope.eventOn(scope.tavern_events.CHAT_CHANGED,()=>{let current=scope.SillyTavern.getCurrentChatId();current&&current!==chatId&&(dispose(),window.location.reload())}),dispose=()=>{chatListener.stop(),controller.dispose(),platform.dispose(),removeUI()};previous.nationalFocusDispose=dispose,window.addEventListener("pagehide",dispose,{once:!0}),controller.initialize(),scope.waitGlobalInitialized?.("Mvu").then(()=>controller.refresh()).catch(error2=>controller.report(error2))}catch(error2){let message=doc.createElement("div");message.textContent=`国策脚本初始化失败：${error2 instanceof Error?error2.message:String(error2)}`,Object.assign(message.style,{position:"fixed",bottom:"20px",right:"20px",padding:"15px",background:"#54382a",color:"white",zIndex:"2147483000"}),doc.body.append(message),window.addEventListener("pagehide",()=>message.remove(),{once:!0})}})();
+事件 ev_border_tariff 已结束，不能再推进`,source:sample.source,evidence:sample.evidence},demoRepair=name==="demo-letter-broken"?{status:"available"}:{status:"failed",error:"修复结果仍违反国策规则：互斥路线「南进」已被锁定"},letterNation="",render(),showLetter();break}case"events":showEvents();break;case"relations":showRelations();break;case"refresh":await controller.refresh();break;case"update":await controller.run("update");break;case"lock-ask":lockConfirm=nodeId,render();break;case"lock-cancel":lockConfirm="",render();break;case"start":lockConfirm="",await controller.mutate(state=>startFocus(state,countryId,nodeId),!0);break;case"pause":await controller.mutate(state=>pauseFocus(state,countryId),!0);break;case"switch":lockConfirm="",await controller.mutate(state=>startFocus(pauseFocus(state,countryId),countryId,nodeId),!0);break;case"fit":fit();break;case"overview":overview();break;case"locate-current":{let country=currentCountry();country?.current&&(nodeId=country.current,render(),locateNode(nodeId));break}case"search-next":{let country=currentCountry(),matches=Object.values(country?.nodes??{}).filter(n=>`${n.name} ${n.description}`.includes(query));matches.length&&(nodeId=matches[(matches.findIndex(n=>n.id===nodeId)+1)%matches.length].id,branch="",openDetails(),render(),locateNode(nodeId));break}case"isolate":{let country=currentCountry();if(country){let chosen=branch||country.nodes[nodeId]?.branch;for(let b of new Set(Object.values(country.nodes).map(n=>n.branch)))b!==chosen&&collapsed.add(b);jumpBranch(chosen)}break}case"expand-all":collapsed.clear(),branch="",render(),fit();break;case"zoom-in":case"zoom-out":{let canvas=shell.querySelector(".canvas");zoomAt(zoom*(name==="zoom-in"?1.2:1/1.2),canvas.clientWidth/2,canvas.clientHeight/2);break}case"demo-days":await preview?.advance(7);break;case"demo-period-crisis":await preview?.periodSample?.(!1);break;case"demo-period-complete":await preview?.periodSample?.(!0);break;case"demo-period-next":await preview?.nextPeriod?.();break;case"demo-outcome":await preview?.outcome();break;case"demo-news":await preview?.news(),showEvents();break;case"demo-reset":preview?.reset();break}})};root.addEventListener("click",clickHandler),root.addEventListener("toggle",event=>{let pop=event.target.dataset?.pop;pop&&(event.target.open?openPops.add(pop):openPops.delete(pop))},!0),root.addEventListener("input",event=>{let target=event.target;if(target.id==="focus-search"){query=target.value;let country=currentCountry();country&&controller.state&&drawTree(country)}}),root.addEventListener("change",event=>{let input2=event.target;if(input2.dataset.treeFile!==void 0){let file2=input2.files?.[0];input2.value="",file2&&file2.text().then(text2=>{let raw;try{raw=JSON.parse(text2)}catch{throw new Error("文件不是有效的 JSON")}importing={file:file2.name,entries:parseTreeFile(raw),withProgress:!1,replace:!1},treeNotice="",showCountries(!1)}).catch(error2=>{let element=backdrop.querySelector(".modal-error");element&&(element.textContent=`导入失败：${error2 instanceof Error?error2.message:String(error2)}`)});return}if(input2.dataset.importProgress!==void 0&&importing){importing.withProgress=input2.checked;return}if(input2.dataset.importReplace!==void 0&&importing){importing.replace=input2.checked,showCountries(!1);return}if(input2.id==="country-picker"&&(input2.value==="__manage"?(input2.value=countryId,showCountries()):(countryId=input2.value,nodeId="",query="",branch="",collapsed.clear(),centeredCountry="",detailsOpen=!1,render())),input2.dataset.eventCountry!==void 0){eventCountry=input2.value,showEvents();return}if(input2.dataset.candidate!==void 0){let enable=backdrop.querySelector('[data-modal="enable"]');enable&&(enable.disabled=!backdrop.querySelector("[data-candidate]:checked"));return}if(input2.id==="country-control"&&action(()=>controller.mutate(state=>changeCountry(state,countryId,{control:input2.value}),!0)),input2.dataset.periodAuto){action(()=>controller.mutate(state=>changeCountry(state,input2.dataset.periodAuto,{autoPeriod:input2.checked})));return}for(let key of["enable","delegate"]){let id=input2.dataset[key];id&&action(()=>controller.mutate(state=>changeCountry(state,id,key==="enable"?{enabled:input2.checked}:{skipDelegate:input2.checked}),!0))}}),backdrop.addEventListener("click",event=>{let button=event.target.closest("[data-copy]");if(!button)return;event.preventDefault(),event.stopPropagation();let text2=logTexts[Number(button.dataset.copy)]?.text??"",done=()=>{button.textContent="已复制",setTimeout(()=>button.textContent="复制",1500)},fallback=()=>{let area=document.createElement("textarea");area.value=text2,backdrop.append(area),area.select(),document.execCommand("copy"),area.remove(),done()};navigator.clipboard?.writeText?navigator.clipboard.writeText(text2).then(done,fallback):fallback()},!0),backdrop.addEventListener("toggle",event=>{let part=event.target;part.matches(".log-part2")&&part.open&&fillLogPart(part)},!0);for(let type of["input","change","click"])backdrop.addEventListener(type,()=>{modal==="settings"&&setTimeout(showDirty)});backdrop.addEventListener("click",event=>{let target=event.target.closest("button");target&&(async()=>{try{if(target.dataset.treeExport){let id=target.dataset.treeExport;download(`国策树-${controller.state.countries[id].name}-${stamp2()}.json`,exportTrees(controller.state,[id]));return}switch(target.dataset.tree){case"import":backdrop.querySelector("[data-tree-file]")?.click();return;case"export-all":download(`国策树-全部-${stamp2()}.json`,exportTrees(controller.state));return;case"copy-all":{let text2=exportTrees(controller.state);try{await navigator.clipboard.writeText(text2),treeNotice=`已复制 ${text2.length.toLocaleString()} 字符的 JSON。`}catch{throw new Error("浏览器不允许复制到剪贴板，请改用「导出全部」下载文件。")}showCountries(!1);return}case"template":download("国策树范本.json",treeTemplate());return;case"import-cancel":importing=null,showCountries(!1);return;case"import-confirm":{let pending=importing;await controller.importTrees(pending.entries,{withProgress:pending.withProgress&&pending.entries.some(entry=>entry.status),replace:pending.replace}),importing=null,treeNotice=`已导入 ${pending.entries.map(entry=>`「${entry.tree.name}」`).join("、")}。${pending.withProgress?"请执行「更新局势」校准进度。":""}`,countryId=pending.entries[0].tree.id,nodeId="",centeredCountry="",showCountries(!1);return}}if(target.dataset.candidateAll){let all2=target.dataset.candidateAll==="all";for(let box of backdrop.querySelectorAll("[data-candidate]"))box.checked=all2;let enable=backdrop.querySelector('[data-modal="enable"]');enable&&(enable.disabled=!all2);return}if(target.dataset.removeCountry!==void 0){removing=target.dataset.removeCountry,showCountries(!1);return}if(target.dataset.removeCancel!==void 0){removing="",showCountries(!1);return}if(target.dataset.removeConfirm){let id=target.dataset.removeConfirm;removing="",await controller.removeCountry(id),countryId===id&&(countryId="",nodeId="",detailsOpen=!1),showCountries(!1);return}if(target.dataset.cancel){controller.cancel(target.dataset.cancel);return}if(target.dataset.log){showLog(target.dataset.log);return}if(target.dataset.settingsTab){switchSettingsTab(target.dataset.settingsTab);return}if(target.dataset.retry){let job=controller.jobs.find(j=>j.id===target.dataset.retry);job&&(job.kind==="repair"?(await controller.repairProposal(),showLetter()):await controller.run(job.kind,job.candidate,job.periodWork));return}if(target.dataset.eventFilter){eventFilter=target.dataset.eventFilter,showEvents();return}switch(target.dataset.modal){case"close":requestClose();break;case"keep-editing":{let footer=backdrop.querySelector(".modal-footer");footer&&(footer.innerHTML=settingsFooter);break}case"discard":closeModal();break;case"jobs":showJobs();break;case"identify":await controller.run("identify");break;case"enable":{let ids=[...backdrop.querySelectorAll("[data-candidate]:checked")].map(e=>e.dataset.candidate),candidates=controller.candidates.filter(c=>ids.includes(c.id));if(!candidates.length)throw new Error("请先勾选候选国家");closeModal(),await controller.enable(candidates);break}case"run-update":await controller.run("update");break;case"run-reshape":await controller.run("reshape");break;case"cancel-all":controller.cancelAll();break;case"save-settings":{readSettingsDraft();let size=backdrop.querySelector('[data-setting="size"]').value,pace=backdrop.querySelector('[data-setting="pace"]').value;try{apiPanel?.commit()}catch(error2){throw switchSettingsTab("apis"),error2}for(let kind of jobKinds)draft.jobs[kind].strictJson=!1;controller.saveSettings(draft),await controller.refresh(),controller.state&&(controller.state.settings.size!==size||controller.state.settings.pace!==pace)&&await controller.mutate(state=>(Object.assign(state.settings,{size,pace}),state.revision++,state)),closeModal();break}}}catch(error2){let message=error2 instanceof Error?error2.message:String(error2),element=backdrop.querySelector(".modal-error");element?element.textContent=message:controller.report(error2)}})()}),root.addEventListener("keydown",event=>{let key=event;if(key.key==="Escape"&&(modal?requestClose():detailsOpen?(detailsOpen=!1,render()):(open2=!1,render())),key.key==="Tab"&&modal){let focusable=[...backdrop.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled)")].filter(e=>!e.closest("[hidden]")),first=focusable[0],last=focusable.at(-1);key.shiftKey&&root.activeElement===first&&(key.preventDefault(),last?.focus()),!key.shiftKey&&root.activeElement===last&&(key.preventDefault(),first?.focus())}}),unsub=controller.subscribe(()=>{render(!0)});let stopNews=controller.platform.onNewsRequest?.((_messageId,action2)=>{modal&&closeModal(),open2=!0,render(),action2==="events"&&showEvents()})??(()=>{});return render(),()=>{unsub(),apiPanel?.dispose(),apiPanel=void 0,sourcePanel?.dispose(),sourcePanel=void 0,taskPanel?.dispose(),taskPanel=void 0,hud.dispose(),stopNews(),tabsObserver?.disconnect(),clearInterval(clock),view.removeEventListener("resize",onResize),host.remove()}}var scope=globalThis,doc=window.parent.document,previous=window.parent;previous.nationalFocusDispose?.();try{let platform=new TavernPlatform(scope,window.parent.localStorage),controller=new FocusController(platform),removeUI=mountUI(controller,doc),chatId=scope.SillyTavern.getCurrentChatId(),chatListener=scope.eventOn(scope.tavern_events.CHAT_CHANGED,()=>{let current=scope.SillyTavern.getCurrentChatId();current&&current!==chatId&&(dispose(),window.location.reload())}),dispose=()=>{chatListener.stop(),controller.dispose(),platform.dispose(),removeUI()};previous.nationalFocusDispose=dispose,window.addEventListener("pagehide",dispose,{once:!0}),controller.initialize(),scope.waitGlobalInitialized?.("Mvu").then(()=>controller.refresh()).catch(error2=>controller.report(error2))}catch(error2){let message=doc.createElement("div");message.textContent=`国策脚本初始化失败：${error2 instanceof Error?error2.message:String(error2)}`,Object.assign(message.style,{position:"fixed",bottom:"20px",right:"20px",padding:"15px",background:"#54382a",color:"white",zIndex:"2147483000"}),doc.body.append(message),window.addEventListener("pagehide",()=>message.remove(),{once:!0})}})();
 
 /* Third-party notices
 zod

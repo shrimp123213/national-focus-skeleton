@@ -55,6 +55,7 @@ import {
   type RollbackNotice,
 } from './world-schedule';
 import {
+  FloorNotReady,
   requestId,
   type JobStatus,
   type Platform,
@@ -104,6 +105,8 @@ export class FocusController {
   config: Config;
   readonly integration: FocusIntegration;
   state: State | null = null;
+  /** Set while `state` is an earlier AI floor shown for reading only, because the latest floor is not ready. */
+  readOnly: { messageId: number; reason: string } | null = null;
   candidates: Candidate[] = [];
   jobs: JobStatus[] = [];
   /** Recent requests and replies; only filled while the run log setting is on. */
@@ -211,6 +214,10 @@ export class FocusController {
     this.stops.push(
       this.platform.onReady(() => {
         this.cancelAll();
+        if (this.readOnly) {
+          // The floor is ready now; replace the read-only view with it.
+          void this.refresh();
+        }
         this.pendingReady = true;
         if (!this.automatic) {
           this.automatic = (async () => {
@@ -278,11 +285,26 @@ export class FocusController {
         return;
       }
       this.state = snapshot.state;
+      this.readOnly = null;
       this.platform.inject(snapshot.state, this.config.newsPrompt);
       this.error = '';
     } catch (error) {
-      this.state = null;
-      this.report(error);
+      // The next AI reply builds on the nearest saved floor, so show and inject that state.
+      const shown =
+        error instanceof FloorNotReady ? await this.platform.peek?.(this.config).catch(() => null) : null;
+      if (this.disposed) {
+        return;
+      }
+      if (shown) {
+        this.state = shown.state;
+        this.readOnly = { messageId: shown.messageId, reason: error instanceof Error ? error.message : '' };
+        this.platform.inject(shown.state, this.config.newsPrompt);
+        this.error = '';
+      } else {
+        this.state = null;
+        this.readOnly = null;
+        this.report(error);
+      }
     }
     this.notify();
   }
@@ -1000,6 +1022,7 @@ export class FocusController {
           this.setCoordination({ ...this.coordination, status: 'idle' });
         }
         this.state = committed.state;
+        this.readOnly = null;
         // Integration ticks run once a second: watch for an overwrite for about two seconds.
         this.overwriteTicks = 2;
         this.setProposalState({ ...this.reception, status: 'accepted', reason: undefined });

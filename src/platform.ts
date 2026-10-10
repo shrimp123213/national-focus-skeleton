@@ -85,6 +85,8 @@ export interface Platform {
   chatId(): string;
   models(api: Config['apis'][number]): Promise<string[]>;
   read(config: Config, job?: JobKind): Promise<Snapshot>;
+  /** The state saved on the nearest AI floor, for display only while the latest floor is not ready. */
+  peek?(config: Config): Promise<{ state: State; messageId: number } | null>;
   readIntegration?(messageId: number, config: Config): IntegrationRead;
   bindIntegration?(api: IntegrationApi): () => void;
   readWorldProposal?(messageId: number): WorldObservation | null;
@@ -118,6 +120,10 @@ export interface Platform {
 }
 
 export type NewsAction = 'news' | 'panel' | 'events';
+/** The latest floor is not a finished AI reply yet. An earlier floor can still be shown read-only. */
+export class FloorNotReady extends Error {
+  override name = 'FloorNotReady';
+}
 export function valueAt(value: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((current, key) => {
     if (current && typeof current === 'object' && Object.hasOwn(current, key)) {

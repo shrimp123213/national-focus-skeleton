@@ -1944,6 +1944,28 @@ button.focus-gauge:hover .focus-name {
   color: var(--muted);
   margin: 0;
 }
+/* Long descriptions must wrap inside the text column, not push it below the checkbox. */
+label.candidate {
+  flex-wrap: nowrap;
+  cursor: pointer;
+}
+label.candidate > input {
+  flex: none;
+  margin-top: 3px;
+}
+label.candidate > span {
+  flex: 1;
+  min-width: 0;
+}
+label.candidate small {
+  display: block;
+  margin-top: 4px;
+}
+.candidate-tools {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
 .event-card h3 {
   margin: 6px 0;
 }
@@ -4982,4 +5004,23 @@ details.detail-section.fold > summary::before {
 }
 .rollback-slot[hidden] {
   display: none;
+}
+/* The latest floor is not ready; the panel shows an earlier AI floor and blocks saves. */
+.readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  background: linear-gradient(90deg, rgba(220, 194, 124, 0.12), rgba(220, 194, 124, 0.03));
+  border-bottom: 1px solid var(--line);
+  color: #e6dcc0;
+  font-size: 13px;
+}
+.readonly-banner .letter-seal {
+  flex: none;
+  color: var(--gold);
+}
+.readonly-banner p {
+  flex: 1;
+  margin: 0;
 }

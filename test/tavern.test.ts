@@ -4,7 +4,7 @@ import { TavernPlatform, type TavernApi } from '../src/tavern';
 import { ConfigSchema, defaultConfig } from '../src/model';
 import { demoState } from '../src/demo';
 import { countryKey, migrateCountryKeys } from '../src/engine';
-import { storyDay } from '../src/platform';
+import { FloorNotReady, storyDay } from '../src/platform';
 import { applyDeepSeek } from '../src/api-config';
 import { parse } from 'yaml';
 import { FocusController } from '../src/workflow';
@@ -409,6 +409,34 @@ test('只渲染已选且触发的世界书巨集，来源报告计算展开后�
     assert.ok(!rendered.includes('{{huge}}'));
     assert.equal(snapshot.sourceReport?.entries[0].characters, '帝国位于大陆中央'.length);
     assert.equal(snapshot.sourceReport?.characters, JSON.stringify(snapshot.context).length);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
+test('最新楼层是使用者楼层时，peek 唯读取最近一个已保存国策的 AI 楼层', async () => {
+  const env = environment();
+  const saved = demoState();
+  const floors: Record<number, any> = {
+    0: { stat_data: { 世界: { 时间: 90 } } },
+    1: { stat_data: { 世界: { 时间: 100 } }, 国策: structuredClone(saved) },
+  };
+  const messages = [
+    { message_id: 0, role: 'assistant', swipe_id: 0, swipes: ['开场'], message: '开场' },
+    { message_id: 1, role: 'assistant', swipe_id: 0, swipes: ['上一楼'], message: '上一楼' },
+    { message_id: 2, role: 'user', swipe_id: 0, swipes: ['玩家'], message: '玩家' },
+  ];
+  env.api.Mvu!.getMvuData = ({ message_id }) => structuredClone(floors[message_id]);
+  env.api.getLastMessageId = () => 2;
+  env.api.getChatMessages = (range) => (range === -1 ? [messages[2]] : structuredClone(messages));
+  try {
+    await assert.rejects(env.platform.read(defaultConfig()), FloorNotReady);
+    const shown = await env.platform.peek(defaultConfig());
+    assert.equal(shown?.messageId, 1);
+    assert.deepEqual(
+      Object.keys(shown!.state.countries),
+      Object.keys(migrateCountryKeys(structuredClone(saved)).countries),
+    );
   } finally {
     env.platform.dispose();
   }

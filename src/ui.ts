@@ -390,6 +390,9 @@ export function mountUI(
     const error = controller.error
       ? `<div class="error-banner" role="alert"><span>${escape(controller.error)}</span><button data-action="refresh">重新读取</button></div>`
       : '';
+    const readOnly = controller.readOnly
+      ? `<div class="readonly-banner" role="status" title="${escape(controller.readOnly.reason)}"><span class="letter-seal" aria-hidden="true">阅</span><p>只读：显示第 ${controller.readOnly.messageId} 楼（最近一则 AI 回复）的国策。本楼 AI 回复完成后，才能选择国策或更新局势。</p></div>`
+      : '';
     let body: string;
     if (country && state) {
       const current = country.current ? country.nodes[country.current] : undefined;
@@ -447,8 +450,17 @@ export function mountUI(
     }
     // The header is rebuilt on every render; keep where the country tabs were scrolled.
     const tabsScroll = shell.querySelector<HTMLElement>('.nation-tabs')?.scrollLeft ?? 0;
-    shell.innerHTML = `${command}${error}${renderRollback()}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ''}</span><button class="linkish" data-action="events">事件记录</button></footer>`;
+    shell.innerHTML = `${command}${error}${readOnly}${renderRollback()}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ''}</span><button class="linkish" data-action="events">事件记录</button></footer>`;
     bindNationTabs(tabsScroll);
+    if (controller.readOnly) {
+      // Saves go only to the latest finished AI floor; stop these here instead of failing later.
+      for (const control of shell.querySelectorAll<HTMLButtonElement | HTMLSelectElement>(
+        '[data-action="update"], [data-action="start"], [data-action="pause"], [data-action="switch"], [data-action="lock-ask"], #country-control',
+      )) {
+        control.disabled = true;
+        control.title = '只读：等本楼 AI 回复完成';
+      }
+    }
     // v0.15.3: the panel is redrawn on every change, so the drawer is drawn in its old position
     // and moved once, letting its transition run (opening and closing).
     const drawer = shell.querySelector<HTMLElement>('.drawer');
@@ -1325,7 +1337,7 @@ export function mountUI(
             '',
           )}${countries.some((c) => !c.enabled) ? '<small class="muted">重新启用后，下一次局势更新会先校准现况；停用期间不累积工期。</small>' : ''}<div class="separator"></div>`
       : '';
-    const body = `${created}<h3>新增国家</h3><p class="muted">先从本局资料辨识国家，再勾选要生成国策树的对象。</p><button data-modal="identify" ${identifying ? 'disabled' : ''}>${identifying ? '正在辨识…' : '从目前资料辨识国家'}</button>${controller.candidates.map((c) => `<label class="candidate"><input type="checkbox" data-candidate="${escape(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape(c.name)}</strong><p>${escape(c.description)}</p><small>${escape(c.evidence)}</small></span></label>`).join('')}${!controller.candidates.length ? '<p class="muted">尚无待启用的候选国家。</p>' : ''}<div class="separator"></div><details class="tree-io" ${importing || treeNotice ? 'open' : ''}><summary>国策树文件：导入与导出</summary><div class="tree-io-actions"><button data-tree="import" title="加载手写、submod 或其他聊天导出的国策树">导入国策树</button><button data-tree="export-all" ${countries.length ? '' : 'disabled'} title="含完整进度，可用来备份或回报问题">导出全部</button><button data-tree="copy-all" ${countries.length ? '' : 'disabled'}>复制全部 JSON</button><button data-tree="template">下载范本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice ? `<p class="api-status">${escape(treeNotice)}</p>` : ''}${importPanel()}</details>`;
+    const body = `${created}<h3>新增国家</h3><p class="muted">先从本局资料辨识国家，再勾选要生成国策树的对象。</p><button data-modal="identify" ${identifying ? 'disabled' : ''}>${identifying ? '正在辨识…' : '从目前资料辨识国家'}</button>${controller.candidates.length > 1 ? '<div class="candidate-tools"><button data-candidate-all="all">全选</button><button data-candidate-all="none">全不选</button></div>' : ''}${controller.candidates.map((c) => `<label class="candidate"><input type="checkbox" data-candidate="${escape(c.id)}" ${checked(selectedCandidates.includes(c.id))}><span><strong>${escape(c.name)}</strong><p>${escape(c.description)}</p><small>${escape(c.evidence)}</small></span></label>`).join('')}${!controller.candidates.length ? '<p class="muted">尚无待启用的候选国家。</p>' : ''}<div class="separator"></div><details class="tree-io" ${importing || treeNotice ? 'open' : ''}><summary>国策树文件：导入与导出</summary><div class="tree-io-actions"><button data-tree="import" title="加载手写、submod 或其他聊天导出的国策树">导入国策树</button><button data-tree="export-all" ${countries.length ? '' : 'disabled'} title="含完整进度，可用来备份或回报问题">导出全部</button><button data-tree="copy-all" ${countries.length ? '' : 'disabled'}>复制全部 JSON</button><button data-tree="template">下载范本</button><input type="file" accept=".json,application/json" data-tree-file hidden></div>${treeNotice ? `<p class="api-status">${escape(treeNotice)}</p>` : ''}${importPanel()}</details>`;
     const footer = `<button data-modal="close">返回</button><button class="primary" data-modal="enable" ${selectedCandidates.length ? '' : 'disabled'}>生成并启用选取国家</button>`;
     if (!focus && modal === 'countries') {
       const section = backdrop.querySelector('.modal-body');
@@ -2609,6 +2621,17 @@ export function mountUI(
             showCountries(false);
             return;
           }
+        }
+        if (target.dataset.candidateAll) {
+          const all = target.dataset.candidateAll === 'all';
+          for (const box of backdrop.querySelectorAll<HTMLInputElement>('[data-candidate]')) {
+            box.checked = all;
+          }
+          const enable = backdrop.querySelector<HTMLButtonElement>('[data-modal="enable"]');
+          if (enable) {
+            enable.disabled = !all;
+          }
+          return;
         }
         if (target.dataset.removeCountry !== undefined) {
           removing = target.dataset.removeCountry;
