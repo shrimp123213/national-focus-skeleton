@@ -21,7 +21,6 @@ const preset = () =>
     name: '自订',
     url: 'https://example.invalid/v1',
     model: 'manual-model',
-    proxy: '',
     apiKey: 'test-secret',
   });
 
@@ -32,7 +31,6 @@ test('新连线温度预设 0.85，旧设定保留明确数值且补齐进阶栏
     name: '旧',
     url: '',
     model: '',
-    proxy: '',
     temperature: 0.7,
     maxTokens: 16384,
   });
@@ -142,7 +140,7 @@ test('无效 URL／模型／YAML 与无法套用的进阶设定阻止保存', ()
     { bodyParams: 'field: [' },
     { requestHeaders: 'not an object' },
     { bodyParams: 'seed: 42', url: '' },
-    { customPromptPostProcessing: 'strict', proxy: 'proxy' },
+    { customPromptPostProcessing: 'strict', url: '' },
   ]) {
     assert.throws(() => validateApi({ ...preset(), ...change }));
   }

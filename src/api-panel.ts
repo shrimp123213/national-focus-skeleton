@@ -18,6 +18,9 @@ const escape = (value: unknown): string =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 type Update = (config: Config) => Config;
+/** Loaded model lists per endpoint and key. They stay for the page session, so saving or switching presets keeps the menu. */
+const modelLists = new Map<string, string[]>();
+const listKey = (api: ApiPreset) => JSON.stringify([api.url.trim(), api.apiKey]);
 
 /**
  * Owns the API editor so saving connections never needs an MVU write. v0.15.1: presets are a list
@@ -35,7 +38,7 @@ export function mountApiPanel(
   let original: string | null = currentApiName(controller.config, chatId);
   let draft = structuredClone(controller.config.apis.find((api) => api.name === original)!);
   let savedDraft = structuredClone(draft);
-  let models: string[] = [];
+  const models = () => modelLists.get(listKey(draft)) ?? [];
   let status = '';
   let busy = false;
   let requestVersion = 0;
@@ -96,11 +99,9 @@ export function mountApiPanel(
       name: `连接 ${controller.config.apis.length + 1}`,
       url: '',
       model: '',
-      proxy: '',
     });
     savedDraft = structuredClone(draft);
     deepSeekBefore = null;
-    models = [];
     requestVersion++;
     busy = false;
     status = '按「保存并选用」建立新预设，并设为目前聊天使用。';
@@ -117,7 +118,6 @@ export function mountApiPanel(
     original = name;
     draft = structuredClone(controller.config.apis.find((api) => api.name === name)!);
     savedDraft = structuredClone(draft);
-    models = [];
     busy = false;
     requestVersion++;
     deletePending = false;
@@ -132,6 +132,7 @@ export function mountApiPanel(
         : '找不到酒馆扩展设置，金钥暂存于此浏览器的 localStorage（未加密）；不写入楼层变量或剧情。';
   }
   function render(): void {
+    const loaded = models();
     const field = (key: keyof ApiPreset, label: string, type = 'text', extra = '') =>
       `<label class="field">${label}<input data-api-field="${key}" type="${type}" value="${escape(draft[key])}" ${extra}></label>`;
     const textarea = (key: keyof ApiPreset, label: string, hint: string, placeholder: string) =>
@@ -157,8 +158,8 @@ export function mountApiPanel(
       ${deletePending ? '<div class="api-actions confirm-row"><span>删除此预设？引用它的任务将改为跟随目前预设。</span><button class="danger" data-api-action="confirm-delete">确认删除</button><button data-api-action="cancel-delete">取消</button></div>' : ''}
       <div class="api-card-body"><div class="form-grid api-editor">
       ${field('name', '预设名称')}${field('url', '端点（基础 URL）', 'url', 'placeholder="https://example.com/v1"')}
-      ${field('apiKey', 'API 金钥', 'password', 'autocomplete="off"')}${field('proxy', '酒馆代理预设名称（选填）')}
-      <div class="field">模型<div class="inline-field"><input data-api-field="model" type="text" value="${escape(draft.model)}" placeholder="输入模型名称，或加载清单后选择" aria-label="模型"><button data-api-action="models" ${busy ? 'disabled' : ''} title="用上方 URL 与金钥取得模型清单">${busy ? '加载中…' : '加载模型'}</button></div>${models.length ? `<select data-api-model aria-label="模型清单"><option value="">从 ${models.length} 个模型中选择</option>${models.map((name) => `<option value="${escape(name)}" ${name === draft.model ? 'selected' : ''}>${escape(name)}</option>`).join('')}</select>` : ''}</div>
+      ${field('apiKey', 'API 金钥', 'password', 'autocomplete="off"')}
+      <div class="field">模型<div class="inline-field"><input data-api-field="model" type="text" value="${escape(draft.model)}" placeholder="输入模型名称，或加载清单后选择" aria-label="模型"><button data-api-action="models" ${busy ? 'disabled' : ''} title="用上方 URL 与金钥取得模型清单">${busy ? '加载中…' : '加载模型'}</button></div><select class="model-list" data-api-model aria-label="模型清单" ${loaded.length ? '' : 'disabled'}>${loaded.length ? `<option value="">从 ${loaded.length} 个模型中选择</option>${loaded.map((name) => `<option value="${escape(name)}" ${name === draft.model ? 'selected' : ''}>${escape(name)}</option>`).join('')}` : '<option value="">模型清单（尚未加载）</option>'}</select></div>
       ${field('maxTokens', '最大回复长度（Token）', 'number', 'min="1" step="1"')}${field('temperature', 'Temperature', 'number', 'min="0" max="2" step="0.05"')}
       <details class="wide api-advanced" ${advancedOpen ? 'open' : ''}><summary>进阶参数<small>严格 JSON · DeepSeek · 推理 · 流式 · 主体参数与标头</small></summary><div class="form-grid">
       <label class="check wide"><input type="checkbox" data-api-strict ${deep.strict ? 'checked' : ''}>严格 JSON 回应<small>要求模型只返回 JSON：加入 response_format: json_object、strict 后处理，并排除 top_p 与 reasoning_effort。关闭只移除 response_format。需指定 URL；供应商不支持时请关闭。所有使用此预设的任务都套用。</small></label>
@@ -171,7 +172,7 @@ export function mountApiPanel(
       ${textarea('excludeBodyParams', '排除主体参数', '逗号、换行或 YAML 列表，从请求体移除指定栏位。', 'top_p, reasoning_effort')}
       ${textarea('requestHeaders', '附加请求标头', '每行 Header: Value（YAML）；会加入自定义 API 请求。', 'X-Custom-Header: value')}
       </div></details>
-      </div><p class="muted">URL、模型与代理皆空白时沿用酒馆目前连接。进阶参数需指定 URL 与模型。预设输出 60,000 Token、Temperature 0.85。</p><p class="muted">${secretNotice()}</p></div>
+      </div><p class="muted">URL 与模型皆空白时沿用酒馆目前连接。进阶参数需指定 URL 与模型。预设输出 60,000 Token、Temperature 0.85。</p><p class="muted">${secretNotice()}</p></div>
       <footer class="api-card-foot"><p class="api-status" role="status">${escape(status)}${saved}</p><button data-api-action="discard">放弃修改</button><button class="primary" data-api-action="save">${original === null ? '保存并选用' : '保存此预设'}</button></footer>
       </section></div>`;
   }
@@ -227,7 +228,6 @@ export function mountApiPanel(
             deepSeekBefore = null;
             requestVersion++;
             busy = false;
-            models = [];
             status = original === null ? '已取消新增。' : '已放弃尚未保存的修改。';
             if (original === null) {
               load(currentApiName(controller.config, chatId));
@@ -308,11 +308,10 @@ export function mountApiPanel(
                 return;
               }
               read();
+              modelLists.set(listKey(request), list);
               if (draft.url !== request.url || draft.apiKey !== request.apiKey) {
-                models = [];
                 status = '连接资料已改变，请重新加载模型。';
               } else {
-                models = list;
                 status = list.length
                   ? `已加载 ${list.length} 个模型。`
                   : '未取得模型清单；请确认端点与凭证，或手动输入模型。';
@@ -325,7 +324,6 @@ export function mountApiPanel(
                 return;
               }
               read();
-              models = [];
               status = `加载模型失败：${redactApiError(error, [request, draft])}`;
             }
             busy = false;
@@ -357,7 +355,7 @@ export function mountApiPanel(
       } else if (input.dataset.apiField === 'model') {
         const select = host.querySelector<HTMLSelectElement>('[data-api-model]');
         if (select) {
-          select.value = models.includes(draft.model) ? draft.model : '';
+          select.value = models().includes(draft.model) ? draft.model : '';
         }
         return;
       } else {

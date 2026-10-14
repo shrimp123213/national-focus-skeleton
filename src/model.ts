@@ -472,7 +472,6 @@ export const ApiSchema = z.object({
   name: Text,
   url: z.string(),
   model: z.string(),
-  proxy: z.string(),
   apiKey: z.string().default(''),
   maxTokens: z.number().int().min(1).default(defaultMaxTokens),
   temperature: z.number().min(0).max(2).default(defaultTemperature),
@@ -527,8 +526,6 @@ export const JobConfigSchema = z.preprocess(
     strictJson: z.boolean().default(false),
     /** Generate only: focuses per fill request. Unset = the older API preset value. */
     segmentMax: z.number().int().min(0).max(300).optional(),
-    /** A note shown in the task editor and kept in task presets, e.g. which model suits the prompts. */
-    recommendedModel: z.string().max(200).default(''),
     /** 0 means no limit, matching Workflow Assistant route caps. */
     primaryMaxConcurrency: z.number().int().min(0).max(16).default(0),
     fallbackMaxConcurrencies: z.array(z.number().int().min(0).max(16)).default([]),
@@ -660,7 +657,6 @@ export const TaskSnapshotSchema = z.object({
   schedule: z.enum(['reply', 'rounds', 'days', 'manual']),
   interval: z.number().int().min(1).max(1000),
   segmentMax: z.number().int().min(0).max(300).optional(),
-  recommendedModel: z.string().max(200).default(''),
   prompts: z.array(PromptItemSchema).max(60),
 });
 export const TaskPresetSchema = z.object({
@@ -708,7 +704,7 @@ export function defaultConfig(): Config {
     interval: 1,
   };
   return ConfigSchema.parse({
-    apis: [{ name: '目前连线', url: '', model: '', proxy: '' }],
+    apis: [{ name: '目前连线', url: '', model: '' }],
     defaultApi: '目前连线',
     jobs: {
       identify: { ...job },

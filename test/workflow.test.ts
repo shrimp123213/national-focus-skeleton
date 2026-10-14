@@ -155,7 +155,6 @@ test('主连线失败使用备援，不同任务可并行且可个别取消', as
     name: '备援',
     url: '',
     model: '',
-    proxy: '',
     maxTokens: 16384,
     temperature: 0.7,
   });

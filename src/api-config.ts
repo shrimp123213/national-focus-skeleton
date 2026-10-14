@@ -42,7 +42,6 @@ export function validateApi(input: unknown): ApiPreset {
   api.name = api.name.trim();
   api.url = api.url.trim();
   api.model = api.model.trim();
-  api.proxy = api.proxy.trim();
   if (!api.name) {
     throw new Error('预设名称不可空白');
   }
@@ -63,8 +62,8 @@ export function validateApi(input: unknown): ApiPreset {
   yamlObject(api.bodyParams, '附加主体参数');
   yamlObject(api.requestHeaders, '附加请求标头');
   excludedParams(api.excludeBodyParams);
-  if (hasAdvancedApi(api) && (!api.url || api.proxy)) {
-    throw new Error('进阶参数请使用明确的 API URL 与模型，并清空酒馆代理预设名称');
+  if (hasAdvancedApi(api) && !api.url) {
+    throw new Error('进阶参数请使用明确的 API URL 与模型');
   }
   return api;
 }
@@ -221,7 +220,7 @@ export function redactApiError(error: unknown, apis: ApiPreset[]): string {
 
 /** Workflow Assistant strict JSON tasks: add json_object output only where the preset lacks it. */
 export function structuredApi(api: ApiPreset): ApiPreset {
-  if (!api.url || api.proxy) {
+  if (!api.url) {
     // Structured parameters need the Chat Completion path with an explicit endpoint.
     return api;
   }

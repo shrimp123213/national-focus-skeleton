@@ -8,7 +8,6 @@ import {
   type PromptItem,
 } from './model';
 import { defaultPromptText, isModified, newPromptId, promptText } from './prompts';
-import { currentApiName } from './api-config';
 import { placeholders } from './sources';
 import {
   applyTaskPreset,
@@ -128,17 +127,6 @@ export function mountTaskPanel(
   function generationNote(): string {
     return '<p class="muted wide">分期版每国一次生成当期内容，换期时同次产生新树与旧期摘要。每期规模在「一般」设置；本任务的 API、重试与超时也用于换期。</p>';
   }
-  /** Compare the recommended model with the primary connection's model. */
-  function modelNote(kind: JobKind, config: Config): string {
-    const job = config.jobs[kind];
-    if (!job.recommendedModel) {
-      return '';
-    }
-    const name = job.api || currentApiName(config, controller.platform.chatId());
-    const model = config.apis.find((api) => api.name === name)?.model ?? '';
-    const same = Boolean(model) && model.toLowerCase().includes(job.recommendedModel.toLowerCase());
-    return `<small class="block-note ${same ? '' : 'model-hint'}">建议模型：${escape(job.recommendedModel)}；${model ? `主要连接「${escape(name)}」目前是 ${escape(model)}。` : `主要连接「${escape(name)}」沿用酒馆目前的模型，请自行确认。`}</small>`;
-  }
   function sourcesBlock(kind: JobKind, config: Config): string {
     if (!hooks) {
       return '';
@@ -178,7 +166,6 @@ export function mountTaskPanel(
         <div data-fallbacks>${fallbackRows}</div>
         <button data-task-action="fb-add" ${config.apis.length ? '' : 'disabled'}>＋ 新增备援</button>
         <small class="block-note">失败时依序改用备援。「此连接同时请求数」只限制这项任务在该连接上同时送出的请求，0 为不限；主要连接满载时直接改用有空位的备援。各任务只受自己的路由额度限制，没有所有任务合计的并行上限。</small>
-        <div data-model-note>${modelNote(kind, config)}</div>
       </details>
       <details class="task-block" open><summary>执行设置</summary><div class="form-grid">
         ${
@@ -199,7 +186,6 @@ export function mountTaskPanel(
         ${kind === 'generate' ? generationNote() : ''}
         <label class="field">每条连接重试次数<input type="number" min="0" max="10" data-t="retries" value="${job.retries}"><small>失败原因会回馈给模型再试（0–10）。</small></label>
         <label class="field">超时秒数<input type="number" min="10" max="600" data-t="timeout" value="${job.timeout}"></label>
-        <label class="field wide">建议模型<input data-t="recommendedModel" maxlength="200" value="${escape(job.recommendedModel)}" placeholder="例如 deepseek-chat；只是备注，不影响连接"><small>随任务预设保存，分享预设时让对方知道这组提示词适合哪个模型。</small></label>
       </div></details>
       ${sourcesBlock(kind, config)}
       <section class="task-block prompts-block"><div class="prompt-toolbar"><h4>提示词串</h4><small>${promptCount(job.prompts)}</small><span class="spacer"></span><button data-task-action="expand-all">全部展开</button><button data-task-action="collapse-all">全部收合</button><button data-task-action="preview">预览完整提示词串</button></div>
@@ -219,7 +205,7 @@ export function mountTaskPanel(
   function render(): void {
     const config = getDraft();
     const presets = config.taskPresets;
-    host.innerHTML = `<section class="preset-bar"><div class="preset-title" title="保存四项任务的提示词串、排程、重试、每批国策数与建议模型，以及世界书与上下文；不含 API 连接与金钥。预设操作会一并保存目前的任务设置。"><h3>任务预设</h3></div>
+    host.innerHTML = `<section class="preset-bar"><div class="preset-title" title="保存四项任务的提示词串、排程、重试、每批国策数，以及世界书与上下文；不含 API 连接与金钥。预设操作会一并保存目前的任务设置。"><h3>任务预设</h3></div>
       <div class="preset-row"><select data-preset-select aria-label="任务预设"><option value="">${presets.length ? '选择预设以套用…' : '尚无任务预设'}</option>${presets
         .map(
           (preset) =>
@@ -267,7 +253,6 @@ export function mountTaskPanel(
       job.interval = Number(field<HTMLInputElement>('interval').value);
       job.retries = Number(field<HTMLInputElement>('retries').value);
       job.timeout = Number(field<HTMLInputElement>('timeout').value);
-      job.recommendedModel = field<HTMLInputElement>('recommendedModel').value.trim();
       job.prompts = [...section.querySelectorAll<HTMLElement>('[data-prompt-row]')].map((row) => {
         const kindOf = row.dataset.kind as PromptItem['kind'];
         const value = (key: string) =>
@@ -554,16 +539,6 @@ export function mountTaskPanel(
       read();
       hooks.setMode(kind, input.dataset.sourceMode as 'worldbook' | 'context', input.value === 'custom');
       render();
-      return;
-    }
-    if (input.dataset.t === 'api' || input.dataset.t === 'recommendedModel') {
-      // Update only the note: a full redraw on blur would swallow the click that caused it.
-      const section = input.closest<HTMLElement>('[data-task-editor]')!;
-      read();
-      section.querySelector<HTMLElement>('[data-model-note]')!.innerHTML = modelNote(
-        section.dataset.taskEditor as JobKind,
-        getDraft(),
-      );
       return;
     }
     const row = input.closest<HTMLElement>('[data-prompt-row]');

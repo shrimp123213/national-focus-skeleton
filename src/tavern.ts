@@ -893,7 +893,7 @@ export class TavernPlatform implements Platform {
   ): Promise<GenerateResult> {
     signal.throwIfAborted();
     // Keep custom requests isolated from the player's main generation settings.
-    if (api.url && !api.proxy) {
+    if (api.url) {
       const service = this.context()?.ChatCompletionService;
       if (service) {
         try {
@@ -950,13 +950,12 @@ export class TavernPlatform implements Platform {
         custom_api: {
           max_tokens: api.maxTokens,
           temperature: api.temperature,
-          ...(api.url || api.model || api.proxy
+          ...(api.url || api.model
             ? {
                 apiurl: api.url || undefined,
                 model: api.model || undefined,
-                proxy_preset: api.proxy || undefined,
                 key: secret || undefined,
-                source: api.url || api.proxy ? 'openai' : undefined,
+                source: api.url ? 'openai' : undefined,
               }
             : {}),
         },

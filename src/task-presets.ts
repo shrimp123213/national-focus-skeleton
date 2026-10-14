@@ -11,7 +11,7 @@ import { normalizePrompts } from './prompts';
 
 /**
  * Task presets after Workflow Assistant: a named snapshot of every task's prompt chain,
- * schedule, retry and batch settings and recommended model, plus the worldbook/context sources. API routes (primary,
+ * schedule, retry and batch settings, plus the worldbook/context sources. API routes (primary,
  * fallbacks, route caps) and credentials are never part of a preset.
  */
 export function snapshotTasks(config: Config, name: string): TaskPreset {
@@ -24,7 +24,6 @@ export function snapshotTasks(config: Config, name: string): TaskPreset {
       schedule: job.schedule,
       interval: job.interval,
       ...(kind === 'generate' && job.segmentMax !== undefined ? { segmentMax: job.segmentMax } : {}),
-      recommendedModel: job.recommendedModel,
       prompts: structuredClone(job.prompts),
     });
   }

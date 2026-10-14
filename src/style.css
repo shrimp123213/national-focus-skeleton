@@ -1876,7 +1876,8 @@ button.focus-gauge:hover .focus-name {
 }
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, …): long content, such as a model name in a select, must not widen a column past the card. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 18px;
 }
 .form-grid > .wide {
@@ -1885,6 +1886,8 @@ button.focus-gauge:hover .focus-name {
 }
 .field {
   display: grid;
+  /* An input's default width grows with the font; let the column shrink to the field instead. */
+  grid-template-columns: minmax(0, 1fr);
   /* A field stretched to a taller neighbor in its row keeps its own control height. */
   align-content: start;
   gap: 6px;
@@ -3410,9 +3413,6 @@ button.icon {
   padding: 8px 10px;
   background: rgba(230, 169, 80, 0.08);
 }
-.block-note.model-hint {
-  color: #f0c49a;
-}
 .source-scope {
   display: flex;
   flex-wrap: wrap;
@@ -3908,6 +3908,18 @@ details.detail-section.fold > summary::before {
 }
 .inline-field button {
   white-space: nowrap;
+}
+.model-list {
+  width: 100%;
+  min-width: 0;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+}
+.model-list:disabled {
+  color: var(--faint);
+  background: transparent;
+  border-style: dashed;
+  cursor: not-allowed;
 }
 .api-advanced {
   border-top: 1px solid var(--line);

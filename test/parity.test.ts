@@ -574,7 +574,6 @@ test('任务预设保存、套用、汇出与汇入，不含 API 路由', () => 
   );
   config.sources.memoryRecallRecentCount = 7;
   config.jobs.generate.segmentMax = 40;
-  config.jobs.generate.recommendedModel = 'deepseek-chat';
   config.jobs.update.strictJson = true;
   config = saveTaskPreset(config, '外交向');
   assert.equal(config.activeTaskPreset, '外交向');
@@ -593,7 +592,6 @@ test('任务预设保存、套用、汇出与汇入，不含 API 路由', () => 
   assert.equal(other.jobs.update.prompts.find((p) => p.kind === 'task')!.content, '自订局势更新指示');
   assert.equal(other.sources.memoryRecallRecentCount, 7);
   assert.equal(other.jobs.generate.segmentMax, 40);
-  assert.equal(other.jobs.generate.recommendedModel, 'deepseek-chat');
   // The retired task-level strict JSON switch is not part of presets any more.
   assert.equal(other.jobs.update.strictJson, false);
   assert.ok(!text.includes('strictJson'));
