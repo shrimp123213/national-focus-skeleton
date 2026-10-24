@@ -485,7 +485,7 @@ export function mountUI(
     if (modal === 'period-history' && country) {
       const body = backdrop.querySelector('.modal-body');
       if (body) {
-        body.innerHTML = historyBody(country);
+        body.innerHTML = historyBody(country, controller.state?.time);
       }
     }
     rendered = { state, config: controller.config, error: controller.error };
@@ -706,7 +706,8 @@ export function mountUI(
    */
   function doneStatus(country: Country, node: FocusNode, progress: Country['progress'][string]): string {
     const by = progress.by;
-    const when = progress.completed === null ? '' : ` · ${storyTime(progress.completed)}`;
+    const when =
+      progress.completed === null ? '' : ` · ${storyTime(progress.completed, false, controller.state?.time)}`;
     const missed = node.effects.some((e) => e.when?.length && !progress.applied.includes(e.id));
     const how = by
       ? by.mode === 'achieved'
@@ -1323,11 +1324,27 @@ export function mountUI(
     const selectedCandidates = [
       ...backdrop.querySelectorAll<HTMLInputElement>('[data-candidate]:checked'),
     ].map((e) => e.dataset.candidate);
+    // Same lock as the nation bar's control select while the latest floor is read-only.
+    const controlLock = controller.readOnly ? 'disabled title="只读：等本楼 AI 回复完成"' : '';
+    const controlAll = (control: Country['control'], label: string) =>
+      `<button data-control="${control}" ${countries.every((c) => c.control === control) ? 'disabled' : controlLock}>${label}</button>`;
+    const controlSwitch = (c: Country) =>
+      `<div class="control-seg" role="group" aria-label="${escape(c.name)}的控制方式">${(
+        [
+          ['player', 'eagle', '玩家'],
+          ['ai', 'crown', 'AI'],
+        ] as const
+      )
+        .map(
+          ([control, crest, label]) =>
+            `<button data-control="${control}" data-control-country="${escape(c.id)}" aria-pressed="${c.control === control}" ${controlLock}>${icon(crest)}${label}</button>`,
+        )
+        .join('')}</div>`;
     const created = countries.length
-      ? `<h3>已建立的国家</h3>${countries
+      ? `<div class="countries-head"><h3>已建立的国家</h3>${countries.length > 1 ? `<div class="control-all">${controlAll('player', '全部玩家')}${controlAll('ai', '全部 AI')}</div>` : ''}</div>${countries
           .map(
             (c) =>
-              `<div class="candidate country-row"><strong class="country-name">${escape(c.name)}</strong>${periodControl(c)}<label class="switch-label"><input type="checkbox" data-enable="${escape(c.id)}" ${checked(c.enabled)}>启用</label>${c.control === 'player' ? `<label class="switch-label" title="故事时间一次跳过很多天时，由 AI 替这个国家接著选下一项国策"><input type="checkbox" data-delegate="${escape(c.id)}" ${checked(c.skipDelegate)}>时间跳跃时由 AI 代选</label>` : '<small class="muted">AI 演化</small>'}<span class="row-spacer"></span>${
+              `<div class="candidate country-row"><strong class="country-name">${escape(c.name)}</strong>${controlSwitch(c)}${periodControl(c)}<label class="switch-label"><input type="checkbox" data-enable="${escape(c.id)}" ${checked(c.enabled)}>启用</label>${c.control === 'player' ? `<label class="switch-label" title="故事时间一次跳过很多天时，由 AI 替这个国家接著选下一项国策"><input type="checkbox" data-delegate="${escape(c.id)}" ${checked(c.skipDelegate)}>时间跳跃时由 AI 代选</label>` : ''}<span class="row-spacer"></span>${
                 removing === c.id
                   ? `<div class="remove-confirm" role="alert"><small>删除「${escape(c.name)}」的国策树、进度与只涉及此国的事件？会写入目前楼层；之后可从候选清单重新生成。</small><button class="danger" data-remove-confirm="${escape(c.id)}">确认删除</button><button data-remove-cancel>取消</button></div>`
                   : `<button data-tree-export="${escape(c.id)}">导出</button><button class="danger" data-remove-country="${escape(c.id)}" ${busyJobs ? 'disabled title="有任务进行中，请等任务结束后再删除"' : ''}>删除国策树</button>`
@@ -1591,7 +1608,7 @@ export function mountUI(
             ? '阿斯塔利亚的世界推演附上一份国策提案'
             : '这一次没有可接收的国策提案';
     const meta = [
-      r.source ? `推演至 ${storyTime(r.source.now, true)}` : '',
+      r.source ? `推演至 ${storyTime(r.source.now, true, state?.time)}` : '',
       digest.length ? `涉及 ${digest.length} 国` : '',
       r.source ? `第 ${r.source.messageId} 楼` : '',
     ]
@@ -1650,7 +1667,7 @@ export function mountUI(
         const entries = nation.entries
           .map(
             (entry) =>
-              `<li class="entry-${entry.kind}"><time>${escape(storyTime(entry.day))}</time><p>${kinds[entry.kind] ? `<span class="entry-kind">${kinds[entry.kind]}</span>` : ''}${escape(entry.title)}${entry.note ? `<small>${escape(entry.note)}</small>` : ''}</p></li>`,
+              `<li class="entry-${entry.kind}"><time>${escape(storyTime(entry.day, false, state?.time))}</time><p>${kinds[entry.kind] ? `<span class="entry-kind">${kinds[entry.kind]}</span>` : ''}${escape(entry.title)}${entry.note ? `<small>${escape(entry.note)}</small>` : ''}</p></li>`,
           )
           .join('');
         detail = `<h3>${escape(nation.name)}</h3>${shifts ? `<ul class="letter-shifts">${shifts}</ul>` : '<p class="letter-still">数值、主国策与能力都不变。</p>'}${entries ? `<ol class="letter-timeline">${entries}</ol>` : '<p class="muted">这段时间没有新的进展。</p>'}`;
@@ -1839,7 +1856,7 @@ export function mountUI(
     const cards = events
       .map(
         (e) =>
-          `<article class="event-card" data-event-id="${escape(e.id)}"><span class="tag">${storyTime(e.at, true)} · ${newsKicker(e)} · ${escape(names(e))}${e.public ? '' : ' · 未公开'}${e.status === 'ongoing' ? ' · 仍在发展' : e.result ? ` · ${resultNames[e.result]}` : ''}</span><h3>${escape(e.headline || e.title)}</h3><p>${escape(e.description)}</p>${e.current ? `<p class="event-current"><b>现况</b> ${escape(e.current)}</p>` : ''}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape(st.text)}${st.when ? ` <small>${escape(st.when)}</small>` : ''}</li>`).join('')}</ul>` : ''}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${storyTime(t.at)}</b> ${escape(t.text)}</li>`).join('')}</ol>` : ''}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape(newsEffects(state, e))}</small>` : ''}<small>${escape(e.evidence)}</small></article>`,
+          `<article class="event-card" data-event-id="${escape(e.id)}"><span class="tag">${storyTime(e.at, true, state?.time)} ·${newsKicker(e)} · ${escape(names(e))}${e.public ? '' : ' · 未公开'}${e.status === 'ongoing' ? ' · 仍在发展' : e.result ? ` · ${resultNames[e.result]}` : ''}</span><h3>${escape(e.headline || e.title)}</h3><p>${escape(e.description)}</p>${e.current ? `<p class="event-current"><b>现况</b> ${escape(e.current)}</p>` : ''}${e.steps?.length ? `<ul class="event-steps">${e.steps.map((st) => `<li class="${st.state}">${escape(st.text)}${st.when ? ` <small>${escape(st.when)}</small>` : ''}</li>`).join('')}</ul>` : ''}${e.timeline.length > 1 ? `<ol class="event-timeline">${e.timeline.map((t) => `<li><b>${storyTime(t.at, false, state?.time)}</b>${escape(t.text)}</li>`).join('')}</ol>` : ''}${e.changes.some((c) => c.effects.length) && state ? `<small class="event-effects">效果：${escape(newsEffects(state, e))}</small>` : ''}<small>${escape(e.evidence)}</small></article>`,
       )
       .join('');
     const body = `${all.length ? toolbar : ''}${cards || `<p class="muted">${all.length ? '没有符合筛选的事件。' : '目前没有事件。局势更新会记录各国发生的事，包括未公开的。'}</p>`}`;
@@ -2136,7 +2153,7 @@ export function mountUI(
               openModal(
                 'period-history',
                 '往期摘要',
-                historyBody(country),
+                historyBody(country, controller.state?.time),
                 '<button data-modal="close">返回</button>',
               );
             }
@@ -2621,6 +2638,22 @@ export function mountUI(
             showCountries(false);
             return;
           }
+        }
+        if (target.dataset.control) {
+          // One country, or every country when the button names none; one save for the whole batch.
+          const control = target.dataset.control as Country['control'];
+          const only = target.dataset.controlCountry;
+          const changes = (state: State) =>
+            Object.values(state.countries).filter((c) => c.control !== control && (!only || c.id === only));
+          if (!controller.state || !changes(controller.state).length) {
+            return;
+          }
+          await controller.mutate(
+            (state) => changes(state).reduce((next, c) => changeCountry(next, c.id, { control }), state),
+            true,
+          );
+          showCountries(false);
+          return;
         }
         if (target.dataset.candidateAll) {
           const all = target.dataset.candidateAll === 'all';

@@ -3,35 +3,52 @@ export { demoTree } from './demo-tree';
 import { applyProposal, createState, installCountry, stampNews, startFocus } from './engine';
 import { defaultConfig, type Config, type State, type JobKind } from './model';
 import { buildSourceContext } from './sources';
-import { stamp, type GenerateResult, type Platform, type Snapshot } from './platform';
+import { stamp, storyDay, type GenerateResult, type Platform, type Snapshot } from './platform';
 import { makeSampleState, advancePeriodSample, type Scenario } from './demo-period';
 
-export function demoState(): State {
-  let state = installCountry(createState(100), demoTree(), 100);
-  state = installCountry(state, demoTree('north', '北境联邦'), 100);
-  state = installCountry(state, demoTree('coast', '苍海同盟'), 100);
+export function demoState(start = 100): State {
+  let state = installCountry(createState(start), demoTree(), start);
+  state = installCountry(state, demoTree('north', '北境联邦'), start);
+  state = installCountry(state, demoTree('coast', '苍海同盟'), start);
   state.countries.north.control = 'ai';
   state.countries.coast.control = 'ai';
   state = startFocus(state, 'augustium', 'focus_1_1');
-  state = applyProposal(state, { id: 'demo_initial', until: 114, reason: '示范进度', steps: [] });
+  state = applyProposal(state, { id: 'demo_initial', until: start + 14, reason: '示范进度', steps: [] });
   return state;
+}
+/** The card's source time text for a story day, for example 复兴纪元488年-03月-15日-星期六-09:00. */
+function eraText(day: number): string {
+  const date = new Date(Math.round(((day - 719528) * 86400000) / 60000) * 60000);
+  const two = (value: number) => String(value).padStart(2, '0');
+  return `复兴纪元${date.getUTCFullYear()}年-${two(date.getUTCMonth() + 1)}月-${two(date.getUTCDate())}日-星期${'日一二三四五六'[date.getUTCDay()]}-${two(date.getUTCHours())}:${two(date.getUTCMinutes())}`;
 }
 export class DemoPlatform implements Platform {
   readonly demo = true;
+  private readonly calendar: boolean;
+  private readonly start: number;
+  /**
+   * `calendar` starts the story on a date and gives the card's era text as the source time, so the
+   * preview shows times as a real chat does. Tests keep the plain day count.
+   */
+  constructor({ calendar = false } = {}) {
+    this.calendar = calendar;
+    this.start = calendar ? storyDay('488-03-01 09:00') : 100;
+    this.state = demoState(this.start);
+  }
   chatId(): string {
     return 'demo';
   }
   async models(): Promise<string[]> {
     throw new Error('离线测试页不连接 API；请在酒馆中载入模型。');
   }
-  private state = demoState();
+  private state: State;
   private revision = 0;
   private config = defaultConfig();
   private changes = new Set<() => void>();
   private scenario: Scenario = 'crisis';
   async periodSample(completed: boolean): Promise<void> {
     this.scenario = completed ? 'complete' : 'crisis';
-    this.state = makeSampleState(this.scenario);
+    this.state = makeSampleState(this.scenario, this.start);
     this.revision++;
     for (const change of this.changes) {
       change();
@@ -45,6 +62,7 @@ export class DemoPlatform implements Platform {
     }
   }
   async read(config = this.config, job?: JobKind): Promise<Snapshot> {
+    const time = this.calendar ? eraText(this.state.day) : undefined;
     const sources = job
       ? await buildSourceContext({
           config,
@@ -59,7 +77,7 @@ export class DemoPlatform implements Platform {
           ],
           entries: await this.sources(),
           memoryEntries: [],
-          variables: { 世界: { 时间: this.state.day } },
+          variables: { 世界: { 时间: time ?? this.state.day } },
           renderEntry: async (text) => text,
         })
       : undefined;
@@ -68,7 +86,7 @@ export class DemoPlatform implements Platform {
       messageId: this.revision,
       turn: 8,
       day: this.state.day,
-      state: structuredClone(this.state),
+      state: { ...structuredClone(this.state), ...(time ? { time } : {}) },
       context: sources?.context ?? { note: '离线 UI 示范，无 API 连线' },
       prompts: sources?.prompts,
       sourceReport: sources?.report,
@@ -216,7 +234,7 @@ export class DemoPlatform implements Platform {
     }
   }
   reset(): void {
-    this.state = demoState();
+    this.state = demoState(this.start);
     this.revision++;
     for (const change of this.changes) {
       change();

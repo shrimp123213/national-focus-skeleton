@@ -7,7 +7,6 @@ const escape = (value: string): string =>
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
-const time = (day: number): string => storyTime(day);
 export function periodControl(country: Country): string {
   return `<label class="switch-label period-toggle" title="关闭后保留当前树，事件仍继续推进"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod ? 'checked' : ''}>自动换期</label>`;
 }
@@ -43,7 +42,9 @@ export function anchorNotice(country: Country, node: FocusNode): string {
     ? '<div class="period-anchor-note"><strong>前期承接</strong><span>保留原国策的状态、工期及已生效成果，相关事件继续更新。</span></div>'
     : '';
 }
-export function historyBody(country: Country): string {
+/** `source` is the current source time text, so past dates follow its era and padding. */
+export function historyBody(country: Country, source?: string): string {
+  const time = (day: number): string => storyTime(day, false, source);
   return `<p class="muted">${escape(country.name)} · 往期只保留时间与摘要</p>${
     country.period.history.length
       ? [...country.period.history]

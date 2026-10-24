@@ -71,3 +71,18 @@ test('故事时间以日期呈现：日期来源还原成年月日，纯日序�
   assert.equal(storyTime(storyDay('复兴纪元490年-10月-15日-星期三-00:00'), true), '490年10月15日');
   assert.equal(storyTime(114.5), '故事日 114');
 });
+
+test('过去日期沿用目前来源时间的纪元与补零；没有来源或不是日期时维持原样', async () => {
+  const { storyTime } = await import('../src/story-time');
+  const past = storyDay('488-03-05 09:00');
+  assert.equal(storyTime(past, false, '复兴纪元488年-03月-15日-星期三-14:25'), '复兴纪元488年03月05日');
+  assert.equal(storyTime(past, true, '复兴纪元488年-03月-15日-星期三-14:25'), '复兴纪元488年03月05日 09:00');
+  assert.equal(storyTime(past, false, '復興紀元490年-10月-15日-星期三-14:25'), '復興紀元488年03月05日');
+  assert.equal(storyTime(past, false, '复兴纪元488年-3月-15日-星期三-14:25'), '复兴纪元488年3月5日');
+  assert.equal(storyTime(past, false, '2026/10/02 14:25'), '488年03月05日');
+  assert.equal(storyTime(past, false, '2026年10月15日'), '488年3月5日');
+  assert.equal(storyTime(past, false, '2026年10月05日'), '488年03月05日');
+  assert.equal(storyTime(past, false, '488'), '488年3月5日');
+  assert.equal(storyTime(past, false, ''), '488年3月5日');
+  assert.equal(storyTime(114.5, false, '复兴纪元488年-03月-15日-星期三-14:25'), '故事日 114');
+});

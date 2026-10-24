@@ -112,12 +112,13 @@ function treeDefinition(rows: FixtureNode[], name: string) {
   };
 }
 
-export function makeSampleState(scenario: Scenario): State {
+/** `start` is the first story day; other sample days keep their distance from it. */
+export function makeSampleState(scenario: Scenario, start = 100): State {
   const sample = fixtures[scenario];
   const definition = treeDefinition(sample.first, '北境的帐，帝国的粮');
   const completed = sample.first.filter((n) => n.status === 'done');
   let state = installCountry(
-    createState(100),
+    createState(start),
     {
       ...definition,
       historical: completed.map((n) => ({ node: n.id, evidence: '样品已发生的政策成果' })),
@@ -128,14 +129,14 @@ export function makeSampleState(scenario: Scenario): State {
         reason: '样品既有成果',
       })),
     },
-    100,
+    start,
   );
   const country = state.countries[countryId];
   country.periodTitle = '北境的帐，帝国的粮';
   country.agenda = '处理北境信用争议，同时保障民生粮运。';
-  country.period.started = 70;
+  country.period.started = start - 30;
   completed.forEach((row, index) => {
-    country.progress[row.id].completed = 80 + index;
+    country.progress[row.id].completed = start - 20 + index;
   });
   for (const row of sample.first) {
     if (row.status === 'active') {
@@ -144,7 +145,7 @@ export function makeSampleState(scenario: Scenario): State {
         ...country.progress[row.id],
         status: 'active',
         days: 18,
-        started: 82,
+        started: start - 18,
         investments: ['已投入港务协调人力'],
         evidence: '港口与粮仓名册已核定，内陆配额协调中。',
       };
@@ -153,7 +154,7 @@ export function makeSampleState(scenario: Scenario): State {
   const event = sample.events[0];
   state.events[event.id] = EventSchema.parse({
     id: event.id,
-    at: 100,
+    at: start,
     countries: [countryId],
     title: event.title,
     description: event.description,
@@ -167,7 +168,7 @@ export function makeSampleState(scenario: Scenario): State {
     status: 'ongoing',
     settle: '依实际局势确认运作成果',
     steps: event.steps.map((text, i) => ({ text, state: i === 0 ? 'done' : i === 1 ? 'active' : 'pending' })),
-    timeline: [{ at: 100, text: event.description }],
+    timeline: [{ at: start, text: event.description }],
     source: { kind: 'update', country: countryId, node: scenario === 'crisis' ? 'A04' : 'A05' },
   });
   state = StateSchema.parse(state);
