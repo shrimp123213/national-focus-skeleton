@@ -250,6 +250,8 @@ export type BookEntry = {
 };
 export function bookEntries(view: PromptView, constant = true): BookEntry[] {
   const read = (path: string) => `<%- getvar('国策.prompt.${path}', { defaults: '' }) %>`;
+  // The book is shared by every chat of the character: a floor without national data shows nothing.
+  const wrap = (tag: string) => `<% if (getvar('国策.prompt.overview', { defaults: '' })) { %>${tag}<% } %>`;
   const ids = Object.keys(view.countries);
   if (!view.overview) {
     return [];
@@ -266,7 +268,7 @@ export function bookEntries(view: PromptView, constant = true): BookEntry[] {
       name: `${bookPrefix}国家动态-包裹-上`,
       constant: true,
       keys: [],
-      content: '<国策动态>',
+      content: wrap('<国策动态>'),
       order: bookOrder.open,
     },
     ...ids.map((id) => ({
@@ -280,7 +282,7 @@ export function bookEntries(view: PromptView, constant = true): BookEntry[] {
       name: `${bookPrefix}国家动态-包裹-下`,
       constant: true,
       keys: [],
-      content: '</国策动态>',
+      content: wrap('</国策动态>'),
       order: bookOrder.close,
     },
   ];

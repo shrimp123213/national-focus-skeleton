@@ -1115,9 +1115,10 @@ test('世界书工作绑定来源聊天与楼层：切换聊天或排入较新�
     const empty = await env.platform.read(defaultConfig());
     env.getData().国策 = { ...demoState(), day: empty.state.day };
     const a = await env.platform.read(defaultConfig());
-    // Switch before the job starts.
+    // Switch before the job starts. Both chats share the fake MVU data, so chat B has no save.
     env.platform.inject(a.state);
     env.chat();
+    delete env.getData().国策;
     env.emit('chat');
     await settle();
     assert.deepEqual(books.get('book-chat-b'), []);
@@ -1145,6 +1146,105 @@ test('世界书工作绑定来源聊天与楼层：切换聊天或排入较新�
     );
   } finally {
     env.platform.dispose();
+  }
+});
+
+/** A floor saved with `国策.prompt`, and one primary worldbook that every chat shares. */
+async function sharedBookEnvironment() {
+  const setup = bookEnvironment();
+  const { env, books } = setup;
+  const unrelated = { name: '原有设定', content: '保留', strategy: { type: 'constant', keys: [] } };
+  books.set('shared', [unrelated]);
+  env.api.getCharWorldbookNames = () => ({ primary: 'shared', additional: [] });
+  const empty = await env.platform.read(defaultConfig());
+  env.getData().国策 = { ...demoState(), day: empty.state.day };
+  const initial = await env.platform.read(defaultConfig());
+  await env.platform.commit(initial, initial.state);
+  let injections = 0;
+  const inject = env.api.injectPrompts;
+  env.api.injectPrompts = (prompts) => {
+    injections++;
+    return inject(prompts);
+  };
+  const entries = () =>
+    books
+      .get('shared')!
+      .filter((entry) => entry.name.startsWith('国策档案-'))
+      .map((entry) => entry.name);
+  return { ...setup, unrelated, entries, injections: () => injections };
+}
+
+test('换聊天时依本聊天的存档重建或清除角色主世界书条目：读不到楼层也同步、不注入，存档损坏时不动', async () => {
+  const { env, books, settle, unrelated, entries, injections } = await sharedBookEnvironment();
+  try {
+    const saved = env.getData().国策;
+    // A general variable update runs: the floor cannot be read, so nothing calls inject().
+    env.api.Mvu!.isDuringExtraAnalysis = () => true;
+    await assert.rejects(env.platform.read(defaultConfig()), FloorNotReady);
+    env.emit('chat');
+    await settle();
+    assert.ok(entries().includes('国策档案-世界概况'));
+    assert.ok(entries().some((name) => name.startsWith('国策档案-国家-')));
+    assert.deepEqual(books.get('shared')![0], unrelated);
+    // Another chat without national data: the entries leave the shared book.
+    env.chat();
+    delete env.getData().国策;
+    env.emit('chat');
+    await settle();
+    assert.deepEqual(books.get('shared'), [unrelated]);
+    // A chat with a save gets its entries back.
+    env.getData().国策 = saved;
+    env.emit('chat');
+    await settle();
+    assert.ok(entries().includes('国策档案-世界概况'));
+    // An unreadable save leaves the entries to the next successful read.
+    const before = structuredClone(books.get('shared'));
+    env.getData().国策 = { countries: 'broken' };
+    env.emit('chat');
+    await settle();
+    assert.deepEqual(books.get('shared'), before);
+    assert.equal(injections(), 0);
+  } finally {
+    env.platform.dispose();
+  }
+});
+
+test('脚本在聊天中启动时同步角色主世界书条目；MVU 较晚就绪时也不取消已排入注入的交接', async () => {
+  const { env, books, state, settle, unrelated, entries } = await sharedBookEnvironment();
+  const storage = new Map<string, string>();
+  const local = {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => void storage.set(key, value),
+  } as unknown as Storage;
+  env.platform.dispose();
+  // Opening the chat: the script starts with MVU ready and nothing to inject yet.
+  const opened = new TavernPlatform(env.api, local);
+  try {
+    await settle();
+    assert.ok(entries().includes('国策档案-世界概况'));
+    assert.equal(state.injected, '');
+  } finally {
+    opened.dispose();
+  }
+  // MVU is ready only after the script starts, while an inject job waits on the worldbook read.
+  books.set('shared', [unrelated]);
+  const mvu = env.api.Mvu;
+  env.api.Mvu = undefined;
+  const late = new TavernPlatform(env.api, local);
+  try {
+    env.api.Mvu = mvu;
+    let open!: () => void;
+    state.gate = new Promise((resolve) => (open = resolve));
+    late.inject((await late.read(defaultConfig())).state);
+    assert.match(state.injected, /各国动向/);
+    // The 200 ms check binds MVU and queues the chat sync behind the waiting inject job.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    open();
+    await settle();
+    assert.equal(state.injected, '', 'the inject job still hands over to the entries');
+    assert.ok(entries().includes('国策档案-世界概况'));
+  } finally {
+    late.dispose();
   }
 });
 

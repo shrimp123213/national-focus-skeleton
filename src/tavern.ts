@@ -252,6 +252,9 @@ export class TavernPlatform implements Platform {
         this.sourceRun.abort();
         this.sourceRun = new AbortController();
         this.bookEpoch++;
+        if (name === 'CHAT_CHANGED') {
+          this.syncBook();
+        }
         for (const callback of this.changeListeners) {
           callback();
         }
@@ -326,6 +329,8 @@ export class TavernPlatform implements Platform {
         }
         this.mvuBusy = false;
       });
+      // The saves of this chat are readable now; this script starts again in every chat it opens.
+      this.syncBook();
     };
     bindMvu();
     for (const event of ['MESSAGE_EDITED', 'MESSAGE_UPDATED']) {
@@ -827,40 +832,48 @@ export class TavernPlatform implements Platform {
       ? { state: parsed.data, events: floorNews(parsed.data, messageId, seen ?? undefined) }
       : null;
   }
-  async peek(config: Config) {
+  /** The newest AI floor of this chat that carries a national save. */
+  private newestSave(): { messageId: number; data: MvuData; saved: unknown } | null {
     const mvu = this.api.Mvu;
     const last = this.api.getLastMessageId();
     if (!mvu || last < 0) {
       return null;
     }
-    // Only read: no busy checks and no source context, because nothing is written from this state.
     for (const message of this.api.getChatMessages(`0-${last}`).reverse()) {
       if (message.role !== 'assistant') {
         continue;
       }
       const data = mvu.getMvuData({ type: 'message', message_id: message.message_id });
       const saved = data?.国策 !== undefined ? data.国策 : data?.stat_data?.国策;
-      if (saved === undefined) {
-        continue;
+      if (saved !== undefined) {
+        return { messageId: message.message_id, data, saved };
       }
-      const parsed = StateSchema.safeParse(saved);
-      if (!parsed.success) {
-        return null;
-      }
-      // Same as read(): inject() hands over to the worldbook only when this floor saved the prompt.
-      this.config = config;
-      this.promptSaved = Boolean((data.国策 as { prompt?: unknown } | undefined)?.prompt);
-      const state = migrateCountryKeys(parsed.data);
-      const rawTime = valueAt(data.stat_data, config.sources.timePath);
-      try {
-        storyDay(rawTime);
-        state.time = timeText(rawTime);
-      } catch {
-        // Keep the saved time; this view does not count days.
-      }
-      return { state, messageId: message.message_id };
     }
     return null;
+  }
+  async peek(config: Config) {
+    // Only read: no busy checks and no source context, because nothing is written from this state.
+    const found = this.newestSave();
+    if (!found) {
+      return null;
+    }
+    const parsed = StateSchema.safeParse(found.saved);
+    if (!parsed.success) {
+      return null;
+    }
+    const data = found.data;
+    // Same as read(): inject() hands over to the worldbook only when this floor saved the prompt.
+    this.config = config;
+    this.promptSaved = Boolean((data.国策 as { prompt?: unknown } | undefined)?.prompt);
+    const state = migrateCountryKeys(parsed.data);
+    const rawTime = valueAt(data.stat_data, config.sources.timePath);
+    try {
+      storyDay(rawTime);
+      state.time = timeText(rawTime);
+    } catch {
+      // Keep the saved time; this view does not count days.
+    }
+    return { state, messageId: found.messageId };
   }
   onNewsRequest(callback: (messageId: number, action: NewsAction) => void): () => void {
     const listener = this.api.eventOn(NEWS_EVENT, (messageId: unknown, action: unknown) => {
@@ -1085,6 +1098,31 @@ export class TavernPlatform implements Platform {
       token: ++this.bookToken,
       // Floors saved before v0.12.6 have no `国策.prompt` for the entries to read yet.
       handOff: book && this.promptSaved && Boolean(content),
+    });
+  }
+  /**
+   * The character primary worldbook is shared by every chat of the character, and a chat whose
+   * floor cannot be read yet never calls inject(). When this script meets a chat, rebuild the
+   * entries from the newest save of that chat, or remove them when it has none. This job never
+   * injects and keeps the current token, so a queued inject job still hands over its prompt.
+   */
+  private syncBook(): void {
+    if (this.disposed || !this.api.Mvu || !this.api.updateWorldbookWith || this.api.getLastMessageId() < 0) {
+      return;
+    }
+    const found = this.newestSave();
+    const parsed = found ? StateSchema.safeParse(found.saved) : null;
+    if (parsed && !parsed.success) {
+      // Leave the entries of an unreadable save to the next successful read.
+      return;
+    }
+    this.config ??= this.loadConfig();
+    const view = parsed ? promptView(migrateCountryKeys(parsed.data), this.config.newsPrompt) : null;
+    this.queueBook(this.bookMode() ? view : null, {
+      chat: this.api.SillyTavern.getCurrentChatId(),
+      epoch: this.bookEpoch,
+      token: this.bookToken,
+      handOff: false,
     });
   }
   private bookCurrent(source: { chat: string; epoch: number; token: number }): boolean {

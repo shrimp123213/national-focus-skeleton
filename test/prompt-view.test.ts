@@ -107,6 +107,56 @@ test('聊天世界书条目：蓝灯概况与包裹、每国详情预设蓝灯�
   assert.deepEqual(reconcileBook(updated, bookEntries(promptView(createState(0)))), [other]);
 });
 
+/** Enough of EJS for these entries: `<% code %>`, `<%- value %>` and text. */
+function render(template: string, vars: Record<string, string>): string {
+  const body = template
+    .split(/(<%[\s\S]*?%>)/)
+    .map((part) =>
+      part.startsWith('<%-')
+        ? `out += ${part.slice(3, -2)};`
+        : part.startsWith('<%')
+          ? part.slice(2, -2)
+          : `out += ${JSON.stringify(part)};`,
+    )
+    .join('\n');
+  const getvar = (path: string, options: { defaults: string }) => vars[path] ?? options.defaults;
+  return new Function('getvar', `let out = ''; ${body}\nreturn out;`)(getvar);
+}
+
+test('角色主世界书由各聊天共用：没有国策资料的楼层，全部条目（含包裹）都输出空白；旧版固定包裹就地改写', () => {
+  const { state } = world();
+  const wanted = bookEntries(promptView(state));
+  const floor = { '国策.prompt.overview': '概况', '国策.prompt.countries.augustium.text': '帝国详情' };
+  assert.deepEqual(
+    wanted.map((entry) => render(entry.content, floor)),
+    ['概况', '<国策动态>', '帝国详情', '', '</国策动态>'],
+  );
+  assert.deepEqual(
+    wanted.map((entry) => render(entry.content, {})),
+    ['', '', '', '', ''],
+  );
+  // Entries written by older versions had fixed wrapper tags: update them in place.
+  const other: WorldbookEntryLike = {
+    name: '玩家的条目',
+    strategy: { type: 'constant', keys: [] },
+    content: '保留',
+  };
+  const moved = { type: 'at_depth', depth: 1, order: 7 };
+  const old = reconcileBook([other], wanted)!.map((entry) =>
+    entry.name === `${bookPrefix}国家动态-包裹-上`
+      ? { ...entry, content: '<国策动态>', position: moved }
+      : entry.name === `${bookPrefix}国家动态-包裹-下`
+        ? { ...entry, content: '</国策动态>' }
+        : entry,
+  );
+  const updated = reconcileBook(old, wanted)!;
+  const open = updated.find((entry) => entry.name === `${bookPrefix}国家动态-包裹-上`)!;
+  assert.equal(open.content, wanted[1].content);
+  assert.deepEqual(open.position, moved);
+  assert.equal(updated.length, old.length);
+  assert.equal(reconcileBook(updated, wanted), null);
+});
+
 test('持续事件以最新进展呈现：已解除的禁运不写成仍有效，今日的更新算近期消息', async () => {
   const { EventSchema } = await import('../src/model');
   const { state } = world();
