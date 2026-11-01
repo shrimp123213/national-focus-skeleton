@@ -821,7 +821,7 @@ NodeSchema += {
 - `tavern.ts`：`commit` 在寫入前 `stampNews`，寫入後若有玩家可見的新新聞，以 `setChatMessages` 在樓層末尾加 `\n\n<国策快讯/>`（已有則略過）；`identity()`、`historyHash()` 與 `sources.ts` 的 $7 提取都先 `stripNewsTag`，所以標籤不算正文編輯、不讓任務過期、不送進任務上下文。`inject(state, news)` 附上 `newsDigest`。`readNews(messageId)` 讀取該樓 MVU 的國策並以迷霧過濾；`onNewsRequest` 監聽卡片發出的 `national-focus:open-news`（酒館助手事件匯流排）。
 - `ui.ts`：國際快訊視窗（`showNews`，一頁一則，唯一選項按鈕翻頁或關閉，滑過顯示效果）、`autoNews`（最新樓層未讀的重要新聞自動彈出一次，已讀存 localStorage `national-focus.news-seen.v1`）、事件紀錄顯示推進歷程、節點 ✦ 標記與詳情「轉折國策」段、一般設定的 newsPrompt 開關、離線頁「發布示範新聞」。
 - `src/news-card/card.html`：iframe 卡片。**與第 20.6.3 節的差異：沒有另存可見頭條快照，而是在卡片內用與 `canObserve` 相同的規則（fog、control、observing、public）過濾**，資料取自該樓的 `getVariables({type:'message', message_id: getCurrentMessageId()})`，因為每樓的國策本來就是當時的快照。
-- `scripts/build.mjs` 產生 `dist/國策快訊-卡片正則.json`（markdownOnly、placement [2]、maxDepth 2，卡片內嵌，不依賴外部網址）、`dist/國策快訊-提示移除正則.json`（promptOnly，刪除標籤，避免模型模仿），以及 `dist/國策快訊-卡片預覽.html`。
+- `scripts/build.mjs` 產生 `dist/国策档案-v0.17.3-正则-1-快讯卡片.json`（markdownOnly、placement [2]、maxDepth 2，卡片內嵌，不依賴外部網址）、`dist/国策档案-v0.17.3-正则-3-快讯提示移除.json`（promptOnly，刪除標籤，避免模型模仿），以及 `dist/國策快訊-卡片預覽.html`。
 
 驗證：100 項測試通過；Chromium 冒煙檢查離線頁的示範新聞自動彈出、翻頁、已讀後不再彈出、手機版面，以及卡片預覽頁的展開與開窗事件，無頁面錯誤。未在真實酒館驗收：`setChatMessages` 觸發的 MESSAGE_EDITED 與 MVU 的互動、iframe 卡片的高度、事件匯流排是否跨 iframe 傳到腳本。
 
@@ -1373,7 +1373,7 @@ v0.6.0 起，標準以上的規模改為「藍圖＋逐支請求」（第 17 節
 
 - v0.11.1：`F:\命一串\national-focus`，不變。
 - 骨架版：`F:\命一串\national-focus-skeleton`，本機 git 分支 `skeleton`。
-- 腳本名稱「【命定之詩】國策檔案 v0.12.0 骨架版」，id `3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13`，匯入檔 `dist/國策檔案-骨架版-酒館助手.json`。
+- 腳本名稱「【命定之詩】國策檔案 v0.12.0 骨架版」，id `3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13`，匯入檔 `dist/国策档案-v0.17.3-脚本.json`。
 - 兩版都讀寫最外層 `国策`，同時只啟用一個。
 - 設定：`tavern.ts` 的 localStorage key 改為 `national-focus-skeleton.config.v1`，`secrets.ts` 的酒館設定命名空間改為 `national-focus-skeleton__config_v1`；找不到時讀 v0.11.1 的設定作為初始值。金鑰命名空間 `national-focus__api_secrets_v1` 兩版共用。
 
@@ -1390,7 +1390,7 @@ v0.6.0 起，標準以上的規模改為「藍圖＋逐支請求」（第 17 節
 - `repair.ts`：`repairReply(value, stage)`。fill 回覆不做節點修補（否則會補上 prerequisites 等欄位，讓嚴格 schema 退回）；skeleton 只補三種條件的空陣列。
 - `workflow.ts`：進度快取改為 `SkeletonProgress { skeleton?, filled }`，key 不再含每批上限（改批次大小不必重做骨架）；預覽顯示 skeleton 請求。
 - `prompts.ts`：generate 任務改為 generate／skeleton／fill 三個 stage，加入制衡與 lock 說明。
-- `scripts/build-weaver-preset.py`：生成思維改為 skeleton／fill，Step 5 為制衡與能力流；輸出 `presets/織界國策-任務預設-v3-骨架版.json`。v1、v2 預設從本版移除。
+- `scripts/build-weaver-preset.py`：生成思維改為 skeleton／fill，Step 5 為制衡與能力流；輸出 `presets/旧版/織界國策-任務預設-v3-骨架版.json`。v1、v2 預設從本版移除。
 - UI 文字：API 欄位改名「每批填寫國策數（骨架生成）」、規模說明、任務說明。
 
 ### 31.3 與第 30 節的差異
@@ -1437,7 +1437,7 @@ v0.6.0 起，標準以上的規模改為「藍圖＋逐支請求」（第 17 節
 ### 32.3 提示詞與預設
 
 - `prompts.ts`：skeleton 說明加入 negate、conditional、core、relations；「國策之間的關係」一段依 GPT 的設計順序（問題與參與者 → 因果 → 規則 → 文字）與六類關係撰寫，明示不要硬湊、普通建設可以單純有用；fill 要求描述寫出關係與條件式成果。
-- `scripts/build-weaver-preset.py`：Step 5 改為「國策之間的關係與能力流」。重新產生 `presets/織界國策-任務預設-v3-骨架版.json`。
+- `scripts/build-weaver-preset.py`：Step 5 改為「國策之間的關係與能力流」。重新產生 `presets/旧版/織界國策-任務預設-v3-骨架版.json`。
 
 ### 32.4 其他
 
@@ -1809,7 +1809,7 @@ Q1–Q5 仍為已確認方向；A–H 中新增的具體機制屬 GPT 建議，�
   - `readNews()` 依該樓 `快讯.insiders` 過濾；面板的自動新聞視窗改用 `readNews`。
   - `onNewsRequest` 帶動作：`news`／`panel`／`events`。
 - `src/news-card/card.html` 改寫為報紙版（見 README）。設定存在酒館助手全域變量 `national_focus_newspaper`，沒有 `insertOrAssignVariables` 時改用 localStorage。
-- 打包：卡片正則 `maxDepth` 4；新增 `國策快訊-舊樓層隱藏正則.json`（`minDepth` 5，只影響顯示）。
+- 打包：卡片正則 `maxDepth` 4；新增 `国策档案-v0.17.3-正则-2-快讯旧楼层隐藏.json`（`minDepth` 5，只影響顯示）。
 - 介面：「轉折國策」字樣改為「重要國策」；事件紀錄顯示現況、步驟與結束方式。
 
 ### 43.5 驗證與未驗證
@@ -1852,7 +1852,7 @@ P2 項目（改選國策、測試連線、任務層的世界書與上下文設�
 - `tavern.ts`：讀不到故事時間時的錯誤寫出路徑與讀到的值。沒有加入 `onParseFail`「照常執行」選項：國策進度以故事日計算，沒有時間就無法推進，讀取在所有任務之前就會失敗。
 - `ui.ts`：`switchSettingsTab()`；`settingsDirty()` 含 `apiPanel.dirty()`；頁尾儲存先 `apiPanel.commit()`，失敗時切到 API 分頁並顯示錯誤。國策詳情新增 `switch` 動作（`startFocus(pauseFocus(...))`），鎖定確認也用它；「設計依據」「工期理由」改為 `<details>`。手機版 `nationMore` 與 `.nation-more-btn`、`.control-tag`；頂部國家選單只列國名。一般設定的並發改名「同時執行的任務數」。
 - `style.css`：手機版資訊列（檔案末尾的 760px 區塊覆寫前面的規則）、`.notice`、`.confirm-row`、`.source-scope`、`.source-modes`、`details.fold`。
-- `scripts/build-weaver-preset.py` 不再寫入 `strictJson`，重新產生 `presets/織界國策-任務預設-v3-骨架版.json`。
+- `scripts/build-weaver-preset.py` 不再寫入 `strictJson`，重新產生 `presets/旧版/織界國策-任務預設-v3-骨架版.json`。
 
 未做：任務預設操作（套用、匯入等）會重新掛載設定視窗，API 分頁未儲存的修改會遺失，行為與 v0.13.2 相同。
 
@@ -1895,7 +1895,7 @@ P2 項目（改選國策、測試連線、任務層的世界書與上下文設�
 - 匯入缺 `tree.autoPeriod` 一律 false（連同進度與否皆同）；明示值原樣保留，匯出帶回。連同進度時保留 period 摘要和索引，仍按原匯入流程校準。舊版已載入存檔的樹缺少來源標記，无法辨識是否手製，需玩家手動關閉。
 - 原 UI 加期別列、每國開關、承接標記／詳情與摘要視窗。沒有新增全新面板，沒有手動強制換期。長期方向在模型輸入及正文可見，當期議程顯示於期別列。
 - 正式 `dist/UI測試.html` 的「測試操作」提供兩個離線分期情境，沿用之前核准的樣稿並使用正式 transitionPeriod。原 docs/period-preview 是 v0.13.4 上的拋棄式樣品，不再以它的注入建置脚本測試新版 UI。
-- 已修改的使用者提示詞不覆寫。使用織界者時可匯入新 `presets/織界國策-任務預設-v4-分期版.json`，保留 v3 原檔；v4 取消舊結構配額，處理 period 回覆。
+- 已修改的使用者提示詞不覆寫。使用織界者時可匯入新 `presets/旧版/織界國策-任務預設-v4-分期版.json`，保留 v3 原檔；v4 取消舊結構配額，處理 period 回覆。
 - 更新腳本及快訊卡片正則；其他正則本版不需重新匯入。UI 與真實酒館／API 尚待人工驗收，具體步驟見 VALIDATION.md。
 
 ### 驗證與範圍
@@ -2048,7 +2048,7 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 ### 驗證、交付與尚未完成項目
 
 - v0.14.11 的 TypeScript、164／164 項自動化測試、格式、建置、匯出一致性與差異檢查通過；已核對遠端主分支與版本標籤。這是本機靜態／受控測試證據，不是實際酒館或供應商 API 驗收。
-- 最新安裝需更新 `dist/國策檔案-骨架版-酒館助手.json` 和三個 `dist/國策快訊-…正則.json`，再重新載入聊天。未編輯的內建提示詞自動用新版；織界使用者若要簡體分期提示詞，需重新匯入並套用 `presets/織界國策-任務預設-v4-分期版.json`。
+- 最新安裝需更新 `dist/国策档案-v0.17.3-脚本.json` 和三個 `dist/國策快訊-…正則.json`，再重新載入聊天。未編輯的內建提示詞自動用新版；織界使用者若要簡體分期提示詞，需重新匯入並套用 `presets/旧版/織界國策-任務預設-v4-分期版.json`。
 - 正式離線樣品為 `dist/UI測試.html`，其中分期測試操作走正式實作；它不連真實 API。`docs/period-preview` 等舊樣品不能代替新版的人工驗收。
 - UI、真實酒館更新、角色主世界書遷移、跨瀏覽器及實際模型生成品質仍待人工驗收，案例見 `VALIDATION.md`。使用者明確要求前端 UI 由人工驗收，禁止以 computer use 代做。
 - 尚未實作的後續方向：工作流助手 `addon_data` 對接（仍需實際樣本與契約）、完整「任何路線都不可能開始」的條件分析、違約自動事實。這些是未完成方向，沒有在本次交接自動升格為下一個已授權開發任務。
@@ -2065,7 +2065,7 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 
 使用者回報最常被退回的是參數型別與結構錯誤，要求參考工作流助手「世界后台引擎」的巨集與格式寫法建立 v5。只新增預設與其生成器，未改 `src/`，主腳本與正則不需更新。
 
-- 檔案：`presets/織界國策-任務預設-v5-格式強化版.json`，由 `python scripts/build-weaver-preset.py <輸出路徑>` 產生（生成器已改為 v5；v4 以 git 歷史及原 JSON 保留）。
+- 檔案：`presets/旧版/織界國策-任務預設-v5-格式強化版.json`，由 `python scripts/build-weaver-preset.py <輸出路徑>` 產生（生成器已改為 v5；v4 以 git 歷史及原 JSON 保留）。
 - 新增段落（四項任務皆有）：
   - `宏重置`（第一段，勿關）：`{{setvar::国策_VOID指令::}}`、`{{setvar::国策_思考位置::…}}`，清掉前次執行留下的聊天變量。
   - `思考方式·原生思考`／`思考方式·thinking 标签`（預設皆關）：覆寫 `国策_思考位置`；全關時沿用自動判斷的通用文字。思維要求以 `{{getvar::国策_思考位置}}` 讀取。
@@ -2124,7 +2124,7 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 
 使用者發現只有局勢更新有世界局勢段，而且它預設關閉；生成國策樹沒有讀。原因：v4 起只在局勢更新試放 `{{世界状态摘要@world}}`，這是工作流助手自己的標籤變數巨集，國策任務不經工作流助手，酒館很可能不認得而原文送出，始終未驗證；國策來源只讀 `stat_data`，世界后台引擎的 `addon_data` 與 `post_process_tags` 在其外，所以四項任務實際都讀不到世界局勢。換期尤其需要當下局勢。
 
-- 預設改名 v5.1，輸出 `presets/織界國策-任務預設-v5.1-格式強化版.json`（v5 檔保留不改）；生成器 `PRESET_NAME` 與 Usage 同步。
+- 預設改名 v5.1，輸出 `presets/旧版/織界國策-任務預設-v5.1-格式強化版.json`（v5 檔保留不改）；生成器 `PRESET_NAME` 與 Usage 同步。
 - `WORLD_STATE` 改為 EJS（ST-Prompt-Template，tavern.ts 在巨集之後執行，與國策世界書條目相同）：讀 `getvar('post_process_tags')['世界状态摘要_world'][世界名]`（剝除 `<世界状态摘要>` 外層），以及 `getvar('addon_data').世界` 中 `降临===true` 的世界（沒有降临者則取全部）。只取刊报日期、时代快讯.世界时代阶段／世界时局演进动态、世界剧情态势.时局动态／团体动态、世界经济简报.世界经济气候／贸易格局／经济事件；遞迴移除 叙事指导、平行演化、位面交汇、降临 與 `_` 開頭的只讀鍵；有 `YAML` 時用 YAML，否則 JSON。兩者都沒有內容時整段為空，不送出。鍵名依 v6.3 預設的世界書模板與 addon-mvu v0.0.46 規則核對。
 - 位置：生成、局勢更新、重大改樹的 `nf-background` 之後、`data` 之前，預設開啟；辨識國家不加。背景信息末行改為說明之後依序是世界局勢、任務資料、國策輸出格式。
 - 測試：`test/weaver-preset.test.ts` 改讀 v5.1；新增以迷你 EJS 求值器（`<%_ _%>`、`<%- %>`、`<%= %>` 與空白吞噬）執行該段：無變量時輸出為空；有變量時含摘要與篩選後的狀態，排除非降临世界、占卜、歲月史書、市場與只讀鍵；並確認佔位符替換不改動腳本、無 `{{`。176／176 測試通過。實際酒館中 getvar 讀到的是否為本樓變量、輸出長度是否合適，待使用者以請求預覽驗收。
@@ -2135,7 +2135,7 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 
 - 核對 v6.3：世界后台引擎只寫「思维链语言：中文」「语言：中文」，沒有簡體規定；它輸出簡體是因為整份提示詞皆為簡體。國策 v4／v5 的編織技法寫「所有輸出文字的語言與字形跟隨<前文劇情>與<背景設定>」，世界書或正文（含使用者輸入）夾雜繁體時模型就會改用繁體，是本問題的來源。
 - `src/prompts.ts`：`DEFAULT_GUIDE` 開頭加入「所有輸出文字（包括思考）一律使用簡體中文；來源資料夾雜繁體時也改用簡體書寫，只有國家 ID 照抄 candidate 或 state」。
-- 織界 v5.2（`presets/織界國策-任務預設-v5.2-格式強化版.json`，v5.1 保留）：編織技法與辨識國家技法改為一律簡體（國名照抄世界書）；`THINK_WHERE` 思維語言改為簡體中文；`COMMON` 新增 J11。
+- 織界 v5.2（`presets/旧版/織界國策-任務預設-v5.2-格式強化版.json`，v5.1 保留）：編織技法與辨識國家技法改為一律簡體（國名照抄世界書）；`THINK_WHERE` 思維語言改為簡體中文；`COMMON` 新增 J11。
 - `src/style.css`：`:host` 新增 `--sans`（Microsoft YaHei、PingFang SC、Noto Sans SC、Source Han Sans SC，後備 Noto Sans TC、Microsoft JhengHei、PingFang TC），`--serif` 改為 Noto Serif SC、Source Han Serif SC、Songti SC 優先，最後回退 `--sans`；與報紙卡片（v0.14.7 起已簡體優先）一致。原本主面板以 Noto Sans TC／微軟正黑體為首，簡體字缺字或字形不同時混用其他字型。
 - 已存在存檔中的繁體國策、事件文字不轉換；專案沒有執行期繁簡轉換套件。如需轉換需另行評估（例如匯出後離線轉換再匯入，或重新生成）。
 - 驗證：177／177 測試；Edge 無頭量測確認 Shadow DOM 內計算字型為簡體優先。UI 與實際模型輸出待人工驗收。

@@ -1,5 +1,5 @@
 # Builds the 织界国策 task preset (national-focus-task-presets v1).
-# Usage: python scripts/build-weaver-preset.py presets/織界國策-任務預設-v6.0-格式強化版.json
+# Usage: python scripts/build-weaver-preset.py presets/国策档案-v0.17.3-预设-织界任务.json
 # Other build scripts import the prompt constants; only running this file writes a preset.
 import json
 import sys

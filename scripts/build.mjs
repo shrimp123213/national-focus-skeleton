@@ -1,11 +1,19 @@
 import { build } from 'esbuild';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = join(root, 'dist');
 await mkdir(output, { recursive: true });
+// Release files share one prefix with the package version, such as 国策档案-v0.17.3-脚本.json.
+const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+const tag = `v${version.replace(/-skeleton$/, '')}`;
+const prefix = `国策档案-${tag}-`;
+// Remove the release files of earlier versions.
+for (const name of await readdir(output)) {
+  if (name.startsWith('国策档案-v') && !name.startsWith(prefix)) await rm(join(output, name));
+}
 // The `z` namespace re-exports every zod locale; only the default English messages are used.
 const zodLocales = {
   name: 'zod-english-only',
@@ -54,7 +62,7 @@ await writeFile(join(output, 'THIRD_PARTY_NOTICES.txt'), notices.join('\n\n'), '
 const exported = {
   type: 'script',
   enabled: true,
-  name: '【命定之诗】国策档案 v0.17.3 骨架版',
+  name: `【命定之诗】国策档案 ${tag} 骨架版`,
   id: '3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13',
   content: script,
   info: '正文完成后于背景演化的国策树。需酒馆助手与 MVU。从悬浮球开启；请先设定可靠故事时间栏位与 API。',
@@ -62,7 +70,7 @@ const exported = {
   data: {},
   export_with: { data: false, button: true },
 };
-await writeFile(join(output, '國策檔案-骨架版-酒館助手.json'), JSON.stringify(exported, null, 2), 'utf8');
+await writeFile(join(output, `${prefix}脚本.json`), JSON.stringify(exported, null, 2), 'utf8');
 const html = `<!doctype html><html lang="zh-Hans"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>国策档案 · UI 测试</title><style>html,body{margin:0;min-height:100%;background:#141d18;color:#e3ddc9;font:14px system-ui}body>main{padding:10vh 7vw;max-width:600px}h1{font-family:Georgia,serif;font-size:38px;font-weight:400}p{color:#aeb69f;line-height:1.9}</style></head><body><main><small>NATIONAL FOCUS ARCHIVE</small><h1>国策档案</h1><p>离线 UI 测试页。右下角的狮鹫悬浮球可以重新开启面板。所有示范资料只存在本页记忆体，不会呼叫 AI 或连接酒馆。</p><p>你可以拖曳、缩放、点选国策、切换国家，以及用「测试操作」推进进度。重新整理会恢复示范。</p></main><script>${preview.replaceAll('</script', '<\\/script')}</script></body></html>`;
 await writeFile(join(output, 'UI測試.html'), html, 'utf8');
 await writeFile(join(output, 'index.html'), html, 'utf8');
@@ -88,7 +96,7 @@ const regex = (id, scriptName, extra) => ({
   ...extra,
 });
 await writeFile(
-  join(output, '國策快訊-卡片正則.json'),
+  join(output, `${prefix}正则-1-快讯卡片.json`),
   JSON.stringify(
     regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b01', '国策快讯卡片', {
       replaceString: `\`\`\`\n${card}\n\`\`\``,
@@ -102,7 +110,7 @@ await writeFile(
 );
 // Older floors keep their tag but show nothing, so the tag never appears as plain text.
 await writeFile(
-  join(output, '國策快訊-舊樓層隱藏正則.json'),
+  join(output, `${prefix}正则-2-快讯旧楼层隐藏.json`),
   JSON.stringify(
     regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b03', '国策快讯旧楼层隐藏', {
       markdownOnly: true,
@@ -114,7 +122,7 @@ await writeFile(
   'utf8',
 );
 await writeFile(
-  join(output, '國策快訊-提示移除正則.json'),
+  join(output, `${prefix}正则-3-快讯提示移除.json`),
   JSON.stringify(
     regex('5b0e3f5a-8f2d-4c21-9d0a-6f1c2e7a4b02', '国策快讯不送给模型', { promptOnly: true }),
     null,
@@ -126,5 +134,5 @@ await writeFile(
 const cardPreview = `<!doctype html><html lang="zh-Hans"><head><meta charset="UTF-8"><title>国策快讯卡片预览</title></head><body style="background:#141d18;padding:24px"><script>window.__emitted=[];window.getCurrentMessageId=()=>7;window.getVariables=(o)=>o&&o.type==='global'?(window.__global||{}):window.__variables;window.insertOrAssignVariables=(v)=>{window.__global=Object.assign(window.__global||{},v);};window.__listeners=new Map();window.eventOn=(event,callback)=>{const group=window.__listeners.get(event)||new Set();group.add(callback);window.__listeners.set(event,group);return {stop:()=>group.delete(callback)};};window.eventEmit=(event,...args)=>{window.__emitted.push([event,...args]);for(const callback of window.__listeners.get(event)||[]){callback(...args);}return Promise.resolve();};</script><iframe id="card" style="width:100%;border:0;height:900px"></iframe><script>const source=${JSON.stringify(card).replaceAll('</script', '<\\/script')};window.showCard=(variables)=>{window.__variables=variables;const frame=document.getElementById('card');frame.srcdoc='<script>for (const k of ["getCurrentMessageId","getVariables","eventEmit","eventOn","insertOrAssignVariables"]) window[k]=parent[k];<\\/script>'+source;};</script></body></html>`;
 await writeFile(join(output, '國策快訊-卡片預覽.html'), cardPreview, 'utf8');
 console.log(
-  'Built: dist/國策檔案-骨架版-酒館助手.json, dist/national-focus.js, dist/UI測試.html, dist/國策快訊-*.json',
+  `Built: dist/${prefix}脚本.json, dist/national-focus.js, dist/UI測試.html, dist/${prefix}正则-*.json`,
 );

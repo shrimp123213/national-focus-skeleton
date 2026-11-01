@@ -4,8 +4,12 @@ import { readFileSync } from 'node:fs';
 import { ProposalSchema } from '../src/model';
 import { DEFAULT_GUIDE } from '../src/prompts';
 
+const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 /** The Workflow Assistant preset that lets the world task propose national-focus updates. */
-const file = new URL('../presets/工作流助手-世界后台引擎-国策整合版.json', import.meta.url);
+const file = new URL(
+  `../presets/国策档案-v${version.replace(/-skeleton$/, '')}-预设-工作流整合.json`,
+  import.meta.url,
+);
 const preset = JSON.parse(readFileSync(file, 'utf8'));
 type Group = { name: string; role: string; content: string; enabled: boolean };
 const task = preset.tasks.find((item: { name: string }) => item.name === '世界时局与经济简报');
