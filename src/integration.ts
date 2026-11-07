@@ -1,7 +1,7 @@
 import { migrateCountryKeys } from './engine';
-import { workingState } from './generation';
 import { StateSchema, type State } from './model';
 import { requestId, storyDay, valueAt } from './platform';
+import { worldSummary } from './prompt-view';
 
 export type IntegrationReason =
   | 'preview'
@@ -23,8 +23,9 @@ export type IntegrationReason =
   | 'request_expired';
 
 /**
- * v2 (v0.18): the world task writes plain-text guidance, so the payload no longer carries the
- * proposal schema or the saved history. A v1 preset sees no API and runs the world alone.
+ * v2 (v0.18): the world task writes plain-text guidance, so the payload carries a text summary of
+ * the nations, not the state, the proposal schema or the saved history. A v1 preset sees no API
+ * and runs the world alone.
  */
 export const INTEGRATION_VERSION = 2;
 export type IntegrationUnavailable = {
@@ -72,7 +73,7 @@ export type IntegrationReady = {
   nonce: string;
   now: number;
   cursors: Record<string, number>;
-  state: object;
+  summary: string;
 };
 export type IntegrationReply = IntegrationReady | IntegrationUnavailable;
 export type IntegrationApi = {
@@ -146,23 +147,14 @@ export function sameData(left: unknown, right: unknown): boolean {
 
 function payload(registration: IntegrationRegistration): IntegrationReady {
   const { state, now, cursors, nonce } = registration;
-  // The world task writes guidance, not a proposal: unfinished focuses need full definitions only.
-  const working = workingState(state) as {
-    instructions?: unknown;
-    events: { ongoing: { review?: unknown }[] };
-  };
-  // The integration preset owns model instructions. Keep this API data-only.
-  delete working.instructions;
-  for (const event of working.events.ongoing) {
-    delete event.review;
-  }
+  // The world task writes guidance, not a proposal: it gets a summary. The rules stay with the update.
   return structuredClone({
     version: INTEGRATION_VERSION,
     status: 'ready',
     nonce,
     now,
     cursors,
-    state: working,
+    summary: worldSummary(state),
   });
 }
 

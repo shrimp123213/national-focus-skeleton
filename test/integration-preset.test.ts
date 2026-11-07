@@ -40,7 +40,8 @@ test('integration segments sit in order and only reach the world that owns natio
   assert.match(data, /nfReplica === "阿斯塔利亚"/);
   assert.match(data, /mode: 'request', requestId/);
   assert.ok(data.includes(`api.version !== ${INTEGRATION_VERSION}`), '预设与脚本使用同一版整合 API');
-  assert.equal(/nf\.(schema|history|nonce)/.test(data), false);
+  assert.equal(/nf\.(state|schema|history|nonce)/.test(data), false);
+  assert.match(data, /<各国国策>\n<%- nf\.summary %>\n<\/各国国策>/, '世界任务读国策档案整理的摘要');
 });
 
 test('integration rules ask for plain-text guidance instead of the proposal law', () => {
@@ -48,7 +49,8 @@ test('integration rules ask for plain-text guidance instead of the proposal law'
   assert.equal(rules.includes(DEFAULT_GUIDE.trim()), false);
   assert.equal(rules.includes('<国策输出格式>'), false);
   assert.ok(rules.includes('不写 JSON'));
-  assert.ok(rules.includes('control=player'), '玩家国不建议选策');
+  assert.ok(rules.includes('玩家国的选策由玩家决定'), '玩家国不建议选策');
+  assert.ok(rules.includes('只从「可选国策」或「主国策完成后新开放」中选'), 'AI 国从摘要算好的国策中选');
   const [, example] = /<国策指引范例>\n([\s\S]*?)\n<\/国策指引范例>/.exec(rules)!;
   assert.match(parseWorldGuidance(example), /^【奥古斯提姆帝国】/);
   const tail = group('deepseek尾部').content;

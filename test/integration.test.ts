@@ -52,7 +52,7 @@ function ready(reply: IntegrationReply): IntegrationReady {
 }
 const request = (requestId = 'world-1') => ({ mode: 'request' as const, requestId });
 
-test('资料包含精确时间、各国实际 cursor 与指引所需的现况，不含 schema 与历史，不推进或写入国策', async () => {
+test('资料包含精确时间、各国实际 cursor 与各国现况摘要，不含 state、schema 与历史，不推进或写入国策', async () => {
   const source = input();
   const before = structuredClone(source);
   const integration = new FocusIntegration(() => source);
@@ -63,17 +63,15 @@ test('资料包含精确时间、各国实际 cursor 与指引所需的现况，
   assert.deepEqual(data.cursors, { 奥古斯提姆帝国: 114, 北境联邦: 103.75, 苍海同盟: 114 });
   assert.equal(Object.hasOwn(data, 'schema'), false, '世界任务只写指引，不需要提案 schema');
   assert.equal(Object.hasOwn(data, 'history'), false);
-  assert.equal(Object.hasOwn(data.state, 'instructions'), false);
-  assert.equal(JSON.stringify(data.state).includes('"review"'), false);
-  const ongoing = (
-    data.state as { events: { ongoing: { id: string; public: boolean; timeline: unknown }[] } }
-  ).events.ongoing;
-  const saved = ongoing.find((event) => event.id === 'saved')!;
-  assert.deepEqual(saved.timeline, [
-    { at: 110, text: '已开始' },
-    { at: 111, text: '仍在协商' },
-  ]);
-  assert.equal(saved.public, false, '资料提供不套用正文迷雾');
+  assert.equal(Object.hasOwn(data, 'state'), false, '世界任务读摘要，不读完整 state');
+  assert.match(data.summary, /^【奥古斯提姆帝国】/);
+  assert.match(
+    data.summary,
+    /【北境联邦】（AI 国｜[^\n]*\n[\s\S]*- 谈判（[^\n]*仍在发展，未公开）/,
+    '资料提供不套用正文迷雾',
+  );
+  assert.ok(data.summary.includes('仍在协商'));
+  assert.equal(data.summary.includes('未列 progress'), false, '规则由整合预设提供');
   assert.deepEqual(source, before);
   const registered = integration.lookup(data.nonce)!;
   assert.equal(registered.chatId, source.chatId);

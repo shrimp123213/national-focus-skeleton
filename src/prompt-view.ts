@@ -1,6 +1,6 @@
-import { eventText, eventUpdatedAt, newsDigest } from './engine';
+import { blockers, conditionMet, eventText, eventUpdatedAt, newsDigest } from './engine';
 import { stateTime, storyTime } from './story-time';
-import type { Country, State } from './model';
+import type { Country, FocusNode, State } from './model';
 
 /**
  * The country data for the story model, saved with every floor at `国策.prompt`. It is the true
@@ -22,7 +22,7 @@ export const promptHeader =
  * focus, every step of an ongoing event), history is complete but brief (every completed focus by
  * name, every institution in force), and only the recent and the turning points keep their text.
  */
-const limits = { description: 160, detailed: 4, resolvedEvents: 2, progress: 3 } as const;
+const limits = { description: 160, choice: 80, detailed: 4, resolvedEvents: 2, progress: 3 } as const;
 
 function clip(text: string, length: number): string {
   const flat = text.replace(/\s+/g, ' ').trim();
@@ -75,8 +75,7 @@ const stepMarks = { done: '已完成', active: '进行中', pending: '待办', p
  * and its plan), and the latest progress; older progress is only counted, so a long project does
  * not grow the prompt without end.
  */
-function eventHistory(state: State, event: State['events'][string]): string {
-  const when = (day: number) => ago(state, day);
+function eventHistory(event: State['events'][string], when: (day: number) => string): string {
   const timeline = [...event.timeline].sort((a, b) => a.at - b.at);
   const recent = timeline.slice(-limits.progress);
   const older = timeline.length - recent.length;
@@ -99,14 +98,106 @@ function eventHistory(state: State, event: State['events'][string]): string {
   return lines.join('\n');
 }
 
-export function promptView(state: State, news = true): PromptView {
-  const countries = Object.values(state.countries).filter((country) => country.enabled);
-  // Unresolved matters first, then the most recently updated.
-  const events = Object.values(state.events).sort(
+/** Unresolved matters first, then the most recently updated. */
+function sortedEvents(state: State): State['events'][string][] {
+  return Object.values(state.events).sort(
     (a, b) =>
       Number(b.status === 'ongoing') - Number(a.status === 'ongoing') ||
       eventUpdatedAt(b) - eventUpdatedAt(a),
   );
+}
+
+/** One country's details; `when` renders a story day (null: before the story began). */
+function countrySections(
+  state: State,
+  country: Country,
+  events: State['events'][string][],
+  when: (day: number | null) => string,
+): string[] {
+  const sections: string[] = [
+    `【${country.name}】`,
+    `第 ${country.period.number} 期：${country.periodTitle}。${country.agenda}`,
+  ];
+  const lastPeriod = country.period.history.at(-1);
+  if (lastPeriod) {
+    sections.push(
+      `前期（${storyTime(lastPeriod.start)}–${storyTime(lastPeriod.end)}）：${lastPeriod.summary}`,
+    );
+  }
+  if (country.longTerm.length) {
+    // Model-written goals often end with 。; drop it so the list reads 「…；…」, not 「…。；…」.
+    sections.push(
+      `长期方向：${country.longTerm.map((goal) => goal.text.trim().replace(/[。；;.]+$/, '')).join('；')}`,
+    );
+  }
+  const current = country.current ? country.nodes[country.current] : undefined;
+  if (current) {
+    sections.push(`推进中：${progressText(country)}：${clip(current.description, limits.description)}`);
+  }
+  const completed = completedOf(country);
+  const routes = chosenRoutes(country);
+  if (routes.length) {
+    sections.push(`已选定路线：${routes.join('、')}`);
+  }
+  if (completed.length) {
+    const recent = new Set(completed.slice(0, limits.detailed).map(({ node }) => node.id));
+    const detailed = completed.filter(({ node }) => recent.has(node.id) || node.impact === 'pivotal');
+    sections.push(
+      `重要与近期完成：\n${detailed
+        .map(
+          ({ node, day, known, by }) =>
+            `- ${node.name}（${when(day)}${node.impact === 'pivotal' ? '，重要国策' : ''}${by ? `，${by.mode === 'achieved' ? '由' : '因'}「${by.title}」${by.mode === 'achieved' ? '达成' : '而略过'}` : ''}${known ? '' : '，未公开'}）：${clip(node.description, limits.description)}`,
+        )
+        .join('\n')}`,
+    );
+    const branchOrder = (name: string) => {
+      const index = country.branches.findIndex((branch) => branch.name === name);
+      return index < 0 ? Infinity : index;
+    };
+    const byBranch = new Map<string, string[]>();
+    for (const { node, known } of [...completed].reverse()) {
+      byBranch.set(node.branch, [
+        ...(byBranch.get(node.branch) ?? []),
+        `${node.name}${known ? '' : '（未公开）'}`,
+      ]);
+    }
+    sections.push(
+      `已完成国策（共 ${completed.length} 项，依分支、由早到晚）：\n${[...byBranch]
+        .sort(([a], [b]) => branchOrder(a) - branchOrder(b))
+        .map(([branch, names]) => `- ${branch}：${names.join('、')}`)
+        .join('\n')}`,
+    );
+  }
+  const capabilities = Object.values(country.capabilities)
+    .filter((capability) => capability.active)
+    .map((capability) => capability.name);
+  if (capabilities.length) {
+    sections.push(`现行制度与成果：${capabilities.join('、')}`);
+  }
+  const commitments = Object.values(country.commitments);
+  if (commitments.length) {
+    sections.push(`承诺：${commitments.join('、')}`);
+  }
+  const own = events.filter((event) => event.countries.includes(country.id));
+  const ongoing = own.filter((event) => event.status === 'ongoing');
+  const resolved = own.filter((event) => event.status !== 'ongoing').slice(0, limits.resolvedEvents);
+  if (ongoing.length || resolved.length) {
+    sections.push(
+      `相关事件：\n${[
+        ...ongoing.map((event) => eventHistory(event, when)),
+        ...resolved.map((event) => `- ${eventText(event, when)}`),
+      ].join('\n')}`,
+    );
+  }
+  if (sections.length === 1) {
+    sections.push('目前没有推进中或已完成的国策。');
+  }
+  return sections;
+}
+
+export function promptView(state: State, news = true): PromptView {
+  const countries = Object.values(state.countries).filter((country) => country.enabled);
+  const events = sortedEvents(state);
   const lines = countries.map((country) => {
     const current = progressText(country);
     const [latest] = completedOf(country);
@@ -127,89 +218,113 @@ export function promptView(state: State, news = true): PromptView {
     overview,
     countries: Object.fromEntries(
       countries.map((country) => {
-        const sections: string[] = [
-          `【${country.name}】`,
-          `第 ${country.period.number} 期：${country.periodTitle}。${country.agenda}`,
-        ];
-        const lastPeriod = country.period.history.at(-1);
-        if (lastPeriod) {
-          sections.push(
-            `前期（${storyTime(lastPeriod.start)}–${storyTime(lastPeriod.end)}）：${lastPeriod.summary}`,
-          );
-        }
-        if (country.longTerm.length) {
-          // Model-written goals often end with 。; drop it so the list reads 「…；…」, not 「…。；…」.
-          sections.push(
-            `长期方向：${country.longTerm.map((goal) => goal.text.trim().replace(/[。；;.]+$/, '')).join('；')}`,
-          );
-        }
-        const current = country.current ? country.nodes[country.current] : undefined;
-        if (current) {
-          sections.push(`推进中：${progressText(country)}：${clip(current.description, limits.description)}`);
-        }
-        const completed = completedOf(country);
-        const routes = chosenRoutes(country);
-        if (routes.length) {
-          sections.push(`已选定路线：${routes.join('、')}`);
-        }
-        if (completed.length) {
-          const recent = new Set(completed.slice(0, limits.detailed).map(({ node }) => node.id));
-          const detailed = completed.filter(({ node }) => recent.has(node.id) || node.impact === 'pivotal');
-          sections.push(
-            `重要与近期完成：\n${detailed
-              .map(
-                ({ node, day, known, by }) =>
-                  `- ${node.name}（${ago(state, day)}${node.impact === 'pivotal' ? '，重要国策' : ''}${by ? `，${by.mode === 'achieved' ? '由' : '因'}「${by.title}」${by.mode === 'achieved' ? '达成' : '而略过'}` : ''}${known ? '' : '，未公开'}）：${clip(node.description, limits.description)}`,
-              )
-              .join('\n')}`,
-          );
-          const branchOrder = (name: string) => {
-            const index = country.branches.findIndex((branch) => branch.name === name);
-            return index < 0 ? Infinity : index;
-          };
-          const byBranch = new Map<string, string[]>();
-          for (const { node, known } of [...completed].reverse()) {
-            byBranch.set(node.branch, [
-              ...(byBranch.get(node.branch) ?? []),
-              `${node.name}${known ? '' : '（未公开）'}`,
-            ]);
-          }
-          sections.push(
-            `已完成国策（共 ${completed.length} 项，依分支、由早到晚）：\n${[...byBranch]
-              .sort(([a], [b]) => branchOrder(a) - branchOrder(b))
-              .map(([branch, names]) => `- ${branch}：${names.join('、')}`)
-              .join('\n')}`,
-          );
-        }
-        const capabilities = Object.values(country.capabilities)
-          .filter((capability) => capability.active)
-          .map((capability) => capability.name);
-        if (capabilities.length) {
-          sections.push(`现行制度与成果：${capabilities.join('、')}`);
-        }
-        const commitments = Object.values(country.commitments);
-        if (commitments.length) {
-          sections.push(`承诺：${commitments.join('、')}`);
-        }
-        const own = events.filter((event) => event.countries.includes(country.id));
-        const ongoing = own.filter((event) => event.status === 'ongoing');
-        const resolved = own.filter((event) => event.status !== 'ongoing').slice(0, limits.resolvedEvents);
-        if (ongoing.length || resolved.length) {
-          sections.push(
-            `相关事件：\n${[
-              ...ongoing.map((event) => eventHistory(state, event)),
-              ...resolved.map((event) => `- ${eventText(event, (day) => ago(state, day))}`),
-            ].join('\n')}`,
-          );
-        }
-        if (sections.length === 1) {
-          sections.push('目前没有推进中或已完成的国策。');
-        }
+        const sections = countrySections(state, country, events, (day) => ago(state, day));
         const keys = [...new Set([country.name, ...(country.keywords ?? [])])];
         return [country.id, { name: country.name, keys, text: sections.join('\n') }];
       }),
     ),
   };
+}
+
+/** Route locks keep this focus out for good. */
+function lockedOut(country: Country, node: FocusNode): boolean {
+  const lock = node.mutex && country.locks[node.mutex.group];
+  return !!lock && lock.route !== node.mutex!.route;
+}
+/** Focuses that could start now: every blocker is clear. The main focus is not counted. */
+function startable(country: Country): FocusNode[] {
+  return Object.values(country.nodes).filter(
+    (node) => node.id !== country.current && blockers(country, node).length === 0,
+  );
+}
+function focusItem(country: Country, node: FocusNode): string {
+  const progress = country.progress[node.id];
+  const resumed = progress?.status === 'paused' ? `，暂停中，已推进 ${Math.floor(progress.days)} 天` : '';
+  return `  - ${node.name}（${node.id}｜${node.branch}｜${node.days} 天${resumed}）：${clip(node.description, limits.choice)}`;
+}
+/** The main focus: its ID, when its work ends at the current pace, and what the story must still bring. */
+function mainFocusLine(country: Country, when: (day: number) => string): string {
+  const node = country.current ? country.nodes[country.current] : undefined;
+  if (!node) {
+    return '- 主国策：无';
+  }
+  const progress = country.progress[node.id];
+  const halted = node.sustain.filter((requirement) => !conditionMet(country, requirement));
+  const pending = node.outcomes.filter((requirement) => !conditionMet(country, requirement));
+  const work =
+    progress.status === 'waiting'
+      ? '工期已满'
+      : halted.length
+        ? `持续条件未满足（${halted.map((r) => r.label).join('、')}），工期暂停累积`
+        : `工期预计于${when(country.cursor + Math.max(0, node.days - progress.days))}届满`;
+  return `- 主国策：${node.name}（${node.id}），${work}${pending.length ? `；完成还需：${pending.map((r) => r.label).join('、')}` : ''}`;
+}
+
+/**
+ * National focus for the world task of the integration preset (v0.18). The world task only writes
+ * guidance and the script's own update applies the rules, so this view carries no rules: the
+ * story details with dates, and what the guidance needs to choose. For an AI nation that is the
+ * focuses that can start now and those the main focus opens (its effects are not applied first).
+ */
+export function worldSummary(state: State): string {
+  const events = sortedEvents(state);
+  // The same date form as <时间> in the preset, which the guidance is told to follow.
+  const when = (day: number | null) => (day === null ? '开局前' : storyTime(day));
+  return Object.values(state.countries)
+    .filter((country) => country.enabled)
+    .map((country) => {
+      const [, ...details] = countrySections(state, country, events, when);
+      const head = `【${country.name}】（${country.id === country.name ? '' : `${country.id}｜`}${country.control === 'ai' ? 'AI 国' : '玩家国'}｜稳定度 ${Math.round(country.stability)}／战争支持度 ${Math.round(country.warSupport)}${country.calibration ? '｜等待重新启用校准，暂不推进' : ''}）`;
+      const reference = [mainFocusLine(country, when)];
+      const listed = new Set(country.current ? [country.current] : []);
+      if (country.control === 'ai') {
+        const now = startable(country);
+        now.forEach((node) => listed.add(node.id));
+        reference.push(
+          now.length
+            ? `- 可选国策：\n${now.map((node) => focusItem(country, node)).join('\n')}`
+            : '- 可选国策：无',
+        );
+        const main = country.current ? country.nodes[country.current] : undefined;
+        if (main) {
+          const after = structuredClone(country);
+          after.progress[main.id].status = 'completed';
+          after.current = '';
+          if (main.mutex && !after.locks[main.mutex.group]) {
+            after.locks[main.mutex.group] = { route: main.mutex.route, reason: main.mutex.reason };
+          }
+          const opened = startable(after).filter((node) => !listed.has(node.id));
+          opened.forEach((node) => listed.add(node.id));
+          if (opened.length) {
+            reference.push(
+              `- 主国策完成后新开放：\n${opened.map((node) => focusItem(country, node)).join('\n')}`,
+            );
+          }
+        }
+      }
+      const rest = new Map<string, string[]>();
+      for (const node of Object.values(country.nodes)) {
+        const status = country.progress[node.id]?.status;
+        if (
+          listed.has(node.id) ||
+          status === 'completed' ||
+          status === 'terminated' ||
+          lockedOut(country, node)
+        ) {
+          continue;
+        }
+        rest.set(node.branch, [...(rest.get(node.branch) ?? []), node.name]);
+      }
+      if (rest.size) {
+        reference.push(
+          `- ${country.control === 'ai' ? '其余' : ''}未完成国策：\n${[...rest]
+            .map(([branch, names]) => `  - ${branch}：${names.join('、')}`)
+            .join('\n')}`,
+        );
+      }
+      return [head, ...details, `国策推演参考：\n${reference.join('\n')}`].join('\n');
+    })
+    .join('\n\n');
 }
 
 /** The same content as one message, for chats without ST-Prompt-Template or floors saved before v0.12.6. */

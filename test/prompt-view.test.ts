@@ -8,8 +8,10 @@ import {
   promptText,
   promptView,
   reconcileBook,
+  worldSummary,
   type WorldbookEntryLike,
 } from '../src/prompt-view';
+import { storyTime } from '../src/story-time';
 
 function world() {
   let state = installCountry(createState(0), { ...demoTree(), keywords: ['狮鹫王座', '七省'] }, 0);
@@ -303,4 +305,82 @@ test('正文资料的各国动向标示故事时间而非日数：有来源时�
     { id: 'b', text: '建造横渡巨舰。' },
   ];
   assert.match(promptView(state).countries.augustium.text, /长期方向：恢复关税管辖权；建造横渡巨舰\n/);
+});
+
+const section = (text: string, name: string) =>
+  text.split('\n\n').find((part) => part.startsWith(`【${name}】`))!;
+
+test('世界任务摘要：标题注明 AI 国与数值，日期取代几天前；AI 国列出可选、主国策完成后新开放与其余未完成的国策', () => {
+  const { state, done, doing } = world();
+  const empire = state.countries.augustium;
+  empire.control = 'ai';
+  const text = section(worldSummary(state), '奥古斯提姆帝国');
+  assert.match(text, /^【奥古斯提姆帝国】（augustium｜AI 国｜稳定度 \d+／战争支持度 \d+）/);
+  assert.ok(text.includes(`- ${done.name}（${storyTime(30)}）`));
+  assert.equal(text.includes('天前'), false);
+  assert.ok(
+    text.includes(
+      `- 主国策：${doing.name}（${doing.id}），工期预计于${storyTime(empire.cursor + doing.days - 10)}届满`,
+    ),
+  );
+  const [, reference] = text.split('国策推演参考：\n');
+  const [choices, opened, rest] = ['- 可选国策', '- 主国策完成后新开放', '- 其余未完成国策'].map(
+    (title) => reference.split(`${title}：`)[1]?.split('\n- ')[0] ?? '',
+  );
+  assert.equal(choices.includes(doing.name), false, '主国策不算可选');
+  const after = Object.values(empire.nodes).filter((node) =>
+    node.prerequisites.some((group) => group.includes(doing.id)),
+  );
+  assert.ok(after.length >= 2);
+  for (const node of after) {
+    assert.ok(opened.includes(`${node.name}（${node.id}｜${node.branch}｜${node.days} 天）`), node.name);
+    assert.equal(choices.includes(node.name), false);
+  }
+  assert.ok(rest.length > 0);
+  for (const name of [done.name, doing.name, ...after.map((node) => node.name)]) {
+    assert.equal(rest.includes(name), false, `${name} 不列在其余未完成`);
+  }
+});
+
+test('世界任务摘要：互斥路线已锁定的国策不再出现；玩家国不列可选国策，只列未完成国策', () => {
+  const { state, doing } = world();
+  const empire = state.countries.augustium;
+  empire.control = 'ai';
+  const routes = Object.values(empire.nodes).filter(
+    (node) => node.mutex && node.prerequisites.some((group) => group.includes(doing.id)),
+  );
+  const [kept, ...locked] = routes;
+  assert.ok(locked.length >= 1);
+  empire.locks[kept.mutex!.group] = { route: kept.mutex!.route, reason: '已选定' };
+  const text = section(worldSummary(state), '奥古斯提姆帝国');
+  assert.ok(text.includes(`${kept.name}（${kept.id}`));
+  for (const node of locked) {
+    assert.equal(text.includes(node.name), false, `${node.name} 的路线已锁定`);
+  }
+  const coast = section(worldSummary(state), '苍海同盟');
+  assert.match(coast, /^【苍海同盟】（coast｜玩家国｜/);
+  assert.equal(coast.includes('可选国策'), false);
+  assert.match(coast, /- 主国策：无\n- 未完成国策：\n {2}- /);
+});
+
+test('世界任务摘要：主国策工期已满时写出完成还需的成果，持续条件不成立时写工期暂停', () => {
+  const { state, doing } = world();
+  const empire = state.countries.augustium;
+  const node = empire.nodes[doing.id];
+  node.outcomes = [{ kind: 'fact', id: 'survey_done', label: '完成实地勘查' }];
+  empire.progress[doing.id].status = 'waiting';
+  assert.ok(
+    section(worldSummary(state), '奥古斯提姆帝国').includes(
+      `- 主国策：${doing.name}（${doing.id}），工期已满；完成还需：完成实地勘查`,
+    ),
+  );
+  empire.progress[doing.id].status = 'active';
+  node.outcomes = [];
+  node.sustain = [{ kind: 'stability', minimum: 100, label: '稳定度达到 100' }];
+  empire.stability = 50;
+  assert.ok(
+    section(worldSummary(state), '奥古斯提姆帝国').includes(
+      `- 主国策：${doing.name}（${doing.id}），持续条件未满足（稳定度达到 100），工期暂停累积`,
+    ),
+  );
 });
