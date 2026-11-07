@@ -1,5 +1,5 @@
 import { jobKinds, SourcesSchema, type Config, type JobKind, type SourceSettings } from './model';
-import { entryExclusion, selectedEntry, tableEntry } from './sources';
+import { databaseSourceEntry, entryExclusion, selectedEntry } from './sources';
 import type { SourceEntry } from './platform';
 import type { FocusController } from './workflow';
 
@@ -98,20 +98,21 @@ export function mountSourcePanel(
   }
   function entryList(selected: Record<string, number[]>): string {
     const query = entryFilter.toLowerCase();
-    return [...new Set(entries.map((entry) => entry.book))]
+    // Database entries are not listed; the table switch decides them (Workflow Assistant hides them too).
+    const listed = entries
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => !databaseSourceEntry(entry));
+    return [...new Set(listed.map(({ entry }) => entry.book))]
       .map((book) => {
-        const rows = entries
-          .map((entry, index) => ({ entry, index }))
-          .filter(({ entry }) => entry.book === book);
+        const rows = listed.filter(({ entry }) => entry.book === book);
         const count = rows.filter(
           ({ entry }) => !entryExclusion(entry) && selectedEntry(entry, selected),
         ).length;
         return `<div class="source-group">${escape(book)} · 已选 ${count}／${rows.length}</div>${rows
           .map(({ entry, index }) => {
             const excluded = entryExclusion(entry);
-            const automatic = !excluded && settings.autoIncludeTables && tableEntry(entry);
             const text = `${entry.book} ${entry.name}`.toLowerCase();
-            return `<label class="source-entry ${entry.enabled ? '' : 'source-disabled'}" data-filter-text="${escape(text)}" ${text.includes(query) ? '' : 'hidden'}><input type="checkbox" data-source-entry="${index}" ${automatic || (!excluded && selectedEntry(entry, selected)) ? 'checked' : ''} ${excluded || automatic ? 'disabled' : ''}><span>${escape(entry.name || `条目 ${entry.uid}`)}<small>${escape(excluded || (automatic ? '数据库表格 · 自动纳入' : entry.strategy?.type === 'constant' ? '常驻' : '关键字触发'))} · ${entry.content.length.toLocaleString()} 字符${entry.enabled ? '' : ' · 酒馆停用'}</small></span></label>`;
+            return `<label class="source-entry ${entry.enabled ? '' : 'source-disabled'}" data-filter-text="${escape(text)}" ${text.includes(query) ? '' : 'hidden'}><input type="checkbox" data-source-entry="${index}" ${!excluded && selectedEntry(entry, selected) ? 'checked' : ''} ${excluded ? 'disabled' : ''}><span>${escape(entry.name || `条目 ${entry.uid}`)}<small>${escape(excluded || (entry.strategy?.type === 'constant' ? '常驻' : '关键字触发'))} · ${entry.content.length.toLocaleString()} 字符${entry.enabled ? '' : ' · 酒馆停用'}</small></span></label>`;
           })
           .join('')}`;
       })
@@ -137,7 +138,7 @@ export function mountSourcePanel(
       <fieldset ${customBooks() ? '' : 'disabled'}><legend>剧情世界书（对应 $1）</legend><label class="field">来源<select data-book-source><option value="character" ${selection.source === 'character' ? 'selected' : ''}>目前角色绑定</option><option value="manual" ${selection.source === 'manual' ? 'selected' : ''}>手动选择世界书</option></select></label><small>目前角色绑定：${escape(books.character.join('、') || '尚未加载／未绑定')}</small>
       ${selection.source === 'manual' ? `<label class="field">筛选世界书<input data-book-filter value="${escape(bookFilter)}" placeholder="世界书名称"></label><div class="source-list">${books.all.map((book) => `<label class="check source-book" ${book.toLowerCase().includes(bookFilter.toLowerCase()) ? '' : 'hidden'} data-filter-text="${escape(book.toLowerCase())}"><input type="checkbox" data-source-book="${escape(book)}" ${selection.manualSelection.includes(book) ? 'checked' : ''}>${escape(book)}</label>`).join('')}</div><label class="field">手动选书（每行一项；空白就是不选书）<textarea data-manual-books>${escape(selection.manualSelection.join('\n'))}</textarea></label>` : ''}
       <div class="api-actions"><button data-source-action="load">加载／刷新世界书与条目</button><button data-source-action="all">全选启用条目</button><button data-source-action="none">全不选</button></div><p class="muted">全不选会保存为空清单，不会回退成全选。酒馆停用条目可以个别勾选，不改动酒馆设置。规则／MVU／工作流托管与纪要专用条目不纳入剧情扫描。</p>
-      <label class="check"><input type="checkbox" data-source-global="autoIncludeTables" ${settings.autoIncludeTables ? 'checked' : ''}>数据库表格条目一律纳入<small>开启后 TavernDB-ACU 表格导出（纪要、主角信息、托管条目除外）不受勾选限制，也不看酒馆启用状态；关闭时与一般条目相同，全不选即排除。</small></label>
+      <label class="check"><input type="checkbox" data-source-global="includeTables" ${settings.includeTables ? 'checked' : ''}>数据库表格条目一律纳入<small>数据库条目不列在下方清单。开启时 TavernDB-ACU 表格导出（纪要、主角信息除外）全部送出，不看酒馆启用状态；关闭则全部不送。</small></label>
       <label class="field">筛选条目／世界书<input data-entry-filter value="${escape(entryFilter)}"></label><div class="source-list" data-entry-list>${entryList(selection.enabledEntries) || `<p>${loading ? '读取中…' : '尚未加载条目。'}</p>`}</div></fieldset>
       <fieldset ${customContext() ? '' : 'disabled'}><legend>预设上下文（对应 $7）</legend><label class="field">最近 N 则 AI 回复<input data-source-count type="number" min="0" max="100" value="${context.contextTurnCount}"><small>N 包含当前回复；0 只保留当前楼。使用目前 Swipe，排除使用者与系统消息。</small></label>
       <details><summary>提取与排除规则说明</summary><p>先提取，再排除。每条规则匹配最后一组完整边界，不分大小写；开始词支持 &lt;tp、&lt;content 等未闭合开标签前缀，保留边界本身。多条提取结果依规则顺序合并；全部未命中时沿用原文，预览会标示。排除规则每条只移除最后一组，也套用于合并后的世界书内容。</p></details>${ruleEditor('contextExtractRules', '提取规则')}${ruleEditor('contextExcludeRules', '排除规则')}</fieldset>
@@ -220,7 +221,13 @@ export function mountSourcePanel(
               bookConfig().enabledEntries[book] =
                 button.dataset.sourceAction === 'all'
                   ? entries
-                      .filter((entry) => entry.book === book && entry.enabled && !entryExclusion(entry))
+                      .filter(
+                        (entry) =>
+                          entry.book === book &&
+                          entry.enabled &&
+                          !entryExclusion(entry) &&
+                          !databaseSourceEntry(entry),
+                      )
                       .map((entry) => entry.uid)
                   : [];
             }
@@ -318,15 +325,16 @@ export function mountSourcePanel(
       const selected =
         bookConfig().enabledEntries[entry.book] ??
         entries
-          .filter((row) => row.book === entry.book && row.enabled && !entryExclusion(row))
+          .filter(
+            (row) =>
+              row.book === entry.book && row.enabled && !entryExclusion(row) && !databaseSourceEntry(row),
+          )
           .map((row) => row.uid);
       bookConfig().enabledEntries[entry.book] = input.checked
         ? [...new Set([...selected, entry.uid])]
         : selected.filter((id) => id !== entry.uid);
     } else if (input.matches('[data-source-preview-job]')) {
       previewJob = input.value as JobKind;
-    } else if (input.dataset.sourceGlobal === 'autoIncludeTables') {
-      // Re-render so table entries show whether they are included automatically.
     } else {
       // Text-field blur must not replace the button the user is about to click.
       return;

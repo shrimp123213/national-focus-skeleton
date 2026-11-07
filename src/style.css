@@ -4373,9 +4373,8 @@ details.detail-section.fold > summary::before {
   }
 }
 
-/* v0.16 世界来函 · the world task's national-focus proposal, reviewed before it is saved.
- * The cinnabar seal is the one loud element: it marks a letter waiting for review and stamps 准 on
- * acceptance. Everything else follows the archive's ledger look: hairlines, serif names, quiet text. */
+/* v0.16 seal mark (banners) and the per-nation changes of a saved update (v0.18 task window).
+ * The layout follows the archive's ledger look: hairlines, serif names, quiet text. */
 .letter-seal {
   display: inline-grid;
   place-items: center;
@@ -4389,231 +4388,19 @@ details.detail-section.fold > summary::before {
   line-height: 1;
   transform: rotate(-4deg);
 }
-.cmd-btn.letter-quiet {
-  color: var(--muted);
-  border-style: dashed;
-}
-.cmd-btn.letter-muted {
-  color: var(--faint);
-}
-.cmd-btn.letter-pending {
-  border-color: var(--gold);
-  color: var(--text);
-}
-.cmd-btn.letter-pending .letter-seal {
-  background: var(--seal);
-  border-color: var(--seal);
-  color: var(--seal-ink);
-  animation: seal-arrive 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
-}
-.cmd-btn.letter-alert {
-  border-color: var(--red);
-  color: #f2b3a6;
-}
-@keyframes seal-arrive {
-  from {
-    transform: rotate(-14deg) scale(1.7);
-    opacity: 0;
-  }
-  to {
-    transform: rotate(-4deg) scale(1);
-    opacity: 1;
-  }
-}
-.orb-letter {
-  position: absolute;
-  bottom: -2px;
-  left: -4px;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  background: var(--seal);
-  color: var(--seal-ink);
-  font-family: var(--serif);
-  font-size: 12px;
-  font-weight: 700;
-  transform: rotate(-6deg);
-  box-shadow: 0 0 0 2px var(--ink);
-}
-.orb-letter[hidden] {
-  display: none;
-}
-.status-jobs.letter {
-  color: var(--gold);
-}
-.status-dot.letter {
-  background: var(--seal);
-  border-radius: 2px;
-  transform: rotate(-6deg);
-}
 
-.modal.modal-letter {
+.modal.modal-changes {
   width: min(1000px, 100%);
 }
 .letter-sheet {
   display: grid;
   gap: 18px;
 }
-.letter-head {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-.letter-seal-big {
-  position: relative;
-  flex: none;
-  width: 62px;
-  height: 62px;
-}
-.letter-seal-big .seal-mark,
-.letter-seal-big .seal-stamp {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 6px;
-  font-family: var(--serif);
-  font-weight: 700;
-}
-.letter-seal-big .seal-mark {
-  border: 2px solid var(--gold-deep);
-  color: var(--gold);
-  font-size: 30px;
-  transform: rotate(-3deg);
-  box-shadow:
-    inset 0 0 0 3px var(--panel),
-    inset 0 0 0 4px rgba(220, 194, 124, 0.25);
-}
-.letter-seal-big .seal-stamp {
-  background: var(--seal);
-  color: var(--seal-ink);
-  font-size: 32px;
-  transform: rotate(-9deg);
-  box-shadow:
-    inset 0 0 0 3px var(--seal),
-    inset 0 0 0 4px rgba(243, 220, 203, 0.55);
-  opacity: 0;
-}
-.letter-seal-big.sealed .seal-stamp {
-  opacity: 1;
-}
-.letter-seal-big.sealed .seal-mark {
-  opacity: 0.25;
-}
-.letter-seal-big.fresh .seal-stamp {
-  animation: seal-press 0.55s cubic-bezier(0.25, 1.1, 0.35, 1) both;
-}
-@keyframes seal-press {
-  0% {
-    transform: rotate(-16deg) scale(1.9);
-    opacity: 0;
-  }
-  60% {
-    transform: rotate(-9deg) scale(0.93);
-    opacity: 1;
-  }
-  100% {
-    transform: rotate(-9deg) scale(1);
-    opacity: 1;
-  }
-}
-.letter-from {
-  font-family: var(--serif);
-  font-size: 19px;
-  line-height: 1.45;
-  color: var(--text);
-}
 .letter-meta {
   margin-top: 2px;
   color: var(--muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-}
-.letter-state {
-  padding: 9px 14px;
-  border-left: 2px solid var(--gold-deep);
-  background: rgba(220, 194, 124, 0.05);
-  color: var(--text);
-}
-.letter-state.muted {
-  border-left-color: var(--faint);
-  color: var(--muted);
-}
-.letter-state.alert {
-  border-left-color: var(--red);
-  background: rgba(217, 112, 95, 0.08);
-}
-.letter-state.done {
-  border-left-color: var(--seal);
-}
-.letter-checks {
-  margin: 0;
-  border-top: 1px solid var(--line);
-}
-.letter-check {
-  display: grid;
-  grid-template-columns: 112px 1fr;
-  gap: 16px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--line);
-}
-.letter-check dt {
-  font-family: var(--serif);
-  color: var(--gold);
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.letter-check dt::before {
-  content: "";
-  width: 9px;
-  height: 9px;
-  flex: none;
-  border-radius: 50%;
-  transform: translateY(-1px);
-}
-.letter-check.ok dt::before {
-  background: var(--green);
-}
-.letter-check.unknown dt::before {
-  border: 1.5px solid var(--amber);
-  background: linear-gradient(90deg, var(--amber) 50%, transparent 50%);
-}
-.letter-check dd {
-  margin: 0;
-  color: var(--muted);
-}
-.letter-check ul {
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 18px;
-}
-.letter-check li {
-  font-size: 13px;
-}
-.letter-check li::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 7px;
-  border-radius: 50%;
-  vertical-align: 2px;
-  background: var(--faint);
-}
-.letter-check li.ok::before {
-  background: var(--green);
-}
-.letter-check li.warn {
-  color: #f2b3a6;
-}
-.letter-check li.warn::before {
-  background: var(--red);
 }
 .letter-review {
   display: grid;
@@ -4800,211 +4587,44 @@ details.detail-section.fold > summary::before {
   font-size: 12px;
   color: var(--muted);
 }
-/*
- * v0.17 local repair: a marginal slip under the letter's reason. Its rule colour carries the state
- * (amber can be mended, blue mending, red not passed, faint expired); the seal red stays reserved.
- */
-.letter-mend {
-  --mend: var(--amber);
-  position: relative;
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px 14px 18px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--mend);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--mend) 9%, transparent), transparent 62%),
-    var(--raised);
-  overflow: hidden;
-}
-.letter-mend.running {
-  --mend: var(--blue);
-}
-.letter-mend.failed {
-  --mend: var(--red);
-}
-.letter-mend.expired {
-  --mend: var(--faint);
-  background: var(--panel);
-}
-.letter-mend header {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-.modal-body .letter-mend h3 {
-  margin: 0;
-  font-family: var(--serif);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--gold);
-  letter-spacing: 0.08em;
-}
-.letter-mend-state {
-  padding: 1px 8px;
-  border: 1px solid color-mix(in srgb, var(--mend) 55%, transparent);
-  border-radius: 999px;
-  color: var(--mend);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-}
-.letter-mend > p {
-  margin: 0;
-  color: var(--text);
-  line-height: 1.65;
-}
-.letter-mend.expired > p {
-  color: var(--muted);
-}
-/* Mending: a hairline sweeps along the top edge instead of a spinner competing with the seal. */
-.letter-mend.running::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 38%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--blue), transparent);
-  animation: mend-sweep 1.6s ease-in-out infinite;
-}
-@keyframes mend-sweep {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(280%);
-  }
-}
-.letter-mend .letter-mend-error {
-  padding: 7px 10px;
-  border-radius: 6px;
-  background: rgba(217, 112, 95, 0.1);
-  color: #f2b3a6;
-  font-size: 13px;
-}
-.letter-mend .letter-mend-caution {
-  color: var(--faint);
-  font-size: 12.5px;
-  line-height: 1.6;
-}
-.letter-mend .letter-mend-caution::before {
-  content: "※";
-  margin-right: 6px;
-  color: var(--gold-deep);
-}
-.letter-error {
-  font-size: 13px;
-}
-.letter-error > summary {
+/* v0.18: the world guidance behind a saved update, folded so the changes are read first. */
+.guidance-note > summary {
   width: fit-content;
   cursor: pointer;
   color: var(--muted);
+  font-size: 13px;
   list-style: none;
 }
-.letter-error > summary::-webkit-details-marker {
+.guidance-note > summary::-webkit-details-marker {
   display: none;
 }
-.letter-error > summary::before {
+.guidance-note > summary::before {
   content: "▸";
   display: inline-block;
   width: 1em;
   color: var(--gold-deep);
   transition: transform 0.15s ease;
 }
-.letter-error[open] > summary::before {
+.guidance-note[open] > summary::before {
   transform: rotate(90deg);
 }
-.letter-error > summary:hover {
+.guidance-note > summary:hover {
   color: var(--text);
 }
-.letter-error pre {
+.guidance-note p {
   margin: 8px 0 0;
-  max-height: 168px;
+  max-height: 220px;
   overflow: auto;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--ink);
-  color: var(--muted);
-  font: 12px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  padding: 12px 14px;
+  border-left: 2px solid var(--gold-deep);
+  background: rgba(220, 194, 124, 0.05);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.letter-check.repaired dt::before {
-  border: 1.5px solid var(--blue);
-  border-radius: 2px;
-  transform: translateY(-1px) rotate(45deg) scale(0.85);
-}
-.repair-notes {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: mend;
-  display: grid;
-  gap: 5px;
-}
-.repair-notes li {
-  counter-increment: mend;
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  color: var(--text);
-  font-size: 13.5px;
-  line-height: 1.6;
-}
-.letter-check .repair-notes li::before {
-  content: counter(mend);
-  display: block;
-  width: auto;
-  height: auto;
-  margin: 0;
-  border-radius: 0;
-  background: none;
-  vertical-align: baseline;
-  color: var(--blue);
-  font-family: var(--serif);
-  font-variant-numeric: tabular-nums;
-}
-@media (prefers-reduced-motion: reduce) {
-  .letter-mend.running::after {
-    animation: none;
-    width: 100%;
-    opacity: 0.6;
-  }
-}
-.modal-letter .modal-footer {
-  align-items: center;
-}
-.footer-gap {
-  flex: 1;
-}
-.modal-footer .letter-reject {
-  background: none;
-  border-color: transparent;
-  color: #e9a090;
-}
-.modal-footer .letter-reject:hover:not(:disabled) {
-  background: rgba(217, 112, 95, 0.1);
-  border-color: rgba(217, 112, 95, 0.4);
-}
 @media (max-width: 760px) {
-  .cmd-btn.letter-slot .cmd-text {
-    display: none;
-  }
-  .letter-head {
-    gap: 14px;
-  }
-  .letter-seal-big {
-    width: 50px;
-    height: 50px;
-  }
-  .letter-from {
-    font-size: 16px;
-  }
-  .letter-check {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
   .letter-review {
     grid-template-columns: 1fr;
   }
@@ -5041,15 +4661,9 @@ details.detail-section.fold > summary::before {
   .letter-timeline .entry-update::before {
     left: 77px;
   }
-  .modal-letter .modal-footer {
-    flex-wrap: wrap;
-  }
-  .modal-letter .footer-gap {
-    display: none;
-  }
 }
 
-/* v0.16: national focus went back after a proposal was accepted (usually a workflow re-run). */
+/* v0.16: national focus went back after a guided update (usually a workflow re-run). */
 .rollback-banner {
   display: flex;
   align-items: center;

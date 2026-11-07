@@ -1,7 +1,6 @@
-import { z } from 'zod';
 import { migrateCountryKeys } from './engine';
 import { workingState } from './generation';
-import { ProposalSchema, StateSchema, type State } from './model';
+import { StateSchema, type State } from './model';
 import { requestId, storyDay, valueAt } from './platform';
 
 export type IntegrationReason =
@@ -23,9 +22,18 @@ export type IntegrationReason =
   | 'update_started'
   | 'request_expired';
 
-export type IntegrationUnavailable = { version: 1; status: 'unavailable'; reason: IntegrationReason };
+/**
+ * v2 (v0.18): the world task writes plain-text guidance, so the payload no longer carries the
+ * proposal schema or the saved history. A v1 preset sees no API and runs the world alone.
+ */
+export const INTEGRATION_VERSION = 2;
+export type IntegrationUnavailable = {
+  version: typeof INTEGRATION_VERSION;
+  status: 'unavailable';
+  reason: IntegrationReason;
+};
 export function unavailable(reason: IntegrationReason): IntegrationUnavailable {
-  return { version: 1, status: 'unavailable', reason };
+  return { version: INTEGRATION_VERSION, status: 'unavailable', reason };
 }
 
 /** Raw floor data, read without waiting for TavernPlatform.read's ready timer. */
@@ -59,29 +67,16 @@ export type IntegrationRegistration = IntegrationSource & {
 };
 export type IntegrationOptions = { mode?: 'preview' | 'request'; requestId?: string };
 export type IntegrationReady = {
-  version: 1;
+  version: typeof INTEGRATION_VERSION;
   status: 'ready';
   nonce: string;
   now: number;
   cursors: Record<string, number>;
   state: object;
-  schema: z.core.JSONSchema.JSONSchema;
-  history: {
-    complete: false;
-    since: null;
-    countries: Record<
-      string,
-      {
-        progress: State['countries'][string]['progress'];
-        periods: State['countries'][string]['period']['history'];
-      }
-    >;
-    events: State['events'];
-  };
 };
 export type IntegrationReply = IntegrationReady | IntegrationUnavailable;
 export type IntegrationApi = {
-  version: 1;
+  version: typeof INTEGRATION_VERSION;
   prepare(messageId: number, options?: IntegrationOptions): Promise<IntegrationReply>;
   lookup(nonce: string): IntegrationRegistration | null;
 };
@@ -151,7 +146,8 @@ export function sameData(left: unknown, right: unknown): boolean {
 
 function payload(registration: IntegrationRegistration): IntegrationReady {
   const { state, now, cursors, nonce } = registration;
-  const working = workingState(state, true) as {
+  // The world task writes guidance, not a proposal: unfinished focuses need full definitions only.
+  const working = workingState(state) as {
     instructions?: unknown;
     events: { ongoing: { review?: unknown }[] };
   };
@@ -161,27 +157,12 @@ function payload(registration: IntegrationRegistration): IntegrationReady {
     delete event.review;
   }
   return structuredClone({
-    version: 1,
+    version: INTEGRATION_VERSION,
     status: 'ready',
     nonce,
     now,
     cursors,
     state: working,
-    schema: z.toJSONSchema(ProposalSchema, { io: 'input' }),
-    history: {
-      complete: false,
-      since: null,
-      countries: Object.fromEntries(
-        Object.values(state.countries).map((country) => [
-          country.id,
-          {
-            progress: country.progress,
-            periods: country.period.history,
-          },
-        ]),
-      ),
-      events: state.events,
-    },
   });
 }
 
@@ -193,7 +174,6 @@ export type UpdateAccess =
 /** One controller owns one registration and one local update, all kept in memory. */
 export class FocusIntegration {
   private registration: IntegrationRegistration | null = null;
-  private consumed: IntegrationRegistration | null = null;
   private sourceSignal?: AbortSignal;
   private owner: symbol | null = null;
   private epoch = 0;
@@ -209,7 +189,7 @@ export class FocusIntegration {
   ) {}
 
   current(): IntegrationRegistration | null {
-    return structuredClone(this.registration ?? this.consumed);
+    return structuredClone(this.registration);
   }
   readSource(messageId: number): IntegrationSource | IntegrationUnavailable {
     const cache = this.sourceCache;
@@ -233,24 +213,9 @@ export class FocusIntegration {
       this.sourceCache = null;
     }
   }
-  /** Accepted nonces are hidden from ordinary lookup, but retain a revocable retry checkpoint. */
-  consume(nonce: string): void {
-    if (this.registration?.nonce === nonce) {
-      this.consumed = this.registration;
-      this.registration = null;
-    }
-  }
-  retry(nonce: string): IntegrationRegistration | null {
-    if (this.consumed?.nonce !== nonce || this.owner || this.disposed) {
-      return null;
-    }
-    return this.validate(this.consumed);
-  }
-
   invalidate(reason: IntegrationReason = 'request_expired'): void {
     this.epoch++;
     this.registration = null;
-    this.consumed = null;
     this.sourceSignal = undefined;
     this.pendingRequest = '';
     this.changed(reason);

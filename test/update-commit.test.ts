@@ -227,3 +227,26 @@ test('独立更新仍结算并生成下一期，重送不再次保存或生成',
     controller.dispose();
   }
 });
+
+test('局势更新成功后，任务记下各国变化，与世界来函同一格式', async () => {
+  const platform = new UpdatePlatform();
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 0;
+  const before = structuredClone(platform.data.countries.land);
+  platform.outputs.push(JSON.stringify({ id: 'plain', until: 130, reason: '时间推进', steps: [] }));
+  try {
+    await controller.run('update');
+    const job = controller.jobs[0];
+    assert.equal(job.state, 'success', job.message);
+    assert.equal(job.changes?.until, 130);
+    const land = job.changes?.countries.find((country) => country.id === 'land');
+    assert.ok(land, JSON.stringify(job.changes));
+    assert.deepEqual(land.stability, [before.stability, before.stability + 5]);
+    assert.deepEqual(
+      land.entries.map((entry) => [entry.kind, entry.day]),
+      [['complete', 130]],
+    );
+  } finally {
+    controller.dispose();
+  }
+});

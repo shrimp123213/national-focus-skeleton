@@ -6,7 +6,7 @@ import { FocusController } from '../src/workflow';
 import type { IntegrationInput } from '../src/integration';
 import type { State } from '../src/model';
 import type { Snapshot } from '../src/platform';
-import type { WorldObservation } from '../src/world-proposal';
+import { GUIDANCE_TAG, type WorldObservation } from '../src/world-proposal';
 import { PREDICTION_WAIT_MS, type ScheduleSource, type WorldSchedulePrediction } from '../src/world-schedule';
 
 class SchedulePlatform extends DemoPlatform {
@@ -32,7 +32,6 @@ class SchedulePlatform extends DemoPlatform {
     member: { taskId: 'world', rootId: 'root' },
     run: null,
     fingerprint: 'world',
-    patchLog: null,
   };
   readScheduleSource() {
     return structuredClone(this.source);
@@ -103,40 +102,41 @@ async function register(controller: FocusController, requestId = 'world-a') {
   assert.equal(reply.status, 'ready');
   return reply;
 }
-function worldResult(platform: SchedulePlatform, nonce: string, id = 'external') {
+function worldResult(platform: SchedulePlatform, text = '【奥古斯提姆帝国】局势：世界推演') {
   platform.observation.run = {
     messageId: 8,
     at: Date.now(),
-    taskResults: [
-      {
-        taskId: 'world',
-        success: true,
-        extractedTags: {
-          国策提案: JSON.stringify({
-            nonce,
-            proposal: { id, until: platform.day, reason: '世界提案', steps: [] },
-          }),
-        },
-      },
-    ],
+    taskResults: [{ taskId: 'world', success: true, extractedTags: { [GUIDANCE_TAG]: text } }],
   };
 }
+/** Guided and fallback updates start without being awaited; wait until no task is running. */
+async function settle(controller: FocusController) {
+  for (let i = 0; i < 500; i++) {
+    if (!controller.jobs.some((job) => ['queued', 'running'].includes(job.state))) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+  throw new Error('任务没有结束');
+}
 
-test('世界先登记优先于未到期预测；没有提案也不自行接管，手动失败使旧登记永久失效', async () => {
+test('世界先登记优先于未到期预测；没有指引也不自行接管，手动失败使旧登记永久失效', async () => {
   const { platform, controller } = await setup();
   const reply = await register(controller);
   platform.prediction = { status: 'not_due', reason: 'interval_pending' };
   await controller.runScheduled();
   await controller.runScheduled();
   assert.equal(platform.calls, 0);
-  assert.equal(controller.scheduleCoordination.status, 'proposal_wait');
+  assert.equal(controller.scheduleCoordination.status, 'guidance_wait');
+  assert.equal(controller.worldGuidance.status, 'waiting');
   platform.fail = true;
   await controller.run('update');
   assert.equal(platform.calls, 1);
   assert.equal(controller.integration.lookup(reply.nonce), null);
-  worldResult(platform, reply.nonce);
-  controller.refreshProposal();
-  assert.equal(await controller.accept(), false);
+  worldResult(platform);
+  controller.refreshGuidance();
+  await settle(controller);
+  assert.equal(platform.calls, 1, '失效登记的指引不启动更新');
   controller.dispose();
 });
 test('国策先开始时不可提供资料；提交后新请求读取最新状态', async () => {
@@ -154,7 +154,7 @@ test('国策先开始时不可提供资料；提交后新请求读取最新状�
   const work = controller.runScheduled();
   await flush();
   assert.deepEqual(await controller.integration.prepare(8, { mode: 'request', requestId: 'too-late' }), {
-    version: 1,
+    version: 2,
     status: 'unavailable',
     reason: 'update_busy',
   });
@@ -180,7 +180,7 @@ test('预测等待中登记立即让位；10 秒后仍不自动接管有效登�
   assert.equal(controller.scheduleCoordination.status, 'prediction_wait');
   await register(controller);
   await work;
-  assert.equal(controller.scheduleCoordination.status, 'proposal_wait');
+  assert.equal(controller.scheduleCoordination.status, 'guidance_wait');
   t.mock.timers.tick(PREDICTION_WAIT_MS);
   await controller.runScheduled();
   assert.equal(platform.calls, 0);
@@ -235,7 +235,7 @@ for (const change of ['chat', 'swipe', 'floor', 'body', 'manual', 'cancel'] as c
   });
 }
 for (const skipped of [true, false]) {
-  test(`新的执行纪录${skipped ? '跳过' : '没有提案'}可提前解除等待`, async () => {
+  test(`新的执行纪录${skipped ? '跳过' : '没有指引'}可提前解除等待`, async () => {
     const { platform, controller } = await setup();
     platform.observation.run = { messageId: 8, at: 1, taskResults: [] };
     const work = controller.runScheduled();
@@ -279,7 +279,7 @@ test('等待结束与登记接近时，保存前的同步入口仍让位', async
   t.mock.timers.tick(PREDICTION_WAIT_MS);
   await work;
   assert.equal(platform.calls, 0);
-  assert.equal(controller.scheduleCoordination.status, 'proposal_wait');
+  assert.equal(controller.scheduleCoordination.status, 'guidance_wait');
   controller.dispose();
 });
 test('计时器刚结束、快照读取尚未结束时手动补救，旧自动工作仍取消', async (t) => {
@@ -310,8 +310,8 @@ test('计时器刚结束、快照读取尚未结束时手动补救，旧自动�
   assert.equal(platform.calls, 1, '手动失败也不得让旧自动工作接手');
   controller.dispose();
 });
-test('晚到的跳过或空纪录不撤销有效 nonce，也不启动第二条自动更新', async () => {
-  for (const skipped of [true, false]) {
+for (const skipped of [true, false]) {
+  test(`让位后世界${skipped ? '跳过' : '没写指引'}：登记结束，改跑一次一般更新`, async () => {
     const { platform, controller } = await setup();
     const work = controller.runScheduled();
     await flush();
@@ -323,12 +323,48 @@ test('晚到的跳过或空纪录不撤销有效 nonce，也不启动第二条�
     };
     platform.tick();
     await work;
+    await settle(controller);
+    assert.equal(controller.integration.lookup(reply.nonce), null);
+    assert.equal(controller.worldGuidance.status, 'ended');
+    assert.equal(controller.worldGuidance.reason, skipped ? 'world_skipped' : 'missing_guidance');
+    assert.equal(platform.calls, 1);
+    assert.equal(controller.jobs[0].label, undefined, '改跑的是一般更新');
+    assert.equal(controller.scheduleCoordination.status, 'idle');
+    platform.tick();
     await controller.runScheduled();
-    assert.ok(controller.integration.lookup(reply.nonce));
-    assert.equal(controller.externalProposal.reason, skipped ? 'world_skipped' : 'missing_proposal');
-    assert.equal(platform.calls, 0);
+    await settle(controller);
+    assert.equal(platform.calls, 1, '同一楼不再更新');
     controller.dispose();
-  }
+  });
+}
+test('让位后故事时间改变：结束等待、排程回到待命，不改跑更新', async () => {
+  const { platform, controller } = await setup();
+  await register(controller);
+  await controller.runScheduled();
+  assert.equal(controller.scheduleCoordination.status, 'guidance_wait');
+  platform.day += 1;
+  platform.tick();
+  await settle(controller);
+  assert.equal(controller.worldGuidance.status, 'ended');
+  assert.equal(controller.worldGuidance.reason, 'source_changed');
+  assert.equal(controller.scheduleCoordination.status, 'idle');
+  assert.equal(platform.calls, 0);
+  controller.dispose();
+});
+test('让位后指引送达：只依指引更新一次，排程回到待命', async () => {
+  const { platform, controller } = await setup();
+  const reply = await register(controller);
+  await controller.runScheduled();
+  assert.equal(controller.scheduleCoordination.status, 'guidance_wait');
+  worldResult(platform);
+  platform.tick();
+  platform.tick();
+  await settle(controller);
+  assert.equal(platform.calls, 1);
+  assert.equal(controller.jobs[0].label, '依世界指引');
+  assert.equal(controller.integration.lookup(reply.nonce), null);
+  assert.equal(controller.scheduleCoordination.status, 'idle');
+  controller.dispose();
 });
 test('超时不能略过 MVU 忙碌检查', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000 });
@@ -363,92 +399,83 @@ test('取消国策更新不恢复旧登记，非同步准备也不能登记旧�
   assert.equal(controller.jobs[0].state, 'cancelled');
   controller.dispose();
 });
+/** Register, let the world task return guidance, and wait for the guided update to save. */
+async function guided(platform: SchedulePlatform, controller: FocusController, requestId = 'world-a') {
+  await register(controller, requestId);
+  worldResult(platform);
+  controller.refreshGuidance();
+  await settle(controller);
+  assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+}
 test('回退侦测超出短窗口仍有效，新请求不清除；确认后不重复提示', async () => {
   const { platform, controller } = await setup();
   const before = structuredClone(platform.data);
-  const reply = await register(controller);
-  worldResult(platform, reply.nonce);
-  controller.refreshProposal();
-  assert.equal(await controller.accept(), true);
+  await guided(platform, controller);
   for (let i = 0; i < 12; i++) {
-    controller.refreshProposal();
+    controller.refreshGuidance();
   }
   await register(controller, 'rerun');
   platform.data = before;
-  controller.refreshProposal();
+  controller.refreshGuidance();
   const notice = controller.rollbackNotice!;
   assert.equal(notice.messageId, 8);
   assert.equal(notice.swipeId, 0);
   assert.equal(notice.receiptMissing, true);
   assert.equal(notice.returnedToBefore, true);
-  assert.equal(notice.proposalId, 'external');
+  assert.equal(notice.proposalId, 'own-1');
   assert.ok(notice.detectedAt);
   assert.deepEqual(platform.data, before, '只提示，不自动恢复');
   controller.dismissRollback();
-  controller.refreshProposal();
+  controller.refreshGuidance();
   assert.equal(controller.rollbackNotice, null);
   controller.dispose();
 });
 test('revision 降低本身不触发回退，receipt 消失即使不等于旧状态也提示；换楼清除', async () => {
   const { platform, controller } = await setup();
-  const reply = await register(controller);
-  worldResult(platform, reply.nonce);
-  controller.refreshProposal();
-  await controller.accept();
-  for (let i = 0; i < 12; i++) {
-    controller.refreshProposal();
-  }
+  await guided(platform, controller);
   platform.data.revision = 0;
-  controller.refreshProposal();
+  controller.refreshGuidance();
   assert.equal(controller.rollbackNotice, null);
   platform.data.receipts = [];
-  controller.refreshProposal();
+  controller.refreshGuidance();
   assert.equal(controller.rollbackNotice!.receiptMissing, true);
   assert.equal(controller.rollbackNotice!.returnedToBefore, false);
   platform.source.messageId++;
-  controller.refreshProposal();
+  controller.refreshGuidance();
   assert.equal(controller.rollbackNotice, null);
   controller.dispose();
 });
-test('新的接收清除回退提示，换 swipe 与重载也清除记忆体追踪', async () => {
+test('新的依指引更新清除回退提示，换 swipe 与重载也清除记忆体追踪', async () => {
   const { platform, controller } = await setup();
   const before = structuredClone(platform.data);
-  const first = await register(controller);
-  worldResult(platform, first.nonce);
-  controller.refreshProposal();
-  await controller.accept();
-  for (let i = 0; i < 12; i++) {
-    controller.refreshProposal();
-  }
+  await guided(platform, controller);
   platform.data = before;
-  controller.refreshProposal();
+  controller.refreshGuidance();
   assert.ok(controller.rollbackNotice);
-  const next = await register(controller, 'next');
-  worldResult(platform, next.nonce, 'next');
-  controller.refreshProposal();
-  assert.equal(await controller.accept(), true);
+  await guided(platform, controller, 'next');
   assert.equal(controller.rollbackNotice, null);
   platform.data.receipts = [];
-  controller.refreshProposal();
+  controller.refreshGuidance();
   assert.ok(controller.rollbackNotice);
   platform.source.swipeId++;
-  controller.refreshProposal();
+  controller.refreshGuidance();
   assert.equal(controller.rollbackNotice, null);
   const reloaded = new FocusController(platform);
-  reloaded.refreshProposal();
+  reloaded.refreshGuidance();
   assert.equal(reloaded.rollbackNotice, null);
   reloaded.dispose();
   controller.dispose();
 });
-test('已有 receipt 的重复提案没有新效果，不误判为回到接收前状态', async () => {
+test('一般更新不追踪回退；已有 receipt 的依指引更新没有新效果，也不误判', async () => {
   const { platform, controller } = await setup();
-  platform.data.receipts.push('external');
-  const reply = await register(controller);
-  worldResult(platform, reply.nonce);
-  controller.refreshProposal();
-  assert.equal(await controller.accept(), true);
+  await controller.run('update');
+  platform.data.receipts = [];
+  controller.refreshGuidance();
+  assert.equal(controller.rollbackNotice, null);
+  platform.data.receipts.push('own-2');
+  await guided(platform, controller);
   for (let i = 0; i < 12; i++) {
-    controller.refreshProposal();
+    controller.refreshGuidance();
   }
   assert.equal(controller.rollbackNotice, null);
   controller.dispose();

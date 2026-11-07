@@ -244,6 +244,10 @@ export function tableEntry(entry: Pick<SourceEntry, 'name'>, names: TableNames =
   const name = normalizedEntryName(entry.name);
   return databaseEntry(name) && !entryExclusion(entry, names);
 }
+/** Entries the database plugin writes; the entry list hides them, as Workflow Assistant does. */
+export function databaseSourceEntry(entry: Pick<SourceEntry, 'name'>): boolean {
+  return databaseEntry(normalizedEntryName(entry.name));
+}
 
 export function selectedEntry(entry: SourceEntry, selected: Record<string, number[]>): boolean {
   const ids = selected[entry.book];
@@ -607,10 +611,13 @@ export async function buildSourceContext(input: SourceInput) {
   input.entries.forEach((entry, originalIndex) => {
     const excluded = entryExclusion(entry, names);
     const table = tableEntry(entry, names);
+    // Table exports are not in the entry list, so the switch alone decides them.
     const status = excluded
       ? excluded
-      : table && settings.autoIncludeTables
-        ? ''
+      : table
+        ? settings.includeTables
+          ? ''
+          : '数据库表格（未开启纳入）'
         : selectedEntry(entry, selection)
           ? ''
           : '未勾选';

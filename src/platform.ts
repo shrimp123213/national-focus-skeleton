@@ -2,8 +2,8 @@ import type { Config, JobKind, PromptItem, PromptRole, State, WorldbookSource } 
 import type { SourceReport } from './sources';
 import type { Transition } from './periods';
 import type { IntegrationApi, IntegrationRead } from './integration';
-import type { WorldObservation } from './world-proposal';
-import type { ProposalRepairMaterial } from './proposal-repair';
+import type { WorldGuidance, WorldObservation } from './world-proposal';
+import type { LetterCountry } from './proposal-view';
 import type { ScheduleSource, WorldSchedulePrediction } from './world-schedule';
 
 export type PeriodWork = {
@@ -63,6 +63,10 @@ export type JobStatus = {
   finished?: number;
   /** API preset that produced the accepted response. */
   route?: string;
+  /** A saved situation update: what it changed in each nation, read like the world letter. */
+  changes?: { until: number; countries: LetterCountry[] };
+  /** The world task's guidance this update followed, kept for display and retry. */
+  guidance?: WorldGuidance;
 };
 /** In-memory debug record, only kept when the player enables the run log. */
 export type RunLogEntry = {
@@ -90,8 +94,6 @@ export interface Platform {
   readIntegration?(messageId: number, config: Config): IntegrationRead;
   bindIntegration?(api: IntegrationApi): () => void;
   readWorldProposal?(messageId: number): WorldObservation | null;
-  loadProposalRepair?(): unknown;
-  saveProposalRepair?(material: ProposalRepairMaterial | null, chatId: string): void;
   onIntegrationTick?(callback: () => void): () => void;
   readScheduleSource?(): ScheduleSource | null;
   predictWorldSchedule?(source: ScheduleSource): WorldSchedulePrediction;

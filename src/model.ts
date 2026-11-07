@@ -608,8 +608,12 @@ export const SourcesSchema = z.preprocess(
         .default({}),
       memoryRecallRecentCount: z.number().int().min(0).max(1000).default(10),
       includeLatestUser: z.boolean().default(false),
-      /** Workflow Assistant always includes database table exports in $1; opt in here. */
-      autoIncludeTables: z.boolean().default(false),
+      /**
+       * Database table exports in $1. The entry list hides database entries, as Workflow Assistant
+       * does: on sends all of them (its behaviour), off sends none. Replaces `autoIncludeTables`,
+       * whose off state followed the entry checkboxes; the old key is dropped on load.
+       */
+      includeTables: z.boolean().default(true),
       /** $2 WorkflowHelper-* managed entries. */
       managedEntries: z.boolean().default(false),
       /** $5 chronicle index or outline table. */

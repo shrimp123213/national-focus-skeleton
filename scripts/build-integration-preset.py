@@ -1,85 +1,82 @@
 # Builds the 世界后台引擎 × 国策档案 integration preset for Workflow Assistant (工作流助手).
-# Usage: python scripts/build-integration-preset.py <exported 世界后台引擎 preset.json> <out.json> [world]
+# Usage: python scripts/build-integration-preset.py <世界后台引擎 preset.json> <out.json> [world]
 #
-# The world task keeps its structured JSON output. The proposal travels like <世界状态摘要>: the model
-# writes <国策提案>…</国策提案> inside the "analysis" string, Workflow Assistant moves analysis into
-# <Analysis>, and extractInjectTags picks the tag up. National-focus rules come from src/prompts.ts and
-# build-weaver-preset.py, so the integration states the same law as the script's own update task.
+# The world task keeps its structured JSON output. Since v0.18 it writes plain-text guidance for
+# national focus: <国策指引>…</国策指引> inside the "analysis" string, which Workflow Assistant moves
+# into <Analysis> and extractInjectTags picks up. The script's own update task turns the guidance
+# into a validated proposal. The source may be a plain engine preset or an earlier integration
+# preset; earlier integration segments are removed first, so the build can run again.
 import copy
-import importlib.util
 import json
 import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
 TASK = '世界时局与经济简报'
-TAG = '国策提案'
-API_VERSION = 1
+TAG = '国策指引'
+OLD_TAGS = ['国策提案']
+API_VERSION = 2
+SUFFIX = '（国策整合）'
+RULES_NAME = '国策推演规则（国策整合）'
+DATA_NAME = '国策档案（国策整合）'
 
 
-def load_weaver():
-    spec = importlib.util.spec_from_file_location('weaver', ROOT / 'scripts' / 'build-weaver-preset.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def gate_open(world):
+    return f"<%_ if (String(`{{{{replica:val}}}}`).trim() === {json.dumps(world, ensure_ascii=False)}) {{ _%>\n"
 
 
-def builtin_law():
-    """DEFAULT_GUIDE and the update task, as the script sends them when the player has not edited them."""
-    source = (ROOT / 'src' / 'prompts.ts').read_text(encoding='utf-8')
-    guide = re.search(r'export const DEFAULT_GUIDE = `(.*?)`;', source, re.S)
-    update = re.search(r'\n  update: `(.*?)`,\n  reshape:', source, re.S)
-    if not guide or not update:
-        raise SystemExit('src/prompts.ts 中找不到 DEFAULT_GUIDE 或局势更新任务指示')
-    # The local-update note about data.context.world means nothing to the world task itself.
-    update_text = update.group(1).replace('\n${WORLD_CONTEXT_TASK}', '')
-    for text in (guide.group(1), update_text):
-        if '${' in text or '`' in text:
-            raise SystemExit('规则文字含模板插值或反引号，需要更新本脚本的读取方式')
-    return guide.group(1).strip(), update_text.strip()
+GATE_CLOSE = '\n<%_ } _%>'
 
 
 def gate(world, body):
     """Send a segment only to the replica that owns national focus."""
-    return (f"<%_ if (String(`{{{{replica:val}}}}`).trim() === {json.dumps(world, ensure_ascii=False)}) {{ _%>\n"
-            f"{body.strip()}\n<%_ }} _%>")
+    return gate_open(world) + body.strip() + GATE_CLOSE
 
 
 INTEGRATION_RULES = r'''<国策整合规则>
-1. 范围：只有<国策档案>的状态为「可用」时才推演国策；状态是「暂不可提供」或没有<国策档案>时，本次只推演世界，不推演国策，也不输出<国策提案>。
+1. 范围：只有<国策档案>的状态为「可用」时才写国策指引；状态是「暂不可提供」或没有<国策档案>时，本次只推演世界，不写<国策指引>。
 2. 分工：
-   - 国策提案决定各国国策的进度：选策、国策完成，以及国策造成的直接成果（facts、能力、承诺、稳定度与战争支持度）。世界变量不得把尚未完成的国策写成已完成。
-   - 世界变量推演各方的反应、经济、社会、传闻与时代演进。
-   - 国策提案的 events 是国策档案的事件纪录与报纸来源，玩家与正文只从这里看到各国新闻。世界推演中与各国有关的重要发展——国策行动的公开结果、他国的反应、冲突、外交与协议——都要在国策提案中写成事件（origin=background，evidence 注明「世界局势」），说法与世界变量的事件脉络一致；已有对应的进行中事件就用 eventUpdates 推进。
-   - 同一件事两边都写不算重复；重复结算指同一个效果套用两次。事件的 changes 只写这件事对该国稳定度、战争支持度、能力或承诺的实际影响，不要为了凑数加效果。
-   - 已完成且公众可知的国策（例如公开颁布的法令、公开的军事部署）写进 publications。
-3. 时间：
-   - now 与各国 cursor 是故事日数字（整数为日，小数为一日中的时刻），<国策档案>的<时间>附有对应日期。
-   - proposal.until 逐字照抄 now，包括全部小数位；steps.at 用故事日数字，由小到大，不早于该国 cursor、不晚于 now。
-   - 国策事件的时间要与世界事件脉络的日期对得上。
-4. 依据：<国策律>说的「context」「正文」指<故事信息>，「state」指<国策档案>的<state>。引用本次世界推演或<上期世界状态>时，evidence 注明「世界局势」。<history>只含国策档案实际保存的纪录（complete=false），缺漏的部分不要自行补写成历史。
-5. 输出位置：<国策律>与<国策输出格式>所说的「只输出一个 JSON 物件」，在这里指<国策提案>标签里的内容。整个回复仍是 WorldPaper_Update_Format 规定的 {"analysis":…,"patch":[…]}：
-   - 在 analysis 的 Step10 末尾写：<国策提案>{"nonce":"<国策档案>的 nonce","proposal":{局势更新根物件}}</国策提案>
-   - 标签里写单行压缩 JSON；它位于 analysis 字串之中，双引号要像 analysis 的其他内容一样写成 \"
-   - 整个 analysis 只在 Step10 末尾写一次完整的国策提案标签；其他地方提到它时只写「国策提案」四字，不加尖括号（系统只取最后一个标签）
-   - 国策提案不写进 patch；patch 只更新世界变量
-6. nonce 每次推演都不同，逐字照抄本次<国策档案>的值，不要沿用旧值；proposal.id 也要新取。
-</国策整合规则>'''
+   - 你完成推演后，国策档案会以自己的「局势更新」任务读取这份指引，推进各国国策：选策、国策完成、国策事件、事实、稳定度与战争支持度、换期。它会检查前置、互斥、工期与换期规则，不合规则的部分改写成事件或事实，或略过。
+   - 所以指引只写方向与依据，用文字写，不写 JSON，不需要符合任何 schema。
+   - 世界变量推演各方的反应、经济、社会、传闻与时代演进。世界变量不得把尚未完成的国策写成已完成；国策的进度只由国策档案记录。
+   - 国策档案的事件是玩家与正文看到各国新闻的来源。世界推演中与各国有关的重要发展——国策行动的公开结果、他国的反应、冲突、外交与协议——都要写进指引，说法与日期和世界变量的事件脉络一致。
+3. 读法：<state>是国策档案的现况。countries 只列已启用的国家：control 是 player（玩家国）或 ai；current 是正在推进的主国策 ID；nodes 是国策（name、description、prerequisites 前置、mutex 互斥路线；已完成的只留名称）；progress 是已开始或已完成的国策；period 是本期议程（title、agenda）；longTerm 是长期方向。events.ongoing 是进行中的国策事件。
+4. 指引内容（逐国写；没有变化的国家写「本期无重大变化」）：
+   - 局势：本期与该国有关的发展，每件写出故事日期（年月日）与经过；进行中的事件写它推进到哪里。
+   - 国策：主国策在本期是否完成、受阻或改变；AI 国空闲时会选哪一项国策（写国策名称与 ID，并说明理由；只选前置已完成、未被互斥路线锁定的国策）；正文或世界推演是否已实际做成某项尚未完成的国策；本期议程是否已完成，或因局势变化已不适用（需要换期）。
+   - 数值：稳定度、战争支持度的变化方向、大约幅度与原因。
+   - 玩家国（control=player）的选策由玩家决定：只写局势与数值，不建议选策。
+5. 时间：日期用<国策档案>的<时间>所附的日期格式；不早于该国 cursor 的日期，不晚于 now 的日期。
+6. 输出位置：整个回复仍是 WorldPaper_Update_Format 规定的 {"analysis":…,"patch":[…]}。
+   - 在 analysis 的 Step10 末尾写一次 <国策指引>…</国策指引>。标签内是纯文字，可以分行、条列；它位于 analysis 字串之中，换行与引号要像 analysis 的其他内容一样转义。引用时用「」，不用英文双引号。
+   - 其他地方提到它时只写「国策指引」四字，不加尖括号（系统只取最后一个标签）。
+   - 国策指引不写进 patch；patch 只更新世界变量。
+</国策整合规则>
+
+<国策指引范例>
+<国策指引>
+【奥古斯提姆帝国】
+- 局势：490年3月2日北境债券暴跌，帝都商会撤资；3月9日诺斯加德递交抗议照会，要求帝国停止清查北境账目。
+- 国策：主国策「统一行省税制」于3月12日如期完成；接着选「清丈北境田亩」（tax_survey），因为税制要落实到地方，前置已完成。
+- 数值：稳定度小幅下降（约 -3），因北境债券风波；战争支持度不变。
+【北境联邦】
+- 局势：490年3月9日向帝国递交抗议照会，边境商路暂停。
+- 国策：本期无重大变化。
+- 数值：战争支持度略升（约 +2），因民间反帝情绪。
+</国策指引>
+</国策指引范例>'''
 
 
-def rules_segment(world, weaver, guide, task):
+def rules_segment(world):
     body = '\n\n'.join([
-        f'VOID: 织界者，{world}同时承载「国策档案」：各国的长期国策由你在同一次推演中一并推进。以下<国策律>与<国策输出格式>原本写给国策档案的「背景规划者」，指的就是此刻的你；<国策整合规则>说明它们在世界推演中的位置，彼此冲突时以<国策整合规则>为准。',
+        f'VOID: 织界者，{world}同时承载「国策档案」：你在推演世界的同时，为各国的长期国策写一份「国策指引」，交给国策档案依规则落实。<国策整合规则>说明指引的分工、读法与写法。',
         INTEGRATION_RULES,
-        '<国策律>\n' + guide + '\n\n' + task + '\n</国策律>',
-        weaver.FORMAT['update'],
     ])
     return gate(world, body)
 
 
 DATA = r'''<%_
-// 国策档案（国策脚本挂在页面上的 NationalFocusIntegration）为本次请求准备资料并登记 nonce。
+// 国策档案（国策脚本挂在页面上的 NationalFocusIntegration）为本次请求准备资料并登记。
 // 工作流助手只在真正执行任务时渲染提示词，所以每次渲染都是一次正式请求。
 const nfReplica = String(`{{replica:val}}`).trim();
 let nf = null;
@@ -110,9 +107,9 @@ const nfDate = (day) => {
 };
 _%>
 <%_ if (nf && nf.status === 'ready') { _%>
-VOID: 以下是国策档案为本次推演提供的资料（状态：可用）。依<国策整合规则>与<国策律>推进各国国策。
+VOID: 以下是国策档案为本次推演提供的资料（状态：可用）。依<国策整合规则>写国策指引。
 
-<国策档案 nonce="<%= nf.nonce %>">
+<国策档案>
 <时间>
 now：<%= nf.now %>（<%= nfDate(nf.now) %>）
 各国 cursor：
@@ -123,51 +120,40 @@ now：<%= nf.now %>（<%= nfDate(nf.now) %>）
 <state>
 <%- JSON.stringify(nf.state) %>
 </state>
-<history>
-<%- JSON.stringify(nf.history) %>
-</history>
-<schema>
-<%- JSON.stringify(nf.schema) %>
-</schema>
 </国策档案>
 <%_ } else if (nf) { _%>
 VOID: <国策档案 状态="暂不可提供" 原因="<%= nf.reason %>"/>
-本期没有可用的国策资料：本次只推演世界，不推演国策，也不输出<国策提案>。
+本期没有可用的国策资料：本次只推演世界，不写<国策指引>。
 <%_ } _%>'''
 
 
-COT_FOCUS = '''- Step4.1A：国策推演（依<国策整合规则>与<国策律>；<国策档案>不是「可用」时写「本期无国策档案」，跳过本步与 Step10）
-  - 时间窗：now 是多少？逐国列出 cursor、calibration、control、skipDelegate；本次推进各国 cursor → now
-  - 事实：从各国 cursor 到 now，<故事信息>与<上期世界状态>中有哪些与各国有关的事？各在哪个故事日？哪些可写成 facts？哪些等待中国策的 outcomes 已取得？
-  - 逐国：主国策是否在区间内完成、完成时点是否晚于前置与成果取得的时点；空闲的 AI 国依当时条件选策，选策前逐项写出核对：prerequisites 的每一组在该时点至少有一项已完成（含本次更早完成的）、没有被互斥路线锁定、requirements 成立，任一项不成立就不能选；玩家国只在跳时且 skipDelegate=true 时代选；正文或事件是否已实际做成某项未完成国策（achieved／bypassed／不完成）；本期主要目的是否已完成或已不适配（换期）
-  - 国策事件：先推进 state.events.ongoing；国策的执行若有持续过程，由同一事件承接
-  - 交给世界推演：本期各国的选择、完成与直接成果，会引起哪些他国、团体、经济或社会的反应？逐条列出，在 Step4.2 与 Step5 推演、写进世界变量；其中与各国有关的重要发展，到 Step10 再写成国策事件
+COT_FOCUS = '''- Step4.1A：国策推演（依<国策整合规则>；<国策档案>不是「可用」时写「本期无国策档案」，跳过本步与 Step10）
+  - 时间窗：now 是哪一天？逐国列出 cursor 与 control；本次推进各国 cursor → now
+  - 逐国：主国策在区间内是否完成或受阻？空闲的 AI 国会选哪一项前置已完成、未被互斥锁定的国策？正文或世界推演是否已实际做成某项尚未完成的国策？本期议程是否已完成或已不适用？
+  - 交给世界推演：各国的选择与成果会引起哪些他国、团体、经济或社会的反应？逐条列出，在 Step4.2 与 Step5 推演、写进世界变量；与各国有关的重要发展，到 Step10 写进国策指引
 '''
 
+COT_TAIL = '''Step10：国策指引（<国策档案>不是「可用」时写「本期无国策档案」，不输出标签）
+- 一致性：对照 Step4.2–Step7 的世界推演，指引中的事件、日期与国策方向不得与世界变量矛盾；同一件事两边都提时，指引写国家做了什么，世界写各方怎么反应
+- 覆盖：逐条对照 Step5.1 推进或新建的世界事件，凡与已启用国家有关的重要发展都写进指引，每件附故事日期
+- 选策：AI 国建议的国策，前置都已完成、未被互斥路线锁定；玩家国不建议选策
+- 最后写出国策指引（纯文字，逐国分段，不写 JSON）：
+<国策指引>
+【国家名】
+- 局势：……
+- 国策：……
+- 数值：……
+</国策指引>
+'''
 
-def cot_tail(weaver):
-    update = weaver.COT['update']
-    start = update.index('Step 8：格式自检')
-    end = update.index('</analysis_format>')
-    checks = update[start:end].strip().split('\n', 1)[1]
-    return ('Step10：国策提案（<国策档案>不是「可用」时写「本期无国策档案」，不输出标签）\n'
-            '- 一致性：对照 Step4.2–Step7 的世界推演，国策提案的事件、事实与选策不得与世界变量矛盾；同一件事两边都提时，国策写国家做了什么，世界写各方怎么反应\n'
-            '- 选策复核：每项 selections 的国策，在其 at 时点前置都已完成、未被互斥锁定、条件成立；不成立的删去，改选当时真正可开始的国策\n'
-            '- 事件复核：逐条对照 Step5.1 推进或新建的世界事件，凡与已启用国家有关的重要发展，在国策提案中写成事件或 eventUpdates（时间放进对应的时间步骤）；公开的国策完成写进 publications。时间跨度长、局势有重大变化，而 events、eventUpdates、publications 全空时，回头补齐\n'
-            '- 格式自检（对照<国策输出格式>；只写发现的问题与修正，没有问题写「通过」）：\n'
-            + '\n'.join('  ' + line for line in checks.split('\n')) + '\n'
-            '- 最后写出完整提案（单行压缩 JSON；nonce 逐字照抄<国策档案>；双引号写成 \\"）：\n'
-            '<国策提案>{"nonce":"…","proposal":{…}}</国策提案>\n')
-
-
-TAIL = '<国策档案>为「可用」时，在 analysis 的 Step10 末尾写出 <国策提案>…</国策提案>：标签内是单行压缩 JSON，和 analysis 其他内容一样位于 JSON 字串中，双引号写成 \\"。'
+TAIL = '<国策档案>为「可用」时，在 analysis 的 Step10 末尾写出 <国策指引>…</国策指引>：标签内是逐国的纯文字指引，不写 JSON。'
 
 
 def find(groups, name):
     for index, group in enumerate(groups):
         if group.get('name') == name:
             return index
-    raise SystemExit(f'预设缺少提示词段「{name}」；本脚本依世界后台引擎 v6.3 的段落结构修改')
+    raise SystemExit(f'预设缺少提示词段「{name}」；本脚本依世界后台引擎 v6.5 的段落结构修改')
 
 
 def insert_before(text, marker, addition, label):
@@ -176,35 +162,42 @@ def insert_before(text, marker, addition, label):
     return text.replace(marker, addition + marker, 1)
 
 
+def strip_integration(task, world):
+    """Remove the segments an earlier build added, so the result equals a plain engine preset."""
+    task['promptGroups'] = [g for g in task['promptGroups'] if g.get('name') not in (RULES_NAME, DATA_NAME)]
+    block = re.escape(gate_open(world)) + r'.*?' + re.escape(GATE_CLOSE)
+    cot = task['promptGroups'][find(task['promptGroups'], 'COT')]
+    cot['content'] = re.sub(block + r'\n', '', cot['content'], flags=re.S)
+    tail = task['promptGroups'][find(task['promptGroups'], 'deepseek尾部')]
+    tail['content'] = re.sub(r'\n' + block + r'$', '', tail['content'], flags=re.S)
+    task['extractInjectTags'] = [t for t in task.get('extractInjectTags') or [] if t not in [TAG, *OLD_TAGS]]
+
+
 def build(preset, world):
-    weaver = load_weaver()
-    guide, task = builtin_law()
     out = copy.deepcopy(preset)
-    out['name'] = f"{preset.get('name', '世界后台引擎')}（国策整合）"
+    name = preset.get('name', '世界后台引擎')
+    out['name'] = name if name.endswith(SUFFIX) else name + SUFFIX
     tasks = [t for t in out['tasks'] if t.get('name') == TASK]
     if len(tasks) != 1:
         raise SystemExit(f'预设中「{TASK}」任务应恰好一个，实际 {len(tasks)} 个')
     target = tasks[0]
     if target.get('structuredOutputMode') != 'addon_json_patch':
         raise SystemExit('世界任务应为 addon_json_patch 结构化输出；整合依赖 analysis 进入 <Analysis> 后抽取标签')
-    tags = list(target.get('extractInjectTags') or [])
-    if TAG not in tags:
-        tags.append(TAG)
-    target['extractInjectTags'] = tags
+    strip_integration(target, world)
+    target['extractInjectTags'].append(TAG)
 
     groups = target['promptGroups']
-    rules = {'enabled': True, 'name': '国策推演规则（国策整合）', 'role': 'user',
-             'content': rules_segment(world, weaver, guide, task)}
+    rules = {'enabled': True, 'name': RULES_NAME, 'role': 'user', 'content': rules_segment(world)}
     # Before the rules acknowledgement: snapshots may move the patch-format segment to the very end.
     groups.insert(find(groups, '变量规则结束'), rules)
 
     cot = groups[find(groups, 'COT')]
     cot['content'] = insert_before(cot['content'], '- Step4.2：综合推演', gate(world, COT_FOCUS) + '\n', 'COT')
-    cot['content'] = insert_before(cot['content'], '```\n</analysis_format>', gate(world, cot_tail(weaver)) + '\n', 'COT')
+    cot['content'] = insert_before(cot['content'], '```\n</analysis_format>', gate(world, COT_TAIL) + '\n', 'COT')
 
     data = (DATA.replace('__WORLD__', json.dumps(world, ensure_ascii=False))
             .replace('__VERSION__', str(API_VERSION)))
-    groups.insert(find(groups, '背景信息') + 1, {'enabled': True, 'name': '国策档案（国策整合）', 'role': 'user', 'content': data})
+    groups.insert(find(groups, '背景信息') + 1, {'enabled': True, 'name': DATA_NAME, 'role': 'user', 'content': data})
 
     tail = groups[find(groups, 'deepseek尾部')]
     tail['content'] = tail['content'].rstrip() + '\n' + gate(world, TAIL)

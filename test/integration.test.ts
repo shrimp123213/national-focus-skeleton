@@ -52,26 +52,28 @@ function ready(reply: IntegrationReply): IntegrationReady {
 }
 const request = (requestId = 'world-1') => ({ mode: 'request' as const, requestId });
 
-test('资料包含精确时间、各国实际 cursor、完整定义与实际保存记录，不推进或写入国策', async () => {
+test('资料包含精确时间、各国实际 cursor 与指引所需的现况，不含 schema 与历史，不推进或写入国策', async () => {
   const source = input();
   const before = structuredClone(source);
   const integration = new FocusIntegration(() => source);
   const data = ready(await integration.prepare(8, request()));
-  assert.equal(data.version, 1);
+  assert.equal(data.version, 2);
   assert.equal(data.now, storyDay('490-10-15 14:25'));
   assert.notEqual(data.now, Math.floor(data.now));
   assert.deepEqual(data.cursors, { 奥古斯提姆帝国: 114, 北境联邦: 103.75, 苍海同盟: 114 });
-  assert.equal(data.schema.type, 'object');
-  assert.ok(data.schema.properties?.transitions);
+  assert.equal(Object.hasOwn(data, 'schema'), false, '世界任务只写指引，不需要提案 schema');
+  assert.equal(Object.hasOwn(data, 'history'), false);
   assert.equal(Object.hasOwn(data.state, 'instructions'), false);
   assert.equal(JSON.stringify(data.state).includes('"review"'), false);
-  assert.equal(data.history.complete, false);
-  assert.equal(data.history.since, null);
-  assert.deepEqual(data.history.events.saved.timeline, [
+  const ongoing = (
+    data.state as { events: { ongoing: { id: string; public: boolean; timeline: unknown }[] } }
+  ).events.ongoing;
+  const saved = ongoing.find((event) => event.id === 'saved')!;
+  assert.deepEqual(saved.timeline, [
     { at: 110, text: '已开始' },
     { at: 111, text: '仍在协商' },
   ]);
-  assert.equal(data.history.events.saved.public, false, '资料提供不套用正文迷雾');
+  assert.equal(saved.public, false, '资料提供不套用正文迷雾');
   assert.deepEqual(source, before);
   const registered = integration.lookup(data.nonce)!;
   assert.equal(registered.chatId, source.chatId);
@@ -138,7 +140,7 @@ for (const [reason, change] of unavailableCases) {
     change(source);
     const integration = new FocusIntegration(() => source);
     const result = await integration.prepare(8, request());
-    assert.deepEqual(result, { version: 1, status: 'unavailable', reason });
+    assert.deepEqual(result, { version: 2, status: 'unavailable', reason });
     assert.equal(integration.lookup('unknown'), null);
   });
 }
@@ -394,7 +396,7 @@ test('酒馆全域绑定读取指定末楼，不依赖就绪计时器；异常�
   config.sources.timePath = source.timePath;
   const integration = new FocusIntegration((messageId) => platform.readIntegration(messageId, config));
   const exposed: IntegrationApi = {
-    version: 1,
+    version: 2,
     prepare: (id, options) => integration.prepare(id, options),
     lookup: (nonce) => integration.lookup(nonce),
   };

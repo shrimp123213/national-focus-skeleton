@@ -20,9 +20,7 @@ import { stateTime, storyTime } from './story-time';
 import type { State } from './model';
 import { exportTrees, parseTreeFile, treeTemplate, type TreeImport } from './tree-io';
 import type { FocusController } from './workflow';
-import { evidenceLines, letterDigest, letterReason } from './proposal-view';
-import type { ProposalReceptionState } from './world-proposal';
-import type { ProposalRepairStatus } from './proposal-repair';
+import { letterDigest, type LetterCountry } from './proposal-view';
 import css from './style.css';
 import { mountApiPanel } from './api-panel';
 import { mountSourcePanel } from './source-panel';
@@ -97,7 +95,7 @@ export function mountUI(
   host.id = 'national-focus-root';
   doc.body.append(host);
   const root = host.attachShadow({ mode: 'open' });
-  root.innerHTML = `<style>${css}</style><button class="orb" title="开启国策树" aria-label="开启国策树">${icon('eagle')}<span class="count" hidden></span><span class="orb-letter" hidden aria-hidden="true">函</span></button><section class="shell" aria-label="国策树面板" hidden></section><div class="modal-backdrop" hidden></div>`;
+  root.innerHTML = `<style>${css}</style><button class="orb" title="开启国策树" aria-label="开启国策树">${icon('eagle')}<span class="count" hidden></span></button><section class="shell" aria-label="国策树面板" hidden></section><div class="modal-backdrop" hidden></div>`;
   const shell = root.querySelector<HTMLElement>('.shell')!;
   const orb = root.querySelector<HTMLButtonElement>('.orb')!;
   const backdrop = root.querySelector<HTMLElement>('.modal-backdrop')!;
@@ -144,13 +142,10 @@ export function mountUI(
   /** Event log filters. */
   let eventFilter: 'all' | 'ongoing' | 'resolved' | 'secret' = 'all';
   let eventCountry = '';
-  // v0.16 world letter: the nation shown in the review, the offline sample, and when the seal landed.
-  let letterNation = '';
-  let demoLetter: ProposalReceptionState | null = null;
+  /** The open situation-update changes: its job and the chosen nation. */
+  let changeJob = '';
+  let changeNation = '';
   let demoRollback: FocusController['rollbackNotice'] = null;
-  let demoRepair: ProposalRepairStatus | null = null;
-  let letterSealedAt = 0;
-  let letterKey = '';
   let unsub = () => {};
   let treeSize = { width: 1600, height: 1000 };
   let orbDragged = false;
@@ -326,8 +321,6 @@ export function mountUI(
     const badge = root.querySelector<HTMLElement>('.count')!;
     badge.hidden = busy === 0;
     badge.textContent = String(busy);
-    const letter = letterLook(reception());
-    root.querySelector<HTMLElement>('.orb-letter')!.hidden = !letter || letter.tone !== 'pending';
     hud.suppress(open);
     hud.update();
     if (!open) {
@@ -351,15 +344,10 @@ export function mountUI(
       if (status) {
         status.outerHTML = renderTaskSummary();
       }
-      const seal = shell.querySelector<HTMLElement>('.letter-slot');
-      if (seal) {
-        seal.outerHTML = renderLetterButton();
-      }
       const rollback = shell.querySelector<HTMLElement>('.rollback-slot');
       if (rollback) {
         rollback.outerHTML = renderRollback();
       }
-      refreshLetter();
       const note = shell.querySelector<HTMLElement>('.period-note');
       if (country && note) {
         const text = periodNote(country, controller.jobs);
@@ -386,7 +374,7 @@ export function mountUI(
           `<button class="nation-tab ${c.id === countryId ? 'active' : ''} ${c.control}" data-country="${escape(c.id)}" title="${escape(c.name)}" aria-pressed="${c.id === countryId}"><span class="tab-crest">${icon(c.control === 'player' ? 'eagle' : 'crown')}</span><span class="tab-copy"><strong>${escape(c.name)}</strong><small>${controlLabel(c)}</small></span></button>`,
       )
       .join('');
-    const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>' : ''}${dateChip(state)}${renderLetterButton()}${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
+    const command = `<header class="command"><div class="brand-mark" title="国策档案 · NATIONAL FOCUS ARCHIVE">${icon('eagle')}</div><div class="brand"><h1>国策档案</h1><small>NATIONAL FOCUS</small></div><div class="nation-scroller"><button class="nation-scroll prev" data-tabs-scroll="-1" title="向左滚动国家" aria-label="向左滚动国家">‹</button><nav class="nation-tabs" aria-label="国家">${tabs}<button class="nation-tab add" data-action="countries" title="管理国家" aria-label="管理国家">＋</button></nav><button class="nation-scroll next" data-tabs-scroll="1" title="向右滚动国家" aria-label="向右滚动国家">›</button></div><label class="nation-picker"><span class="sr">切换国家</span><select id="country-picker">${countries.map((c) => `<option value="${escape(c.id)}" ${selected(c.id === countryId)}>${escape(c.name)}</option>`).join('')}<option value="__manage">＋ 管理国家…</option></select></label><div class="command-spacer"></div>${controller.platform.demo ? '<span class="test-label" title="所有国名与内容均为界面示范">离线示范</span>' : ''}${dateChip(state)}${renderTaskButton(busy)}<button class="cmd-btn" data-action="settings" title="设置" aria-label="设置"><span class="cmd-icon">⚙</span><span class="cmd-text">设置</span></button><button class="cmd-btn close" data-action="close" aria-label="关闭面板">×</button></header>`;
     const error = controller.error
       ? `<div class="error-banner" role="alert"><span>${escape(controller.error)}</span><button data-action="refresh">重新读取</button></div>`
       : '';
@@ -444,7 +432,7 @@ export function mountUI(
           '',
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
       body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2 title="${escape(country.description)}">${escape(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape(stateTime(state, false))}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
-<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-letter">世界来函：待审</button><button data-action="demo-letter-wait">世界来函：推演中</button><button data-action="demo-letter-over">世界来函：被覆写</button><button data-action="demo-letter-broken">世界来函：可修复</button><button data-action="demo-letter-mend-failed">世界来函：修复未通过</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
+<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-guided">依世界指引更新</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
     } else {
       body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '为这个世界选择方向' : '连接你的故事'}</h2><p>${state ? '先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。' : '国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。'}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;
     }
@@ -514,50 +502,15 @@ export function mountUI(
   }
   function renderTaskSummary(): string {
     const summary = taskSummary();
-    return `<button class="linkish status-jobs ${summary.state}" data-action="${summary.state === 'letter' ? 'letter' : 'jobs'}"><i class="status-dot ${summary.state}"></i>${escape(summary.text)}</button>`;
+    return `<button class="linkish status-jobs ${summary.state}" data-action="jobs"><i class="status-dot ${summary.state}"></i>${escape(summary.text)}</button>`;
   }
-  /** Accepted national focus that later went back, most likely when the workflow re-ran this floor. */
+  /** A guided update that later went back, most likely when the workflow re-ran this floor. */
   function renderRollback(): string {
     const notice = controller.platform.demo && demoRollback ? demoRollback : controller.rollbackNotice;
     if (!notice) {
       return '<div class="rollback-slot" hidden></div>';
     }
-    return `<div class="rollback-slot rollback-banner" role="alert"><span class="letter-seal" aria-hidden="true">函</span><p>侦测到国策状态回退，可能由工作流重跑造成；第 ${notice.messageId} 楼接收提案后的修改可能已被覆盖。</p><button data-action="rollback-dismiss">知道了</button></div>`;
-  }
-  /** The world letter shown here; the offline page can load a sample instead of the controller's. */
-  function reception(): ProposalReceptionState {
-    return controller.platform.demo && demoLetter ? demoLetter : controller.externalProposal;
-  }
-  function repairState(): ProposalRepairStatus | null {
-    return controller.platform.demo && demoLetter ? demoRepair : controller.proposalRepair;
-  }
-  /** How the header seal reads in each state; null hides it (nothing to review or act on). */
-  function letterLook(r: ProposalReceptionState): { tone: string; label: string } | null {
-    switch (r.status) {
-      case 'waiting':
-        return { tone: 'quiet', label: '世界推演中' };
-      case 'pending':
-        return { tone: 'pending', label: '国策提案待审' };
-      case 'overwritten':
-        return { tone: 'alert', label: '提案需重新接收' };
-      case 'expired':
-      case 'unavailable':
-        return { tone: 'muted', label: '提案未能接收' };
-      case 'rejected':
-        return r.reason === 'user_rejected' ? null : { tone: 'muted', label: '提案未能接收' };
-      default:
-        return null;
-    }
-  }
-  /** Header seal; a hidden slot keeps its place so status updates can swap it without a full render. */
-  function renderLetterButton(): string {
-    const r = reception();
-    const look = letterLook(r);
-    if (!look) {
-      return '<span class="letter-slot" hidden></span>';
-    }
-    const why = letterReason(r) || look.label;
-    return `<button class="cmd-btn letter-slot letter-${look.tone}" data-action="letter" title="${escape(why)}" aria-label="世界来函：${escape(look.label)}"><span class="letter-seal" aria-hidden="true">函</span><span class="cmd-text">${escape(look.label)}</span></button>`;
+    return `<div class="rollback-slot rollback-banner" role="alert"><span class="letter-seal" aria-hidden="true">函</span><p>侦测到国策状态回退，可能由工作流重跑造成；第 ${notice.messageId} 楼依世界指引更新的国策可能已被覆盖。</p><button data-action="rollback-dismiss">知道了</button></div>`;
   }
   /** Failed jobs not yet seen in the task window. */
   function unseenFailures() {
@@ -579,17 +532,14 @@ export function mountUI(
     if (failed) {
       return { text: `${failed} 项任务失败，点此查看`, state: 'failed' };
     }
-    const letter = reception().status;
-    if (letter === 'pending' || letter === 'overwritten') {
-      return { text: letter === 'pending' ? '世界来函附上国策提案，点此审阅' : '提案接收后被覆写，点此重新接收', state: 'letter' };
-    }
     // v0.16: the scheduled update stepped aside for the world task (or briefly waits to see if it will).
     const wait = controller.scheduleCoordination.status;
     if (wait === 'prediction_wait') {
       return { text: '预期世界排程到期，暂候国策资料登记', state: 'busy' };
     }
-    if (wait === 'proposal_wait') {
-      return { text: '已让给世界推演，等待国策提案', state: 'busy' };
+    // v0.18: the world task reads the archive now; its guidance will start the update.
+    if (wait === 'guidance_wait' || controller.worldGuidance.status === 'waiting') {
+      return { text: '世界推演中，完成后依国策指引更新局势', state: 'busy' };
     }
     const last = controller.jobs.find((job) => job.state === 'success');
     return last
@@ -1264,8 +1214,7 @@ export function mountUI(
       return;
     }
     const summary = taskSummary();
-    // The letter has its own seal in the header; its status line would only repeat it here.
-    pill.hidden = !summary.state || modal === 'jobs' || summary.state === 'letter';
+    pill.hidden = !summary.state || modal === 'jobs';
     pill.className = `modal-task-status ${summary.state}`;
     // A static dot: this note is rewritten every second while a task runs (v0.15.4).
     const html = `<i class="status-dot ${summary.state === 'busy' ? 'busy' : 'failed'}"></i>${escape(summary.text.replace('，点此查看', ''))}`;
@@ -1434,7 +1383,7 @@ export function mountUI(
         const chips = [j.route, j.time]
           .filter(Boolean)
           .map((chip) => `<span class="job-chip">${escape(chip!)}</span>`);
-        return `<article class="job-card2 ${j.state}"><span class="job-icon" aria-hidden="true">${jobIcons[j.state] ?? ''}</span><div class="job-main"><div class="job-name">${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${chips.join('')}</div><div class="job-sub"><b>${escape(problems.length ? `${head} · ${problems.length} 个问题` : head)}</b>${meta ? ` · ${meta}` : ''}</div>${list}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button class="primary" data-retry="${j.id}">重试</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">请求记录</button>` : ''}</div></article>`;
+        return `<article class="job-card2 ${j.state}"><span class="job-icon" aria-hidden="true">${jobIcons[j.state] ?? ''}</span><div class="job-main"><div class="job-name">${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${chips.join('')}</div><div class="job-sub"><b>${escape(problems.length ? `${head} · ${problems.length} 个问题` : head)}</b>${meta ? ` · ${meta}` : ''}</div>${list}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button class="primary" data-retry="${j.id}">重试</button>` : ''}${j.changes ? `<button data-changes="${j.id}">各国变化</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">请求记录</button>` : ''}</div></article>`;
       })
       .join('');
     const body = `<div class="job-actions"><button data-modal="run-reshape" title="剧情大幅改变时，修改尚未开始的国策">评估重大改树</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任务</button></div>${rows ? `<div class="job-list">${rows}</div>` : '<p class="muted">尚无任务记录。正文与一般变数更新完成后，国策任务会在背景执行，不会锁住聊天；进度显示在悬浮球上方。</p>'}${controller.config.runLog ? '<p class="muted job-note">执行记录已开启：请求内容只保存在此页记忆体，重新整理即清除。</p>' : ''}`;
@@ -1576,184 +1525,82 @@ export function mountUI(
       '<button data-modal="close">返回</button>',
     );
   }
-  /** Review state that changes the window; the seal timestamp stays out so the stamp plays once. */
-  function letterState(r: ProposalReceptionState): string {
-    return JSON.stringify([r.status, r.reason, r.detail, r.proposal?.id, r.source?.nonce, r.evidence, letterNation, repairState()]);
-  }
-  /** The repair task writes its changes one per line or clause; show them as a short list. */
-  function repairNotes(reason: string): string[] {
-    const lines = reason.split(/\n+/).map((line) => line.replace(/^\s*(?:[-*•]|\d+[.、)）])\s*/, '').trim());
-    const notes = lines.length > 1 ? lines : reason.split(/[；;]\s*/).map((line) => line.trim());
-    return notes.filter(Boolean).slice(0, 12);
-  }
-  /** The world letter: what the world task proposes for each nation, reviewed before it is saved. */
-  function letterView(r: ProposalReceptionState): { body: string; footer: string } {
+  /** Nation tabs and the chosen nation's changes in a saved situation update. */
+  function nationReview(digest: LetterCountry[], active: string): string {
     const state = controller.state;
-    const digest = state && r.preview && r.proposal ? letterDigest(state, r.preview, r.proposal) : [];
-    if (digest.length && !digest.some((c) => c.id === letterNation)) {
-      letterNation = digest[0].id;
-    }
-    const sealed = r.status === 'accepted';
-    const fresh = sealed && Date.now() - letterSealedAt < 1400;
-    const reviewable = r.status === 'pending' || r.status === 'overwritten' || sealed;
-    const mendable = !reviewable && repairState() && repairState()!.status !== 'expired';
-    const intro =
-      r.origin === 'repair'
-        ? '这份国策提案由本地修复产生，世界资料保持原样'
-        : mendable
-          ? '世界推演已经写入，附带的国策提案没通过检查'
-          : r.status === 'waiting'
-          ? '阿斯塔利亚的世界正在推演'
-          : reviewable
-            ? '阿斯塔利亚的世界推演附上一份国策提案'
-            : '这一次没有可接收的国策提案';
-    const meta = [
-      r.source ? `推演至 ${storyTime(r.source.now, true, state?.time)}` : '',
-      digest.length ? `涉及 ${digest.length} 国` : '',
-      r.source ? `第 ${r.source.messageId} 楼` : '',
-    ]
-      .filter(Boolean)
-      .join('，');
-    const head = `<div class="letter-head"><div class="letter-seal-big${sealed ? ' sealed' : ''}${fresh ? ' fresh' : ''}" aria-hidden="true"><span class="seal-mark">函</span><span class="seal-stamp">准</span></div><div class="letter-intro"><p class="letter-from">${intro}</p>${meta ? `<p class="letter-meta">${escape(meta)}</p>` : ''}</div></div>`;
-    const note = sealed
-      ? '<p class="letter-state done">提案已接收，国策已保存到这一楼。</p>'
-      : letterReason(r)
-        ? `<p class="letter-state ${r.status === 'overwritten' ? 'alert' : r.status === 'waiting' ? '' : 'muted'}">${escape(letterReason(r))}</p>`
-        : '';
-    let review = '';
-    if (reviewable && r.proposal) {
-      const lines = evidenceLines(r.evidence)
-        .map((line) => `<li class="${line.tone}">${escape(line.text)}</li>`)
-        .join('');
-      // A repaired letter says what the repair changed before anything else, so it is read first.
-      const notes = r.origin === 'repair' ? repairNotes(r.proposal.reason) : [];
-      const repaired = notes.length
-        ? `<div class="letter-check repaired"><dt>本地修复</dt><dd>依同一次世界结果改写，世界资料没有改动。<ol class="repair-notes">${notes.map((n) => `<li>${escape(n)}</li>`).join('')}</ol></dd></div>`
-        : '';
-      const checks = `<dl class="letter-checks">${repaired}<div class="letter-check ok"><dt>国策规则</dt><dd>提案已通过国策引擎的验证，可以套用。</dd></div><div class="letter-check unknown"><dt>世界写入</dt><dd>程序无法确认世界资料是否完整写入，请参考这次的执行纪录：<ul>${lines}</ul></dd></div></dl>`;
-      const nation = digest.find((c) => c.id === letterNation);
-      const tabs = digest
+    const nation = digest.find((c) => c.id === active);
+    const tabs = digest
+      .map(
+        (c) =>
+          `<button role="tab" class="letter-nation${c.id === active ? ' active' : ''}" aria-selected="${c.id === active}" data-change-nation="${escape(c.id)}"><span class="letter-nation-name">${escape(c.name)}</span><span class="letter-nation-count" aria-label="${c.entries.length} 项变化">${c.entries.length}</span></button>`,
+      )
+      .join('');
+    let detail = '<p class="muted">这次更新没有改变任何国家。</p>';
+    if (nation) {
+      const shift = (label: string, [from, to]: [number, number]) =>
+        from === to
+          ? ''
+          : `<li>${label}<span class="shift"><b>${from}</b><i aria-label="变为">→</i><b>${to}</b></span></li>`;
+      const named = (label: string, [from, to]: [string, string]) =>
+        from === to
+          ? ''
+          : `<li>${label}<span class="shift"><b>${escape(from || '暂无')}</b><i aria-label="变为">→</i><b>${escape(to || '暂无')}</b></span></li>`;
+      const shifts =
+        shift('稳定度', nation.stability) +
+        shift('战争支持度', nation.warSupport) +
+        named('主国策', nation.focus) +
+        (nation.gained.length
+          ? `<li>新增能力<span class="shift">${escape(nation.gained.join('、'))}</span></li>`
+          : '') +
+        (nation.lost.length
+          ? `<li>失去能力<span class="shift">${escape(nation.lost.join('、'))}</span></li>`
+          : '');
+      const kinds: Record<string, string> = {
+        start: '',
+        complete: '',
+        event: '事件',
+        update: '进展',
+        fact: '事实',
+        transition: '换期',
+      };
+      const entries = nation.entries
         .map(
-          (c) =>
-            `<button role="tab" class="letter-nation${c.id === letterNation ? ' active' : ''}" aria-selected="${c.id === letterNation}" data-letter-nation="${escape(c.id)}"><span class="letter-nation-name">${escape(c.name)}</span><span class="letter-nation-count" aria-label="${c.entries.length} 项变化">${c.entries.length}</span></button>`,
+          (entry) =>
+            `<li class="entry-${entry.kind}"><time>${escape(storyTime(entry.day, false, state?.time))}</time><p>${kinds[entry.kind] ? `<span class="entry-kind">${kinds[entry.kind]}</span>` : ''}${escape(entry.title)}${entry.note ? `<small>${escape(entry.note)}</small>` : ''}</p></li>`,
         )
         .join('');
-      let detail = '<p class="muted">这份提案没有改变任何国家。</p>';
-      if (nation) {
-        const shift = (label: string, [from, to]: [number, number]) =>
-          from === to
-            ? ''
-            : `<li>${label}<span class="shift"><b>${from}</b><i aria-label="变为">→</i><b>${to}</b></span></li>`;
-        const named = (label: string, [from, to]: [string, string]) =>
-          from === to
-            ? ''
-            : `<li>${label}<span class="shift"><b>${escape(from || '暂无')}</b><i aria-label="变为">→</i><b>${escape(to || '暂无')}</b></span></li>`;
-        const shifts =
-          shift('稳定度', nation.stability) +
-          shift('战争支持度', nation.warSupport) +
-          named('主国策', nation.focus) +
-          (nation.gained.length
-            ? `<li>新增能力<span class="shift">${escape(nation.gained.join('、'))}</span></li>`
-            : '') +
-          (nation.lost.length ? `<li>失去能力<span class="shift">${escape(nation.lost.join('、'))}</span></li>` : '');
-        const kinds: Record<string, string> = {
-          start: '',
-          complete: '',
-          event: '事件',
-          update: '进展',
-          fact: '事实',
-          transition: '换期',
-        };
-        const entries = nation.entries
-          .map(
-            (entry) =>
-              `<li class="entry-${entry.kind}"><time>${escape(storyTime(entry.day, false, state?.time))}</time><p>${kinds[entry.kind] ? `<span class="entry-kind">${kinds[entry.kind]}</span>` : ''}${escape(entry.title)}${entry.note ? `<small>${escape(entry.note)}</small>` : ''}</p></li>`,
-          )
-          .join('');
-        detail = `<h3>${escape(nation.name)}</h3>${shifts ? `<ul class="letter-shifts">${shifts}</ul>` : '<p class="letter-still">数值、主国策与能力都不变。</p>'}${entries ? `<ol class="letter-timeline">${entries}</ol>` : '<p class="muted">这段时间没有新的进展。</p>'}`;
-      }
-      review = `${checks}<div class="letter-review"><div class="letter-nations" role="tablist" aria-label="涉及的国家">${tabs}</div><section class="letter-detail" role="tabpanel">${detail}</section></div>`;
+      detail = `<h3>${escape(nation.name)}</h3>${shifts ? `<ul class="letter-shifts">${shifts}</ul>` : '<p class="letter-still">数值、主国策与能力都不变。</p>'}${entries ? `<ol class="letter-timeline">${entries}</ol>` : '<p class="muted">这段时间没有新的进展。</p>'}`;
     }
-    if (!reviewable && r.evidence) {
-      const lines = evidenceLines(r.evidence)
-        .map((line) => `<li class="${line.tone}">${escape(line.text)}</li>`)
-        .join('');
-      review = `<dl class="letter-checks"><div class="letter-check unknown"><dt>世界写入纪录</dt><dd><ul>${lines}</ul></dd></div></dl>`;
+    return `<div class="letter-review"><div class="letter-nations" role="tablist" aria-label="涉及的国家">${tabs}</div><section class="letter-detail" role="tabpanel">${detail}</section></div>`;
+  }
+  /** What a saved situation update changed in each nation, and the world guidance it followed. */
+  function showChanges(jobId: string): void {
+    const job = controller.jobs.find((j) => j.id === jobId);
+    const changes = job?.changes;
+    if (!changes) {
+      return;
     }
-    const repair = reviewable ? null : repairState();
-    // Long engine and schema messages fold away; the reason line above already says what failed.
-    const detail = r.detail
-      ? `<details class="letter-error"><summary>检查错误</summary><pre>${escape(r.detail)}</pre></details>`
+    const guidance = job.guidance
+      ? `<details class="guidance-note"><summary>国策指引</summary><p>${escape(job.guidance.text)}</p></details>`
       : '';
-    let mend = '';
-    if (repair) {
-      const look = {
-        available: ['可修复', '可以依这次的世界结果在本地修复提案，不必重跑工作流；修复结果仍要你审阅接收。'],
-        running: ['修复中', '正在用局势更新的 API 依这次世界结果改写提案，世界资料不会改动。'],
-        failed: ['未通过', '修复结果仍不合法，材料还在，可以再试一次。'],
-        expired: ['已过期', '楼层、分支或国策资料已经变动，这份材料不能再使用。'],
-      }[repair.status];
-      const failure =
-        repair.status === 'failed' && repair.error
-          ? `<p class="letter-mend-error">${escape(repair.error)}</p>`
-          : '';
-      const caution =
-        repair.status === 'expired' || repair.status === 'running'
-          ? ''
-          : '<p class="letter-mend-caution">改用局势更新会放弃这份材料，由国策从正文重新推演，方向可能与世界不同。</p>';
-      const stored = repair.storageError ? `<p class="letter-mend-caution">${escape(repair.storageError)}</p>` : '';
-      mend = `<section class="letter-mend ${repair.status}" aria-live="polite"><header><h3>本地修复</h3><span class="letter-mend-state">${look[0]}</span></header><p>${look[1]}</p>${failure}${caution}${stored}${detail}</section>`;
+    if (changeJob !== jobId || !changes.countries.some((c) => c.id === changeNation)) {
+      changeNation = changes.countries[0]?.id ?? '';
     }
-    const diagnostic = repair ? '' : detail;
-    const mendButton =
-      repair && repair.status !== 'expired'
-        ? `<button class="primary" data-action="letter-repair" ${repair.status === 'running' ? 'disabled aria-busy="true"' : ''}>${repair.status === 'running' ? '修复中…' : repair.status === 'failed' ? '重试修复' : '本地修复提案'}</button>`
-        : '';
-    const remedy = `<button data-action="update" title="放弃这份提案，改由国策自己推进到这一楼"${repair?.status === 'running' ? ' disabled' : ''}>改用局势更新</button>`;
-    const footer =
-      r.status === 'pending' || r.status === 'overwritten'
-        ? `<button class="letter-reject" data-action="letter-reject">驳回</button><span class="footer-gap"></span>${remedy}<button class="primary" data-action="letter-accept">${r.status === 'overwritten' ? '重新接收' : '接收提案'}</button>`
-        : sealed
-          ? '<button class="primary" data-modal="close">完成</button>'
-          : r.status === 'waiting'
-            ? '<button data-modal="close">返回</button>'
-            : mendButton
-              ? `<button data-modal="close">返回</button><span class="footer-gap"></span>${remedy}${mendButton}`
-              : `${remedy}<button data-modal="close">返回</button>`;
-    return { body: `<div class="letter-sheet">${head}${note}${mend}${diagnostic}${review}</div>`, footer };
+    changeJob = jobId;
+    openModal(
+      'changes',
+      '局势更新',
+      `<div class="letter-sheet"><p class="letter-meta">推进至 ${escape(storyTime(changes.until, true, controller.state?.time))}${job.guidance ? ' · 依世界指引' : ''}</p>${guidance}${nationReview(changes.countries, changeNation)}</div>`,
+      '<button data-modal="jobs">返回任务</button>',
+    );
   }
-  function showLetter(): void {
-    const r = reception();
-    const { body, footer } = letterView(r);
-    letterKey = letterState(r);
-    if (modal === 'letter') {
-      const content = backdrop.querySelector<HTMLElement>('.modal-body');
-      const actions = backdrop.querySelector<HTMLElement>('.modal-footer');
-      if (content && actions) {
-        content.innerHTML = `${body}<div class="modal-error" role="alert"></div>`;
-        actions.innerHTML = footer;
-        return;
-      }
-    }
-    openModal('letter', '世界来函', body, footer);
-  }
-  /** Redraw an open letter only when its reception changed, so focus and scrolling stay put. */
-  function refreshLetter(): void {
-    if (modal === 'letter' && letterState(reception()) !== letterKey) {
-      showLetter();
-    }
-  }
-  /** Offline sample: the demo state moved three weeks on, with a fact and an event to review. */
-  function demoLetterSample(status: ProposalReceptionState['status']): ProposalReceptionState | null {
+  /** Offline sample: a guided update three weeks on, with a fact and an event, as a finished task. */
+  function demoGuidedJob(): void {
     const state = controller.state;
     if (!state) {
-      return null;
+      return;
     }
     const now = state.day + 21;
-    const source = { chatId: 'demo', messageId: 128, swipeId: 0, now, nonce: 'focus_demo' };
-    if (status === 'waiting') {
-      return { status, reason: 'waiting_workflow', source };
-    }
     const preview = structuredClone(state);
     const countries = Object.values(preview.countries).filter((c) => c.enabled);
     countries.forEach((c, i) => {
@@ -1774,8 +1621,8 @@ export function mountUI(
     });
     const first = countries[0];
     if (first) {
-      preview.events.demo_letter_event = EventSchema.parse({
-        id: 'demo_letter_event',
+      preview.events.demo_guided_event = EventSchema.parse({
+        id: 'demo_guided_event',
         at: state.day + 14,
         countries: [first.id],
         title: '边境关卡重开',
@@ -1788,7 +1635,7 @@ export function mountUI(
       });
     }
     const proposal = ProposalSchema.parse({
-      id: 'demo_letter',
+      id: 'demo_guided',
       until: now,
       reason: '离线示范',
       steps: first
@@ -1809,22 +1656,24 @@ export function mountUI(
       calibrations: [],
       transitions: [],
     });
-    return {
-      status,
-      reason: status === 'overwritten' ? 'overwritten' : undefined,
-      source,
-      proposal,
-      preview,
-      evidence: {
-        taskId: 'demo',
-        rootId: 'demo',
-        at: Date.now(),
-        success: true,
-        skipped: false,
-        changed: true,
-        patch: { known: true, operationCount: 14, issues: [], failedFragments: [], unassigned: 0 },
-      },
-    };
+    const text = countries
+      .map(
+        (c, i) =>
+          `【${c.name}】\n- ${i === 0 ? '边境关卡重开，商队恢复通行；主国策如期完成，接着推进下一项。' : '本期无重大变化，民心略有起伏。'}`,
+      )
+      .join('\n\n');
+    controller.jobs.unshift({
+      id: `demo_guided_${Date.now()}`,
+      kind: 'update',
+      state: 'success',
+      message: '验证通过，已保存至本楼',
+      time: new Date().toLocaleTimeString(),
+      label: '依世界指引',
+      started: Date.now() - 41_000,
+      finished: Date.now(),
+      guidance: { chatId: 'demo', messageId: 128, swipeId: 0, now, nonce: 'focus_demo', text },
+      changes: { until: now, countries: letterDigest(state, preview, proposal) },
+    });
   }
   function showEvents(): void {
     const state = controller.state;
@@ -2137,10 +1986,10 @@ export function mountUI(
       render();
       return;
     }
-    if (target.dataset.letterNation) {
-      letterNation = target.dataset.letterNation;
-      showLetter();
-      backdrop.querySelector<HTMLElement>(`[data-letter-nation="${CSS.escape(letterNation)}"]`)?.focus();
+    if (target.dataset.changeNation) {
+      changeNation = target.dataset.changeNation;
+      showChanges(changeJob);
+      backdrop.querySelector<HTMLElement>(`[data-change-nation="${CSS.escape(changeNation)}"]`)?.focus();
       return;
     }
     const name = target.dataset.action;
@@ -2195,30 +2044,6 @@ export function mountUI(
           case 'jobs':
             showJobs();
             break;
-          case 'letter':
-            showLetter();
-            break;
-          case 'letter-repair':
-            (target as HTMLButtonElement).disabled = true;
-            if (controller.platform.demo && demoLetter) {
-              // Offline: show the running state, then hand back the sample as a repaired proposal.
-              demoRepair = { status: 'running' };
-              showLetter();
-              await new Promise((done) => setTimeout(done, 1400));
-              const repaired = demoLetterSample('pending');
-              if (repaired) {
-                repaired.origin = 'repair';
-                repaired.proposal!.reason =
-                  '保留原提案的事实与选策，只修正错误指出的问题。\n删除北境王国「对南方施压」的选策：前置「整编边军」尚未完成，世界资料中的施压行动改记为事件。\n事件 ev_border_tariff 已结束，原提案对它的推进改为新事件。';
-              }
-              demoLetter = repaired;
-              demoRepair = null;
-            } else {
-              await controller.repairProposal();
-            }
-            showLetter();
-            render(true);
-            break;
           case 'rollback-dismiss':
             if (controller.platform.demo && demoRollback) {
               demoRollback = null;
@@ -2227,75 +2052,23 @@ export function mountUI(
             }
             render(true);
             break;
-          case 'letter-accept': {
-            (target as HTMLButtonElement).disabled = true;
-            target.textContent = '接收中…';
-            let accepted: boolean;
-            if (controller.platform.demo && demoLetter) {
-              demoLetter = { ...demoLetter, status: 'accepted', reason: undefined };
-              accepted = true;
-            } else {
-              accepted = await controller.accept();
-            }
-            if (accepted) {
-              letterSealedAt = Date.now();
-            }
-            showLetter();
+          case 'demo-guided':
+            demoGuidedJob();
             render(true);
-            break;
-          }
-          case 'letter-reject':
-            if (controller.platform.demo && demoLetter) {
-              demoLetter = { ...demoLetter, status: 'rejected', reason: 'user_rejected' };
-            } else {
-              controller.reject();
-            }
-            closeModal();
-            render();
+            showJobs();
             break;
           case 'demo-rollback':
             demoRollback = {
               chatId: 'demo',
               messageId: 128,
               swipeId: 0,
-              proposalId: 'demo_letter',
+              proposalId: 'demo_guided',
               detectedAt: Date.now(),
               receiptMissing: true,
               returnedToBefore: true,
             };
             render();
             break;
-          case 'demo-letter':
-          case 'demo-letter-wait':
-          case 'demo-letter-over':
-            demoLetter = demoLetterSample(
-              name === 'demo-letter' ? 'pending' : name === 'demo-letter-wait' ? 'waiting' : 'overwritten',
-            );
-            demoRepair = null;
-            letterNation = '';
-            render();
-            showLetter();
-            break;
-          case 'demo-letter-broken':
-          case 'demo-letter-mend-failed': {
-            const sample = demoLetterSample('pending');
-            demoLetter = sample && {
-              status: 'rejected',
-              reason: 'invalid_rules',
-              detail:
-                '选策国家不可用：北境王国「对南方施压」的前置「整编边军」尚未完成\n  at steps[1].selections[0]\n事件 ev_border_tariff 已结束，不能再推进',
-              source: sample.source,
-              evidence: sample.evidence,
-            };
-            demoRepair =
-              name === 'demo-letter-broken'
-                ? { status: 'available' }
-                : { status: 'failed', error: '修复结果仍违反国策规则：互斥路线「南进」已被锁定' };
-            letterNation = '';
-            render();
-            showLetter();
-            break;
-          }
           case 'events':
             showEvents();
             break;
@@ -2696,6 +2469,10 @@ export function mountUI(
           showLog(target.dataset.log);
           return;
         }
+        if (target.dataset.changes) {
+          showChanges(target.dataset.changes);
+          return;
+        }
         if (target.dataset.settingsTab) {
           switchSettingsTab(target.dataset.settingsTab);
           return;
@@ -2703,9 +2480,8 @@ export function mountUI(
         if (target.dataset.retry) {
           const job = controller.jobs.find((j) => j.id === target.dataset.retry);
           if (job) {
-            if (job.kind === 'repair') {
-              await controller.repairProposal();
-              showLetter();
+            if (job.guidance) {
+              await controller.runGuided(job.guidance);
             } else {
               await controller.run(job.kind as JobKind, job.candidate, job.periodWork);
             }

@@ -60,15 +60,11 @@ until 必须等于 now；同时可在 steps 中承接到 now 为止的局势变�
 export const DEFAULT_DATA = `以下是本次任务的完整资料（JSON）：
 ${DATA_TOKEN}`;
 
-export const REPAIR_TASK = `任务：修复世界任务的国策提案。
-世界任务已经推演完毕，并把世界资料写入了 data.world；它附带的国策提案（data.failed.raw）没能通过检查，错误列在 data.failed.errors。你的工作是把同一次推演的结果改写成合法的提案，不是重新推演。
-- 方向以 data.world 与 data.failed.raw 为准：保留其中的选策、完成、事件、事实与换期意图。不得改走另一条路线，不得加入世界资料与原提案都没有依据的事。
-- 只修正错误指出的问题，以及因此必须连带调整的部分；其余内容照原提案保留。
-- 格式错误：依 schema 重写同一内容。国策或事件 ID 不存在时，在 state 中找同国同名者；找不到就删除该操作。
-- 选策违反前置、互斥或 requirements：删除该选策，不补造前置或事实；世界资料中确实发生的事改写成事件或事实保留。
-- 原提案以事件完成国策时，只有事件确实做成该国策描述的事才保留，用 completions 表示（不检查前置与工期）；否则删除，事件本身保留。
-- 换期只在原提案已提出、且仍符合换期规则时保留。
-- 修不了的部分宁可删除，也不要猜。reason 逐条写出改了什么、删了什么、为什么。`;
+/** Added to the update task when the world task left guidance for this floor (v0.18). */
+export const GUIDANCE_TASK = `data.guidance 是世界任务本轮推演后写给国策档案的指引，与 data.context.world 出自同一次推演。依指引推进各国：
+- 指引写到的选策、国策完成、事件、事实、数值走向与换期，凡符合规则与 state 的都照做，时间放在指引所写的时点；同一件事沿用指引的说法，写成事件或 eventUpdates。
+- 不符合前置、互斥、requirements、工期或换期规则的部分不要硬套：能以事件或事实保留的就保留，否则略过；在 reason 逐条写出照做了什么、改写或略过了什么、为什么。
+- 指引只写方向，ID、数值与时点仍以 state 与 schema 为准；指引没有提到的国家与事件，照常依正文与 state 推演。指引与正文冲突时以正文为准。`;
 
 const builtinMeta: Record<BuiltinKind, { name: string; role: PromptRole }> = {
   guide: { name: '系统规则', role: 'system' },

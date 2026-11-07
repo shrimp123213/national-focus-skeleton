@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import { ProposalSchema, type Proposal, type State } from './model';
-import { repairReply } from './repair';
 import type { IntegrationReason, IntegrationRegistration } from './integration';
 
 export const FOCUS_WORLD = '阿斯塔利亚';
@@ -29,69 +27,33 @@ export type WorldObservation = {
   member: WorldMember | null;
   run: z.infer<typeof RunStatusSchema> | null;
   fingerprint: string | null;
-  patchLog: unknown;
   /** Current Addon world result, separate from stat_data. */
   world?: unknown;
 };
-export type WorldEvidence = {
-  taskId: string;
-  rootId: string;
-  at: number;
-  success: boolean;
-  skipped: boolean;
-  skipReason?: string;
-  changed: boolean | null;
-  patch: {
-    known: boolean;
-    operationCount: number | null;
-    issues: { kind: string; message: string; path: string }[];
-    failedFragments: { index: number; message: string }[];
-    unassigned: number;
-  };
-};
-export type ProposalReason =
+export type GuidanceReason =
   | IntegrationReason
   | 'waiting_workflow'
   | 'workflow_unknown'
   | 'member_mismatch'
-  | 'missing_proposal'
-  | 'invalid_proposal'
-  | 'nonce_mismatch'
-  | 'invalid_rules'
-  | 'until_mismatch'
+  | 'missing_guidance'
   | 'world_failed'
-  | 'world_skipped'
-  | 'world_patch_failed'
-  | 'preview_changed'
-  | 'user_rejected'
-  | 'save_failed'
-  | 'overwritten';
-export type ProposalReceptionState = {
-  status:
-    | 'none'
-    | 'waiting'
-    | 'pending'
-    | 'accepted'
-    | 'rejected'
-    | 'expired'
-    | 'unavailable'
-    | 'overwritten';
-  reason?: ProposalReason;
-  detail?: string;
-  source?: Pick<IntegrationRegistration, 'chatId' | 'messageId' | 'swipeId' | 'now' | 'nonce'>;
-  proposal?: Proposal;
-  preview?: State;
-  evidence?: WorldEvidence;
-  origin?: 'repair';
-};
-export type ProposalDiagnostic = {
-  at: number;
-  status: ProposalReceptionState['status'];
-  reason?: ProposalReason;
-  detail?: string;
-  source?: ProposalReceptionState['source'];
-  proposalId?: string;
-  evidence?: WorldEvidence;
+  | 'world_skipped';
+/** The floor and request a world guidance belongs to. */
+export type GuidanceSource = Pick<
+  IntegrationRegistration,
+  'chatId' | 'messageId' | 'swipeId' | 'now' | 'nonce'
+>;
+/** What the world task wrote for national focus, as plain text, with the floor it belongs to. */
+export type WorldGuidance = GuidanceSource & { text: string };
+/**
+ * waiting: the world task asked for data on this floor and has not finished.
+ * started: its guidance started a local update. ended: it finished without guidance, or the floor
+ * changed first; `reason` says which.
+ */
+export type GuidanceState = {
+  status: 'none' | 'waiting' | 'started' | 'ended';
+  reason?: GuidanceReason;
+  source?: GuidanceSource;
 };
 
 /** Resolve a unique replica root and its member; display names are deliberately ignored. */
@@ -141,105 +103,34 @@ export function worldFingerprint(value: unknown): string | null {
   return `${text.length}:${hash >>> 0}:${second >>> 0}`;
 }
 
-/** Decode the handoff before validating its proposal, so repairs can check known provenance. */
-export function parseWorldProposalEnvelope(raw: string): { nonce: string; proposal: unknown } {
-  const matches = [...raw.matchAll(/<国策提案\s*>([\s\S]*?)<\/国策提案\s*>/g)];
+export const GUIDANCE_TAG = '国策指引';
+
+/**
+ * The guidance text from the world task's extracted tag. The tag sits in the "analysis" JSON
+ * string, so one layer of JSON string escapes may remain; plain text passes through.
+ */
+export function parseWorldGuidance(raw: string): string {
+  const tag = new RegExp(`<${GUIDANCE_TAG}\\s*>([\\s\\S]*?)</${GUIDANCE_TAG}\\s*>`, 'g');
+  const matches = [...raw.matchAll(tag)];
   let text = (matches.at(-1)?.[1] ?? raw).trim();
   text = text
-    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/^```[a-z]*\s*/i, '')
     .replace(/\s*```$/, '')
     .trim();
-  let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    // One residual JSON string-escaping layer from structured analysis output.
-    value = JSON.parse(JSON.parse(`"${text.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"`));
-  }
-  if (typeof value === 'string') {
-    value = JSON.parse(value);
-  }
-  return z.object({ nonce: z.string().trim().min(1), proposal: z.unknown() }).parse(value);
-}
-
-export function parseWorldProposal(raw: string): { nonce: string; proposal: Proposal } {
-  const envelope = parseWorldProposalEnvelope(raw);
-  return { nonce: envelope.nonce, proposal: ProposalSchema.parse(repairReply(envelope.proposal, 'update')) };
-}
-
-function worldPath(path: unknown): path is string {
-  return (
-    typeof path === 'string' &&
-    [`/${FOCUS_WORLD}`, `/世界/${FOCUS_WORLD}`].some((root) => path === root || path.startsWith(`${root}/`))
-  );
-}
-function operationPath(op: unknown): string | null {
-  if (!op || typeof op !== 'object') {
-    return null;
-  }
-  const data = op as Record<string, unknown>;
-  return [data.path, data.from, data.to].find(worldPath) ?? null;
-}
-export function worldEvidence(
-  observation: WorldObservation,
-  registration: IntegrationRegistration,
-  result: z.infer<typeof ResultSchema>,
-): WorldEvidence {
-  const log = z
-    .object({
-      messageId: z.number(),
-      timestamp: z.number(),
-      ops: z.array(z.unknown()),
-      issues: z.array(z.object({ kind: z.string(), message: z.string(), op: z.unknown().optional() })),
-      failedFragments: z.array(z.object({ index: z.number(), message: z.string(), snippet: z.string() })),
-    })
-    .safeParse(observation.patchLog);
-  const patch: WorldEvidence['patch'] = {
-    known: false,
-    operationCount: null,
-    issues: [],
-    failedFragments: [],
-    unassigned: 0,
-  };
-  if (
-    log.success &&
-    log.data.messageId === registration.messageId &&
-    log.data.timestamp >= registration.registeredAt
-  ) {
-    patch.known = true;
-    patch.operationCount = log.data.ops.filter((op) => operationPath(op)).length;
-    for (const issue of log.data.issues) {
-      const path = operationPath(issue.op);
-      if (path) {
-        patch.issues.push({ kind: issue.kind, message: issue.message.slice(0, 500), path });
-      } else if (!issue.op) {
-        patch.unassigned++;
-      }
-    }
-    for (const fragment of log.data.failedFragments) {
-      // Malformed fragments cannot reliably be assigned by searching their prose for a world name.
-      try {
-        const op: unknown = JSON.parse(fragment.snippet);
-        if (operationPath(op)) {
-          patch.failedFragments.push({ index: fragment.index, message: fragment.message.slice(0, 500) });
-        } else {
-          patch.unassigned++;
-        }
-      } catch {
-        patch.unassigned++;
-      }
+  // Escaped line breaks without real ones: the tag kept the JSON string escapes of "analysis".
+  if (/\\[n"\\]/.test(text) && !text.includes('\n')) {
+    try {
+      text = JSON.parse(`"${text.replace(/\r/g, '\\r').replace(/\t/g, '\\t')}"`) as string;
+    } catch {
+      text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
     }
   }
-  return {
-    ...observation.member!,
-    at: observation.run!.at,
-    success: result.success,
-    skipped: result.skipped === true,
-    skipReason: result.skipReason?.slice(0, 500),
-    changed:
-      registration.world?.fingerprint != null && observation.fingerprint != null
-        ? registration.world.fingerprint !== observation.fingerprint
-        : null,
-    patch,
-  };
+  text = text
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  if (!text) {
+    throw new Error('国策指引是空的');
+  }
+  return text;
 }

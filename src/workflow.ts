@@ -26,26 +26,27 @@ import {
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
 import { checkTransition, periodAnchor, PeriodReplySchema, transitionPeriod } from './periods';
 import { drawStructure, signature, structureData, type Structure, type TreeType } from './structure';
-import { DATA_TOKEN, promptText, REPAIR_TASK } from './prompts';
-import {
-  ProposalRepairSchema,
-  type ProposalRepairMaterial,
-  type ProposalRepairStatus,
-} from './proposal-repair';
+import { DATA_TOKEN, GUIDANCE_TASK, promptText } from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
+import { letterDigest } from './proposal-view';
 import { assertInputSize, InputSizeError, messageCharacters } from './sources';
 import { RoutePool, routeLimits } from './route-pool';
-import { FocusIntegration, sameData, unavailable, type IntegrationRegistration } from './integration';
 import {
-  parseWorldProposal,
-  parseWorldProposalEnvelope,
-  worldEvidence,
+  FocusIntegration,
+  INTEGRATION_VERSION,
+  sameData,
+  unavailable,
+  type IntegrationRegistration,
+} from './integration';
+import {
+  GUIDANCE_TAG,
+  parseWorldGuidance,
   worldFingerprint,
-  type ProposalDiagnostic,
-  type ProposalReason,
-  type ProposalReceptionState,
-  type WorldEvidence,
+  type GuidanceReason,
+  type GuidanceSource,
+  type GuidanceState,
+  type WorldGuidance,
   type WorldObservation,
 } from './world-proposal';
 import {
@@ -81,25 +82,16 @@ function scheduledDue(job: Config['jobs'][JobKind], snapshot: Snapshot, kind: Jo
 
 export type UpdateCommit = {
   state: State;
+  /** The saved state the proposal was applied to. */
+  before: State;
   periods: { candidate: Candidate; work: PeriodWork }[];
 };
 
-class ProposalBlocked extends Error {
-  constructor(
-    readonly reason: ProposalReason,
-    readonly detail?: string,
-  ) {
+class GuidanceBlocked extends Error {
+  constructor(readonly reason: GuidanceReason) {
     super(reason);
   }
 }
-type ProposalReview = {
-  registration: IntegrationRegistration;
-  proposal: Proposal;
-  preview: State;
-  evidence: WorldEvidence;
-  evidenceKey: string;
-  repair?: ProposalRepairMaterial;
-};
 
 export class FocusController {
   config: Config;
@@ -123,17 +115,8 @@ export class FocusController {
   private pendingReady = false;
   private disposed = false;
   private stops: (() => void)[] = [];
-  private reception: ProposalReceptionState = { status: 'none' };
-  private diagnostics: ProposalDiagnostic[] = [];
-  private review: ProposalReview | null = null;
-  private repairMaterial: ProposalRepairMaterial | null = null;
-  private repairStatus: ProposalRepairStatus | null = null;
-  private repairing: Promise<boolean> | null = null;
-  private repairAborter: AbortController | null = null;
-  private accepting: Promise<boolean> | null = null;
-  private overwriteTicks = 0;
+  private guidance: GuidanceState = { status: 'none' };
   private worldCache: Map<number, WorldObservation | null> | null = null;
-  private proposalPeriods: AbortController | null = null;
   private rollback: RollbackNotice | null = null;
   private acceptedCheckpoint: {
     source: Omit<ScheduleSource, 'content'>;
@@ -159,22 +142,11 @@ export class FocusController {
     this.integration = new FocusIntegration(
       (messageId) => platform.readIntegration?.(messageId, this.config) ?? unavailable('unsupported'),
       (reason) => {
-        const current = this.integration.current();
-        const material = this.repairMaterial ?? this.review?.repair;
         if (
-          reason === 'update_started' ||
-          (current && material && current.nonce !== material.registration.nonce)
+          this.guidance.status === 'waiting' &&
+          this.integration.current()?.nonce !== this.guidance.source?.nonce
         ) {
-          this.invalidateRepair(reason ?? 'request_expired');
-        }
-        if (this.review && !this.review.repair && current?.nonce !== this.review.registration.nonce) {
-          this.proposalPeriods?.abort();
-          this.setProposalState({
-            ...this.reception,
-            status: 'expired',
-            reason: reason ?? 'request_expired',
-          });
-          this.review = null;
+          this.setGuidance({ ...this.guidance, status: 'ended', reason: reason ?? 'request_expired' });
         }
         this.pollPredictionWait();
         this.notify();
@@ -197,14 +169,14 @@ export class FocusController {
     const stopTick = this.platform.onIntegrationTick?.(() => {
       this.checked(() => {
         this.pollPredictionWait();
-        this.refreshProposal();
+        this.refreshGuidance();
       });
     });
     if (stopTick) {
       this.stops.push(stopTick);
     }
     const unbind = this.platform.bindIntegration?.({
-      version: 1,
+      version: INTEGRATION_VERSION,
       prepare: (messageId, options) => this.integration.prepare(messageId, options, this.writes),
       lookup: (nonce) => this.integration.lookup(nonce),
     });
@@ -237,7 +209,6 @@ export class FocusController {
     );
     this.stops.push(
       this.platform.onChange(() => {
-        this.repairSourceFailed(new ProposalBlocked('source_changed'));
         this.dismissRollback();
         this.waitFloor = '';
         this.waitedSources.clear();
@@ -247,16 +218,11 @@ export class FocusController {
         this.cancelAll();
         this.pendingReady = false;
         this.candidates = [];
-        this.repairMaterial = null;
-        this.repairStatus = null;
-        this.review = null;
-        this.reception = { status: 'none' };
-        this.restoreRepair();
+        this.guidance = { status: 'none' };
         void this.refresh();
       }),
     );
     await this.refresh();
-    this.restoreRepair();
   }
   dispose(): void {
     if (this.disposed) {
@@ -342,9 +308,11 @@ export class FocusController {
       throw new Error('更新终点必须等于来源故事时间');
     }
     const periods: UpdateCommit['periods'] = [];
+    let before = source.state;
     const state = await this.writeState((current) => {
       source.signal?.throwIfAborted();
       verifyExternal?.();
+      before = current.state;
       if (current.state.receipts.includes(proposal.id)) {
         return null;
       }
@@ -367,321 +335,22 @@ export class FocusController {
       }
       return next;
     }, signal ?? source.signal);
-    return { state, periods };
+    return { state, before, periods };
   }
-  get externalProposal(): ProposalReceptionState {
-    return structuredClone(this.reception);
+  /** The world task's guidance for the latest registered request on this floor. */
+  get worldGuidance(): GuidanceState {
+    return structuredClone(this.guidance);
   }
-  get proposalRepair(): ProposalRepairStatus | null {
-    return structuredClone(this.repairStatus);
-  }
-  private storeRepair(chatId = this.repairMaterial?.registration.chatId ?? this.platform.chatId()): void {
-    try {
-      this.platform.saveProposalRepair?.(this.repairMaterial, chatId);
-    } catch (error) {
-      if (this.repairStatus) {
-        this.repairStatus.storageError = `修复材料仅保留在本次页面：${redactApiError(error, this.config.apis)}`;
-      } else {
-        this.report(error);
-      }
-    }
-  }
-  private restoreRepair(): void {
-    try {
-      const raw = this.platform.loadProposalRepair?.();
-      if (!raw) {
-        return;
-      }
-      const material = ProposalRepairSchema.parse(raw);
-      if (material.registration.chatId !== this.platform.chatId()) {
-        return;
-      }
-      this.repairMaterial = material;
-      this.repairStatus = { status: 'available' };
-      const { chatId, messageId, swipeId, now, nonce } = material.registration;
-      this.setProposalState({
-        status: 'rejected',
-        reason: material.reason,
-        detail: material.errors.join('\n'),
-        source: { chatId, messageId, swipeId, now, nonce },
-        evidence: material.evidence,
-      });
-      this.checkRepairSource(material);
-    } catch (error) {
-      if (this.repairMaterial) {
-        this.repairSourceFailed(error);
-      } else {
-        this.report(error);
-      }
-    }
-  }
-  private invalidateRepair(reason: ProposalReason): void {
-    this.repairAborter?.abort();
-    if (this.review?.repair || this.repairMaterial) {
-      this.proposalPeriods?.abort();
-      if (this.review?.repair) {
-        this.review = null;
-      }
-      this.setProposalState({ ...this.reception, status: 'expired', reason });
-    }
-    const chatId = this.repairMaterial?.registration.chatId;
-    this.repairMaterial = null;
-    this.repairStatus = null;
-    if (chatId !== undefined) {
-      this.storeRepair(chatId);
-    }
-  }
-  private checkRepairSource(material: ProposalRepairMaterial): void {
-    if (this.disposed) {
-      throw new ProposalBlocked('disposed');
-    }
-    if (material.expired) {
-      throw new ProposalBlocked('request_expired');
-    }
-    const {
-      nonce: _nonce,
-      requestId: _requestId,
-      registeredAt: _at,
-      world: _world,
-      ...expected
-    } = material.registration;
-    const source = this.integration.readSource(expected.messageId);
-    if ('status' in source) {
-      throw new ProposalBlocked(source.reason);
-    }
-    if (!sameData(source, expected)) {
-      throw new ProposalBlocked('source_changed');
-    }
-    const observation = this.readWorld(source.messageId);
-    if (!observation?.run) {
-      throw new ProposalBlocked('workflow_unknown');
-    }
-    const result = observation.run.taskResults.filter((item) => item.taskId === material.evidence.taskId);
-    if (
-      observation.run.messageId !== source.messageId ||
-      result.length !== 1 ||
-      observation.member?.taskId !== material.evidence.taskId ||
-      observation.member.rootId !== material.evidence.rootId
-    ) {
-      throw new ProposalBlocked('source_changed');
-    }
-    const evidence = worldEvidence(observation, material.registration, result[0]);
-    const key = JSON.stringify({
-      at: observation.run.at,
-      raw: result[0].extractedTags?.['国策提案'],
-      evidence,
-      fingerprint: observation.fingerprint,
-    });
-    if (key !== material.evidenceKey || !sameData(observation.world, material.world)) {
-      throw new ProposalBlocked('source_changed');
-    }
-  }
-  private repairSourceFailed(error: unknown): void {
-    if (!this.repairMaterial && !this.review?.repair) {
+  private setGuidance(state: GuidanceState): void {
+    if (sameData(this.guidance, state)) {
       return;
     }
-    const reason = error instanceof ProposalBlocked ? error.reason : 'read_failed';
-    if (['mvu_busy', 'workflow_unknown', 'read_failed'].includes(reason)) {
-      return;
-    }
-    this.repairAborter?.abort();
-    if (this.repairStatus) {
-      this.repairStatus = {
-        ...this.repairStatus,
-        status: 'expired',
-        error: '修复来源已改变，请使用当前楼层重新更新局势。',
-      };
-    }
-    if (this.repairMaterial) {
-      this.repairMaterial.expired = true;
-      this.storeRepair();
-    }
-    this.review = null;
-    this.setProposalState({ ...this.reception, status: 'expired', reason });
-  }
-  get proposalDiagnostics(): ProposalDiagnostic[] {
-    return structuredClone(this.diagnostics);
-  }
-  clearProposalDiagnostics(): void {
-    this.diagnostics = [];
+    this.guidance = structuredClone(state);
     this.notify();
   }
-  private setProposalState(state: ProposalReceptionState): void {
-    if (sameData(this.reception, state)) {
-      return;
-    }
-    this.reception = structuredClone(state);
-    this.diagnostics.unshift({
-      at: Date.now(),
-      status: state.status,
-      reason: state.reason,
-      detail: state.detail,
-      source: structuredClone(state.source),
-      proposalId: state.proposal?.id,
-      evidence: structuredClone(state.evidence),
-    });
-    this.diagnostics = this.diagnostics.slice(0, 60);
-    this.notify();
-  }
-  private proposalCandidate(registration: IntegrationRegistration): ProposalReview {
-    const source = this.integration.readSource(registration.messageId);
-    if ('status' in source) {
-      throw new ProposalBlocked(source.reason);
-    }
-    const observation = this.readWorld(registration.messageId);
-    if (!observation) {
-      throw new ProposalBlocked('workflow_unknown');
-    }
-    const { world } = registration;
-    if (
-      !world ||
-      !observation.member ||
-      world.taskId !== observation.member.taskId ||
-      world.rootId !== observation.member.rootId
-    ) {
-      throw new ProposalBlocked('member_mismatch');
-    }
-    const run = observation.run;
-    if (!run || run.messageId !== registration.messageId || run.at < registration.registeredAt) {
-      throw new ProposalBlocked('waiting_workflow');
-    }
-    const results = run.taskResults.filter((result) => result.taskId === world.taskId);
-    if (results.length !== 1) {
-      throw new ProposalBlocked('waiting_workflow');
-    }
-    const result = results[0];
-    const evidence = worldEvidence(observation, registration, result);
-    // Evidence is available to the reviewer even when it rules out acceptance.
-    this.reception.evidence = structuredClone(evidence);
-    if (result.skipped) {
-      throw new ProposalBlocked('world_skipped');
-    }
-    if (!result.success) {
-      throw new ProposalBlocked('world_failed');
-    }
-    // Addon also records successful path/format repairs as issues with kind "heal".
-    if (
-      evidence.patch.issues.some((issue) => issue.kind !== 'heal') ||
-      evidence.patch.failedFragments.length
-    ) {
-      throw new ProposalBlocked('world_patch_failed');
-    }
-    const raw = result.extractedTags?.['国策提案'];
-    if (!raw?.trim()) {
-      throw new ProposalBlocked('missing_proposal');
-    }
-    const evidenceKey = JSON.stringify({ at: run.at, raw, evidence, fingerprint: observation.fingerprint });
-    const failed = (reason: ProposalRepairMaterial['reason'], detail: string): never => {
-      let envelope: ReturnType<typeof parseWorldProposalEnvelope> | undefined;
-      try {
-        envelope = parseWorldProposalEnvelope(raw);
-      } catch {
-        // Broken JSON still belongs to the matched task run; retain its untouched text.
-      }
-      if (envelope && envelope.nonce !== registration.nonce) {
-        throw new ProposalBlocked('nonce_mismatch');
-      }
-      const originalId = (envelope?.proposal as { id?: unknown } | undefined)?.id;
-      if (typeof originalId === 'string' && registration.state.receipts.includes(originalId)) {
-        throw new ProposalBlocked('preview_changed', '原提案已有保存记录，不得以新的修复 ID 重复套用');
-      }
-      if (this.repairMaterial?.evidenceKey !== evidenceKey) {
-        this.repairMaterial = structuredClone({
-          version: 1,
-          id: requestId('repair-source'),
-          registration,
-          reason,
-          raw,
-          errors: [detail],
-          world: observation.world,
-          evidence,
-          evidenceKey,
-        });
-        this.repairStatus = { status: 'available' };
-        this.storeRepair();
-      }
-      throw new ProposalBlocked(reason, detail);
-    };
-    let parsed: ReturnType<typeof parseWorldProposal>;
-    try {
-      parsed = parseWorldProposal(raw);
-    } catch (error) {
-      return failed('invalid_proposal', error instanceof Error ? error.message : String(error));
-    }
-    if (parsed.nonce !== registration.nonce) {
-      throw new ProposalBlocked('nonce_mismatch');
-    }
-    if (parsed.proposal.until !== registration.now) {
-      return failed(
-        'until_mismatch',
-        `提案终点 ${parsed.proposal.until} 与来源时间 ${registration.now} 不一致`,
-      );
-    }
-    const snapshot: Snapshot = {
-      identity: '',
-      messageId: registration.messageId,
-      day: registration.now,
-      turn: 0,
-      state: source.state,
-      context: {},
-    };
-    let preview: State;
-    try {
-      preview = this.proposedState('update', snapshot, parsed.proposal);
-    } catch (error) {
-      return failed('invalid_rules', error instanceof Error ? error.message : String(error));
-    }
-    return {
-      registration,
-      proposal: parsed.proposal,
-      preview,
-      evidence,
-      evidenceKey,
-    };
-  }
-  private blockProposal(reason: ProposalReason, detail?: string): void {
-    const waiting = ['waiting_workflow', 'mvu_busy', 'update_busy'].includes(reason);
-    const expired = [
-      'source_changed',
-      'not_latest',
-      'not_assistant',
-      'request_expired',
-      'preview_changed',
-      'invalid_time',
-    ].includes(reason);
-    const unavailable = [
-      'workflow_unknown',
-      'missing_proposal',
-      'invalid_proposal',
-      'read_failed',
-      'mvu_unavailable',
-    ].includes(reason);
-    const state: ProposalReceptionState = {
-      ...this.reception,
-      status: waiting ? 'waiting' : expired ? 'expired' : unavailable ? 'unavailable' : 'rejected',
-      reason,
-      detail,
-    };
-    // An unpaired/late workflow record can block acceptance, but cannot revoke a live request.
-    const unpaired = [
-      'workflow_unknown',
-      'nonce_mismatch',
-      'missing_proposal',
-      'invalid_proposal',
-      'world_failed',
-      'world_skipped',
-      'world_patch_failed',
-    ].includes(reason);
-    if (!waiting && !unpaired) {
-      this.proposalPeriods?.abort();
-      this.review = null;
-      this.integration.invalidate();
-    }
-    this.setProposalState(state);
-  }
-  /** Called by the existing platform timer, and available for the review panel's refresh button. */
-  refreshProposal(): void {
-    this.checked(() => this.checkProposal());
+  /** Called by the platform's integration timer. */
+  refreshGuidance(): void {
+    this.checked(() => this.checkGuidance());
   }
   /** One integration check reads each floor and its world run once. */
   private checked<T>(check: () => T): T {
@@ -706,355 +375,100 @@ export class FocusController {
     }
     return cache.get(messageId);
   }
-  private checkProposal(): void {
-    if (this.disposed || this.accepting) {
+  /**
+   * The guidance of the registered world member: its run on the same floor, recorded after the
+   * registration. Throws the reason when there is none yet, or when none will come.
+   */
+  private guidanceText(registration: IntegrationRegistration): string {
+    const observation = this.readWorld(registration.messageId);
+    if (!observation) {
+      throw new GuidanceBlocked('workflow_unknown');
+    }
+    const { world } = registration;
+    if (
+      !world ||
+      !observation.member ||
+      world.taskId !== observation.member.taskId ||
+      world.rootId !== observation.member.rootId
+    ) {
+      throw new GuidanceBlocked('member_mismatch');
+    }
+    const run = observation.run;
+    if (!run || run.messageId !== registration.messageId || run.at < registration.registeredAt) {
+      throw new GuidanceBlocked('waiting_workflow');
+    }
+    const results = run.taskResults.filter((result) => result.taskId === world.taskId);
+    if (results.length !== 1) {
+      throw new GuidanceBlocked('waiting_workflow');
+    }
+    const [result] = results;
+    if (result.skipped) {
+      throw new GuidanceBlocked('world_skipped');
+    }
+    if (!result.success) {
+      throw new GuidanceBlocked('world_failed');
+    }
+    try {
+      return parseWorldGuidance(result.extractedTags?.[GUIDANCE_TAG] ?? '');
+    } catch {
+      throw new GuidanceBlocked('missing_guidance');
+    }
+  }
+  /** A registered request waits for its world run; guidance starts the local update at once. */
+  private checkGuidance(): void {
+    if (this.disposed) {
       return;
     }
     this.observeRollback();
-    if (this.repairMaterial && this.repairStatus?.status !== 'expired') {
-      try {
-        this.checkRepairSource(this.repairMaterial);
-      } catch (error) {
-        this.repairSourceFailed(error);
-        return;
-      }
-    }
-    if (this.repairing) {
-      return;
-    }
-    if (this.review?.repair && !['accepted', 'overwritten'].includes(this.reception.status)) {
-      this.setProposalState({ ...this.reception, status: 'pending', reason: undefined, detail: undefined });
-      return;
-    }
-    if (this.reception.status === 'accepted' && this.overwriteTicks <= 0) {
-      return;
-    }
-    const registration = this.review?.repair ? this.review.registration : this.integration.current();
+    const registration = this.integration.current();
     if (!registration) {
       return;
     }
-    if (this.reception.status === 'accepted') {
-      if (this.overwriteTicks <= 0 || !this.review) {
-        return;
-      }
-      const source = this.integration.readSource(registration.messageId);
-      if ('status' in source) {
-        if (source.reason !== 'mvu_busy') {
-          this.blockProposal(source.reason);
-        }
-        return;
-      }
-      this.overwriteTicks--;
-      if (
-        source.chatId !== registration.chatId ||
-        source.swipeId !== registration.swipeId ||
-        source.now !== registration.now
-      ) {
-        this.blockProposal('source_changed');
-      } else if (!source.state.receipts.includes(this.review.proposal.id)) {
-        this.proposalPeriods?.abort();
-        if (sameData(source.state, registration.state)) {
-          this.setProposalState({ ...this.reception, status: 'overwritten', reason: 'overwritten' });
-        } else {
-          this.blockProposal('preview_changed');
-        }
-      }
+    const { chatId, messageId, swipeId, now, nonce } = registration;
+    const source: GuidanceSource = { chatId, messageId, swipeId, now, nonce };
+    if (this.guidance.source?.nonce === nonce && this.guidance.status !== 'waiting') {
       return;
-    }
-    if (this.reception.status === 'overwritten') {
-      const current = this.integration.readSource(registration.messageId);
-      if ('status' in current && current.reason === 'mvu_busy') {
-        return;
-      }
-      if (this.review?.repair) {
-        try {
-          this.checkRepairSource(this.review.repair);
-        } catch (error) {
-          this.repairSourceFailed(error);
-        }
-      } else if (!this.integration.retry(registration.nonce)) {
-        this.blockProposal('preview_changed');
-      }
-      return;
-    }
-    const source = {
-      chatId: registration.chatId,
-      messageId: registration.messageId,
-      swipeId: registration.swipeId,
-      now: registration.now,
-      nonce: registration.nonce,
-    };
-    if (this.reception.source?.nonce !== registration.nonce) {
-      this.setProposalState({ status: 'waiting', reason: 'waiting_workflow', source });
     }
     try {
-      const input = this.integration.readSource(registration.messageId);
+      const input = this.integration.readSource(messageId);
       if ('status' in input) {
-        throw new ProposalBlocked(input.reason);
+        throw new GuidanceBlocked(input.reason);
       }
-      if (!this.integration.lookup(registration.nonce)) {
-        throw new ProposalBlocked('source_changed');
+      // Guidance only advises; a changed national state is checked again by the update itself.
+      if (input.chatId !== chatId || input.swipeId !== swipeId || input.now !== now) {
+        throw new GuidanceBlocked('source_changed');
       }
-      const candidate = this.proposalCandidate(registration);
-      if (this.review && candidate.evidenceKey !== this.review.evidenceKey) {
-        throw new ProposalBlocked('preview_changed');
-      }
-      this.review = candidate;
-      this.setProposalState({
-        status: 'pending',
-        source,
-        proposal: candidate.proposal,
-        preview: candidate.preview,
-        evidence: candidate.evidence,
-      });
+      const text = this.guidanceText(registration);
+      this.setGuidance({ status: 'started', source });
+      void this.runGuided({ ...source, text }).catch((error) => this.report(error));
     } catch (error) {
-      this.blockProposal(
-        error instanceof ProposalBlocked ? error.reason : 'read_failed',
-        error instanceof ProposalBlocked ? error.detail : undefined,
-      );
+      this.endGuidance(error instanceof GuidanceBlocked ? error.reason : 'read_failed', source);
     }
   }
-  reject(): void {
-    if (this.accepting || !['pending', 'waiting', 'overwritten'].includes(this.reception.status)) {
+  private endGuidance(reason: GuidanceReason, source: GuidanceSource): void {
+    if (['waiting_workflow', 'workflow_unknown', 'mvu_busy', 'update_busy', 'read_failed'].includes(reason)) {
+      this.setGuidance({ status: 'waiting', reason, source });
       return;
     }
-    this.review = null;
-    this.invalidateRepair('user_rejected');
+    this.setGuidance({ status: 'ended', reason, source });
     this.integration.invalidate();
-    this.setProposalState({ ...this.reception, status: 'rejected', reason: 'user_rejected' });
-  }
-  /** Repair the saved handoff through the update route; only accept() may commit its result. */
-  repairProposal(): Promise<boolean> {
-    if (this.repairing) {
-      return this.repairing;
+    // The scheduled update stepped aside for this world run. If the run finished without guidance,
+    // run it now; if the floor changed instead, the new floor schedules its own update.
+    const finished = ['world_failed', 'world_skipped', 'missing_guidance', 'member_mismatch'].includes(
+      reason,
+    );
+    const floor = this.scheduleIdentity({ ...source, content: '' });
+    if (this.coordination.status === 'guidance_wait' && this.yieldedSource === floor) {
+      this.yieldedSource = '';
+      this.setCoordination({
+        ...this.coordination,
+        status: 'idle',
+        reason: finished ? 'result' : 'source_changed',
+      });
+      if (finished) {
+        void this.runTask('update', undefined, undefined, 'scheduled').catch((error) => this.report(error));
+      }
     }
-    const material = this.repairMaterial;
-    if (
-      !material ||
-      this.disposed ||
-      this.accepting ||
-      this.repairStatus?.status === 'expired' ||
-      ['pending', 'accepted', 'overwritten'].includes(this.reception.status) ||
-      this.jobs.some((job) => job.kind === 'update' && ['queued', 'running'].includes(job.state))
-    ) {
-      return Promise.resolve(false);
-    }
-    this.integration.invalidate();
-    const id = requestId('repair');
-    const aborter = new AbortController();
-    this.repairAborter = aborter;
-    const status: JobStatus = {
-      id,
-      kind: 'repair',
-      label: '修复世界提案',
-      state: 'running',
-      message: '修复世界提案',
-      time: new Date().toLocaleTimeString(),
-      started: Date.now(),
-    };
-    this.jobs.unshift(status);
-    this.jobs = this.jobs.slice(0, 40);
-    this.aborters.set(id, aborter);
-    this.repairStatus = { ...this.repairStatus, status: 'running', error: undefined };
-    this.notify();
-    this.repairing = (async () => {
-      let sourceSignal: AbortSignal | undefined;
-      const cancel = () => aborter.abort();
-      try {
-        await this.writes;
-        aborter.signal.throwIfAborted();
-        this.checkRepairSource(material);
-        const snapshot = await this.platform.read(this.config, 'update');
-        sourceSignal = snapshot.signal;
-        sourceSignal?.addEventListener('abort', cancel, { once: true });
-        sourceSignal?.throwIfAborted();
-        this.checkRepairSource(material);
-        const context =
-          snapshot.context && typeof snapshot.context === 'object'
-            ? ({ ...snapshot.context } as Record<string, unknown>)
-            : {};
-        // The repair uses the captured world exactly once, not a later world copy from context.
-        delete context.world;
-        const proposal = await this.request(
-          'update',
-          {
-            job: 'update',
-            stage: 'repair',
-            now: material.registration.now,
-            state: workingState(material.registration.state, true),
-            context,
-            world: material.world ?? null,
-            failed: { raw: material.raw, errors: material.errors },
-            schema: z.toJSONSchema(ProposalSchema.omit({ id: true, until: true }), { io: 'input' }),
-          },
-          ProposalSchema,
-          aborter.signal,
-          status,
-          (value) => {
-            this.checkRepairSource(material);
-            this.proposedState('update', snapshot, value);
-          },
-          snapshot.prompts,
-          (value) =>
-            value && typeof value === 'object' && !Array.isArray(value)
-              ? { ...value, id, until: material.registration.now }
-              : value,
-        );
-        aborter.signal.throwIfAborted();
-        this.checkRepairSource(material);
-        const preview = this.proposedState('update', snapshot, proposal);
-        this.review = {
-          registration: material.registration,
-          proposal,
-          preview,
-          evidence: material.evidence,
-          evidenceKey: material.evidenceKey,
-          repair: material,
-        };
-        this.repairStatus = { ...this.repairStatus, status: 'available' };
-        status.state = 'success';
-        status.message = '修复已通过验证，等待审阅与接收';
-        const { chatId, messageId, swipeId, now, nonce } = material.registration;
-        this.setProposalState({
-          status: 'pending',
-          origin: 'repair',
-          source: { chatId, messageId, swipeId, now, nonce },
-          proposal,
-          preview,
-          evidence: material.evidence,
-        });
-        return true;
-      } catch (error) {
-        status.state = aborter.signal.aborted ? 'cancelled' : 'failed';
-        status.message = redactApiError(error, this.config.apis);
-        if (this.repairMaterial === material) {
-          this.repairStatus = { ...this.repairStatus, status: 'failed', error: status.message };
-          this.repairSourceFailed(error);
-        }
-        return false;
-      } finally {
-        sourceSignal?.removeEventListener('abort', cancel);
-        this.aborters.delete(id);
-        status.finished = Date.now();
-        this.repairAborter = null;
-        this.notify();
-      }
-    })().finally(() => {
-      this.repairing = null;
-    });
-    return this.repairing;
-  }
-  accept(): Promise<boolean> {
-    if (this.accepting) {
-      return this.accepting;
-    }
-    if (!this.review || !['pending', 'overwritten'].includes(this.reception.status)) {
-      return Promise.resolve(false);
-    }
-    const review = this.review;
-    const retry = this.reception.status === 'overwritten';
-    const verify = () => {
-      if (this.review !== review) {
-        throw new ProposalBlocked('request_expired');
-      }
-      if (review.repair) {
-        this.checkRepairSource(review.repair);
-        const preview = this.proposedState(
-          'update',
-          {
-            identity: '',
-            messageId: review.registration.messageId,
-            day: review.registration.now,
-            turn: 0,
-            state: review.registration.state,
-            context: {},
-          },
-          review.proposal,
-        );
-        if (!sameData(preview, review.preview)) {
-          throw new ProposalBlocked('preview_changed');
-        }
-        return;
-      }
-      const source = this.integration.readSource(review.registration.messageId);
-      if ('status' in source) {
-        throw new ProposalBlocked(source.reason);
-      }
-      const registered = retry
-        ? this.integration.retry(review.registration.nonce)
-        : this.integration.lookup(review.registration.nonce);
-      if (!registered) {
-        throw new ProposalBlocked('preview_changed');
-      }
-      const candidate = this.proposalCandidate(registered);
-      if (candidate.evidenceKey !== review.evidenceKey || !sameData(candidate.preview, review.preview)) {
-        throw new ProposalBlocked('preview_changed');
-      }
-    };
-    this.accepting = (async () => {
-      try {
-        verify();
-        const snapshot = await this.platform.read(this.config);
-        verify();
-        const committed = await this.commitUpdate(review.proposal, snapshot, snapshot.signal, verify);
-        if (!review.repair && this.integration.current()?.nonce !== review.registration.nonce) {
-          throw new ProposalBlocked('request_expired');
-        }
-        if (!review.repair) {
-          this.integration.consume(review.registration.nonce);
-        }
-        this.repairMaterial = null;
-        this.repairStatus = null;
-        this.storeRepair();
-        this.acceptedCheckpoint = review.registration.state.receipts.includes(review.proposal.id)
-          ? null
-          : {
-              source: {
-                chatId: review.registration.chatId,
-                messageId: review.registration.messageId,
-                swipeId: review.registration.swipeId,
-              },
-              proposalId: review.proposal.id,
-              before: worldFingerprint(review.registration.state),
-            };
-        this.rollback = null;
-        if (this.coordination.status === 'proposal_wait') {
-          this.setCoordination({ ...this.coordination, status: 'idle' });
-        }
-        this.state = committed.state;
-        this.readOnly = null;
-        // Integration ticks run once a second: watch for an overwrite for about two seconds.
-        this.overwriteTicks = 2;
-        this.setProposalState({ ...this.reception, status: 'accepted', reason: undefined });
-        this.proposalPeriods?.abort();
-        const periods = new AbortController();
-        this.proposalPeriods = periods;
-        for (const period of committed.periods) {
-          void this.run('generate', period.candidate, period.work, {
-            signal: periods.signal,
-            receipt: review.proposal.id,
-          });
-        }
-        return true;
-      } catch (error) {
-        if (this.review !== review) {
-          return false;
-        }
-        if (review.repair) {
-          this.repairSourceFailed(error);
-        }
-        const reason = error instanceof ProposalBlocked ? error.reason : 'save_failed';
-        if (retry && ['mvu_busy', 'workflow_unknown', 'waiting_workflow'].includes(reason)) {
-          this.setProposalState({ ...this.reception, status: 'overwritten', reason });
-        } else {
-          this.blockProposal(reason, error instanceof ProposalBlocked ? error.detail : undefined);
-        }
-        return false;
-      }
-    })().finally(() => {
-      this.accepting = null;
-    });
-    return this.accepting;
   }
   async mutate(operation: (state: State) => State, changesTimeline = false): Promise<void> {
     if (this.disposed) {
@@ -1235,7 +649,7 @@ export class FocusController {
       run.at > wait.previousAt
     ) {
       const result = run.taskResults.find((item) => item.taskId === wait.taskId);
-      if (result && (result.skipped || !result.extractedTags?.['国策提案']?.trim())) {
+      if (result && (result.skipped || !result.extractedTags?.[GUIDANCE_TAG]?.trim())) {
         this.finishPredictionWait(true, 'result');
       }
     }
@@ -1261,23 +675,19 @@ export class FocusController {
       this.waitedSources.clear();
       this.yieldedSource = '';
     }
-    const yieldToProposal = () => {
+    const yieldToWorld = () => {
       const registration = this.integration.current();
       const valid = registration && this.integration.lookup(registration.nonce);
-      if (
-        valid ||
-        (this.repairMaterial && this.repairStatus?.status !== 'expired') ||
-        this.yieldedSource === floor
-      ) {
+      if (valid || this.yieldedSource === floor) {
         this.yieldedSource = floor;
         const { content: _content, ...identity } = source;
-        this.setCoordination({ status: 'proposal_wait', source: identity, reason: 'nonce' });
-        this.refreshProposal();
+        this.setCoordination({ status: 'guidance_wait', source: identity, reason: 'nonce' });
+        this.refreshGuidance();
         return true;
       }
       return false;
     };
-    if (yieldToProposal()) {
+    if (yieldToWorld()) {
       return;
     }
     const prediction = this.platform.predictWorldSchedule?.(source) ?? {
@@ -1325,7 +735,7 @@ export class FocusController {
       ) {
         return;
       }
-      if (yieldToProposal()) {
+      if (yieldToWorld()) {
         return;
       }
       const current = await this.platform.read(this.config);
@@ -1348,7 +758,7 @@ export class FocusController {
       }
     }
     // runTask checks the nonce and takes ownership synchronously, including arrivals after the await.
-    await this.runTask('update', undefined, undefined, undefined, 'scheduled');
+    await this.runTask('update', undefined, undefined, 'scheduled');
   }
   /**
    * Delete a country's tree from the current floor. The country goes back to the candidates, so
@@ -1396,37 +806,30 @@ export class FocusController {
     // Route pools limit requests; independent countries keep their own result and failure state.
     await Promise.all(candidates.map((candidate) => this.run('generate', candidate)));
   }
-  async run(
-    kind: JobKind,
-    candidate?: Candidate,
-    periodWork?: PeriodWork,
-    externalPeriod?: { signal: AbortSignal; receipt: string },
-  ): Promise<void> {
+  async run(kind: JobKind, candidate?: Candidate, periodWork?: PeriodWork): Promise<void> {
     if (kind === 'update') {
-      this.invalidateRepair('update_started');
       this.coordinationEpoch++;
       this.finishPredictionWait(false, 'manual');
       this.yieldedSource = '';
       this.setCoordination({ ...this.coordination, status: 'idle', reason: 'manual' });
     }
-    await this.runTask(kind, candidate, periodWork, externalPeriod, 'manual');
+    await this.runTask(kind, candidate, periodWork, 'manual');
+  }
+  /** Update this floor by the world task's guidance; a failed run can retry with the same guidance. */
+  runGuided(guidance: WorldGuidance): Promise<void> {
+    this.coordinationEpoch++;
+    this.finishPredictionWait(false, 'result');
+    this.yieldedSource = '';
+    return this.runTask('update', undefined, undefined, 'guided', guidance);
   }
   private async runTask(
     kind: JobKind,
     candidate?: Candidate,
     periodWork?: PeriodWork,
-    externalPeriod?: { signal: AbortSignal; receipt: string },
-    mode: 'manual' | 'scheduled' = 'manual',
+    mode: 'manual' | 'scheduled' | 'guided' = 'manual',
+    guidance?: WorldGuidance,
   ): Promise<void> {
     if (this.disposed) {
-      return;
-    }
-    if (
-      kind === 'update' &&
-      mode === 'scheduled' &&
-      this.repairMaterial &&
-      this.repairStatus?.status !== 'expired'
-    ) {
       return;
     }
     if (
@@ -1440,16 +843,20 @@ export class FocusController {
     ) {
       return;
     }
-    const access = kind === 'update' ? this.integration.beginUpdate(mode) : undefined;
+    // A guided update owns its own registration, so it starts like a manual one.
+    const access =
+      kind === 'update'
+        ? this.integration.beginUpdate(mode === 'scheduled' ? 'scheduled' : 'manual')
+        : undefined;
     if (access && access.status !== 'acquired') {
       if (access.status === 'waiting') {
         this.yieldedSource = this.waitFloor;
-        this.setCoordination({ ...this.coordination, status: 'proposal_wait', reason: 'nonce' });
-        this.refreshProposal();
+        this.setCoordination({ ...this.coordination, status: 'guidance_wait', reason: 'nonce' });
+        this.refreshGuidance();
       }
       return;
     }
-    if (kind === 'update' && mode === 'scheduled') {
+    if (kind === 'update' && mode !== 'manual') {
       this.setCoordination({ ...this.coordination, status: 'running' });
     }
     const releaseUpdate = () => {
@@ -1459,11 +866,6 @@ export class FocusController {
     };
     const id = requestId('job');
     const aborter = new AbortController();
-    const cancelPeriod = () => aborter.abort();
-    externalPeriod?.signal.addEventListener('abort', cancelPeriod, { once: true });
-    if (externalPeriod?.signal.aborted) {
-      aborter.abort();
-    }
     aborter.signal.addEventListener('abort', releaseUpdate, { once: true });
     const status: JobStatus = {
       id,
@@ -1473,6 +875,7 @@ export class FocusController {
       time: new Date().toLocaleTimeString(),
       ...(candidate ? { label: candidate.name, candidate } : {}),
       ...(periodWork ? { periodWork, label: `${candidate?.name} · 换期` } : {}),
+      ...(guidance ? { guidance, label: '依世界指引' } : {}),
     };
     this.jobs.unshift(status);
     this.jobs = this.jobs.slice(0, 40);
@@ -1488,8 +891,8 @@ export class FocusController {
       status.message = '正在分析本楼资料';
       this.notify();
       const snapshot = await this.platform.read(this.config, kind);
-      if (externalPeriod && !snapshot.state.receipts.includes(externalPeriod.receipt)) {
-        throw new Error('外部提案的保存记录已失效');
+      if (guidance && (snapshot.messageId !== guidance.messageId || snapshot.day !== guidance.now)) {
+        throw new Error('世界指引所属的楼层或故事时间已改变，没有套用。');
       }
       sourceSignal = snapshot.signal;
       sourceSignal?.addEventListener('abort', cancelSource, { once: true });
@@ -1610,7 +1013,10 @@ export class FocusController {
             )
           : await ask(
               kind,
-              taskData(snapshot, kind === 'reshape'),
+              {
+                ...taskData(snapshot, kind === 'reshape'),
+                ...(guidance ? { guidance: guidance.text } : {}),
+              },
               kind === 'identify' ? CandidatesSchema : ProposalSchema,
               (value) => {
                 this.proposedState(kind, snapshot, value, candidate);
@@ -1620,14 +1026,25 @@ export class FocusController {
       // Apply to current data in save order, without comparing it to the request input.
       let next: State;
       if (kind === 'update') {
-        const committed = await this.commitUpdate(ProposalSchema.parse(result), snapshot, aborter.signal);
+        const proposal = ProposalSchema.parse(result);
+        const committed = await this.commitUpdate(proposal, snapshot, aborter.signal);
         next = committed.state;
         periods.push(...committed.periods);
+        status.changes = {
+          until: proposal.until,
+          countries: letterDigest(committed.before, committed.state, proposal),
+        };
+        if (guidance && !committed.before.receipts.includes(proposal.id)) {
+          // A workflow re-run on this floor may write back the floor without this update.
+          this.acceptedCheckpoint = {
+            source: { chatId: guidance.chatId, messageId: guidance.messageId, swipeId: guidance.swipeId },
+            proposalId: proposal.id,
+            before: worldFingerprint(committed.before),
+          };
+          this.rollback = null;
+        }
       } else {
         next = await this.writeState((current) => {
-          if (externalPeriod && !current.state.receipts.includes(externalPeriod.receipt)) {
-            throw new Error('外部提案的保存记录已失效');
-          }
           const state = periodWork
             ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result))
             : this.proposedState(kind, current, result, candidate);
@@ -1657,10 +1074,9 @@ export class FocusController {
       status.message =
         status.state === 'cancelled' ? '已取消，未套用结果' : `未提交：${message.slice(0, 1500)}`;
     } finally {
-      if (kind === 'update' && mode === 'scheduled' && this.coordination.status === 'running') {
+      if (kind === 'update' && mode !== 'manual' && this.coordination.status === 'running') {
         this.setCoordination({ ...this.coordination, status: 'idle' });
       }
-      externalPeriod?.signal.removeEventListener('abort', cancelPeriod);
       releaseUpdate();
       aborter.signal.removeEventListener('abort', releaseUpdate);
       sourceSignal?.removeEventListener('abort', cancelSource);
@@ -1701,18 +1117,20 @@ export class FocusController {
       config.jobs[kind].prompts
         .filter((item) => item.enabled || item.kind === 'data')
         .map((item) => ({ ...item, content: promptText(item, kind) }));
-    if ((payload as { stage?: string }).stage === 'repair') {
-      // Always use the repair task, even if the update task was customized or disabled.
-      const task = {
-        id: 'task',
-        kind: 'task' as const,
-        name: '修复任务指示',
-        role: 'system' as const,
-        content: REPAIR_TASK,
-      };
+    if (typeof (payload as { guidance?: unknown }).guidance === 'string') {
+      // The guidance note reaches the model even if the update task was customized or disabled.
       if (chain.some((item) => item.kind === 'task')) {
-        chain = chain.map((item) => (item.kind === 'task' ? task : item));
+        chain = chain.map((item) =>
+          item.kind === 'task' ? { ...item, content: `${item.content}\n${GUIDANCE_TASK}` } : item,
+        );
       } else {
+        const task = {
+          id: 'task',
+          kind: 'task' as const,
+          name: '世界指引说明',
+          role: 'system' as const,
+          content: GUIDANCE_TASK,
+        };
         chain = [task, ...chain];
       }
     }
@@ -1891,7 +1309,7 @@ export class FocusController {
                 error: redactApiError(error, this.config.apis),
               });
             }
-            if (error instanceof InputSizeError || error instanceof ProposalBlocked) {
+            if (error instanceof InputSizeError) {
               throw error;
             }
             lastError = error;

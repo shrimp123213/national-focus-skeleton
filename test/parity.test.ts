@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parse } from 'yaml';
-import { ConfigSchema, defaultConfig, EventSchema, PromptItemSchema } from '../src/model';
+import { ConfigSchema, defaultConfig, EventSchema, PromptItemSchema, SourcesSchema } from '../src/model';
 import { DATA_TOKEN, DEFAULT_GUIDE, DEFAULT_TASK, migratePrompts, normalizePrompts } from '../src/prompts';
 import {
   applyTaskPreset,
@@ -13,6 +13,7 @@ import {
 import {
   buildSourceContext,
   cleanLatestUser,
+  databaseSourceEntry,
   extractContext,
   formatSummaryIndex,
   replacePlaceholders,
@@ -117,18 +118,41 @@ test('$8 只取当前 AI 前一楼的使用者输入，优先取输入标签并�
   assert.equal((await buildSourceContext(base)).context.user, '相邻输入');
 });
 
-test('资料库表格可选择依工作流助手一律纳入，否则仍受全不选限制', async () => {
+test('资料库表格预设依工作流助手一律纳入；关闭时不看勾选，一律不送', async () => {
   const table = {
     ...entry(1, 'TavernDB-ACU-CustomExport-国家状态-1', '# 国家\n\n| 国 |\n| --- |\n| 帝国 |'),
     enabled: false,
   };
   const base = input({ entries: [table, entry(2, '一般', '一般条目')] });
   base.config.sources.worldbook.enabledEntries = { 本局: [] };
-  assert.equal((await buildSourceContext(base)).context.worldbook, '');
-  base.config.sources.autoIncludeTables = true;
+  assert.equal(base.config.sources.includeTables, true);
   const result = await buildSourceContext(base);
   assert.equal(result.context.worldbook, '| 国 |\n| --- |\n| 帝国 |');
   assert.equal(result.report.entries[1].status, '未勾选');
+  base.config.sources.includeTables = false;
+  base.config.sources.worldbook.enabledEntries = { 本局: [1] };
+  const off = await buildSourceContext(base);
+  assert.equal(off.context.worldbook, '');
+  assert.equal(off.report.entries[0].status, '数据库表格（未开启纳入）');
+});
+
+test('旧设定的 autoIncludeTables 不再沿用，表格开关回到预设开启', () => {
+  const sources = SourcesSchema.parse({ version: 2, autoIncludeTables: false });
+  assert.equal(sources.includeTables, true);
+  assert.equal('autoIncludeTables' in sources, false);
+});
+
+test('条目清单隐藏的数据库条目包含纪要与主角信息导出', () => {
+  for (const name of [
+    'TavernDB-ACU-CustomExport-国家状态-1',
+    'TavernDB-ACU-CustomExport-纪要-3',
+    'ACU-[本局]-TavernDB-ACU-ReadableDataTable',
+    '总结条目-1',
+  ]) {
+    assert.equal(databaseSourceEntry({ name }), true, name);
+  }
+  assert.equal(databaseSourceEntry({ name: 'WorkflowHelper-国家关系' }), false);
+  assert.equal(databaseSourceEntry({ name: '帝国' }), false);
 });
 
 test('$2／$5／$U／$C 预设不送，开启后依来源规则组装', async () => {

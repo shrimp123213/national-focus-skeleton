@@ -8,8 +8,7 @@ import { FloorNotReady, storyDay } from '../src/platform';
 import { applyDeepSeek } from '../src/api-config';
 import { parse } from 'yaml';
 import { FocusController } from '../src/workflow';
-import { FOCUS_WORLD, WORLD_FAMILY } from '../src/world-proposal';
-import { ProposalRepairSchema } from '../src/proposal-repair';
+import { FOCUS_WORLD, GUIDANCE_TAG, WORLD_FAMILY } from '../src/world-proposal';
 
 const prompt = [
   { role: 'system' as const, content: 'system' },
@@ -97,14 +96,14 @@ test('世界结果计入完整请求上限，过大不呼叫 API 也不截断资
   }
 });
 
-test('修复材料独立保存于本机并按聊天隔离，不修改 MVU；重载可读取原始材料', async () => {
+test('执行纪录带国策指引时，依指引的局势更新读到指引与世界结果，不修改世界变量', async () => {
   const env = environment();
   const controller = new FocusController(env.platform);
   try {
-    env.getData().国策 = demoState();
+    env.getData().国策 = { ...demoState(), day: 114 };
     env.getData().stat_data.世界.时间 = 130;
     env.getData().addon_data = { 世界: { [FOCUS_WORLD]: { 局势: '贸易恢复' } } };
-    const before = structuredClone(env.getData());
+    const beforeWorld = structuredClone(env.getData().addon_data);
     let run: unknown = null;
     env.api.parent = {
       AcuPostProcessAPI: {
@@ -117,34 +116,34 @@ test('修复材料独立保存于本机并按聊天隔离，不修改 MVU；重�
         getRunStatusForFloor: () => run,
       },
     };
+    controller.config.jobs.update.retries = 0;
     const ready = await controller.integration.prepare(3, { mode: 'request', requestId: 'world-run' });
     assert.equal(ready.status, 'ready');
     const registration = controller.integration.lookup(ready.nonce)!;
+    const guidance = '【奥古斯提姆帝国】\n- 局势：贸易恢复，商队回流。';
+    let payload: { guidance?: string; context?: { world?: unknown } } = {};
+    env.api.generateRaw = async (input) => {
+      const messages = input.ordered_prompts as { content: string }[];
+      const dataMessage = messages.find((m) => m.content.includes('"stage":"update"'))!.content;
+      payload = JSON.parse(dataMessage.slice(dataMessage.indexOf('{')));
+      return JSON.stringify({ id: 'guided-update', until: 130, reason: '依指引', steps: [] });
+    };
     run = {
       messageId: 3,
       at: registration.registeredAt + 1,
-      taskResults: [{ taskId: 'world-a', success: true, extractedTags: { 国策提案: '{broken' } }],
+      taskResults: [{ taskId: 'world-a', success: true, extractedTags: { [GUIDANCE_TAG]: guidance } }],
     };
-    controller.refreshProposal();
-    const saved = ProposalRepairSchema.parse(env.platform.loadProposalRepair());
-    assert.equal(saved.raw, '{broken');
-    assert.deepEqual(saved.world, before.addon_data.世界[FOCUS_WORLD]);
-    assert.deepEqual(env.getData(), before);
-    controller.dispose();
-    const reloaded = new FocusController(env.platform);
-    try {
-      await reloaded.initialize();
-      assert.equal(reloaded.proposalRepair?.status, 'available');
-      assert.equal(reloaded.integration.lookup(ready.nonce), null);
-      env.chat();
-      assert.equal(env.platform.loadProposalRepair(), null);
-      // Clearing the old chat must not target the currently selected chat's storage.
-      env.platform.saveProposalRepair(saved, 'chat-b');
-      env.platform.saveProposalRepair(null, 'chat-a');
-      assert.deepEqual(env.platform.loadProposalRepair(), saved);
-    } finally {
-      reloaded.dispose();
+    controller.refreshGuidance();
+    assert.equal(controller.worldGuidance.status, 'started');
+    for (let i = 0; i < 500 && ['queued', 'running'].includes(controller.jobs[0].state); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
     }
+    assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    assert.equal(controller.jobs[0].label, '依世界指引');
+    assert.equal(payload.guidance, guidance);
+    assert.deepEqual(payload.context?.world, beforeWorld.世界[FOCUS_WORLD]);
+    assert.ok(env.getData().国策.receipts.includes('guided-update'));
+    assert.deepEqual(env.getData().addon_data, beforeWorld);
   } finally {
     controller.dispose();
     env.platform.dispose();

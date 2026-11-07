@@ -27,7 +27,7 @@ export type WorldSchedulePrediction = {
   member?: WorldMember;
 };
 export type ScheduleCoordination = {
-  status: 'idle' | 'prediction_wait' | 'proposal_wait' | 'running' | 'cancelled';
+  status: 'idle' | 'prediction_wait' | 'guidance_wait' | 'running' | 'cancelled';
   source?: Omit<ScheduleSource, 'content'>;
   prediction?: WorldSchedulePrediction;
   startedAt?: number;

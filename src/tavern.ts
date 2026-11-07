@@ -19,7 +19,6 @@ import {
 } from './model';
 import { buildNewsBar, insiders, timeText, type NewsBar } from './newsbar';
 import { unavailable, type IntegrationApi, type IntegrationRead } from './integration';
-import type { ProposalRepairMaterial } from './proposal-repair';
 import { predictWorldSchedule, type ScheduleSource, type WorldSchedulePrediction } from './world-schedule';
 import {
   FOCUS_WORLD,
@@ -106,7 +105,6 @@ export type TavernApi = {
       getEffectiveSettings(): unknown;
       getRunStatusForFloor(messageId: number): unknown;
     };
-    Addon?: { getLastPatchLog(): unknown };
   };
   indexedDB?: IDBFactory;
   substitudeMacros?(text: string): string;
@@ -566,33 +564,14 @@ export class TavernPlatform implements Platform {
       const member = worldMember(workflow.getEffectiveSettings());
       const status = RunStatusSchema.safeParse(workflow.getRunStatusForFloor(messageId));
       const data = this.api.Mvu?.getMvuData({ type: 'message', message_id: messageId });
-      let patchLog: unknown = null;
-      try {
-        patchLog = this.api.parent?.Addon?.getLastPatchLog() ?? null;
-      } catch {
-        // Missing review evidence does not establish either success or failure.
-      }
       return {
         member,
         run: status.success ? status.data : null,
         fingerprint: worldFingerprint(valueAt(data?.addon_data, `世界.${FOCUS_WORLD}`)),
-        patchLog,
         world: structuredClone(valueAt(data?.addon_data, `世界.${FOCUS_WORLD}`)),
       };
     } catch {
       return null;
-    }
-  }
-  loadProposalRepair(): unknown {
-    const saved = this.storage.getItem(`national-focus-skeleton.repair.v1.${this.chatId()}`);
-    return saved ? JSON.parse(saved) : null;
-  }
-  saveProposalRepair(material: ProposalRepairMaterial | null, chatId: string): void {
-    const key = `national-focus-skeleton.repair.v1.${chatId}`;
-    if (material) {
-      this.storage.setItem(key, JSON.stringify(material));
-    } else {
-      this.storage.removeItem(key);
     }
   }
   readScheduleSource(): ScheduleSource | null {
