@@ -164,6 +164,21 @@ export function blockers(country: Country, node: FocusNode): string[] {
   }
   return reasons;
 }
+/** Focuses that could start now: every blocker is clear. The main focus is not counted. */
+export function startableFocuses(country: Country): FocusNode[] {
+  return Object.values(country.nodes).filter(
+    (node) => node.id !== country.current && blockers(country, node).length === 0,
+  );
+}
+/** AI countries without a main focus that could start one now, with the focuses they could start. */
+export function idleChoices(state: State): { country: Country; options: FocusNode[] }[] {
+  return Object.values(state.countries)
+    .filter(
+      (country) => country.enabled && !country.calibration && country.control === 'ai' && !country.current,
+    )
+    .map((country) => ({ country, options: startableFocuses(country) }))
+    .filter((item) => item.options.length > 0);
+}
 function lockRoute(country: Country, node: FocusNode): void {
   if (node.mutex) {
     const existing = country.locks[node.mutex.group];

@@ -13,7 +13,23 @@ export function demoState(start = 100): State {
   state.countries.north.control = 'ai';
   state.countries.coast.control = 'ai';
   state = startFocus(state, 'augustium', 'focus_1_1');
-  state = applyProposal(state, { id: 'demo_initial', until: start + 14, reason: '示范进度', steps: [] });
+  // AI countries always hold a main focus after an update (v0.18), so the sample starts them on one.
+  state = applyProposal(state, {
+    id: 'demo_initial',
+    until: start + 14,
+    reason: '示范进度',
+    steps: [
+      {
+        at: start,
+        facts: [],
+        events: [],
+        selections: [
+          { country: 'north', node: 'regional_1', reason: '示范：北境先整顿地方' },
+          { country: 'coast', node: 'regional_9', reason: '示范：苍海先经营海路' },
+        ],
+      },
+    ],
+  });
   return state;
 }
 /** The card's source time text for a story day, for example 复兴纪元488年-03月-15日-星期六-09:00. */

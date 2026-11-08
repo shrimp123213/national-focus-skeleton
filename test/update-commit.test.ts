@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createState, installCountry, startFocus } from '../src/engine';
 import { DemoPlatform, demoTree } from '../src/demo';
 import { ProposalSchema, type State } from '../src/model';
-import type { Snapshot } from '../src/platform';
+import type { PromptMessage, Snapshot } from '../src/platform';
 import { FocusController } from '../src/workflow';
 
 const tree = demoTree('land', '试验国');
@@ -223,6 +223,80 @@ test('独立更新仍结算并生成下一期，重送不再次保存或生成',
     assert.equal(platform.calls, 3);
     assert.equal(platform.saves, 2);
     assert.deepEqual(platform.data, before);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('局势更新列出空闲 AI 国的可选国策；留空时退回，模型补选后才保存', async () => {
+  const platform = new UpdatePlatform();
+  platform.data = installCountry(createState(100), demoTree('land', '试验国'), 100);
+  platform.data.countries.land.control = 'ai';
+  const requests: { idle?: unknown; correction?: string }[] = [];
+  const generate = platform.generate.bind(platform);
+  platform.generate = async (...args: unknown[]) => {
+    const data = (args[0] as PromptMessage[]).find((m) => m.role === 'user')!.content;
+    requests.push(JSON.parse(data.slice(data.indexOf('{'))));
+    return generate();
+  };
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 1;
+  platform.outputs.push(
+    JSON.stringify({ id: 'idle', until: 130, reason: '时间推进', steps: [] }),
+    JSON.stringify({
+      id: 'pick',
+      until: 130,
+      reason: '时间推进',
+      steps: [
+        {
+          at: 100,
+          facts: [],
+          events: [],
+          selections: [{ country: 'land', node: 'regional_1', reason: '先丈量航道' }],
+        },
+      ],
+    }),
+  );
+  try {
+    await controller.run('update');
+    assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    assert.equal(platform.calls, 2);
+    assert.deepEqual((requests[0].idle as { countries: unknown[] }).countries, [
+      {
+        country: 'land',
+        name: '试验国',
+        options: ['regional_1', 'regional_9', 'regional_17'].map((id) => ({
+          id,
+          name: platform.data.countries.land.nodes[id].name,
+        })),
+      },
+    ]);
+    assert.match(requests[1].correction!, /试验国（land）可选 regional_1、regional_9、regional_17/);
+    assert.equal(platform.data.countries.land.current, 'regional_1');
+    assert.deepEqual(platform.data.receipts, ['pick']);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('换期的 AI 国与玩家国不必在局势更新中选策', async () => {
+  const platform = new UpdatePlatform();
+  let state = installCountry(createState(100), demoTree('land', '试验国'), 100);
+  state = installCountry(state, demoTree('home', '本国'), 100);
+  state.countries.land.control = 'ai';
+  platform.data = state;
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 0;
+  controller.config.jobs.generate.retries = 0;
+  // The next period is not generated here; its failure does not undo the saved update.
+  platform.outputs.push(JSON.stringify(proposal), '{}');
+  try {
+    await controller.run('update');
+    const update = controller.jobs.find((job) => job.kind === 'update')!;
+    assert.equal(update.state, 'success', update.message);
+    assert.deepEqual(platform.data.receipts, ['switch']);
+    assert.equal(platform.data.countries.land.current, '');
+    assert.equal(platform.data.countries.home.current, '');
   } finally {
     controller.dispose();
   }

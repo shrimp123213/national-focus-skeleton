@@ -1,4 +1,4 @@
-import { blockers, conditionMet, eventText, eventUpdatedAt, newsDigest } from './engine';
+import { conditionMet, eventText, eventUpdatedAt, newsDigest, startableFocuses } from './engine';
 import { stateTime, storyTime } from './story-time';
 import type { Country, FocusNode, State } from './model';
 
@@ -231,12 +231,6 @@ function lockedOut(country: Country, node: FocusNode): boolean {
   const lock = node.mutex && country.locks[node.mutex.group];
   return !!lock && lock.route !== node.mutex!.route;
 }
-/** Focuses that could start now: every blocker is clear. The main focus is not counted. */
-function startable(country: Country): FocusNode[] {
-  return Object.values(country.nodes).filter(
-    (node) => node.id !== country.current && blockers(country, node).length === 0,
-  );
-}
 function focusItem(country: Country, node: FocusNode): string {
   const progress = country.progress[node.id];
   const resumed = progress?.status === 'paused' ? `，暂停中，已推进 ${Math.floor(progress.days)} 天` : '';
@@ -278,7 +272,7 @@ export function worldSummary(state: State): string {
       const reference = [mainFocusLine(country, when)];
       const listed = new Set(country.current ? [country.current] : []);
       if (country.control === 'ai') {
-        const now = startable(country);
+        const now = startableFocuses(country);
         now.forEach((node) => listed.add(node.id));
         reference.push(
           now.length
@@ -293,7 +287,7 @@ export function worldSummary(state: State): string {
           if (main.mutex && !after.locks[main.mutex.group]) {
             after.locks[main.mutex.group] = { route: main.mutex.route, reason: main.mutex.reason };
           }
-          const opened = startable(after).filter((node) => !listed.has(node.id));
+          const opened = startableFocuses(after).filter((node) => !listed.has(node.id));
           opened.forEach((node) => listed.add(node.id));
           if (opened.length) {
             reference.push(

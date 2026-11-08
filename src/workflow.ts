@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { applyProposal, countryKey, installCountry, removeCountry } from './engine';
+import { applyProposal, countryKey, idleChoices, installCountry, removeCountry } from './engine';
 import { importTrees, type TreeImport } from './tree-io';
 import {
   CandidatesSchema,
@@ -68,6 +68,45 @@ import {
 
 function taskData(snapshot: Snapshot, full: boolean) {
   return { now: snapshot.day, state: workingState(snapshot.state, full), context: snapshot.context };
+}
+/** Idle AI countries at the start of an update, so the model does not have to work out the rules. */
+function idleData(state: State) {
+  const idle = idleChoices(state);
+  return idle.length
+    ? {
+        idle: {
+          note: '以下 AI 国在上次更新结束时没有主国策，但已有可开始的国策。本次更新须在 selections 为每国选一项，放在第一个步骤或依剧情较晚的时点；本次更新中完成主国策的 AI 国也要接续选策。到 until 时仍空闲却有可选国策，更新会被退回。',
+          countries: idle.map(({ country, options }) => ({
+            country: country.id,
+            name: country.name,
+            options: options.map((node) => ({ id: node.id, name: node.name })),
+          })),
+        },
+      }
+    : {};
+}
+/**
+ * An update may not leave an AI country idle while it could start a focus (v0.18). A country that
+ * changes period in this update is exempt, because its next tree comes after the commit.
+ */
+function requireSelections(state: State, proposal: Proposal): void {
+  const moving = new Set(
+    proposal.transitions
+      .map((transition) => state.countries[transition.country])
+      .filter((country) => country?.enabled && country.autoPeriod && !country.calibration)
+      .map((country) => country.id),
+  );
+  const idle = idleChoices(state).filter(({ country }) => !moving.has(country.id));
+  if (idle.length) {
+    throw new Error(
+      `到 until 时这些 AI 国没有主国策，但有可开始的国策：${idle
+        .map(
+          ({ country, options }) =>
+            `${country.name}（${country.id}）可选 ${options.map((node) => node.id).join('、')}`,
+        )
+        .join('；')}。请在 steps 的 selections 为每国选一项，放在它空闲的时点，或 at=until 的步骤`,
+    );
+  }
 }
 function scheduledDue(job: Config['jobs'][JobKind], snapshot: Snapshot, kind: JobKind): boolean {
   const last = snapshot.state.schedules[kind];
@@ -1015,11 +1054,15 @@ export class FocusController {
               kind,
               {
                 ...taskData(snapshot, kind === 'reshape'),
+                ...(kind === 'update' ? idleData(snapshot.state) : {}),
                 ...(guidance ? { guidance: guidance.text } : {}),
               },
               kind === 'identify' ? CandidatesSchema : ProposalSchema,
               (value) => {
-                this.proposedState(kind, snapshot, value, candidate);
+                const next = this.proposedState(kind, snapshot, value, candidate);
+                if (kind === 'update') {
+                  requireSelections(next, ProposalSchema.parse(value));
+                }
               },
             );
       aborter.signal.throwIfAborted();

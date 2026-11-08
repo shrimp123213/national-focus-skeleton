@@ -1563,11 +1563,15 @@ export function mountUI(
         fact: '事实',
         transition: '换期',
       };
+      // A date shows once above the entries of that day, so dates of any length never crowd the text.
+      let shown = '';
       const entries = nation.entries
-        .map(
-          (entry) =>
-            `<li class="entry-${entry.kind}"><time>${escape(storyTime(entry.day, false, state?.time))}</time><p>${kinds[entry.kind] ? `<span class="entry-kind">${kinds[entry.kind]}</span>` : ''}${escape(entry.title)}${entry.note ? `<small>${escape(entry.note)}</small>` : ''}</p></li>`,
-        )
+        .map((entry) => {
+          const when = storyTime(entry.day, false, state?.time);
+          const head = when === shown ? '' : `<time>${escape(when)}</time>`;
+          shown = when;
+          return `<li class="entry-${entry.kind}">${head}<p>${kinds[entry.kind] ? `<span class="entry-kind">${kinds[entry.kind]}</span>` : ''}${escape(entry.title)}${entry.note ? `<small>${escape(entry.note)}</small>` : ''}</p></li>`;
+        })
         .join('');
       detail = `<h3>${escape(nation.name)}</h3>${shifts ? `<ul class="letter-shifts">${shifts}</ul>` : '<p class="letter-still">数值、主国策与能力都不变。</p>'}${entries ? `<ol class="letter-timeline">${entries}</ol>` : '<p class="muted">这段时间没有新的进展。</p>'}`;
     }

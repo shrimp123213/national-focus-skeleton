@@ -4497,10 +4497,11 @@ details.detail-section.fold > summary::before {
   color: var(--faint);
   font-size: 13px;
 }
+/* v0.18: the rail runs on the left and each date heads its own entries, so long era dates fit. */
 .letter-timeline {
   position: relative;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 24px;
   list-style: none;
 }
 .letter-timeline::before {
@@ -4508,68 +4509,69 @@ details.detail-section.fold > summary::before {
   position: absolute;
   top: 8px;
   bottom: 8px;
-  left: 103px;
+  left: 4px;
   width: 1px;
   background: var(--line-strong);
 }
 .letter-timeline li {
-  position: relative;
-  display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 26px;
-  padding: 6px 0;
+  padding: 5px 0;
 }
-.letter-timeline li::before {
+.letter-timeline li + li > time {
+  margin-top: 10px;
+}
+.letter-timeline p {
+  position: relative;
+  line-height: 1.55;
+}
+.letter-timeline p::before {
   content: "";
   position: absolute;
-  left: 99px;
-  top: 12px;
+  left: -24px;
+  top: 6px;
   width: 9px;
   height: 9px;
   border-radius: 50%;
   border: 1.5px solid var(--gold-deep);
   background: var(--panel);
 }
-.letter-timeline .entry-complete::before {
+.letter-timeline .entry-complete p::before {
   border: 0;
   border-radius: 1px;
   background: var(--gold);
   transform: rotate(45deg);
 }
-.letter-timeline .entry-event::before {
+.letter-timeline .entry-event p::before {
   border-color: var(--blue);
   border-radius: 2px;
 }
-.letter-timeline .entry-update::before {
-  left: 101px;
-  top: 14px;
+.letter-timeline .entry-update p::before {
+  left: -22px;
+  top: 8px;
   width: 5px;
   height: 5px;
   border: 0;
   background: var(--faint);
 }
-.letter-timeline .entry-fact::before {
-  top: 15px;
+.letter-timeline .entry-fact p::before {
+  top: 9px;
   height: 3px;
   border: 0;
   border-radius: 0;
   background: var(--muted);
 }
-.letter-timeline .entry-transition::before {
+.letter-timeline .entry-transition p::before {
   border-color: var(--gold);
   box-shadow:
     0 0 0 2px var(--panel),
     0 0 0 3px var(--gold-deep);
 }
 .letter-timeline time {
+  display: block;
+  margin-bottom: 2px;
   color: var(--muted);
-  font-size: 13px;
-  text-align: right;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.letter-timeline p {
-  line-height: 1.55;
+  letter-spacing: 0.02em;
 }
 .letter-timeline small {
   display: block;
@@ -4647,19 +4649,6 @@ details.detail-section.fold > summary::before {
   .letter-detail {
     max-height: none;
     padding: 14px 16px 18px;
-  }
-  .letter-timeline::before {
-    left: 79px;
-  }
-  .letter-timeline li {
-    grid-template-columns: 70px 1fr;
-    gap: 22px;
-  }
-  .letter-timeline li::before {
-    left: 75px;
-  }
-  .letter-timeline .entry-update::before {
-    left: 77px;
   }
 }
 
