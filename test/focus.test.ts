@@ -137,6 +137,30 @@ test('没有跳时代选授权时拒绝 AI 帮手动国选策', () => {
   assert.equal(state.countries.empire.current, '');
 });
 
+test('AI 选策失败时，错误写出国家、国策、时点与当时可选的国策', () => {
+  const state = changeCountry(installCountry(createState(0), tree(), 0), 'empire', { control: 'ai' });
+  const step = (at: number, node: string) => ({
+    at,
+    facts: [],
+    events: [],
+    selections: [{ country: 'empire', node, reason: 'AI 选择' }],
+  });
+  assert.throws(
+    () => applyProposal(state, { id: 'blocked', until: 10, reason: '推进', steps: [step(0, 'trade')] }),
+    /示范帝国（empire）在 故事日 0（at=0）选 trade：前置：修筑道路。此时可选：roads/,
+  );
+  assert.throws(
+    () =>
+      applyProposal(state, {
+        id: 'busy',
+        until: 10,
+        reason: '推进',
+        steps: [step(0, 'roads'), step(5, 'trade')],
+      }),
+    /在 故事日 5（at=5）选 trade：此时主国策「修筑道路」（roads）仍在进行或等待成果/,
+  );
+});
+
 test('跳时不能把晚到的勘查成果用于提早完成，后续国策从实际选策时开始', () => {
   let state = installCountry(createState(0), tree(), 0);
   state = changeCountry(state, 'empire', { skipDelegate: true });

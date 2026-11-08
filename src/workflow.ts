@@ -11,6 +11,7 @@ import {
   TreeSchema,
   type Candidate,
   type Config,
+  type Country,
   type JobKind,
   type Proposal,
   type State,
@@ -29,6 +30,7 @@ import { drawStructure, signature, structureData, type Structure, type TreeType 
 import { DATA_TOKEN, GUIDANCE_TASK, promptText } from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
+import { storyTime } from './story-time';
 import { letterDigest } from './proposal-view';
 import { assertInputSize, InputSizeError, messageCharacters } from './sources';
 import { RoutePool, routeLimits } from './route-pool';
@@ -89,7 +91,7 @@ function idleData(state: State) {
  * An update may not leave an AI country idle while it could start a focus (v0.18). A country that
  * changes period in this update is exempt, because its next tree comes after the commit.
  */
-function requireSelections(state: State, proposal: Proposal): void {
+function requireSelections(before: State, state: State, proposal: Proposal): void {
   const moving = new Set(
     proposal.transitions
       .map((transition) => state.countries[transition.country])
@@ -98,13 +100,25 @@ function requireSelections(state: State, proposal: Proposal): void {
   );
   const idle = idleChoices(state).filter(({ country }) => !moving.has(country.id));
   if (idle.length) {
+    // Say when each country became idle: on a long skip a focus chosen early can finish before until.
+    const since = (country: Country) => {
+      const last = Object.entries(country.progress)
+        .filter(([, progress]) => progress.completed !== null && progress.completed > before.day)
+        .sort(([, a], [, b]) => b.completed! - a.completed!)[0];
+      if (!last) {
+        return '本次更新开始时已空闲';
+      }
+      const at = last[1].completed!;
+      return `于 ${storyTime(at, false, state.time)}（at=${Math.ceil(at * 100) / 100}）完成「${country.nodes[last[0]].name}」后空闲`;
+    };
+    const list = idle
+      .map(
+        ({ country, options }) =>
+          `${country.id === country.name ? country.name : `${country.name}（${country.id}）`}${since(country)}，可选 ${options.map((node) => node.id).join('、')}`,
+      )
+      .join('；');
     throw new Error(
-      `到 until 时这些 AI 国没有主国策，但有可开始的国策：${idle
-        .map(
-          ({ country, options }) =>
-            `${country.name}（${country.id}）可选 ${options.map((node) => node.id).join('、')}`,
-        )
-        .join('；')}。请在 steps 的 selections 为每国选一项，放在它空闲的时点，或 at=until 的步骤`,
+      `到 until 时这些 AI 国没有主国策，但有可开始的国策：${list}。请在 selections 为每国补选一项，放在它空闲之后的步骤，或 at=until 的步骤；补选的国策若在 until 前又完成，也要接续再选`,
     );
   }
 }
@@ -1061,7 +1075,7 @@ export class FocusController {
               (value) => {
                 const next = this.proposedState(kind, snapshot, value, candidate);
                 if (kind === 'update') {
-                  requireSelections(next, ProposalSchema.parse(value));
+                  requireSelections(snapshot.state, next, ProposalSchema.parse(value));
                 }
               },
             );
@@ -1368,7 +1382,8 @@ export class FocusController {
                   : error instanceof SyntaxError
                     ? `回应不是完整的 JSON（${error.message}），可能超出输出长度而被截断；请精简文字并输出完整对象`
                     : error instanceof Error
-                      ? error.message.slice(0, 1000)
+                      ? // The idle check lists every idle AI country, which can pass 1,000 characters.
+                        error.message.slice(0, 2000)
                       : '';
             feedback = reason
               ? `上次回应未通过本机验证：${reason}。请修正后重新输出完整 JSON。`

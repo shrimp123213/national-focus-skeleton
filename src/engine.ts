@@ -705,13 +705,30 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
     }
     for (const choice of step.selections) {
       const country = state.countries[choice.country];
-      requireThat(country?.enabled && !country.calibration, '选策国家不可用');
-      requireThat(country.cursor === step.at, '选策不能早于国家开始追踪时间');
+      requireThat(
+        country?.enabled && !country.calibration,
+        `选策国家 ${choice.country} 不可用：不存在、未启用或等待校准`,
+      );
+      // Name the country, focus and time, so a model can find the selection to fix.
+      const where = `${country.id === country.name ? country.name : `${country.name}（${country.id}）`}在 ${storyTime(step.at, false, state.time)}（at=${step.at}）选 ${choice.node}`;
+      requireThat(country.cursor === step.at, `${where}：选策不能早于国家开始追踪时间`);
       requireThat(
         country.control === 'ai' || (country.skipDelegate && proposal.until > input.day),
-        '此国未授权 AI 代选',
+        `${where}：此国未授权 AI 代选`,
       );
-      select(country, choice.node);
+      const main = country.current ? country.nodes[country.current] : undefined;
+      requireThat(
+        !main,
+        `${where}：此时主国策「${main?.name}」（${main?.id}）仍在进行或等待成果；在它完成之后的步骤再选`,
+      );
+      try {
+        select(country, choice.node);
+      } catch (error) {
+        const options = startableFocuses(country).map((node) => node.id);
+        throw new Error(
+          `${where}：${error instanceof Error ? error.message : String(error)}。此时可选：${options.join('、') || '无'}`,
+        );
+      }
       country.progress[choice.node].evidence = choice.reason;
     }
     for (const publication of step.publications) {

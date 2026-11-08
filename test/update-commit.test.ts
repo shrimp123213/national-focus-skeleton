@@ -271,9 +271,56 @@ test('局势更新列出空闲 AI 国的可选国策；留空时退回，模型�
         })),
       },
     ]);
-    assert.match(requests[1].correction!, /试验国（land）可选 regional_1、regional_9、regional_17/);
+    assert.match(
+      requests[1].correction!,
+      /试验国（land）本次更新开始时已空闲，可选 regional_1、regional_9、regional_17/,
+    );
     assert.equal(platform.data.countries.land.current, 'regional_1');
     assert.deepEqual(platform.data.receipts, ['pick']);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('长跳时选的国策在 until 前完成时，退回写出完成时点，接续选策后才保存', async () => {
+  const platform = new UpdatePlatform();
+  platform.data = installCountry(createState(100), demoTree('land', '试验国'), 100);
+  platform.data.countries.land.control = 'ai';
+  platform.day = 150;
+  const corrections: string[] = [];
+  const generate = platform.generate.bind(platform);
+  platform.generate = async (...args: unknown[]) => {
+    const data = (args[0] as PromptMessage[]).find((m) => m.role === 'user')!.content;
+    corrections.push(JSON.parse(data.slice(data.indexOf('{'))).correction);
+    return generate();
+  };
+  const pick = (at: number, node: string) => ({
+    at,
+    facts: [],
+    events: [],
+    selections: [{ country: 'land', node, reason: '依局势选策' }],
+  });
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 1;
+  platform.outputs.push(
+    JSON.stringify({ id: 'early', until: 150, reason: '长跳', steps: [pick(100, 'regional_1')] }),
+    JSON.stringify({
+      id: 'chain',
+      until: 150,
+      reason: '长跳',
+      steps: [pick(100, 'regional_1'), pick(135, 'regional_2')],
+    }),
+  );
+  try {
+    await controller.run('update');
+    assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    const name = platform.data.countries.land.nodes.regional_1.name;
+    assert.match(
+      corrections[1],
+      new RegExp(`试验国（land）于 故事日 135（at=135）完成「${name}」后空闲，可选 regional_2、regional_3`),
+    );
+    assert.equal(platform.data.countries.land.progress.regional_1.status, 'completed');
+    assert.equal(platform.data.countries.land.current, 'regional_2');
   } finally {
     controller.dispose();
   }
