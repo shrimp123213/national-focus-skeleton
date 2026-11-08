@@ -1527,14 +1527,17 @@ export function mountUI(
   }
   /** Nation tabs and the chosen nation's changes in a saved situation update. */
   function nationReview(digest: LetterCountry[], active: string): string {
-    const state = controller.state;
-    const nation = digest.find((c) => c.id === active);
     const tabs = digest
       .map(
         (c) =>
           `<button role="tab" class="letter-nation${c.id === active ? ' active' : ''}" aria-selected="${c.id === active}" data-change-nation="${escape(c.id)}"><span class="letter-nation-name">${escape(c.name)}</span><span class="letter-nation-count" aria-label="${c.entries.length} 项变化">${c.entries.length}</span></button>`,
       )
       .join('');
+    return `<div class="letter-review"><div class="letter-nations" role="tablist" aria-label="涉及的国家">${tabs}</div><section class="letter-detail" role="tabpanel">${nationDetail(digest.find((c) => c.id === active))}</section></div>`;
+  }
+  /** One nation's changes; a tab switch replaces only this pane, so the window stays in place. */
+  function nationDetail(nation: LetterCountry | undefined): string {
+    const state = controller.state;
     let detail = '<p class="muted">这次更新没有改变任何国家。</p>';
     if (nation) {
       const shift = (label: string, [from, to]: [number, number]) =>
@@ -1575,7 +1578,7 @@ export function mountUI(
         .join('');
       detail = `<h3>${escape(nation.name)}</h3>${shifts ? `<ul class="letter-shifts">${shifts}</ul>` : '<p class="letter-still">数值、主国策与能力都不变。</p>'}${entries ? `<ol class="letter-timeline">${entries}</ol>` : '<p class="muted">这段时间没有新的进展。</p>'}`;
     }
-    return `<div class="letter-review"><div class="letter-nations" role="tablist" aria-label="涉及的国家">${tabs}</div><section class="letter-detail" role="tabpanel">${detail}</section></div>`;
+    return detail;
   }
   /** What a saved situation update changed in each nation, and the world guidance it followed. */
   function showChanges(jobId: string): void {
@@ -1991,9 +1994,19 @@ export function mountUI(
       return;
     }
     if (target.dataset.changeNation) {
+      // Keep the window: no open animation again, the guidance keeps its open state.
       changeNation = target.dataset.changeNation;
-      showChanges(changeJob);
-      backdrop.querySelector<HTMLElement>(`[data-change-nation="${CSS.escape(changeNation)}"]`)?.focus();
+      const job = controller.jobs.find((j) => j.id === changeJob);
+      const detail = backdrop.querySelector<HTMLElement>('.letter-detail');
+      if (detail) {
+        for (const tab of backdrop.querySelectorAll<HTMLElement>('[data-change-nation]')) {
+          const active = tab.dataset.changeNation === changeNation;
+          tab.classList.toggle('active', active);
+          tab.setAttribute('aria-selected', String(active));
+        }
+        detail.innerHTML = nationDetail(job?.changes?.countries.find((c) => c.id === changeNation));
+        detail.scrollTop = 0;
+      }
       return;
     }
     const name = target.dataset.action;

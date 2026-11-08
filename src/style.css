@@ -4402,9 +4402,12 @@ details.detail-section.fold > summary::before {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+/* A fixed height, so switching nations does not resize the window; long changes scroll inside. */
 .letter-review {
   display: grid;
   grid-template-columns: 210px 1fr;
+  grid-template-rows: minmax(0, 1fr);
+  height: min(46vh, 520px);
   min-height: 260px;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -4460,7 +4463,6 @@ details.detail-section.fold > summary::before {
 .letter-detail {
   padding: 16px 22px 20px;
   overflow: auto;
-  max-height: 46vh;
 }
 .modal-body .letter-detail h3 {
   font-family: var(--serif);
@@ -4629,6 +4631,8 @@ details.detail-section.fold > summary::before {
 @media (max-width: 760px) {
   .letter-review {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: min(56vh, 520px);
   }
   .letter-nations {
     flex-direction: row;
@@ -4647,7 +4651,6 @@ details.detail-section.fold > summary::before {
     border-bottom-color: var(--gold);
   }
   .letter-detail {
-    max-height: none;
     padding: 14px 16px 18px;
   }
 }
