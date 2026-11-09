@@ -223,12 +223,14 @@ const ProgressSchema = z.object({
   investments: z.array(z.string()),
   applied: z.array(z.string()),
   public: z.boolean(),
+  /** The story day its work ended while outcomes were still missing. */
+  due: Day.optional(),
   /** v0.14.22: completed by a story event instead of its own work (HOI4 complete_national_focus / bypass). */
   by: z
     .object({
       event: z.string(),
       title: z.string(),
-      mode: z.enum(['achieved', 'bypassed']),
+      mode: z.enum(['achieved', 'bypassed', 'failed']),
       reason: z.string(),
     })
     .optional(),
@@ -409,19 +411,21 @@ export const ProposalSchema = z
                     country: CountryId,
                     node: Id.describe('由事件完成的国策 id'),
                     mode: z
-                      .enum(['achieved', 'bypassed'])
+                      .enum(['achieved', 'bypassed', 'failed'])
                       .describe(
-                        'achieved＝本国已实际做成此国策描述的事，套用效果；bypassed＝结果已由他方或局势造成、或事件已给过同样效果，只标记完成',
+                        'failed＝到期裁决为失败，只用于 AI 国目前的主国策，不套用效果；achieved＝本国已实际做成此国策描述的事，套用效果；bypassed＝结果已由他方或局势造成、或事件已给过同样效果，只标记完成',
                       ),
                     event: EventId.describe(
                       '导致完成的事件 id：本步或更早写入的事件，或 state.events 中的既有事件',
                     ),
-                    reason: Text.describe('正文或事件中哪件事做成了此国策'),
+                    reason: Text.describe('正文或事件中哪件事做成了此国策；failed 写失败原因'),
                   })
                   .strict(),
               )
               .default([])
-              .describe('由事件直接完成的国策；不检查前置与工期，只在国策描述的事已实际做成时使用'),
+              .describe(
+                '由事件直接完成或判失败的国策；不检查前置与工期，achieved 与 bypassed 只在国策描述的事已实际做成时使用',
+              ),
           })
           .strict(),
       )

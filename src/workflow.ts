@@ -1,5 +1,17 @@
 import { z } from 'zod';
-import { applyProposal, countryKey, idleChoices, installCountry, removeCountry } from './engine';
+import {
+  applyProposal,
+  countryKey,
+  dueFocuses,
+  focusEvent,
+  focusEventId,
+  idleChoices,
+  installCountry,
+  outcomeFocuses,
+  outcomeGraceDays,
+  removeCountry,
+  type UpdateReport,
+} from './engine';
 import { importTrees, type TreeImport } from './tree-io';
 import {
   CandidatesSchema,
@@ -11,7 +23,6 @@ import {
   TreeSchema,
   type Candidate,
   type Config,
-  type Country,
   type JobKind,
   type Proposal,
   type State,
@@ -71,56 +82,70 @@ import {
 function taskData(snapshot: Snapshot, full: boolean) {
   return { now: snapshot.day, state: workingState(snapshot.state, full), context: snapshot.context };
 }
-/** Idle AI countries at the start of an update, so the model does not have to work out the rules. */
-function idleData(state: State) {
+/** What an update has to know about selections and outcomes, so the model need not work out the rules. */
+function updateData(state: State, now: number) {
   const idle = idleChoices(state);
-  return idle.length
-    ? {
-        idle: {
-          note: '以下 AI 国在上次更新结束时没有主国策，但已有可开始的国策。本次更新须在 selections 为每国选一项，放在第一个步骤或依剧情较晚的时点；本次更新中完成主国策的 AI 国也要接续选策。到 until 时仍空闲却有可选国策，更新会被退回。',
-          countries: idle.map(({ country, options }) => ({
-            country: country.id,
-            name: country.name,
-            options: options.map((node) => ({ id: node.id, name: node.name })),
-          })),
-        },
-      }
-    : {};
+  const due = dueFocuses(state, now);
+  const pending = outcomeFocuses(state).filter((item) => !due.some((d) => d.node === item.node));
+  const listed = ({ country, node, missing, due: dueAt }: (typeof due)[number]) => ({
+    country: country.id,
+    name: country.name,
+    node: node.id,
+    nodeName: node.name,
+    dueAt,
+    missing: missing.map((r) => ({ kind: r.kind, ...('id' in r ? { id: r.id } : {}), label: r.label })),
+    event: focusEvent(state, country.id, node.id)?.id ?? focusEventId(country.id, node.id),
+  });
+  return {
+    selectionNote:
+      'AI 国的选策规则：主国策完成之后才能选下一项，到 until 时主国策仍在进行的国家不用选。长跳时每国选一项就够，不必排满整段时间，直接放在 at=until 的步骤也可以。只能选前置已完成的国策；工期已满但 outcomes 未达成的国策仍占着主国策，此时不能选。不合这些规则的选策会被略过，其余内容照常保存。',
+    ...(idle.length
+      ? {
+          idle: {
+            note: '以下 AI 国在上次更新结束时没有主国策，但已有可开始的国策。本次更新须在 selections 为每国选一项，放在第一个步骤或依剧情较晚的时点。',
+            countries: idle.map(({ country, options }) => ({
+              country: country.id,
+              name: country.name,
+              options: options.map((node) => ({ id: node.id, name: node.name })),
+            })),
+          },
+        }
+      : {}),
+    ...(pending.length
+      ? {
+          pendingOutcomes: {
+            note: '以下国策（含玩家国）还缺成果，系统已为每项开了一个进行中事件（event 是事件 ID；它可能还不在 state.events 中，照样使用）。工期内用 eventUpdates 推进它：text 写本期进展，current 写现况，steps 写阶段（整份取代），不要为同一件事另建事件。内容写这个成果是怎么被争取的：谁出面、谁反对、开出什么条件、对方有什么顾虑；依国策 description、当事方立场与当前局势来写，可以受挫，不要每次都顺利。这段时间确实没有动静可以不写。结果留到 dueAt 裁决，只有局势已明确定案才提前。玩家国同样由你推进与裁决：玩家只决定选哪项国策，不必亲自参与。',
+            focuses: pending.map(listed),
+          },
+        }
+      : {}),
+    ...(due.length
+      ? {
+          dueOutcomes: {
+            note: `以下国策（含玩家国）工期已满或将在本次更新内届满，但完成还缺成果。必须依当时的国力、关系、局势与事件发展逐项裁决，在 dueAt 或之后的步骤写出结果；失败是正常结果，不要一律判成功；正文已写出结果时照正文。裁决就是结束事件：在 eventUpdates 对 event 写结局并填 result。achieved＝成，系统写入成果并完成国策（kind=capability 的成果要用事件 changes 取得）。failed＝败，系统终止国策，不给效果，该国可在同一步骤选下一项（玩家国等玩家选）。这里的裁决是例外，不必等正文或世界后台引擎，也不受「不替玩家决定」限制。届满 ${outcomeGraceDays} 个故事日后仍未裁决，系统判为失败。`,
+            focuses: due.map(listed),
+          },
+        }
+      : {}),
+  };
 }
-/**
- * An update may not leave an AI country idle while it could start a focus (v0.18). A country that
- * changes period in this update is exempt, because its next tree comes after the commit.
- */
-function requireSelections(before: State, state: State, proposal: Proposal): void {
-  const moving = new Set(
-    proposal.transitions
-      .map((transition) => state.countries[transition.country])
-      .filter((country) => country?.enabled && country.autoPeriod && !country.calibration)
-      .map((country) => country.id),
-  );
-  const idle = idleChoices(state).filter(({ country }) => !moving.has(country.id));
-  if (idle.length) {
-    // Say when each country became idle: on a long skip a focus chosen early can finish before until.
-    const since = (country: Country) => {
-      const last = Object.entries(country.progress)
-        .filter(([, progress]) => progress.completed !== null && progress.completed > before.day)
-        .sort(([, a], [, b]) => b.completed! - a.completed!)[0];
-      if (!last) {
-        return '本次更新开始时已空闲';
-      }
-      const at = last[1].completed!;
-      return `于 ${storyTime(at, false, state.time)}（at=${Math.ceil(at * 100) / 100}）完成「${country.nodes[last[0]].name}」后空闲`;
-    };
-    const list = idle
-      .map(
-        ({ country, options }) =>
-          `${country.id === country.name ? country.name : `${country.name}（${country.id}）`}${since(country)}，可选 ${options.map((node) => node.id).join('、')}`,
-      )
-      .join('；');
-    throw new Error(
-      `到 until 时这些 AI 国没有主国策，但有可开始的国策：${list}。请在 selections 为每国补选一项，放在它空闲之后的步骤，或 at=until 的步骤；补选的国策若在 until 前又完成，也要接续再选`,
-    );
-  }
+/** The saved message of an update that left something out; the panel lists each item on its own line. */
+function reportMessage({ skipped, expired }: UpdateReport, state: State): string {
+  const items = [
+    ...skipped.map(({ country, node, at, reason }) => {
+      const owner = state.countries[country];
+      return `${owner.name}在 ${storyTime(at, false, state.time)}选「${owner.nodes[node].name}」：${reason.replaceAll('；', '、')}`;
+    }),
+    ...expired.map(({ country, node }) => {
+      const owner = state.countries[country];
+      return `${owner.name}「${owner.nodes[node].name}」`;
+    }),
+  ];
+  const parts = [
+    skipped.length ? `略过 ${skipped.length} 项选策` : '',
+    expired.length ? `${expired.length} 项国策到期未裁决，判为失败` : '',
+  ].filter(Boolean);
+  return `已保存至本楼，${parts.join('，')}：${items.join('；')}`;
 }
 function scheduledDue(job: Config['jobs'][JobKind], snapshot: Snapshot, kind: JobKind): boolean {
   const last = snapshot.state.schedules[kind];
@@ -138,6 +163,8 @@ export type UpdateCommit = {
   /** The saved state the proposal was applied to. */
   before: State;
   periods: { candidate: Candidate; work: PeriodWork }[];
+  /** What this update left out or failed by itself, for the task message. */
+  report: UpdateReport;
 };
 
 class GuidanceBlocked extends Error {
@@ -362,6 +389,7 @@ export class FocusController {
     }
     const periods: UpdateCommit['periods'] = [];
     let before = source.state;
+    let report: UpdateReport = { skipped: [], expired: [] };
     const state = await this.writeState((current) => {
       source.signal?.throwIfAborted();
       verifyExternal?.();
@@ -369,7 +397,8 @@ export class FocusController {
       if (current.state.receipts.includes(proposal.id)) {
         return null;
       }
-      const next = this.proposedState('update', current, proposal);
+      report = { skipped: [], expired: [] };
+      const next = this.proposedState('update', current, proposal, undefined, report);
       next.schedules.update = { turn: source.turn, day: source.day };
       for (const transition of proposal.transitions) {
         const country = next.countries[transition.country];
@@ -388,7 +417,7 @@ export class FocusController {
       }
       return next;
     }, signal ?? source.signal);
-    return { state, before, periods };
+    return { state, before, periods, report };
   }
   /** The world task's guidance for the latest registered request on this floor. */
   get worldGuidance(): GuidanceState {
@@ -1068,20 +1097,18 @@ export class FocusController {
               kind,
               {
                 ...taskData(snapshot, kind === 'reshape'),
-                ...(kind === 'update' ? idleData(snapshot.state) : {}),
+                ...(kind === 'update' ? updateData(snapshot.state, snapshot.day) : {}),
                 ...(guidance ? { guidance: guidance.text } : {}),
               },
               kind === 'identify' ? CandidatesSchema : ProposalSchema,
               (value) => {
-                const next = this.proposedState(kind, snapshot, value, candidate);
-                if (kind === 'update') {
-                  requireSelections(snapshot.state, next, ProposalSchema.parse(value));
-                }
+                this.proposedState(kind, snapshot, value, candidate);
               },
             );
       aborter.signal.throwIfAborted();
       // Apply to current data in save order, without comparing it to the request input.
       let next: State;
+      let saved = '验证通过，已保存至本楼';
       if (kind === 'update') {
         const proposal = ProposalSchema.parse(result);
         const committed = await this.commitUpdate(proposal, snapshot, aborter.signal);
@@ -1091,6 +1118,9 @@ export class FocusController {
           until: proposal.until,
           countries: letterDigest(committed.before, committed.state, proposal),
         };
+        if (committed.report.skipped.length || committed.report.expired.length) {
+          saved = reportMessage(committed.report, committed.state);
+        }
         if (guidance && !committed.before.receipts.includes(proposal.id)) {
           // A workflow re-run on this floor may write back the floor without this update.
           this.acceptedCheckpoint = {
@@ -1119,7 +1149,7 @@ export class FocusController {
         this.progress.delete(progressKey);
       }
       status.state = 'success';
-      status.message = kind === 'identify' ? '候选国家已就绪，请勾选启用' : '验证通过，已保存至本楼';
+      status.message = kind === 'identify' ? '候选国家已就绪，请勾选启用' : saved;
       await this.refresh();
     } catch (error) {
       const message = redactApiError(error, this.config.apis);
@@ -1402,7 +1432,13 @@ export class FocusController {
     signal.throwIfAborted();
     throw lastError ?? new Error('没有可用的 API 回应');
   }
-  private proposedState(kind: JobKind, snapshot: Snapshot, result: unknown, candidate?: Candidate): State {
+  private proposedState(
+    kind: JobKind,
+    snapshot: Snapshot,
+    result: unknown,
+    candidate?: Candidate,
+    report: UpdateReport = { skipped: [], expired: [] },
+  ): State {
     if (kind === 'identify') {
       const next = structuredClone(snapshot.state);
       next.revision++;
@@ -1424,7 +1460,12 @@ export class FocusController {
     if (proposal.until !== snapshot.day) {
       throw new Error('更新终点必须等于来源故事时间');
     }
-    const next = applyProposal(snapshot.state, proposal, kind === 'reshape');
+    const next = applyProposal(
+      snapshot.state,
+      proposal,
+      kind === 'reshape',
+      kind === 'update' ? report : undefined,
+    );
     if (proposal.transitions.length && kind !== 'update') {
       throw new Error('只有局势更新可发起换期');
     }

@@ -6,7 +6,7 @@ import type { Proposal, State } from './model';
  */
 export type LetterEntry = {
   day: number;
-  kind: 'start' | 'complete' | 'event' | 'update' | 'fact' | 'transition';
+  kind: 'start' | 'complete' | 'failed' | 'event' | 'update' | 'fact' | 'transition';
   title: string;
   note?: string;
 };
@@ -42,6 +42,15 @@ export function letterDigest(state: State, preview: State, proposal: Proposal): 
           kind: 'complete',
           title: `完成「${name}」`,
           note: by ? `${by.mode === 'achieved' ? '由事件达成' : '由事件促成'}：${by.title}` : undefined,
+        });
+      }
+      if (progress.status === 'terminated' && was?.status !== 'terminated') {
+        const by = progress.by;
+        entries.push({
+          day: (by && preview.events[by.event]?.timeline.at(-1)?.at) ?? proposal.until,
+          kind: 'failed',
+          title: `未能完成「${name}」`,
+          note: by ? by.title : '到期未裁决',
         });
       }
     }
@@ -102,6 +111,7 @@ export function letterDigest(state: State, preview: State, proposal: Proposal): 
 
 const order: Record<LetterEntry['kind'], number> = {
   complete: 0,
+  failed: 0,
   start: 1,
   event: 2,
   update: 3,

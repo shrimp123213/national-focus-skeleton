@@ -228,11 +228,11 @@ test('独立更新仍结算并生成下一期，重送不再次保存或生成',
   }
 });
 
-test('局势更新列出空闲 AI 国的可选国策；留空时退回，模型补选后才保存', async () => {
+test('局势更新列出空闲 AI 国的可选国策与选策规则；留空也保存，下次更新仍列出', async () => {
   const platform = new UpdatePlatform();
   platform.data = installCountry(createState(100), demoTree('land', '试验国'), 100);
   platform.data.countries.land.control = 'ai';
-  const requests: { idle?: unknown; correction?: string }[] = [];
+  const requests: { idle?: unknown; selectionNote?: string }[] = [];
   const generate = platform.generate.bind(platform);
   platform.generate = async (...args: unknown[]) => {
     const data = (args[0] as PromptMessage[]).find((m) => m.role === 'user')!.content;
@@ -240,16 +240,16 @@ test('局势更新列出空闲 AI 国的可选国策；留空时退回，模型�
     return generate();
   };
   const controller = new FocusController(platform);
-  controller.config.jobs.update.retries = 1;
+  controller.config.jobs.update.retries = 0;
   platform.outputs.push(
     JSON.stringify({ id: 'idle', until: 130, reason: '时间推进', steps: [] }),
     JSON.stringify({
       id: 'pick',
-      until: 130,
+      until: 140,
       reason: '时间推进',
       steps: [
         {
-          at: 100,
+          at: 130,
           facts: [],
           events: [],
           selections: [{ country: 'land', node: 'regional_1', reason: '先丈量航道' }],
@@ -260,67 +260,298 @@ test('局势更新列出空闲 AI 国的可选国策；留空时退回，模型�
   try {
     await controller.run('update');
     assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
-    assert.equal(platform.calls, 2);
-    assert.deepEqual((requests[0].idle as { countries: unknown[] }).countries, [
-      {
-        country: 'land',
-        name: '试验国',
-        options: ['regional_1', 'regional_9', 'regional_17'].map((id) => ({
-          id,
-          name: platform.data.countries.land.nodes[id].name,
-        })),
-      },
-    ]);
-    assert.match(
-      requests[1].correction!,
-      /试验国（land）本次更新开始时已空闲，可选 regional_1、regional_9、regional_17/,
-    );
+    assert.equal(platform.calls, 1);
+    assert.deepEqual(platform.data.receipts, ['idle']);
+    assert.equal(platform.data.countries.land.current, '');
+    assert.match(requests[0].selectionNote!, /长跳时每国选一项就够/);
+    const options = {
+      country: 'land',
+      name: '试验国',
+      options: ['regional_1', 'regional_9', 'regional_17'].map((id) => ({
+        id,
+        name: platform.data.countries.land.nodes[id].name,
+      })),
+    };
+    assert.deepEqual((requests[0].idle as { countries: unknown[] }).countries, [options]);
+    platform.day = 140;
+    await controller.run('update');
+    assert.deepEqual((requests[1].idle as { countries: unknown[] }).countries, [options]);
     assert.equal(platform.data.countries.land.current, 'regional_1');
-    assert.deepEqual(platform.data.receipts, ['pick']);
   } finally {
     controller.dispose();
   }
 });
 
-test('长跳时选的国策在 until 前完成时，退回写出完成时点，接续选策后才保存', async () => {
+const pick = (at: number, ...nodes: string[]) => ({
+  at,
+  facts: [],
+  events: [],
+  selections: nodes.map((node) => ({ country: 'land', node, reason: '依局势选策' })),
+});
+
+test('长跳时选的国策在 until 前完成也照常保存，不必接续选策', async () => {
   const platform = new UpdatePlatform();
   platform.data = installCountry(createState(100), demoTree('land', '试验国'), 100);
   platform.data.countries.land.control = 'ai';
   platform.day = 150;
-  const corrections: string[] = [];
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 0;
+  platform.outputs.push(
+    JSON.stringify({ id: 'early', until: 150, reason: '长跳', steps: [pick(100, 'regional_1')] }),
+  );
+  try {
+    await controller.run('update');
+    assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    assert.equal(platform.calls, 1);
+    assert.equal(controller.jobs[0].message, '验证通过，已保存至本楼');
+    assert.equal(platform.data.countries.land.progress.regional_1.status, 'completed');
+    assert.equal(platform.data.countries.land.current, '');
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('不合前置或时序的选策只略过该笔，其余内容照存，任务消息逐项列出', async () => {
+  const platform = new UpdatePlatform();
+  platform.data = installCountry(createState(100), demoTree('land', '试验国'), 100);
+  platform.data.countries.land.control = 'ai';
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 0;
+  const fact = { country: 'land', id: 'kept_fact', value: true, evidence: '正文', origin: 'story' };
+  platform.outputs.push(
+    JSON.stringify({
+      id: 'mixed',
+      until: 130,
+      reason: '时间推进',
+      steps: [pick(100, 'regional_2', 'regional_1'), { ...pick(110, 'regional_9'), facts: [fact] }],
+    }),
+  );
+  try {
+    await controller.run('update');
+    const job = controller.jobs[0];
+    assert.equal(job.state, 'success', job.message);
+    assert.equal(platform.calls, 1);
+    const land = platform.data.countries.land;
+    assert.equal(land.current, 'regional_1');
+    assert.equal(land.progress.regional_2.status, 'idle');
+    assert.equal(land.facts.kept_fact.value, true);
+    assert.match(job.message, /^已保存至本楼，略过 2 项选策：/);
+    assert.match(job.message, new RegExp(`选「${land.nodes.regional_2.name}」：前置：`));
+    assert.match(
+      job.message,
+      new RegExp(
+        `；试验国在 故事日 110选「${land.nodes.regional_9.name}」：此时主国策「${land.nodes.regional_1.name}」`,
+      ),
+    );
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('局势更新选了不存在的国策 ID 仍然退回', async () => {
+  const platform = new UpdatePlatform();
+  platform.data = installCountry(createState(100), demoTree('land', '试验国'), 100);
+  platform.data.countries.land.control = 'ai';
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 0;
+  platform.outputs.push(
+    JSON.stringify({ id: 'typo', until: 130, reason: '时间推进', steps: [pick(100, 'regional_typo')] }),
+  );
+  try {
+    await controller.run('update');
+    assert.equal(controller.jobs[0].state, 'failed');
+    assert.match(controller.jobs[0].message, /选 regional_typo：国策不存在/);
+    assert.deepEqual(platform.data.receipts, []);
+  } finally {
+    controller.dispose();
+  }
+});
+
+/** An AI country whose main focus ends on day 135 with an outcome missing. */
+function dueLand(day: number) {
+  const platform = new UpdatePlatform();
+  const state = installCountry(createState(100), demoTree('land', '试验国'), 100);
+  const land = state.countries.land;
+  land.control = 'ai';
+  land.nodes.regional_1.outcomes = [{ kind: 'fact', id: 'consent', label: '邻国同意' }];
+  land.current = 'regional_1';
+  land.progress.regional_1.status = 'active';
+  land.progress.regional_1.started = 100;
+  platform.data = state;
+  platform.day = day;
+  const requests: {
+    dueOutcomes?: { focuses: unknown[]; note: string };
+    pendingOutcomes?: { focuses: { event: string; dueAt: number }[]; note: string };
+  }[] = [];
   const generate = platform.generate.bind(platform);
   platform.generate = async (...args: unknown[]) => {
     const data = (args[0] as PromptMessage[]).find((m) => m.role === 'user')!.content;
-    corrections.push(JSON.parse(data.slice(data.indexOf('{'))).correction);
+    requests.push(JSON.parse(data.slice(data.indexOf('{'))));
     return generate();
   };
-  const pick = (at: number, node: string) => ({
-    at,
-    facts: [],
-    events: [],
-    selections: [{ country: 'land', node, reason: '依局势选策' }],
-  });
   const controller = new FocusController(platform);
-  controller.config.jobs.update.retries = 1;
+  controller.config.jobs.update.retries = 0;
+  return { platform, controller, requests };
+}
+
+test('到期的 AI 国策列入局势更新资料，写入成果事实后完成', async () => {
+  const { platform, controller, requests } = dueLand(140);
+  const fact = { country: 'land', id: 'consent', value: true, evidence: '使节回报', origin: 'background' };
   platform.outputs.push(
-    JSON.stringify({ id: 'early', until: 150, reason: '长跳', steps: [pick(100, 'regional_1')] }),
+    JSON.stringify({ id: 'won', until: 140, reason: '裁决', steps: [{ ...pick(135), facts: [fact] }] }),
+  );
+  try {
+    await controller.run('update');
+    assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    assert.deepEqual(requests[0].dueOutcomes?.focuses, [
+      {
+        country: 'land',
+        name: '试验国',
+        node: 'regional_1',
+        nodeName: platform.data.countries.land.nodes.regional_1.name,
+        dueAt: 135,
+        missing: [{ kind: 'fact', id: 'consent', label: '邻国同意' }],
+        event: 'focus_land_regional_1',
+      },
+    ]);
+    assert.match(requests[0].dueOutcomes!.note, /失败是正常结果/);
+    assert.equal(platform.data.countries.land.progress.regional_1.status, 'completed');
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('工期未到的国策列入推进清单，不列入裁决；模型用 eventUpdates 推进系统开的事件', async () => {
+  const { platform, controller, requests } = dueLand(130);
+  platform.outputs.push(
     JSON.stringify({
-      id: 'chain',
-      until: 150,
-      reason: '长跳',
-      steps: [pick(100, 'regional_1'), pick(135, 'regional_2')],
+      id: 'early',
+      until: 130,
+      reason: '推进',
+      steps: [
+        {
+          ...pick(120),
+          eventUpdates: [{ id: 'focus_land_regional_1', text: '使节出发', current: '等待答复' }],
+        },
+      ],
     }),
   );
   try {
     await controller.run('update');
     assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    assert.equal(requests[0].dueOutcomes, undefined);
+    assert.equal(requests[0].pendingOutcomes?.focuses[0].event, 'focus_land_regional_1');
+    assert.equal(requests[0].pendingOutcomes?.focuses[0].dueAt, 135);
+    assert.match(requests[0].pendingOutcomes!.note, /玩家国同样由你推进与裁决/);
+    const event = platform.data.events.focus_land_regional_1;
+    assert.equal(event.status, 'ongoing');
+    assert.equal(event.current, '等待答复');
+    assert.equal(event.timeline.length, 2);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('玩家国到期也列入裁决，事件判败后等玩家选下一项', async () => {
+  const { platform, controller, requests } = dueLand(140);
+  platform.data.countries.land.control = 'player';
+  platform.outputs.push(
+    JSON.stringify({
+      id: 'lost',
+      until: 140,
+      reason: '裁决',
+      steps: [
+        {
+          ...pick(135),
+          eventUpdates: [{ id: 'focus_land_regional_1', text: '邻国回绝', result: 'failed' }],
+        },
+      ],
+    }),
+  );
+  try {
+    await controller.run('update');
+    assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    assert.ok(requests[0].dueOutcomes);
+    const land = platform.data.countries.land;
+    assert.equal(land.progress.regional_1.status, 'terminated');
+    assert.equal(land.current, '');
+    assert.equal(platform.data.events.focus_land_regional_1.result, 'failed');
+    const entry = controller.jobs[0].changes?.countries[0].entries.find((item) => item.kind === 'failed');
+    assert.equal(entry?.day, 135);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('局势更新裁决失败时保存，各国变化写出未能完成', async () => {
+  const { platform, controller } = dueLand(140);
+  const event = {
+    id: 'refused',
+    at: 135,
+    countries: ['land'],
+    title: '邻国拒绝',
+    description: '使节被遣返',
+    evidence: '依据',
+    origin: 'background',
+    public: true,
+    changes: [],
+    scope: 'back',
+    importance: 'minor',
+    headline: '',
+    status: 'resolved',
+    settle: '',
+    option: { label: '知道了', text: '' },
+    timeline: [],
+  };
+  const completions = [
+    { country: 'land', node: 'regional_1', mode: 'failed', event: 'refused', reason: '邻国拒绝' },
+  ];
+  platform.outputs.push(
+    JSON.stringify({
+      id: 'lost',
+      until: 140,
+      reason: '裁决',
+      steps: [{ ...pick(135), events: [event], completions }],
+    }),
+  );
+  try {
+    await controller.run('update');
+    const job = controller.jobs[0];
+    assert.equal(job.state, 'success', job.message);
+    assert.equal(job.message, '验证通过，已保存至本楼');
+    const land = platform.data.countries.land;
+    assert.equal(land.progress.regional_1.status, 'terminated');
+    assert.equal(land.current, '');
+    const entry = job.changes?.countries[0].entries.find((item) => item.kind === 'failed');
+    assert.deepEqual(entry, {
+      day: 135,
+      kind: 'failed',
+      title: `未能完成「${land.nodes.regional_1.name}」`,
+      note: '邻国拒绝',
+    });
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('模型漏写裁决时继续等待，满 7 个故事日判失败并列在任务消息', async () => {
+  const { platform, controller, requests } = dueLand(141);
+  platform.outputs.push(
+    JSON.stringify({ id: 'skip1', until: 141, reason: '推进', steps: [] }),
+    JSON.stringify({ id: 'skip2', until: 142, reason: '推进', steps: [] }),
+  );
+  try {
+    await controller.run('update');
+    assert.equal(controller.jobs[0].message, '验证通过，已保存至本楼');
+    assert.equal(platform.data.countries.land.progress.regional_1.status, 'waiting');
+    platform.day = 142;
+    await controller.run('update');
+    assert.equal(requests.length, 2);
+    assert.ok(requests[1].dueOutcomes);
+    const job = controller.jobs.find((item) => item.state === 'success' && /判为失败/.test(item.message));
     const name = platform.data.countries.land.nodes.regional_1.name;
-    assert.match(
-      corrections[1],
-      new RegExp(`试验国（land）于 故事日 135（at=135）完成「${name}」后空闲，可选 regional_2、regional_3`),
-    );
-    assert.equal(platform.data.countries.land.progress.regional_1.status, 'completed');
-    assert.equal(platform.data.countries.land.current, 'regional_2');
+    assert.equal(job?.message, `已保存至本楼，1 项国策到期未裁决，判为失败：试验国「${name}」`);
+    assert.equal(platform.data.countries.land.progress.regional_1.status, 'terminated');
   } finally {
     controller.dispose();
   }

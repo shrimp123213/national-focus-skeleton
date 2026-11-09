@@ -1366,14 +1366,16 @@ export function mountUI(
         ]
           .filter(Boolean)
           .join(' · ');
-        const { head, problems } = j.state === 'failed' ? splitProblems(text) : { head: text, problems: [] };
+        const { head, problems } = ['failed', 'success'].includes(j.state)
+          ? splitProblems(text)
+          : { head: text, problems: [] };
         const list = problems.length
           ? `<ul class="job-problems">${problems
               .slice(0, 3)
               .map((item) => `<li>${codeText(item)}</li>`)
               .join('')}</ul>${
               problems.length > 3
-                ? `<details class="job-more"><summary>另有 ${problems.length - 3} 个问题</summary><ul class="job-problems">${problems
+                ? `<details class="job-more"><summary>另有 ${problems.length - 3} ${j.state === 'failed' ? '个问题' : '项'}</summary><ul class="job-problems">${problems
                     .slice(3)
                     .map((item) => `<li>${codeText(item)}</li>`)
                     .join('')}</ul></details>`
@@ -1383,7 +1385,7 @@ export function mountUI(
         const chips = [j.route, j.time]
           .filter(Boolean)
           .map((chip) => `<span class="job-chip">${escape(chip!)}</span>`);
-        return `<article class="job-card2 ${j.state}"><span class="job-icon" aria-hidden="true">${jobIcons[j.state] ?? ''}</span><div class="job-main"><div class="job-name">${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${chips.join('')}</div><div class="job-sub"><b>${escape(problems.length ? `${head} · ${problems.length} 个问题` : head)}</b>${meta ? ` · ${meta}` : ''}</div>${list}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button class="primary" data-retry="${j.id}">重试</button>` : ''}${j.changes ? `<button data-changes="${j.id}">各国变化</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">请求记录</button>` : ''}</div></article>`;
+        return `<article class="job-card2 ${j.state}"><span class="job-icon" aria-hidden="true">${jobIcons[j.state] ?? ''}</span><div class="job-main"><div class="job-name">${escape(jobNames[j.kind as keyof typeof jobNames] ?? j.kind)}${j.label ? ` · ${escape(j.label)}` : ''}${chips.join('')}</div><div class="job-sub"><b>${escape(problems.length && j.state === 'failed' ? `${head} · ${problems.length} 个问题` : head)}</b>${meta ? ` · ${meta}` : ''}</div>${list}</div><div class="job-buttons">${['running', 'queued'].includes(j.state) ? `<button data-cancel="${j.id}">取消</button>` : ''}${j.state === 'failed' ? `<button class="primary" data-retry="${j.id}">重试</button>` : ''}${j.changes ? `<button data-changes="${j.id}">各国变化</button>` : ''}${controller.logs.some((log) => log.jobId === j.id) ? `<button data-log="${j.id}">请求记录</button>` : ''}</div></article>`;
       })
       .join('');
     const body = `<div class="job-actions"><button data-modal="run-reshape" title="剧情大幅改变时，修改尚未开始的国策">评估重大改树</button><button class="danger" data-modal="cancel-all" ${busy ? '' : 'disabled'}>取消全部任务</button></div>${rows ? `<div class="job-list">${rows}</div>` : '<p class="muted">尚无任务记录。正文与一般变数更新完成后，国策任务会在背景执行，不会锁住聊天；进度显示在悬浮球上方。</p>'}${controller.config.runLog ? '<p class="muted job-note">执行记录已开启：请求内容只保存在此页记忆体，重新整理即清除。</p>' : ''}`;
@@ -1564,6 +1566,7 @@ export function mountUI(
         event: '事件',
         update: '进展',
         fact: '事实',
+        failed: '失败',
         transition: '换期',
       };
       // A date shows once above the entries of that day, so dates of any length never crowd the text.

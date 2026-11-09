@@ -179,6 +179,26 @@ export function idleChoices(state: State): { country: Country; options: FocusNod
     .map((country) => ({ country, options: startableFocuses(country) }))
     .filter((item) => item.options.length > 0);
 }
+/** Story days an undecided focus may wait after its work ends before it fails. */
+export const outcomeGraceDays = 7;
+/** Main focuses that still miss an outcome. The AI decides these for player countries too. */
+export function outcomeFocuses(state: State) {
+  return Object.values(state.countries)
+    .filter((country) => country.enabled && !country.calibration && country.current)
+    .flatMap((country) => {
+      const node = country.nodes[country.current];
+      const progress = country.progress[node.id];
+      const missing = node.outcomes.filter((r) => !conditionMet(country, r));
+      const due = progress.due ?? country.cursor + Math.max(0, node.days - progress.days);
+      return missing.length ? [{ country, node, missing, due }] : [];
+    });
+}
+/** The focuses of outcomeFocuses whose work ends by `until`; an unmet sustain holds the work. */
+export function dueFocuses(state: State, until: number) {
+  return outcomeFocuses(state).filter(
+    ({ country, node, due }) => due <= until && node.sustain.every((r) => conditionMet(country, r)),
+  );
+}
 function lockRoute(country: Country, node: FocusNode): void {
   if (node.mutex) {
     const existing = country.locks[node.mutex.group];
@@ -243,6 +263,89 @@ function effect(country: Country, change: Effect, reason: string): boolean {
 }
 /** A finished focus; `byEvent` when a story event completed it, so its own news is not repeated. */
 type Completion = { country: string; node: string; at: number; byEvent?: boolean };
+/** A selection an update left out: it came at the wrong time or before its prerequisites. */
+export type SkippedSelection = { country: string; node: string; at: number; reason: string };
+/** What an update job left out or failed by itself. Passing one turns on those rules. */
+export type UpdateReport = { skipped: SkippedSelection[]; expired: { country: string; node: string }[] };
+/** End a focus without its effects. A route it locked at its start opens again. */
+function failFocus(
+  state: State,
+  country: Country,
+  node: FocusNode,
+  at: number,
+  evidence: string,
+  by?: Country['progress'][string]['by'],
+): void {
+  const progress = country.progress[node.id];
+  progress.status = 'terminated';
+  progress.evidence = evidence;
+  if (by) {
+    progress.by = by;
+  }
+  country.current = '';
+  const held = Object.values(country.nodes).some(
+    (other) =>
+      other.id !== node.id &&
+      other.mutex?.group === node.mutex?.group &&
+      other.mutex?.route === node.mutex?.route &&
+      ['active', 'waiting', 'paused', 'completed'].includes(country.progress[other.id]?.status),
+  );
+  if (node.mutex && !held) {
+    delete country.locks[node.mutex.group];
+  }
+  const event = focusEvent(state, country.id, node.id);
+  if (event?.status === 'ongoing') {
+    closeEvent(event, 'failed', at, evidence);
+  }
+}
+function endedSteps(event: StoryEvent, achieved: boolean): StoryEvent['steps'] {
+  return event.steps?.map((step) =>
+    step.state === 'active' ? { ...step, state: achieved ? 'done' : 'pending' } : step,
+  );
+}
+/** End a focus's event for the script, so a finished story no longer reads as running. */
+function closeEvent(event: StoryEvent, result: 'achieved' | 'failed', at: number, text: string): void {
+  event.status = 'resolved';
+  event.result = result;
+  event.current = text;
+  event.steps = endedSteps(event, result === 'achieved');
+  event.timeline.push({ at, text });
+  event.touchedAt = null;
+}
+/** The end of a focus's event is its verdict: success writes the missing facts, any other end fails it. */
+function applyVerdict(
+  state: State,
+  event: StoryEvent,
+  at: number,
+  { text, current, steps }: { text: string; current?: string; steps?: StoryEvent['steps'] },
+): void {
+  const country = event.source.country ? state.countries[event.source.country] : undefined;
+  if (!country?.enabled || !event.result || !event.source.node || country.current !== event.source.node) {
+    return;
+  }
+  const node = country.nodes[country.current];
+  const missing = node.outcomes.filter((r) => !conditionMet(country, r));
+  if (!missing.length) {
+    return;
+  }
+  // An ending the model did not spell out must not keep reading as still in progress.
+  event.current = current ?? text;
+  event.steps = steps ?? endedSteps(event, event.result === 'achieved');
+  if (event.result === 'achieved') {
+    for (const r of missing) {
+      if (r.kind === 'fact') {
+        country.facts[r.id] = { value: !r.negate, evidence: text };
+      }
+    }
+    return;
+  }
+  failFocus(state, country, node, at, `失败：${text}`, {
+    event: event.id,
+    title: event.headline || event.title,
+    mode: 'failed',
+    reason: text,
+  });
+}
 /**
  * Apply the effects of a completing focus. Conditions of conditional effects are read before any
  * effect of this focus applies, so the order of effects inside one focus never changes the result.
@@ -274,6 +377,7 @@ function settle(country: Country, at: number, completed?: Completion[]): void {
   }
   if (!node.outcomes.every((r) => conditionMet(country, r))) {
     progress.status = 'waiting';
+    progress.due ??= at;
     progress.evidence = '工期已达标，等待实际成果';
     return;
   }
@@ -309,6 +413,16 @@ function completeByEvent(state: State, item: EventCompletion, at: number, comple
     progress.status !== 'completed' && progress.status !== 'terminated',
     `国策 ${node.name} 已${progress.status === 'completed' ? '完成' : '终止'}，不能再由事件完成`,
   );
+  if (item.mode === 'failed') {
+    requireThat(country.current === node.id, `${country.name}的主国策不是「${node.name}」，不能判失败`);
+    failFocus(state, country, node, at, `失败：${item.reason}`, {
+      event: event.id,
+      title: event.headline || event.title,
+      mode: item.mode,
+      reason: item.reason,
+    });
+    return;
+  }
   const lock = node.mutex ? country.locks[node.mutex.group] : undefined;
   if (item.mode === 'achieved') {
     requireThat(
@@ -490,6 +604,46 @@ export function focusEvent(state: State, country: string, node: string): StoryEv
   );
 }
 
+/** Open the event that carries a focus with missing outcomes; updates advance and decide it. */
+function openOutcomeEvents(state: State): void {
+  for (const { country, node, missing, due } of outcomeFocuses(state)) {
+    if (focusEvent(state, country.id, node.id)) {
+      continue;
+    }
+    const progress = country.progress[node.id];
+    const at = progress.started ?? country.cursor;
+    const need = missing.map((r) => r.label).join('、');
+    const id = focusEventId(country.id, node.id);
+    state.events[id] = EventSchema.parse({
+      id,
+      at,
+      countries: [country.id],
+      title: node.name,
+      description: node.description,
+      evidence: `国策开始：${node.name}`,
+      origin: 'background',
+      public: progress.public,
+      changes: [],
+      // Back, also for a player country: front stories may not decide a result for the player.
+      scope: 'back',
+      importance: 'minor',
+      headline: `${country.name}着手「${node.name}」`,
+      status: 'ongoing',
+      settle: '成果有了结果，或工期届满时裁决',
+      current: `尚需：${need}`,
+      steps: missing.map((r) => ({
+        text: r.label,
+        state: 'active',
+        when: storyTime(due, false, state.time),
+      })),
+      option: { label: '知道了', text: '' },
+      timeline: [{ at, text: `国策开始，需要取得：${need}` }],
+      source: { kind: 'focus', country: country.id, node: node.id },
+      touchedAt: null,
+    });
+  }
+}
+
 /**
  * A completed important focus becomes a news event; a focus carried out over time (`ongoing`)
  * opens its execution event. An important ongoing focus has one event for both, so the work is
@@ -503,7 +657,22 @@ function publishCompletions(state: State, completed: Completion[]): void {
     const ongoing = node.execution === 'ongoing';
     // A focus completed by an event is reported by that event; only its execution remains.
     const pivotal = node.impact === 'pivotal' && !item.byEvent;
-    if ((!pivotal && !ongoing) || focusEvent(state, item.country, item.node)) {
+    const existing = focusEvent(state, item.country, item.node);
+    if (existing && node.outcomes.length) {
+      // The event opened at the start ends here and reports a turning point, so no second event.
+      if (!ongoing && existing.status === 'ongoing') {
+        closeEvent(existing, 'achieved', item.at, `成果取得，「${node.name}」完成`);
+      }
+      if (pivotal && node.news) {
+        existing.headline = node.news.headline;
+        existing.importance = 'major';
+        existing.option = node.news.option;
+        existing.public ||= country.progress[item.node].public;
+        existing.shownAt = null;
+      }
+      continue;
+    }
+    if ((!pivotal && !ongoing) || existing) {
       continue;
     }
     const news = (pivotal && node.news) || {
@@ -590,16 +759,21 @@ function applyChanges(
   }
 }
 
-export function applyProposal(input: State, raw: unknown, allowEdits = false): State {
+export function applyProposal(input: State, raw: unknown, allowEdits = false, report?: UpdateReport): State {
   const proposal = ProposalSchema.parse(raw);
   if (input.receipts.includes(proposal.id)) {
     return input;
   }
   requireThat(proposal.until >= input.day, '故事时间不可倒退');
   const state = structuredClone(input);
+  if (report) {
+    openOutcomeEvents(state);
+  }
   const completed: Completion[] = [];
   const runningBefore = runningCounts(input);
   let previous = input.day;
+  const wasSkipped = (country: string, node: string) =>
+    report?.skipped.some((item) => item.country === country && item.node === node) ?? false;
   for (const step of proposal.steps) {
     requireThat(step.at >= previous && step.at <= proposal.until, '事件未按故事时间排序');
     for (const country of Object.values(state.countries)) {
@@ -616,7 +790,9 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
     for (const raw of step.events) {
       requireThat(raw.at === step.at, '事件时间与步骤不一致');
       // Models write world events only; focus news and publishing floors belong to the script.
-      const { focus, ...rest } = raw;
+      const { focus: linked, ...rest } = raw;
+      // A skipped selection never started, so its event stays without the link.
+      const focus = linked && wasSkipped(linked.country, linked.node) ? undefined : linked;
       const event: StoryEvent = {
         ...rest,
         source: focus ? { kind: 'update', country: focus.country, node: focus.node } : { kind: 'update' },
@@ -642,10 +818,21 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
           `事件 ${event.id} 承接的国策 ${country.nodes[focus.node].name} 尚未开始`,
         );
         const existing = focusEvent(state, focus.country, focus.node);
-        requireThat(
-          !existing,
-          `国策 ${country.nodes[focus.node].name} 已有执行事件 ${existing?.id}；请用 eventUpdates 推进它，不要另建`,
-        );
+        // A story the model wrote replaces the script's opening while nothing has advanced it.
+        if (
+          report &&
+          existing?.status === 'ongoing' &&
+          existing.source.kind === 'focus' &&
+          existing.timeline.length === 1 &&
+          country.nodes[focus.node].outcomes.length
+        ) {
+          delete state.events[existing.id];
+        } else {
+          requireThat(
+            !existing,
+            `国策 ${country.nodes[focus.node].name} 已有执行事件 ${existing?.id}；请用 eventUpdates 推进它，不要另建`,
+          );
+        }
       }
       applyChanges(state, event, event.changes, step.at, event.description);
       state.events[event.id] = event;
@@ -694,6 +881,9 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
       if (update.report || (event.status === 'resolved' && event.importance !== 'minor')) {
         event.shownAt = null;
       }
+      if (report) {
+        applyVerdict(state, event, step.at, update);
+      }
     }
     for (const item of step.completions) {
       completeByEvent(state, item, step.at, completed);
@@ -711,27 +901,46 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
       );
       // Name the country, focus and time, so a model can find the selection to fix.
       const where = `${country.id === country.name ? country.name : `${country.name}（${country.id}）`}在 ${storyTime(step.at, false, state.time)}（at=${step.at}）选 ${choice.node}`;
-      requireThat(country.cursor === step.at, `${where}：选策不能早于国家开始追踪时间`);
+      requireThat(country.nodes[choice.node], `${where}：国策不存在`);
       requireThat(
         country.control === 'ai' || (country.skipDelegate && proposal.until > input.day),
         `${where}：此国未授权 AI 代选`,
       );
+      // In an update job, a wrong time or an unmet prerequisite loses only this selection.
+      const refuse = (reason: string, advice = '') => {
+        if (!report) {
+          throw new Error(`${where}：${reason}${advice}`);
+        }
+        report.skipped.push({ country: country.id, node: choice.node, at: step.at, reason });
+      };
+      if (country.cursor !== step.at) {
+        refuse('选策不能早于国家开始追踪时间');
+        continue;
+      }
       const main = country.current ? country.nodes[country.current] : undefined;
-      requireThat(
-        !main,
-        `${where}：此时主国策「${main?.name}」（${main?.id}）仍在进行或等待成果；在它完成之后的步骤再选`,
-      );
+      if (main) {
+        refuse(`此时主国策「${main.name}」（${main.id}）仍在进行或等待成果`, '；在它完成之后的步骤再选');
+        continue;
+      }
       try {
         select(country, choice.node);
       } catch (error) {
         const options = startableFocuses(country).map((node) => node.id);
-        throw new Error(
-          `${where}：${error instanceof Error ? error.message : String(error)}。此时可选：${options.join('、') || '无'}`,
+        refuse(
+          error instanceof Error ? error.message : String(error),
+          `。此时可选：${options.join('、') || '无'}`,
         );
+        continue;
       }
       country.progress[choice.node].evidence = choice.reason;
     }
+    if (report) {
+      openOutcomeEvents(state);
+    }
     for (const publication of step.publications) {
+      if (wasSkipped(publication.country, publication.node)) {
+        continue;
+      }
       const country = state.countries[publication.country];
       requireThat(
         country?.enabled && country.progress[publication.node]?.status === 'completed',
@@ -750,6 +959,21 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false): S
   for (const country of Object.values(state.countries)) {
     if (country.enabled && !country.calibration) {
       advance(country, proposal.until, completed);
+    }
+  }
+  if (report) {
+    // Only a focus that was already running here was listed for a verdict in this update's data.
+    for (const { country, node, due } of dueFocuses(state, proposal.until)) {
+      if (input.countries[country.id]?.current === node.id && proposal.until - due >= outcomeGraceDays) {
+        failFocus(
+          state,
+          country,
+          node,
+          proposal.until,
+          `工期届满 ${outcomeGraceDays} 日后仍未裁决，判为失败`,
+        );
+        report.expired.push({ country: country.id, node: node.id });
+      }
     }
   }
   publishCompletions(state, completed);

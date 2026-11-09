@@ -13,7 +13,7 @@ export function demoState(start = 100): State {
   state.countries.north.control = 'ai';
   state.countries.coast.control = 'ai';
   state = startFocus(state, 'augustium', 'focus_1_1');
-  // AI countries always hold a main focus after an update (v0.18), so the sample starts them on one.
+  // The sample starts its AI countries on a main focus, as a played chat does.
   state = applyProposal(state, {
     id: 'demo_initial',
     until: start + 14,

@@ -9,6 +9,10 @@ import {
   applyProposal,
   pauseFocus,
   changeCountry,
+  blockers,
+  dueFocuses,
+  focusEventId,
+  type UpdateReport,
 } from '../src/engine';
 
 const tree = (): z.input<typeof TreeSchema> => ({
@@ -159,6 +163,367 @@ test('AI 选策失败时，错误写出国家、国策、时点与当时可选�
       }),
     /在 故事日 5（at=5）选 trade：此时主国策「修筑道路」（roads）仍在进行或等待成果/,
   );
+});
+
+test('传入略过清单时，被略过的选策不会让引用它的事件与公开退回', () => {
+  const state = changeCountry(installCountry(createState(0), tree(), 0), 'empire', { control: 'ai' });
+  const report: UpdateReport = { skipped: [], expired: [] };
+  const next = applyProposal(
+    state,
+    {
+      id: 'skip',
+      until: 10,
+      reason: '推进',
+      steps: [
+        {
+          at: 0,
+          facts: [],
+          events: [],
+          selections: [{ country: 'empire', node: 'trade', reason: 'AI 选择' }],
+        },
+        {
+          at: 5,
+          facts: [],
+          selections: [],
+          publications: [{ country: 'empire', node: 'trade', evidence: '公开' }],
+          events: [
+            {
+              id: 'linked',
+              at: 5,
+              countries: ['empire'],
+              title: '通商',
+              description: '商路开张',
+              evidence: '依据',
+              origin: 'background',
+              public: true,
+              changes: [],
+              scope: 'back',
+              importance: 'minor',
+              headline: '',
+              status: 'ongoing',
+              settle: '',
+              option: { label: '知道了', text: '' },
+              timeline: [],
+              focus: { country: 'empire', node: 'trade' },
+            },
+          ],
+        },
+      ],
+    },
+    false,
+    report,
+  );
+  assert.deepEqual(
+    report.skipped.map(({ country, node, at }) => [country, node, at]),
+    [['empire', 'trade', 0]],
+  );
+  assert.match(report.skipped[0].reason, /前置：修筑道路/);
+  assert.equal(next.countries.empire.current, '');
+  assert.equal(next.countries.empire.progress.trade.public, false);
+  assert.deepEqual(next.events.linked.source, { kind: 'update' });
+});
+
+/** The sample country as an AI nation, with a free focus to pick after a failure. */
+const aiCountry = (edit: (nodes: ReturnType<typeof tree>['nodes']) => void = () => {}) => {
+  const base = tree();
+  base.nodes.push({ ...base.nodes[1], id: 'ports', name: '开港', x: 2, y: 0, prerequisites: [] });
+  edit(base.nodes);
+  return changeCountry(installCountry(createState(0), base, 0), 'empire', { control: 'ai' });
+};
+const start = (node: string) => ({
+  at: 0,
+  facts: [],
+  events: [],
+  selections: [{ country: 'empire', node, reason: 'AI 选择' }],
+});
+const verdict = (at: number, node = 'roads', selections: object[] = []) => ({
+  at,
+  facts: [],
+  selections,
+  completions: [{ country: 'empire', node, mode: 'failed', event: 'failure', reason: '谈判破裂' }],
+  events: [
+    {
+      id: 'failure',
+      at,
+      countries: ['empire'],
+      title: '修路失败',
+      description: '勘测队无功而返',
+      evidence: '依据',
+      origin: 'background',
+      public: true,
+      changes: [],
+      scope: 'back',
+      importance: 'minor',
+      headline: '',
+      status: 'resolved',
+      settle: '',
+      option: { label: '知道了', text: '' },
+      timeline: [],
+    },
+  ],
+});
+
+test('裁决失败：国策终止、不给效果，同一步可选下一项，靠它当前置的国策走不通', () => {
+  const next = applyProposal(aiCountry(), {
+    id: 'fail',
+    until: 12,
+    reason: '推进',
+    steps: [start('roads'), verdict(12, 'roads', [{ country: 'empire', node: 'ports', reason: '改走海路' }])],
+  });
+  const empire = next.countries.empire;
+  assert.equal(empire.progress.roads.status, 'terminated');
+  assert.equal(empire.progress.roads.by?.mode, 'failed');
+  assert.match(empire.progress.roads.evidence, /失败：谈判破裂/);
+  assert.equal(empire.stability, 60);
+  assert.equal(empire.current, 'ports');
+  assert.match(blockers(empire, empire.nodes.trade).join(), /前置：修筑道路/);
+});
+
+test('裁决失败只用于目前的主国策，玩家国也可以判失败', () => {
+  const player = startFocus(installCountry(createState(0), tree(), 0), 'empire', 'roads');
+  const failed = applyProposal(player, { id: 'p', until: 12, reason: '推进', steps: [verdict(12)] });
+  assert.equal(failed.countries.empire.progress.roads.status, 'terminated');
+  assert.equal(failed.countries.empire.current, '');
+  assert.throws(
+    () => applyProposal(aiCountry(), { id: 'q', until: 12, reason: '推进', steps: [verdict(12, 'ports')] }),
+    /主国策不是「开港」/,
+  );
+});
+
+test('裁决失败时，开始时锁定的路线重新开放，同路线还有进展时不开放', () => {
+  const mutex = (route: string) => ({ group: 'way', route, lock: 'start' as const, reason: '只能择一' });
+  const routed = aiCountry((nodes) => {
+    nodes[0].mutex = mutex('land');
+    nodes[2].mutex = mutex('sea');
+  });
+  const locked = applyProposal(routed, { id: 'a', until: 0, reason: '推进', steps: [start('roads')] });
+  assert.equal(locked.countries.empire.locks.way.route, 'land');
+  const failed = applyProposal(locked, { id: 'b', until: 12, reason: '推进', steps: [verdict(12)] });
+  assert.equal(failed.countries.empire.locks.way, undefined);
+  assert.deepEqual(blockers(failed.countries.empire, failed.countries.empire.nodes.ports), []);
+  const kept = structuredClone(locked);
+  kept.countries.empire.nodes.trade.mutex = mutex('land');
+  kept.countries.empire.progress.trade.status = 'completed';
+  const held = applyProposal(kept, { id: 'c', until: 12, reason: '推进', steps: [verdict(12)] });
+  assert.equal(held.countries.empire.locks.way.route, 'land');
+});
+
+test('到期未裁决满 7 日判失败；本次才选的国策不算，不传报告时不判', () => {
+  const report = (): UpdateReport => ({ skipped: [], expired: [] });
+  const first = report();
+  const late = applyProposal(
+    aiCountry(),
+    { id: 'pick', until: 30, reason: '推进', steps: [start('roads')] },
+    false,
+    first,
+  );
+  assert.deepEqual(first.expired, []);
+  assert.equal(late.countries.empire.progress.roads.status, 'waiting');
+  assert.equal(late.countries.empire.progress.roads.due, 10);
+  const expired = report();
+  const failed = applyProposal(late, { id: 'over', until: 31, reason: '推进', steps: [] }, false, expired);
+  assert.deepEqual(expired.expired, [{ country: 'empire', node: 'roads' }]);
+  assert.equal(failed.countries.empire.progress.roads.status, 'terminated');
+  assert.equal(failed.countries.empire.current, '');
+  assert.equal(failed.countries.empire.stability, 60);
+
+  const picked = applyProposal(aiCountry(), { id: 'p2', until: 0, reason: '推进', steps: [start('roads')] });
+  const six = report();
+  const waiting = applyProposal(picked, { id: 'six', until: 16, reason: '推进', steps: [] }, false, six);
+  assert.deepEqual(six.expired, []);
+  assert.equal(dueFocuses(waiting, 16)[0].due, 10);
+  const seven = report();
+  applyProposal(waiting, { id: 'seven', until: 17, reason: '推进', steps: [] }, false, seven);
+  assert.equal(seven.expired.length, 1);
+  const strict = applyProposal(waiting, { id: 'strict', until: 90, reason: '推进', steps: [] });
+  assert.equal(strict.countries.empire.progress.roads.status, 'waiting');
+});
+
+test('改版前已在等待的存档，从下一次更新起算 7 日', () => {
+  const picked = applyProposal(aiCountry(), { id: 'p', until: 0, reason: '推进', steps: [start('roads')] });
+  const old = applyProposal(picked, { id: 'old', until: 40, reason: '推进', steps: [] });
+  delete old.countries.empire.progress.roads.due;
+  const report: UpdateReport = { skipped: [], expired: [] };
+  const next = applyProposal(old, { id: 'next', until: 46, reason: '推进', steps: [] }, false, report);
+  assert.deepEqual(report.expired, []);
+  assert.equal(next.countries.empire.progress.roads.due, 40);
+});
+
+const fresh = (): UpdateReport => ({ skipped: [], expired: [] });
+const opened = focusEventId('empire', 'roads');
+const moved = (at: number, update: object) => ({
+  at,
+  facts: [],
+  events: [],
+  selections: [],
+  eventUpdates: [{ id: opened, ...update }],
+});
+
+test('还缺成果的国策开始时发事件，一般国策不发；完成时事件结束', () => {
+  const report = fresh();
+  const started = applyProposal(
+    aiCountry(),
+    { id: 'a', until: 1, reason: '推进', steps: [start('roads')] },
+    false,
+    report,
+  );
+  const event = started.events[opened];
+  assert.equal(event.status, 'ongoing');
+  assert.equal(event.scope, 'back');
+  assert.deepEqual(event.source, { kind: 'focus', country: 'empire', node: 'roads' });
+  assert.equal(event.current, '尚需：勘测完成');
+  assert.deepEqual(event.steps, [{ text: '勘测完成', state: 'active', when: '故事日 10' }]);
+  const done = applyProposal(
+    started,
+    {
+      id: 'b',
+      until: 12,
+      reason: '推进',
+      steps: [
+        {
+          at: 10,
+          events: [],
+          selections: [{ country: 'empire', node: 'ports', reason: '接续' }],
+          facts: [{ country: 'empire', id: 'survey', value: true, evidence: '勘测队回报', origin: 'story' }],
+        },
+      ],
+    },
+    false,
+    report,
+  );
+  assert.equal(done.countries.empire.progress.roads.status, 'completed');
+  assert.equal(done.events[opened].status, 'resolved');
+  assert.equal(done.events[opened].result, 'achieved');
+  assert.equal(done.countries.empire.current, 'ports');
+  assert.equal(done.events[focusEventId('empire', 'ports')], undefined);
+});
+
+test('不传报告时不发事件', () => {
+  const next = applyProposal(aiCountry(), { id: 'a', until: 1, reason: '推进', steps: [start('roads')] });
+  assert.deepEqual(next.events, {});
+});
+
+test('玩家国相同：已在进行的国策补发事件，漏判满 7 日判失败并结束事件', () => {
+  const player = startFocus(installCountry(createState(0), tree(), 0), 'empire', 'roads');
+  const report = fresh();
+  const next = applyProposal(player, { id: 'a', until: 17, reason: '推进', steps: [] }, false, report);
+  assert.deepEqual(report.expired, [{ country: 'empire', node: 'roads' }]);
+  assert.equal(next.countries.empire.progress.roads.status, 'terminated');
+  const event = next.events[opened];
+  assert.equal(event.at, 0);
+  assert.equal(event.scope, 'back');
+  assert.equal(event.status, 'resolved');
+  assert.equal(event.result, 'failed');
+  assert.match(event.timeline.at(-1)!.text, /仍未裁决/);
+  assert.match(event.current!, /仍未裁决/);
+  assert.equal(event.steps?.[0].state, 'pending');
+});
+
+test('结束国策事件就是裁决：达成写入成果，其他结局终止国策', () => {
+  const started = applyProposal(
+    aiCountry(),
+    { id: 'a', until: 1, reason: '推进', steps: [start('roads')] },
+    false,
+    fresh(),
+  );
+  const won = applyProposal(
+    started,
+    {
+      id: 'w',
+      until: 12,
+      reason: '裁决',
+      steps: [moved(10, { text: '勘测队带回图纸', result: 'achieved' })],
+    },
+    false,
+    fresh(),
+  );
+  assert.deepEqual(won.countries.empire.facts.survey, { value: true, evidence: '勘测队带回图纸' });
+  assert.equal(won.countries.empire.progress.roads.status, 'completed');
+  assert.equal(won.countries.empire.stability, 65);
+  for (const result of ['failed', 'abandoned']) {
+    const lost = applyProposal(
+      started,
+      { id: result, until: 12, reason: '裁决', steps: [moved(10, { text: '勘测队失踪', result })] },
+      false,
+      fresh(),
+    );
+    assert.equal(lost.countries.empire.progress.roads.status, 'terminated');
+    assert.equal(lost.countries.empire.progress.roads.by?.mode, 'failed');
+    assert.equal(lost.countries.empire.stability, 60);
+    assert.equal(lost.countries.empire.current, '');
+    assert.equal(lost.events[opened].current, '勘测队失踪');
+    assert.equal(lost.events[opened].steps?.[0].state, 'pending');
+  }
+  const progress = applyProposal(
+    started,
+    { id: 'p', until: 5, reason: '进展', steps: [moved(5, { text: '勘测队出发' })] },
+    false,
+    fresh(),
+  );
+  assert.equal(progress.countries.empire.progress.roads.status, 'active');
+  assert.equal(progress.events[opened].status, 'ongoing');
+});
+
+test('模型另建连到国策的事件时，取代尚未推进的开场事件；已推进时退回', () => {
+  const linked = (id: string) => ({
+    ...verdict(5).events[0],
+    id,
+    status: 'ongoing',
+    focus: { country: 'empire', node: 'roads' },
+    at: 5,
+  });
+  const started = applyProposal(
+    aiCountry(),
+    { id: 'a', until: 1, reason: '推进', steps: [start('roads')] },
+    false,
+    fresh(),
+  );
+  const step = (id: string) => ({ at: 5, facts: [], selections: [], events: [linked(id)] });
+  const replaced = applyProposal(
+    started,
+    { id: 'b', until: 5, reason: '推进', steps: [step('own')] },
+    false,
+    fresh(),
+  );
+  assert.equal(replaced.events[opened], undefined);
+  assert.equal(replaced.events.own.source.node, 'roads');
+  const advanced = applyProposal(
+    started,
+    { id: 'c', until: 3, reason: '进展', steps: [moved(3, { text: '勘测队出发' })] },
+    false,
+    fresh(),
+  );
+  assert.throws(
+    () =>
+      applyProposal(advanced, { id: 'd', until: 5, reason: '推进', steps: [step('own')] }, false, fresh()),
+    /已有执行事件/,
+  );
+});
+
+test('重要国策由开场事件发新闻；持续执行的国策完成后事件继续', () => {
+  const news = { headline: '道路贯通', body: '七省相连', option: { label: '好', text: '' } };
+  const finish = (edit: (node: ReturnType<typeof tree>['nodes'][number]) => void) => {
+    const started = applyProposal(
+      aiCountry((nodes) => edit(nodes[0])),
+      { id: 'a', until: 1, reason: '推进', steps: [start('roads')] },
+      false,
+      fresh(),
+    );
+    const fact = { country: 'empire', id: 'survey', value: true, evidence: '回报', origin: 'story' };
+    return applyProposal(
+      started,
+      { id: 'b', until: 12, reason: '推进', steps: [{ at: 10, events: [], selections: [], facts: [fact] }] },
+      false,
+      fresh(),
+    ).events;
+  };
+  const pivotal = finish((node) => Object.assign(node, { impact: 'pivotal', news }));
+  assert.equal(Object.keys(pivotal).length, 1);
+  assert.equal(pivotal[opened].headline, '道路贯通');
+  assert.equal(pivotal[opened].importance, 'major');
+  assert.equal(pivotal[opened].status, 'resolved');
+  const running = finish((node) => Object.assign(node, { execution: 'ongoing' }));
+  assert.equal(running[opened].status, 'ongoing');
 });
 
 test('跳时不能把晚到的勘查成果用于提早完成，后续国策从实际选策时开始', () => {
