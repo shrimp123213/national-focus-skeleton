@@ -821,7 +821,7 @@ NodeSchema += {
 - `tavern.ts`：`commit` 在寫入前 `stampNews`，寫入後若有玩家可見的新新聞，以 `setChatMessages` 在樓層末尾加 `\n\n<国策快讯/>`（已有則略過）；`identity()`、`historyHash()` 與 `sources.ts` 的 $7 提取都先 `stripNewsTag`，所以標籤不算正文編輯、不讓任務過期、不送進任務上下文。`inject(state, news)` 附上 `newsDigest`。`readNews(messageId)` 讀取該樓 MVU 的國策並以迷霧過濾；`onNewsRequest` 監聽卡片發出的 `national-focus:open-news`（酒館助手事件匯流排）。
 - `ui.ts`：國際快訊視窗（`showNews`，一頁一則，唯一選項按鈕翻頁或關閉，滑過顯示效果）、`autoNews`（最新樓層未讀的重要新聞自動彈出一次，已讀存 localStorage `national-focus.news-seen.v1`）、事件紀錄顯示推進歷程、節點 ✦ 標記與詳情「轉折國策」段、一般設定的 newsPrompt 開關、離線頁「發布示範新聞」。
 - `src/news-card/card.html`：iframe 卡片。**與第 20.6.3 節的差異：沒有另存可見頭條快照，而是在卡片內用與 `canObserve` 相同的規則（fog、control、observing、public）過濾**，資料取自該樓的 `getVariables({type:'message', message_id: getCurrentMessageId()})`，因為每樓的國策本來就是當時的快照。
-- `scripts/build.mjs` 產生 `dist/国策档案-v0.17.3-正则-1-快讯卡片.json`（markdownOnly、placement [2]、maxDepth 2，卡片內嵌，不依賴外部網址）、`dist/国策档案-v0.17.3-正则-3-快讯提示移除.json`（promptOnly，刪除標籤，避免模型模仿），以及 `dist/國策快訊-卡片預覽.html`。
+- `scripts/build.mjs` 產生 `dist/国策档案-v0.17.4-正则-1-快讯卡片.json`（markdownOnly、placement [2]、maxDepth 2，卡片內嵌，不依賴外部網址）、`dist/国策档案-v0.17.4-正则-3-快讯提示移除.json`（promptOnly，刪除標籤，避免模型模仿），以及 `dist/國策快訊-卡片預覽.html`。
 
 驗證：100 項測試通過；Chromium 冒煙檢查離線頁的示範新聞自動彈出、翻頁、已讀後不再彈出、手機版面，以及卡片預覽頁的展開與開窗事件，無頁面錯誤。未在真實酒館驗收：`setChatMessages` 觸發的 MESSAGE_EDITED 與 MVU 的互動、iframe 卡片的高度、事件匯流排是否跨 iframe 傳到腳本。
 
@@ -1373,7 +1373,7 @@ v0.6.0 起，標準以上的規模改為「藍圖＋逐支請求」（第 17 節
 
 - v0.11.1：`F:\命一串\national-focus`，不變。
 - 骨架版：`F:\命一串\national-focus-skeleton`，本機 git 分支 `skeleton`。
-- 腳本名稱「【命定之詩】國策檔案 v0.12.0 骨架版」，id `3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13`，匯入檔 `dist/国策档案-v0.17.3-脚本.json`。
+- 腳本名稱「【命定之詩】國策檔案 v0.12.0 骨架版」，id `3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13`，匯入檔 `dist/国策档案-v0.17.4-脚本.json`。
 - 兩版都讀寫最外層 `国策`，同時只啟用一個。
 - 設定：`tavern.ts` 的 localStorage key 改為 `national-focus-skeleton.config.v1`，`secrets.ts` 的酒館設定命名空間改為 `national-focus-skeleton__config_v1`；找不到時讀 v0.11.1 的設定作為初始值。金鑰命名空間 `national-focus__api_secrets_v1` 兩版共用。
 
@@ -1809,7 +1809,7 @@ Q1–Q5 仍為已確認方向；A–H 中新增的具體機制屬 GPT 建議，�
   - `readNews()` 依該樓 `快讯.insiders` 過濾；面板的自動新聞視窗改用 `readNews`。
   - `onNewsRequest` 帶動作：`news`／`panel`／`events`。
 - `src/news-card/card.html` 改寫為報紙版（見 README）。設定存在酒館助手全域變量 `national_focus_newspaper`，沒有 `insertOrAssignVariables` 時改用 localStorage。
-- 打包：卡片正則 `maxDepth` 4；新增 `国策档案-v0.17.3-正则-2-快讯旧楼层隐藏.json`（`minDepth` 5，只影響顯示）。
+- 打包：卡片正則 `maxDepth` 4；新增 `国策档案-v0.17.4-正则-2-快讯旧楼层隐藏.json`（`minDepth` 5，只影響顯示）。
 - 介面：「轉折國策」字樣改為「重要國策」；事件紀錄顯示現況、步驟與結束方式。
 
 ### 43.5 驗證與未驗證
@@ -2048,7 +2048,7 @@ TypeScript、完整 138 項測試、建置通過（之後如新增回歸測試�
 ### 驗證、交付與尚未完成項目
 
 - v0.14.11 的 TypeScript、164／164 項自動化測試、格式、建置、匯出一致性與差異檢查通過；已核對遠端主分支與版本標籤。這是本機靜態／受控測試證據，不是實際酒館或供應商 API 驗收。
-- 最新安裝需更新 `dist/国策档案-v0.17.3-脚本.json` 和三個 `dist/國策快訊-…正則.json`，再重新載入聊天。未編輯的內建提示詞自動用新版；織界使用者若要簡體分期提示詞，需重新匯入並套用 `presets/旧版/織界國策-任務預設-v4-分期版.json`。
+- 最新安裝需更新 `dist/国策档案-v0.17.4-脚本.json` 和三個 `dist/國策快訊-…正則.json`，再重新載入聊天。未編輯的內建提示詞自動用新版；織界使用者若要簡體分期提示詞，需重新匯入並套用 `presets/旧版/織界國策-任務預設-v4-分期版.json`。
 - 正式離線樣品為 `dist/UI測試.html`，其中分期測試操作走正式實作；它不連真實 API。`docs/period-preview` 等舊樣品不能代替新版的人工驗收。
 - UI、真實酒館更新、角色主世界書遷移、跨瀏覽器及實際模型生成品質仍待人工驗收，案例見 `VALIDATION.md`。使用者明確要求前端 UI 由人工驗收，禁止以 computer use 代做。
 - 尚未實作的後續方向：工作流助手 `addon_data` 對接（仍需實際樣本與契約）、完整「任何路線都不可能開始」的條件分析、違約自動事實。這些是未完成方向，沒有在本次交接自動升格為下一個已授權開發任務。
