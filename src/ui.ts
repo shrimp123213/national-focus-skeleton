@@ -155,8 +155,8 @@ export function mountUI(
   let orbPointer: { x: number; y: number; left: number; top: number } | null = null;
   const view = doc.defaultView!;
   const ORB_KEY = 'national-focus.orb.v1';
-  /** Stored orb position and window state; browser storage may be missing or blocked. */
-  function loadOrb(): { left?: number; top?: number; collapsed?: boolean } {
+  /** Stored orb position, visibility and window state; browser storage may be missing or blocked. */
+  function loadOrb(): { left?: number; top?: number; collapsed?: boolean; hidden?: boolean } {
     try {
       const raw = JSON.parse(view.localStorage.getItem(ORB_KEY) ?? '{}');
       return raw && typeof raw === 'object' ? raw : {};
@@ -166,7 +166,10 @@ export function mountUI(
   }
   function saveOrb(): void {
     try {
-      view.localStorage.setItem(ORB_KEY, JSON.stringify({ ...orbAt, collapsed: hudCollapsed }));
+      view.localStorage.setItem(
+        ORB_KEY,
+        JSON.stringify({ ...orbAt, collapsed: hudCollapsed, hidden: orbOff }),
+      );
     } catch {
       // Keep the position for this page only.
     }
@@ -177,6 +180,8 @@ export function mountUI(
       ? { left: stored.left!, top: stored.top! }
       : null;
   let hudCollapsed = stored.collapsed === true;
+  /** v0.17.5: the player turned the orb off in the general settings. */
+  let orbOff = stored.hidden === true;
   const orbSize = () => orb.offsetWidth || 60;
   /** Orb box in viewport coordinates, also while the orb is hidden behind the open panel. */
   function orbBox(): { left: number; top: number; size: number } {
@@ -258,6 +263,21 @@ export function mountUI(
     handle.addEventListener('pointerup', () => dragEnd(false));
     handle.addEventListener('pointercancel', () => dragEnd(true));
   }
+  // v0.17.5: the Tavern wand menu also opens the panel, so a page layout cannot hide the only entry.
+  // The orb can be turned off only while this entry exists.
+  const wandMenu = doc.getElementById('extensionsMenu');
+  const wandEntry = wandMenu ? doc.createElement('div') : null;
+  if (wandMenu && wandEntry) {
+    wandEntry.id = 'national_focus_wand_container';
+    wandEntry.className = 'extension_container';
+    wandEntry.innerHTML =
+      '<div class="list-group-item flex-container flexGap5" title="开启国策树"><div class="fa-solid fa-flag extensionsMenuExtensionButton"></div>国策档案</div>';
+    wandEntry.addEventListener('click', () => {
+      open = true;
+      render();
+    });
+    wandMenu.append(wandEntry);
+  }
   const onResize = () => applyOrb();
   // v0.15.0: the status line and window headers count a running task's time every second.
   const clock = setInterval(() => {
@@ -316,7 +336,7 @@ export function mountUI(
   }
   function render(jobsOnly = false): void {
     shell.hidden = !open;
-    orb.hidden = open;
+    orb.hidden = open || (orbOff && wandEntry !== null);
     const busy = controller.jobs.filter((j) => ['running', 'queued'].includes(j.state)).length;
     const badge = root.querySelector<HTMLElement>('.count')!;
     badge.hidden = busy === 0;
@@ -1789,6 +1809,7 @@ export function mountUI(
     readSettingsDraft();
     const size = backdrop.querySelector<HTMLSelectElement>('[data-setting="size"]')?.value;
     const pace = backdrop.querySelector<HTMLSelectElement>('[data-setting="pace"]')?.value;
+    const orbInput = backdrop.querySelector<HTMLInputElement>('[data-orb]:not(:disabled)');
     const state = controller.state;
     const same = (a: unknown, b: unknown) => {
       try {
@@ -1803,6 +1824,7 @@ export function mountUI(
     return (
       Boolean(apiPanel?.dirty()) ||
       !same(draft, controller.config) ||
+      Boolean(orbInput && orbInput.checked === orbOff) ||
       Boolean(state && ((size && size !== state.settings.size) || (pace && pace !== state.settings.pace)))
     );
   }
@@ -1844,7 +1866,7 @@ export function mountUI(
           ['long', '长期'],
         ],
         state?.settings.pace ?? 'standard',
-      )}</select><small>每期从起点走到终点的目标时间：快速约 2–3 个月、标准约 3–6 个月、长期约 6–9 个月；新国策工期为 7–35 天（一至五周）。只影响新生成与下一期，不改写既有工期。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期国际大事<small>最多 5 则，附在国策资料后，让正文以公告、传闻或对话自然带出。</small></label><label class="field wide">国策资料提供给正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界书条目（预设）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在当前角色的主世界书建立「国策档案-」条目，以 EJS 读取当前楼层资料。未设置角色主世界书或缺少提示词模板扩展时暂用直接注入，不会自动新建世界书。</small></label><label class="field wide">各国详情条目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>蓝灯：每次都送出（预设）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>绿灯：提到国名或关键字才送出</option></select><small>蓝灯让正文每次都看得到各国近况；绿灯较省篇幅。只影响正文看到什么，不影响国策推进。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留执行记录<small>在「任务」窗口查看最近 20 次请求的提示词与回应，只存在此页记忆体，调试后建议关闭。</small></label></div></div>
+      )}</select><small>每期从起点走到终点的目标时间：快速约 2–3 个月、标准约 3–6 个月、长期约 6–9 个月；新国策工期为 7–35 天（一至五周）。只影响新生成与下一期，不改写既有工期。</small></label><label class="check wide"><input data-config="newsPrompt" type="checkbox" ${checked(draft.newsPrompt)}>正文提示加入近期国际大事<small>最多 5 则，附在国策资料后，让正文以公告、传闻或对话自然带出。</small></label><label class="field wide">国策资料提供给正文的方式<select data-config="promptMode"><option value="worldbook" ${draft.promptMode === 'worldbook' ? 'selected' : ''}>世界书条目（预设）</option><option value="inject" ${draft.promptMode === 'inject' ? 'selected' : ''}>直接注入</option></select><small>在当前角色的主世界书建立「国策档案-」条目，以 EJS 读取当前楼层资料。未设置角色主世界书或缺少提示词模板扩展时暂用直接注入，不会自动新建世界书。</small></label><label class="field wide">各国详情条目<select data-config="countryEntries"><option value="constant" ${draft.countryEntries === 'constant' ? 'selected' : ''}>蓝灯：每次都送出（预设）</option><option value="keyword" ${draft.countryEntries === 'keyword' ? 'selected' : ''}>绿灯：提到国名或关键字才送出</option></select><small>蓝灯让正文每次都看得到各国近况；绿灯较省篇幅。只影响正文看到什么，不影响国策推进。</small></label><label class="check wide"><input data-config="runLog" type="checkbox" ${checked(draft.runLog)}>保留执行记录<small>在「任务」窗口查看最近 20 次请求的提示词与回应，只存在此页记忆体，调试后建议关闭。</small></label><label class="check wide"><input data-orb type="checkbox" ${checked(!orbOff || !wandEntry)} ${wandEntry ? '' : 'disabled'}>显示悬浮球<small>${wandEntry ? '关闭后从输入框左侧的魔棒选单开启国策档案。' : '此页面没有酒馆魔棒选单，悬浮球保持显示。'}</small></label></div></div>
       <div class="settings-section" ${settingsTab !== 'apis' ? 'hidden' : ''}><div id="api-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'jobs' ? 'hidden' : ''}><div id="task-panel"></div></div>
       <div class="settings-section" ${settingsTab !== 'sources' ? 'hidden' : ''}><div id="source-panel"></div></div>`,
@@ -2575,6 +2597,11 @@ export function mountUI(
               draft.jobs[kind].strictJson = false;
             }
             controller.saveSettings(draft);
+            const orbInput = backdrop.querySelector<HTMLInputElement>('[data-orb]:not(:disabled)');
+            if (orbInput) {
+              orbOff = !orbInput.checked;
+              saveOrb();
+            }
             await controller.refresh();
             if (
               controller.state &&
@@ -2661,6 +2688,7 @@ export function mountUI(
     tabsObserver?.disconnect();
     clearInterval(clock);
     view.removeEventListener('resize', onResize);
+    wandEntry?.remove();
     host.remove();
   };
 }

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = join(root, 'dist');
 await mkdir(output, { recursive: true });
-// Release files share one prefix with the package version, such as 国策档案-v0.17.4-脚本.json.
+// Release files share one prefix with the package version, such as 国策档案-v0.17.5-脚本.json.
 const { version } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const tag = `v${version.replace(/-skeleton$/, '')}`;
 const prefix = `国策档案-${tag}-`;
@@ -65,7 +65,7 @@ const exported = {
   name: `【命定之诗】国策档案 ${tag} 骨架版`,
   id: '3f6c2a9e-5d41-4b8a-9e07-1c2d8b4f6a13',
   content: script,
-  info: '正文完成后于背景演化的国策树。需酒馆助手与 MVU。从悬浮球开启；请先设定可靠故事时间栏位与 API。',
+  info: '正文完成后于背景演化的国策树。需酒馆助手与 MVU。从悬浮球或魔棒选单开启；请先设定可靠故事时间栏位与 API。',
   button: { enabled: true, buttons: [] },
   data: {},
   export_with: { data: false, button: true },
