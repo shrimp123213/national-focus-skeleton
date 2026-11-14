@@ -27,6 +27,7 @@
       --serif: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif TC', 'Source Han Serif TC', var(--sans);
       --fz: 1;
       --maxh: 720px;
+      --ixw: max(150px, 26vw);
     }
     html,
     body {
@@ -77,6 +78,20 @@
       border-radius: 4px 4px 0 0;
       box-shadow: none;
       border-bottom: 1px solid var(--rule);
+      padding: 6px 10px;
+    }
+    /* Open: the paper has its own masthead, date and headline; the strip keeps the controls. */
+    .nb.open .strip .mast,
+    .nb.open .strip .date,
+    .nb.open .strip .cnt,
+    .nb.open .strip .hl {
+      display: none;
+    }
+    .nb.open.xtra .strip {
+      padding-left: 46px;
+    }
+    .nb:not(.open) .ixb {
+      display: none;
     }
     .strip .mast {
       font-family: var(--serif);
@@ -131,7 +146,8 @@
       white-space: nowrap;
     }
     .ctl .b,
-    .toggle {
+    .toggle,
+    .ixb {
       border: 1px solid var(--line);
       border-radius: 3px;
       padding: 1px 7px;
@@ -145,6 +161,22 @@
       border-color: var(--ink2);
       font-size: calc(12px * var(--fz));
       white-space: nowrap;
+    }
+    .ixb {
+      font-size: calc(12px * var(--fz));
+      white-space: nowrap;
+    }
+    .ixb i {
+      display: inline-block;
+      width: 13px;
+      height: 10px;
+      border: 1.5px solid currentColor;
+      border-left-width: 5px;
+      margin-right: 6px;
+      vertical-align: -1px;
+    }
+    .nb.noix .ixb i {
+      border-left-width: 1.5px;
     }
     .ctl .v {
       min-width: 38px;
@@ -211,38 +243,54 @@
       scrollbar-width: thin;
     }
     .index {
-      width: 26%;
-      min-width: 150px;
+      flex: none;
+      width: var(--ixw);
       background: var(--desk);
       color: var(--desktx);
       border-right: 1px solid #000;
+      overflow-x: hidden;
+      scrollbar-color: #4a4236 transparent;
+      transition: width 0.22s ease;
+    }
+    /* The whole index folds away; the inner box keeps its width so the text does not reflow. */
+    .nb.noix .index {
+      width: 0;
+      border-right-width: 0;
+    }
+    .ixin {
+      width: var(--ixw);
+      min-height: 100%;
       display: flex;
       flex-direction: column;
-      scrollbar-color: #4a4236 transparent;
-    }
-    .index .ih {
-      padding: 12px 12px 8px;
-      border-bottom: 1px solid var(--deskline);
-    }
-    .index .ih b {
-      font-family: var(--sans);
-      font-size: calc(15px * var(--fz));
-      letter-spacing: 0.08em;
-    }
-    .index .ih div {
-      font-size: calc(12px * var(--fz));
-      color: var(--desktx2);
-      margin-top: 3px;
     }
     .grp {
       padding: 8px 0 2px;
     }
     .grp h6 {
+      display: flex;
+      align-items: center;
       margin: 0 12px 4px;
       font-size: calc(12px * var(--fz));
       letter-spacing: 0.08em;
       color: var(--desktx2);
       font-weight: 400;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grp h6::after {
+      content: '';
+      margin-left: auto;
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: translateY(-2px) rotate(45deg);
+    }
+    .grp.shut h6::after {
+      transform: rotate(-45deg);
+    }
+    .grp.shut .gl {
+      display: none;
     }
     .it {
       display: -webkit-box;
@@ -303,6 +351,22 @@
     }
     .it.secret {
       color: #e9b3a9;
+    }
+    /* A long group lists its first entries; the rest wait behind one line. */
+    .it.x {
+      display: none;
+    }
+    .grp.all .it.x {
+      display: -webkit-box;
+    }
+    .rest {
+      display: block;
+      padding: 4px 12px 6px 17px;
+      font-size: calc(12px * var(--fz));
+      color: var(--desktx2);
+      cursor: pointer;
+      text-decoration: underline dotted;
+      text-underline-offset: 3px;
     }
     .index .foot {
       margin-top: auto;
@@ -428,22 +492,31 @@
       color: var(--ink3);
       margin-top: 4px;
     }
-    .more-news {
-      margin-top: 10px;
-      padding-top: 8px;
+    /* The other front-page stories: a headline and two lines until opened. */
+    .brief {
+      padding: 7px 0 8px;
+      cursor: pointer;
+    }
+    .brief + .brief {
       border-top: 1px solid var(--line);
     }
-    .more-news article + article {
-      margin-top: 8px;
-    }
-    .more-news h3 {
+    .brief h3 {
       font-size: calc(15px * var(--fz));
       margin: 2px 0 3px;
     }
-    .more-news p {
+    .brief p {
       margin: 0;
       font-size: calc(14px * var(--fz));
       line-height: 1.8;
+      color: var(--ink2);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .brief.full p {
+      display: block;
+      color: var(--ink);
     }
     .slips {
       display: grid;
@@ -560,6 +633,18 @@
     .serial {
       border-top: 2px solid var(--rule);
       padding-top: 6px;
+      cursor: pointer;
+    }
+    /* Folded: title, meter and the latest state. */
+    .serial:not(.full) .now {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 0;
+    }
+    .serial:not(.full) .detail {
+      display: none;
     }
     .serial.inside {
       border-top-color: var(--red);
@@ -912,6 +997,11 @@
         background: transparent;
       }
     }
+    @media (prefers-reduced-motion: reduce) {
+      .index {
+        transition: none;
+      }
+    }
     @media (max-width: 620px) {
       .strip .ctl {
         order: 4;
@@ -936,32 +1026,43 @@
       .paper {
         min-height: 0;
       }
+      .nb.open .strip .ctl {
+        margin: 0 0 0 auto;
+      }
+      .nb.open .strip .toggle {
+        margin: 0;
+      }
       .index {
         width: auto;
         border-right: 0;
         border-bottom: 1px solid #000;
         overflow: visible;
+        transition: none;
       }
+      .nb.noix .index {
+        display: none;
+      }
+      .ixin {
+        width: auto;
+        min-height: 0;
+      }
+      /* Narrow: the group names are a row of chips that jump to their sections. */
       .index .groups {
         display: flex;
         overflow-x: auto;
       }
       .grp {
-        display: flex;
-        padding: 6px 0;
+        padding: 0;
       }
-      .grp h6,
+      .grp h6 {
+        margin: 0;
+        padding: 8px 12px;
+        white-space: nowrap;
+      }
+      .gl,
+      .grp h6::after,
       .index .foot {
         display: none;
-      }
-      .it {
-        display: block;
-        white-space: nowrap;
-        border-left: 0;
-        border-bottom: 2px solid transparent;
-      }
-      .it.on {
-        border-bottom-color: var(--gold);
       }
       .front,
       .fresh {
@@ -987,6 +1088,10 @@
         });
       };
       var floor = getCurrentMessageId();
+      // What the reader opened by hand; kept while this card redraws.
+      var opened = {};
+      var allOpen = {};
+      var LIMIT = 5;
       var render = function (vars) {
         var state = vars['国策'];
         if (!state || !state.countries || !state.events) {
@@ -1103,7 +1208,19 @@
 
         // Display settings follow the player across chats (Tavern Helper global variables).
         var settingsKey = 'national_focus_newspaper';
-        var settings = { dark: false, fz: 1, serials: true, pages: true, old: true };
+        var settings = {
+          dark: false,
+          fz: 1,
+          serials: true,
+          pages: true,
+          old: true,
+          index: true,
+          front: true,
+          gh: true,
+          gs: true,
+          ge: true,
+          gn: true,
+        };
         try {
           var saved =
             (typeof getVariables === 'function' && (getVariables({ type: 'global' }) || {})[settingsKey]) ||
@@ -1206,6 +1323,7 @@
         html.push(
           '<div class="strip" id="strip">' +
             (extra ? '<span class="extra">号外</span>' : '') +
+            '<button class="ixb" id="ixb"><i></i>要目</button>' +
             '<span class="mast">阿斯塔利亚快讯</span>' +
             (bar.time ? '<span class="date">' + esc(bar.time) + '</span>' : '') +
             (total ? '<span class="cnt">本期 ' + total + ' 则</span>' : '') +
@@ -1232,93 +1350,129 @@
             '</a>'
           );
         };
-        var heading = function (name, count) {
-          return '<h6>' + name + (count ? '<span class="n">' + count + '</span>' : '') + '</h6>';
+        // A group hides entries only when at least three would be hidden.
+        var cap = function (count) {
+          return count > LIMIT + 2 ? LIMIT : count;
+        };
+        var past = function (i, count) {
+          return i >= cap(count) ? ' x' : '';
+        };
+        // The heading folds its group; on a narrow card it jumps to the section instead.
+        var group = function (key, name, section, count, entries) {
+          var hidden = entries.length - cap(entries.length);
+          return (
+            '<div class="grp' +
+            (settings['g' + key] ? '' : ' shut') +
+            (allOpen[key] ? ' all' : '') +
+            '" data-g="' +
+            key +
+            '"><h6 data-sec="' +
+            section +
+            '">' +
+            name +
+            (count ? '<span class="n">' + count + '</span>' : '') +
+            '</h6><div class="gl">' +
+            entries.join('') +
+            (hidden
+              ? '<a class="rest" data-rest="' +
+                hidden +
+                '">' +
+                (allOpen[key] ? '只看前 ' + LIMIT + ' 则' : '其余 ' + hidden + ' 则') +
+                '</a>'
+              : '') +
+            '</div></div>'
+          );
         };
         if (headlines.length) {
           index.push(
-            '<div class="grp">' +
-              heading('头版', headlines.length) +
-              headlines
-                .map(function (event, i) {
-                  return item('h' + i, headlineOf(event), flags(event), '', true);
-                })
-                .join('') +
-              '</div>',
+            group(
+              'h',
+              '头版',
+              'h0',
+              headlines.length,
+              headlines.map(function (event, i) {
+                return item('h' + i, headlineOf(event), flags(event), past(i, headlines.length), false);
+              }),
+            ),
           );
         }
         if (secrets.length) {
           index.push(
-            '<div class="grp">' +
-              heading('内部密报', secrets.length) +
-              secrets
-                .map(function (event, i) {
-                  return item(
-                    's' + i,
-                    event.title,
-                    '未公开・' + inside(event).map(nameOf).join('、'),
-                    'secret',
-                    true,
-                  );
-                })
-                .join('') +
-              '</div>',
+            group(
+              's',
+              '内部密报',
+              's0',
+              secrets.length,
+              secrets.map(function (event, i) {
+                return item(
+                  's' + i,
+                  event.title,
+                  '未公开・' + inside(event).map(nameOf).join('、'),
+                  'secret' + past(i, secrets.length),
+                  false,
+                );
+              }),
+            ),
           );
         }
         if (serials.length) {
           index.push(
-            '<div class="grp">' +
-              heading('连载追踪', serials.length) +
-              serials
-                .map(function (event, i) {
-                  var list = event.steps || [];
-                  var done = list.filter(function (step) {
-                    return step.state === 'done';
-                  }).length;
-                  return item(
-                    'e' + i,
-                    event.title + (list.length ? ' ' + done + '/' + list.length : ''),
-                    event.touchedAt === floor
-                      ? '本楼有进展'
-                      : event.status === 'ongoing'
-                        ? '进行中'
-                        : '本楼结束',
-                    '',
-                    event.touchedAt === floor,
-                  );
-                })
-                .join('') +
-              '</div>',
+            group(
+              'e',
+              '连载追踪',
+              'f-serials',
+              serials.length,
+              serials.map(function (event, i) {
+                var list = event.steps || [];
+                var done = list.filter(function (step) {
+                  return step.state === 'done';
+                }).length;
+                return item(
+                  'e' + i,
+                  event.title + (list.length ? ' ' + done + '/' + list.length : ''),
+                  event.touchedAt === floor
+                    ? '本楼有进展'
+                    : event.status === 'ongoing'
+                      ? '进行中'
+                      : '本楼结束',
+                  past(i, serials.length),
+                  event.touchedAt === floor,
+                );
+              }),
+            ),
           );
         }
         if (boards.length) {
           // The pages as two entries; the updated fields are named in the hover text.
           index.push(
-            '<div class="grp">' +
-              heading('本报各版', 0) +
+            group(
+              'n',
+              '本报各版',
+              'f-pages',
+              0,
               (freshNews.length
-                ? item(
-                    'n-' + freshNews[0].key,
-                    '本楼更新 ' + freshNews.length + ' 栏',
-                    freshNews
-                      .map(function (field) {
-                        return field.name;
-                      })
-                      .join('、'),
-                    '',
-                    true,
-                  )
-                : '') +
-              item('oldhead', '旧闻 ' + oldCount + ' 栏', '', '', false) +
-              '</div>',
+                ? [
+                    item(
+                      'n-' + freshNews[0].key,
+                      '本楼更新 ' + freshNews.length + ' 栏',
+                      freshNews
+                        .map(function (field) {
+                          return field.name;
+                        })
+                        .join('、'),
+                      '',
+                      true,
+                    ),
+                  ]
+                : []
+              ).concat([item('oldhead', '旧闻 ' + oldCount + ' 栏', '', '', false)]),
+            ),
           );
         }
         html.push(
-          '<div class="board"><nav class="index"><div class="ih"><b>本期要目</b><div>' +
-            esc(bar.time || '') +
-            '</div></div><div class="groups">' +
+          '<div class="board"><nav class="index"><div class="ixin"><div class="groups">' +
             index.join('') +
-            '</div><div class="foot"><button class="btn" data-emit="events">事件记录</button><button class="btn" data-emit="panel">开启国策面板</button></div></nav><main class="paper" id="paper">',
+            '</div><div class="foot"><button class="btn" data-emit="events">事件记录</button><button class="btn" data-emit="panel">开启国策面板</button></div></div></nav><main class="paper" id="paper">',
         );
         html.push(
           '<div class="top"><span>' +
@@ -1373,22 +1527,33 @@
                   esc(focus.node.name) +
                   '」</div>'
                 : '') +
-              headlines
-                .slice(1)
-                .map(function (event, i) {
-                  return (
-                    '<div class="more-news"><article id="h' +
-                    (i + 1) +
-                    '"><div class="kicker plain">' +
-                    esc(flags(event)) +
-                    '</div><h3>' +
-                    esc(headlineOf(event)) +
-                    '</h3><p>' +
-                    esc(event.description) +
-                    '</p></article></div>'
-                  );
-                })
-                .join('') +
+              (headlines.length > 1
+                ? '<details class="fold" id="f-front"' +
+                  (settings.front ? ' open' : '') +
+                  '><summary><span class="t">各国要闻</span><span class="n">' +
+                  (headlines.length - 1) +
+                  ' 则</span><span class="car"></span></summary><div class="briefs">' +
+                  headlines
+                    .slice(1)
+                    .map(function (event, i) {
+                      var id = 'h' + (i + 1);
+                      return (
+                        '<article class="brief' +
+                        (opened[id] ? ' full' : '') +
+                        '" id="' +
+                        id +
+                        '"><div class="kicker plain">' +
+                        esc(flags(event)) +
+                        '</div><h3>' +
+                        esc(headlineOf(event)) +
+                        '</h3><p>' +
+                        esc(event.description) +
+                        '</p></article>'
+                      );
+                    })
+                    .join('') +
+                  '</div></details>'
+                : '') +
               '</article>';
           }
           if (secrets.length) {
@@ -1455,9 +1620,13 @@
                   var latest = (event.timeline || []).slice(-1)[0];
                   // A new event without current has only its description as the latest progress.
                   var now = event.current || (latest ? latest.text : '');
+                  var hasNow = now && now !== event.description && now !== first(event.description);
+                  // Stories that moved on this floor start open; the rest show one summary line.
+                  var full = opened['e' + i] === undefined ? event.touchedAt === floor : opened['e' + i];
                   return (
                     '<article class="serial' +
                     (event.public ? '' : ' inside') +
+                    (full ? ' full' : '') +
                     '" id="e' +
                     i +
                     '"><div class="kicker' +
@@ -1480,12 +1649,13 @@
                         : esc(resultName[event.result] || '已结束')) +
                     '</em></h2>' +
                     meter +
-                    '<p class="sum"><b>起因</b>' +
-                    esc(first(event.description)) +
-                    (now && now !== event.description && now !== first(event.description)
-                      ? '<br><b>现况</b>' + esc(now)
-                      : '') +
-                    '</p><ul class="steps">' +
+                    '<p class="sum now"><b>' +
+                    (hasNow ? '现况' : '起因') +
+                    '</b>' +
+                    esc(hasNow ? now : first(event.description)) +
+                    '</p><div class="detail">' +
+                    (hasNow ? '<p class="sum"><b>起因</b>' + esc(first(event.description)) + '</p>' : '') +
+                    '<ul class="steps">' +
                     list
                       .map(function (step, index) {
                         var isNew = event.touchedAt === floor && step.state === 'active';
@@ -1520,7 +1690,7 @@
                           .join('') +
                         '</div>'
                       : '') +
-                    '</article>'
+                    '</div></article>'
                   );
                 })
                 .join('') +
@@ -1619,6 +1789,8 @@
         } catch (error) {}
         var apply = function () {
           root.classList.toggle('dark', settings.dark);
+          root.classList.toggle('noix', !settings.index);
+          root.classList.toggle('xtra', extra);
           root.style.setProperty('--fz', String(settings.fz));
           document.getElementById('fzv').textContent = Math.round(settings.fz * 100) + '%';
           document.getElementById('mode').textContent = settings.dark ? '☀ 浅色' : '☾ 深色';
@@ -1642,31 +1814,64 @@
           } else if (button && button.id === 'mode') {
             settings.dark = !settings.dark;
             save();
+          } else if (button && button.id === 'ixb') {
+            settings.index = !settings.index;
+            save();
           } else {
             root.classList.toggle('open');
           }
           apply();
         });
+        var jump = function (id) {
+          var node = document.getElementById(id);
+          if (!node) return;
+          var fold = node.closest('details');
+          if (fold) fold.open = true;
+          if (node.classList.contains('old')) {
+            if (!settings.old) document.getElementById('oldsw').click();
+            node.classList.add('full');
+          }
+          if (node.classList.contains('brief') || node.classList.contains('serial')) {
+            node.classList.add('full');
+            opened[id] = true;
+          }
+          paper.scrollTo({ top: node.offsetTop - paper.offsetTop - 10, behavior: 'smooth' });
+          node.classList.remove('flash');
+          void node.offsetWidth;
+          node.classList.add('flash');
+        };
         root.onclick = function (event) {
           var target = event.target;
+          var head = target.closest ? target.closest('.grp h6') : null;
+          if (head) {
+            var grp = head.parentNode;
+            if (window.matchMedia && window.matchMedia('(max-width: 620px)').matches) {
+              jump(head.dataset.sec);
+              return;
+            }
+            var key = 'g' + grp.dataset.g;
+            settings[key] = !settings[key];
+            grp.classList.toggle('shut', !settings[key]);
+            save();
+            return;
+          }
+          var rest = target.closest ? target.closest('.rest') : null;
+          if (rest) {
+            var owner = rest.parentNode.parentNode;
+            allOpen[owner.dataset.g] = !allOpen[owner.dataset.g];
+            owner.classList.toggle('all', allOpen[owner.dataset.g]);
+            rest.textContent = allOpen[owner.dataset.g]
+              ? '只看前 ' + LIMIT + ' 则'
+              : '其余 ' + rest.dataset.rest + ' 则';
+            return;
+          }
           var go = target.closest ? target.closest('[data-go]') : null;
           if (go) {
             root.querySelectorAll('.it').forEach(function (it) {
               it.classList.remove('on');
             });
             go.classList.add('on');
-            var node = document.getElementById(go.dataset.go);
-            if (!node) return;
-            var fold = node.closest('details');
-            if (fold) fold.open = true;
-            if (node.classList.contains('old')) {
-              if (!settings.old) document.getElementById('oldsw').click();
-              node.classList.add('full');
-            }
-            paper.scrollTo({ top: node.offsetTop - paper.offsetTop - 10, behavior: 'smooth' });
-            node.classList.remove('flash');
-            void node.offsetWidth;
-            node.classList.add('flash');
+            jump(go.dataset.go);
             return;
           }
           var more = target.closest ? target.closest('.more') : null;
@@ -1688,9 +1893,15 @@
           if (emit) {
             // The national focus script listens and opens its panel or event log.
             eventEmit('national-focus:open-news', floor, emit.dataset.emit);
+            return;
+          }
+          var card = target.closest ? target.closest('.brief, .serial') : null;
+          if (card) {
+            opened[card.id] = !card.classList.contains('full');
+            card.classList.toggle('full', opened[card.id]);
           }
         };
-        ['serials', 'pages'].forEach(function (key) {
+        ['serials', 'pages', 'front'].forEach(function (key) {
           var fold = document.getElementById('f-' + key);
           if (fold) {
             fold.addEventListener('toggle', function () {
