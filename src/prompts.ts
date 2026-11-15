@@ -67,6 +67,16 @@ export const GUIDANCE_TASK = `data.guidance 是世界任务本轮推演后写给
 - 不符合前置、互斥、requirements、工期或换期规则的部分不要硬套：能以事件或事实保留的就保留，否则略过；在 reason 逐条写出照做了什么、改写或略过了什么、为什么。
 - 指引只写方向，ID、数值与时点仍以 state 与 schema 为准；指引没有提到的国家与事件，照常依正文与 state 推演。指引与正文冲突时以正文为准。`;
 
+/** Added to the update and reshape tasks when an enabled country has politics (v0.18.0). */
+export const POLITICS_TASK = `state.countries[].politics 是该国的派系，即掌权后会改变国家方向的一群人。factions 依支持度由高到低排列，ruling=true 为执政派系；support 是政治影响力，不是人口，合计恒为 100。stance 是作风：moderate 优先谈判与妥协，hardline 优先施压与动武但守既有规矩，extreme 不惜清洗异己或全面开战；执政派系的作风就是国家的作风。members 是具名势力，faction 为其支持的派系，null＝未表态；成员只是标签，不占支持度。
+派系效果写在事件与 eventUpdates 的 changes，reshape 也可写在 edits 国策的 effects。派系效果与支持度条件只用于有 politics 的国家；派系 id 与成员 id 照抄 state。
+- support：某派系 ±5、±10 或 ±15。不能直接设定支持度，脚本会调整其他派系使合计保持 100。
+- member：成员倒戈或转为未表态，只改标签。重要成员倒戈时，同一 changes 通常也要写相应的 support 增减。
+- merge：source 整个派系并入 target；source 不可是执政派系。
+- faction：key 不存在时建立新派系，须填起始 support（5、10 或 15），每国最多 8 个派系；已存在时改写名称、诉求与作风，不填 support。
+支持度条件（kind=support：faction、minimum，可加 negate）只能写在国策 requirements 与效果的 when，不能写在 sustain 或 outcomes。
+AI 国选策时偏好 mutex.backers 含其执政派系的路线，并依执政派系的作风行事。只有正文或事件显示影响力确实消长时才改派系；平静是常态，不要每次更新都改数字。`;
+
 const builtinMeta: Record<BuiltinKind, { name: string; role: PromptRole }> = {
   guide: { name: '系统规则', role: 'system' },
   task: { name: '任务指示', role: 'system' },

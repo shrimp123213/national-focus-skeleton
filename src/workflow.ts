@@ -38,7 +38,7 @@ import {
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
 import { checkTransition, periodAnchor, PeriodReplySchema, transitionPeriod } from './periods';
 import { drawStructure, signature, structureData, type Structure, type TreeType } from './structure';
-import { DATA_TOKEN, GUIDANCE_TASK, promptText } from './prompts';
+import { DATA_TOKEN, GUIDANCE_TASK, POLITICS_TASK, promptText } from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
 import { storyTime } from './story-time';
@@ -1204,22 +1204,24 @@ export class FocusController {
       config.jobs[kind].prompts
         .filter((item) => item.enabled || item.kind === 'data')
         .map((item) => ({ ...item, content: promptText(item, kind) }));
-    if (typeof (payload as { guidance?: unknown }).guidance === 'string') {
-      // The guidance note reaches the model even if the update task was customized or disabled.
+    // These notes reach the model even if the task was customized or disabled.
+    const note = (content: string, name: string) => {
       if (chain.some((item) => item.kind === 'task')) {
         chain = chain.map((item) =>
-          item.kind === 'task' ? { ...item, content: `${item.content}\n${GUIDANCE_TASK}` } : item,
+          item.kind === 'task' ? { ...item, content: `${item.content}\n${content}` } : item,
         );
       } else {
-        const task = {
-          id: 'task',
-          kind: 'task' as const,
-          name: '世界指引说明',
-          role: 'system' as const,
-          content: GUIDANCE_TASK,
-        };
+        const task = { id: 'task', kind: 'task' as const, name, role: 'system' as const, content };
         chain = [task, ...chain];
       }
+    };
+    // The state lists enabled countries only.
+    const countries = (payload as { state?: { countries?: { politics?: unknown }[] } }).state?.countries;
+    if ((kind === 'update' || kind === 'reshape') && countries?.some((country) => country.politics)) {
+      note(POLITICS_TASK, '派系说明');
+    }
+    if (typeof (payload as { guidance?: unknown }).guidance === 'string') {
+      note(GUIDANCE_TASK, '世界指引说明');
     }
     const json = JSON.stringify(payload);
     return chain.map((item) => ({

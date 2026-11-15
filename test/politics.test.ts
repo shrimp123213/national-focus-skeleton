@@ -2,12 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
 import { createState, installCountry } from '../src/engine';
+import { DemoPlatform } from '../src/demo';
 import { demoTree } from '../src/demo-tree';
-import { GeneratedTreeSchema } from '../src/generation';
-import { StateSchema, type Politics } from '../src/model';
+import { GeneratedTreeSchema, workingState } from '../src/generation';
+import { StateSchema, type JobKind, type Politics, type State } from '../src/model';
+import type { PromptMessage } from '../src/platform';
 import { assignColors } from '../src/politics';
+import { DEFAULT_TASK, GUIDANCE_TASK, POLITICS_TASK, WORLD_CONTEXT_TASK } from '../src/prompts';
 import { promptView, worldSummary } from '../src/prompt-view';
 import { countryTree, exportTrees, importTrees, parseTreeFile } from '../src/tree-io';
+import { FocusController } from '../src/workflow';
 
 const politics = (): Politics => ({
   ruling: 'crown',
@@ -276,4 +280,135 @@ test('政局只多出摘要中的政局几行；没有政局的国家与概况�
   assert.equal(strip(promptView(state).countries.augustium.text), promptView(plain).countries.augustium.text);
   assert.equal(strip(worldSummary(state)), worldSummary(plain));
   assert.equal(promptView(state).overview, promptView(plain).overview);
+});
+
+type Working = { countries: Record<string, unknown>[] };
+const working = (state: State, full = false) => workingState(state, full) as Working;
+
+test('局势更新资料：派系依支持度由高到低并标出执政派系，成员只带分量与派系，不带色位与更替方式', () => {
+  const value = politics();
+  value.factions[0].support = 20;
+  value.factions[2].support = 40;
+  const state = install(value);
+  for (const full of [false, true]) {
+    assert.deepEqual(working(state, full).countries[0].politics, {
+      ruling: 'crown',
+      factions: [
+        { id: 'guilds', name: '商会派', appeal: '开放商路', stance: 'moderate', support: 40 },
+        { id: 'nobles', name: '旧贵族', appeal: '恢复领主特权', stance: 'extreme', support: 30 },
+        { id: 'crown', name: '王党', appeal: '王权高于一切', stance: 'hardline', support: 20, ruling: true },
+        { id: 'cabinet', name: '内阁派', appeal: '由议会组阁', stance: 'moderate', support: 10 },
+      ],
+      members: [
+        { id: 'hohen', name: '霍亨家族', weight: 'heavy', faction: 'nobles' },
+        { id: 'academy', name: '星辉学塔', weight: 'heavy', faction: null },
+        { id: 'mint', name: '银秤家族', weight: 'medium', faction: 'guilds' },
+      ],
+    });
+  }
+  assert.deepEqual(
+    state.countries.augustium.politics!.factions.map((faction) => faction.id),
+    ['crown', 'nobles', 'guilds', 'cabinet'],
+    '不改动状态中的顺序',
+  );
+  const waiting = working(install({ ...value, pending })).countries[0].politics as { pending?: unknown };
+  assert.deepEqual(waiting.pending, pending);
+});
+
+test('局势更新资料：没有政局的国家不出现 politics，其余栏位与有政局的国家逐字相同', () => {
+  const plain = working(installCountry(createState(0), demoTree(), 0)).countries[0];
+  assert.equal('politics' in plain, false);
+  const { politics: data, ...rest } = working(install()).countries[0];
+  assert.ok(data);
+  assert.equal(JSON.stringify(rest), JSON.stringify(plain));
+});
+
+/** The politics country plus a second country without politics. */
+const promptState = (enabled: boolean) => {
+  const state = installCountry(install(), demoTree('north', '北境联邦'), 0);
+  state.countries.augustium.enabled = enabled;
+  return state;
+};
+const contents = (controller: FocusController, kind: JobKind, state: State, extra = {}) =>
+  controller
+    .messages(kind, undefined, { state: workingState(state, kind === 'reshape'), ...extra })
+    .map((message) => message.content);
+
+test('派系说明：有政局的启用国家时附在 update 与 reshape 的任务指示之后；没有时、其他任务都不附', () => {
+  const controller = new FocusController(new DemoPlatform());
+  for (const kind of ['update', 'reshape'] as const) {
+    assert.deepEqual(
+      contents(controller, kind, promptState(true)).filter((text) => text.includes(POLITICS_TASK)),
+      [`${DEFAULT_TASK[kind]}\n${POLITICS_TASK}`],
+    );
+    for (const state of [promptState(false), installCountry(createState(0), demoTree(), 0)]) {
+      assert.equal(
+        contents(controller, kind, state).some((text) => text.includes(POLITICS_TASK)),
+        false,
+      );
+    }
+  }
+  for (const kind of ['identify', 'generate'] as const) {
+    assert.equal(
+      contents(controller, kind, promptState(true)).some((text) => text.includes(POLITICS_TASK)),
+      false,
+    );
+  }
+});
+
+test('派系说明与世界指引说明的附加方式相同：自订任务指示照附，任务指示停用时单独送出', () => {
+  const controller = new FocusController(new DemoPlatform());
+  const task = controller.config.jobs.update.prompts.find((item) => item.kind === 'task')!;
+  task.content = '自订更新指示';
+  const state = promptState(true);
+  const custom = `自订更新指示\n${WORLD_CONTEXT_TASK}`;
+  assert.ok(contents(controller, 'update', state).includes(`${custom}\n${POLITICS_TASK}`));
+  assert.ok(
+    contents(controller, 'update', state, { guidance: '指引' }).includes(
+      `${custom}\n${POLITICS_TASK}\n${GUIDANCE_TASK}`,
+    ),
+  );
+  task.enabled = false;
+  assert.deepEqual(controller.messages('update', undefined, { state: workingState(state) })[0], {
+    role: 'system',
+    name: '派系说明',
+    content: POLITICS_TASK,
+  });
+  const both = contents(controller, 'update', state, { guidance: '指引' });
+  assert.equal(both[0], `${POLITICS_TASK}\n${GUIDANCE_TASK}`);
+  assert.equal(
+    both.some((text) => text.includes('自订更新指示')),
+    false,
+  );
+});
+
+class PoliticsPlatform extends DemoPlatform {
+  sent: PromptMessage[][] = [];
+  override async read(...args: Parameters<DemoPlatform['read']>) {
+    const snapshot = await super.read(...args);
+    snapshot.state.countries.augustium.politics = install().countries.augustium.politics;
+    return snapshot;
+  }
+  override async generate(messages: PromptMessage[]) {
+    this.sent.push(messages);
+    return { content: JSON.stringify({ id: `p${this.sent.length}`, until: 114, reason: '派系', steps: [] }) };
+  }
+}
+
+test('示范局势更新带政局时，请求仍在默认输入上限内，并附派系资料与说明', async () => {
+  const platform = new PoliticsPlatform();
+  const controller = new FocusController(platform);
+  controller.config.jobs.update.retries = 0;
+  try {
+    await controller.run('update');
+    const job = controller.jobs[0];
+    assert.equal(job.state, 'success', job.message);
+    assert.equal(controller.config.sources.maxInputCharacters, 120000);
+    assert.ok(job.inputCharacters! < 120000, String(job.inputCharacters));
+    const [messages] = platform.sent;
+    assert.ok(messages.some((message) => message.content.endsWith(`\n${POLITICS_TASK}`)));
+    assert.ok(messages.some((message) => message.content.includes('"ruling":true')));
+  } finally {
+    controller.dispose();
+  }
 });

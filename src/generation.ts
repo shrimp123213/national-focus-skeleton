@@ -13,6 +13,7 @@ import {
   sizeLimits,
   type Candidate,
   type FocusNode,
+  type Politics,
   type State,
 } from './model';
 import { coreBranch, layoutTree } from './layout';
@@ -353,6 +354,27 @@ export async function generateCountry(
 }
 /** Story days without progress after which an ongoing event is flagged for review. */
 export const staleEventDays = 120;
+/**
+ * A country's factions for the update and reshape tasks (spec 六): the strongest first, the ruling
+ * one marked. Colours and succession stay out.
+ */
+function politicsData(politics: Politics) {
+  return {
+    ruling: politics.ruling,
+    factions: [...politics.factions]
+      .sort((a, b) => b.support - a.support)
+      .map(({ id, name, appeal, stance, support }) => ({
+        id,
+        name,
+        appeal,
+        stance,
+        support,
+        ...(id === politics.ruling ? { ruling: true } : {}),
+      })),
+    members: politics.members.map(({ id, name, weight, faction }) => ({ id, name, weight, faction })),
+    ...(politics.pending ? { pending: politics.pending } : {}),
+  };
+}
 /** Keep executable rules for time skips, omit large descriptive text and receipt history. */
 export function workingState(state: State, fullDefinitions = false): object {
   return {
@@ -373,6 +395,7 @@ export function workingState(state: State, fullDefinitions = false): object {
         facts: c.facts,
         capabilities: c.capabilities,
         commitments: c.commitments,
+        ...(c.politics ? { politics: politicsData(c.politics) } : {}),
         period: {
           number: c.period.number,
           title: c.periodTitle,
