@@ -4,6 +4,7 @@ import { installCountry, validateGraph } from './engine';
 import { GeneratedTreeSchema, normalizeCore, validateTopology } from './generation';
 import { coreBranch, layoutTree } from './layout';
 import { sizeLimits, StateSchema, TreeSchema, type Country, type Proposal, type State } from './model';
+import { validateFactionRules } from './politics';
 import { assertCapabilityOrder } from './reachability';
 
 export type Transition = Proposal['transitions'][number];
@@ -77,6 +78,8 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   ) {
     throw new Error('新期分支不可重复，节点必须属于已定义分支');
   }
+  // New focuses only: the carried focus may name a faction that has dissolved since.
+  validateFactionRules(nodes, old.politics, nodes);
   if (anchor) {
     // The old routes are no longer choices. Preserve work/effects, not obsolete graph edges.
     nodes.unshift({ ...old.nodes[anchor], prerequisites: [], mutex: null });
@@ -97,6 +100,8 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
     branches,
     nodes: layoutTree(nodes, coreBranch({ branches })),
     capabilities: Object.values(old.capabilities),
+    // Only for the install checks; the country keeps its own politics below.
+    politics: old.politics,
   });
   assertCapabilityOrder(
     tree.nodes,

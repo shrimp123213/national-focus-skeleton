@@ -25,18 +25,34 @@ const Text = z.string().min(1).max(8000);
 const Day = z.number().finite().nonnegative();
 /** negate=true means the fact or capability must NOT hold (skeleton edition, handoff doc section 32). */
 const Negate = z.boolean().optional().describe('true＝必须「没有」这个能力或事实；省略为 false');
+export const factionStances = ['moderate', 'hardline', 'extreme'] as const;
 export const RequirementSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('fact'), id: Id, label: Text, negate: Negate }).strict(),
   z.object({ kind: z.literal('capability'), id: Id, label: Text, negate: Negate }).strict(),
   z
     .object({ kind: z.enum(['stability', 'warSupport']), minimum: z.number().min(0).max(100), label: Text })
     .strict(),
+  /** v0.18.0: only in requirements and in an effect's `when`; a missing faction counts as 0. */
+  z
+    .object({
+      kind: z.literal('support'),
+      faction: Id.describe('派系 id'),
+      minimum: z.number().int().min(0).max(100),
+      label: Text,
+      negate: z.boolean().optional().describe('true＝支持度必须低于 minimum；省略为 false'),
+    })
+    .strict()
+    .describe('派系支持度 ≥ minimum；只能写在 requirements 与效果的 when'),
 ]);
-/** Conditions checked when the effect would apply; unmet means the effect is skipped for good. */
+/**
+ * Conditions checked when the effect would apply; unmet means the effect is skipped for good.
+ * The id makes the model-facing JSON schema define it once, not once per effect kind.
+ */
 const When = z
   .array(RequirementSchema)
   .optional()
-  .describe('条件式效果：完成时这些条件都成立才生效；省略为无条件');
+  .describe('条件式效果：完成时这些条件都成立才生效；省略为无条件')
+  .meta({ id: 'When' });
 export const EffectSchema = z.discriminatedUnion('kind', [
   z
     .object({
@@ -50,6 +66,49 @@ export const EffectSchema = z.discriminatedUnion('kind', [
     .object({ id: Id, kind: z.literal('capability'), key: Id, name: Text, active: z.boolean(), when: When })
     .strict(),
   z.object({ id: Id, kind: z.literal('commitment'), key: Id, name: Text, when: When }).strict(),
+  /** v0.18.0 faction effects: one focus or one event change settles them together (politics.ts). */
+  z
+    .object({
+      id: Id,
+      kind: z.literal('support'),
+      faction: Id.describe('派系 id'),
+      value: z.literal([-15, -10, -5, 5, 10, 15]).describe('支持度增减'),
+      when: When,
+    })
+    .strict(),
+  z
+    .object({
+      id: Id,
+      kind: z.literal('member'),
+      member: Id.describe('成员 id'),
+      faction: Id.nullable().describe('改投的派系 id；null＝转为未表态。只改标签，不改支持度'),
+      when: When,
+    })
+    .strict(),
+  z
+    .object({
+      id: Id,
+      kind: z.literal('merge'),
+      source: Id.describe('并入别人的派系 id；不可为执政派系'),
+      target: Id.describe('接收的派系 id'),
+      when: When,
+    })
+    .strict()
+    .describe('source 的支持度与成员全部归 target，source 解散'),
+  z
+    .object({
+      id: Id,
+      kind: z.literal('faction'),
+      key: Id.describe('派系 id'),
+      name: Text,
+      appeal: Text.describe('一句诉求'),
+      stance: z.enum(factionStances).describe('作风：moderate 温和、hardline 强硬、extreme 极端'),
+      leader: Text.optional().describe('代表人物；可省略'),
+      support: z.literal([5, 10, 15]).optional().describe('新派系的起始支持度；修改既有派系时省略'),
+      when: When,
+    })
+    .strict()
+    .describe('key 不存在时建立新派系（须填 support）；已存在时修改名称、诉求、作风与代表人物'),
 ]);
 export const NodeSchema = z
   .object({
@@ -83,7 +142,13 @@ export const NodeSchema = z
     investments: z.array(Text).describe('投入的人力、物资或机构，简短名词'),
     effects: z.array(EffectSchema).describe('本国策完成时产生的能力、承诺或数值变动'),
     mutex: z
-      .object({ group: Id, route: Id, lock: z.enum(['complete', 'start']), reason: Text })
+      .object({
+        group: Id,
+        route: Id,
+        lock: z.enum(['complete', 'start']),
+        reason: Text,
+        backers: z.array(Id).optional().describe('此路线倚重的派系 id；可省略'),
+      })
       .strict()
       .nullable(),
     impact: z
@@ -160,7 +225,6 @@ export const RelationSchema = z
   })
   .strict();
 export type Relation = z.infer<typeof RelationSchema>;
-export const factionStances = ['moderate', 'hardline', 'extreme'] as const;
 export const factionStanceNames: Record<(typeof factionStances)[number], string> = {
   moderate: '温和',
   hardline: '强硬',
@@ -219,7 +283,8 @@ export const PoliticsSchema = z
           })
           .strict(),
       )
-      .min(2)
+      // In play, dissolutions and merges may leave only the ruling faction; generation asks for more.
+      .min(1)
       .max(8),
     members: z.array(
       z

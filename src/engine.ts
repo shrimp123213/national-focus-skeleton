@@ -1,4 +1,10 @@
-import { assignColors, validatePolitics } from './politics';
+import {
+  assignColors,
+  isFactionEffect,
+  settlePolitics,
+  validateFactionRules,
+  validatePolitics,
+} from './politics';
 import { storyTime } from './story-time';
 import {
   Country,
@@ -73,6 +79,7 @@ export function installCountry(input: State, raw: unknown, day: number): State {
     validatePolitics(tree.politics);
     tree.politics.factions = assignColors(tree.politics.factions);
   }
+  validateFactionRules(tree.nodes, tree.politics);
   const { historical, capabilities, ...definition } = tree;
   const country: Country = {
     ...definition,
@@ -137,6 +144,11 @@ export function conditionMet(country: Country, requirement: Requirement): boolea
       return country.stability >= requirement.minimum;
     case 'warSupport':
       return country.warSupport >= requirement.minimum;
+    case 'support': {
+      // No politics, or a dissolved faction, counts as support 0.
+      const faction = country.politics?.factions.find((item) => item.id === requirement.faction);
+      return (faction?.support ?? 0) >= requirement.minimum !== (requirement.negate === true);
+    }
   }
 }
 export function blockers(country: Country, node: FocusNode): string[] {
@@ -360,7 +372,15 @@ function applyFocusEffects(country: Country, node: FocusNode): void {
   const due = node.effects.filter(
     (item) => !progress.applied.includes(item.id) && (item.when ?? []).every((r) => conditionMet(country, r)),
   );
+  // Faction effects settle as one batch. One that no longer holds is skipped; a focus never fails here.
+  const settled = settlePolitics(country.politics, due.filter(isFactionEffect), () => {});
   for (const item of due) {
+    if (isFactionEffect(item)) {
+      if (settled.includes(item.id)) {
+        progress.applied.push(item.id);
+      }
+      continue;
+    }
     effect(country, { ...item, when: [] }, `国策完成：${node.name}`);
     progress.applied.push(item.id);
   }
@@ -758,9 +778,18 @@ function applyChanges(
     requireThat(country?.enabled, '事件效果引用未启用国家');
     requireThat(country.cursor <= at, '不能修改国家开始追踪前的事件');
     requireThat(new Set(change.effects.map((e) => e.id)).size === change.effects.length, '事件效果 ID 重复');
+    // Faction effects settle as one batch, and their conditions are read before any effect applies.
+    const batch = change.effects
+      .filter(isFactionEffect)
+      .filter((item) => (item.when ?? []).every((r) => conditionMet(country, r)));
     for (const item of change.effects) {
-      effect(country, item, reason);
+      if (!isFactionEffect(item)) {
+        effect(country, item, reason);
+      }
     }
+    settlePolitics(country.politics, batch, (item, why) => {
+      throw new Error(`事件 ${event.id} 对${country.name}的效果 ${item.id} 无法套用：${why}`);
+    });
   }
 }
 
@@ -1020,6 +1049,7 @@ export function applyProposal(input: State, raw: unknown, allowEdits = false, re
     }
     requireThat(Object.keys(country.nodes).length <= 300, '单国国策超过 300 节点');
     validateGraph(country.nodes);
+    validateFactionRules(edit.nodes, country.politics, Object.values(country.nodes));
     pruneRelations(country, new Set(edit.nodes.map((n) => n.id)));
     country.treeRevision++;
   }

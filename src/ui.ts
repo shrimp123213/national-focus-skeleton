@@ -566,11 +566,26 @@ export function mountUI(
       ? { text: `上次完成：${jobNames[last.kind as JobKind] ?? last.kind} · ${last.time}`, state: '' }
       : { text: '任务待命', state: '' };
   }
-  function effectText(e: FocusNode['effects'][number]): string {
+  function effectText(e: FocusNode['effects'][number], country?: Country): string {
     const when = e.when?.length ? `若${e.when.map((r) => r.label).join('且')}：` : '';
-    return when + effectBody(e);
+    return when + effectBody(e, country);
   }
-  function effectBody(e: FocusNode['effects'][number]): string {
+  function effectBody(e: FocusNode['effects'][number], country?: Country): string {
+    // Faction effects name factions and members by name when the country still has them.
+    const faction = (id: string) => country?.politics?.factions.find((item) => item.id === id)?.name ?? id;
+    if (e.kind === 'support') {
+      return `${faction(e.faction)}支持度 ${e.value >= 0 ? '+' : ''}${e.value}`;
+    }
+    if (e.kind === 'member') {
+      const member = country?.politics?.members.find((item) => item.id === e.member)?.name ?? e.member;
+      return e.faction ? `${member}改投${faction(e.faction)}` : `${member}转为未表态`;
+    }
+    if (e.kind === 'merge') {
+      return `${faction(e.source)}并入${faction(e.target)}`;
+    }
+    if (e.kind === 'faction') {
+      return `建立或更新派系「${e.name}」${e.support ? `（新建时支持度 ${e.support}）` : ''}`;
+    }
     return e.kind === 'capability'
       ? `${e.active ? '建立／恢复' : '失效'}：${e.name}`
       : e.kind === 'commitment'
@@ -639,7 +654,7 @@ export function mountUI(
     const effects = `<section class="detail-section ${done ? 'gained' : ''}"><h4>${done ? '已取得' : '完成效果'}</h4>${list(
       node.effects.map(
         (e) =>
-          effectText(e) +
+          effectText(e, country) +
           (progress.by?.mode === 'bypassed' && done
             ? '（已略过，未生效）'
             : e.when?.length && done
@@ -1513,7 +1528,7 @@ export function mountUI(
       .filter((change) => change.effects.length)
       .map(
         (change) =>
-          `${state.countries[change.country]?.name ?? change.country}：${change.effects.map(effectText).join('、')}`,
+          `${state.countries[change.country]?.name ?? change.country}：${change.effects.map((e) => effectText(e, state.countries[change.country])).join('、')}`,
       );
     return parts.length ? parts.join('；') : '无直接影响';
   }

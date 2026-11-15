@@ -85,14 +85,6 @@ const rejected: [string, (value: Politics) => void, RegExp | null][] = [
     null,
   ],
   [
-    '只有一个派系',
-    (p) => {
-      p.factions = [{ ...p.factions[0], support: 100 }];
-      p.members = [];
-    },
-    null,
-  ],
-  [
     '超过 8 个派系',
     (p) => {
       p.factions = Array.from({ length: 9 }, (_, i) => ({
@@ -127,14 +119,6 @@ const rejected: [string, (value: Politics) => void, RegExp | null][] = [
       p.ruling = 'rebels';
     },
     /执政派系 rebels 不在 factions 中/,
-  ],
-  [
-    '执政派系支持度为 0',
-    (p) => {
-      p.factions[0].support = 0;
-      p.factions[1].support = 70;
-    },
-    /执政派系「王党」的支持度须大于 0/,
   ],
   [
     '成员支持不存在的派系',
@@ -185,6 +169,23 @@ for (const [name, corrupt, message] of rejected) {
     );
   });
 }
+
+test('执政派系支持度为 0 仍可安装：只有生成时才要求大于 0', () => {
+  const value = politics();
+  value.factions[0].support = 0;
+  value.factions[1].support = 70;
+  assert.equal(install(value).countries.augustium.politics!.factions[0].support, 0);
+});
+
+test('只有一个派系仍可安装：至少两个派系只在生成时要求', () => {
+  const value = politics();
+  value.factions = [{ ...value.factions[0], support: 100 }];
+  value.members = [];
+  assert.deepEqual(
+    install(value).countries.augustium.politics!.factions.map((faction) => faction.id),
+    ['crown'],
+  );
+});
 
 test('没有政局的树照常安装、汇出与汇入，不出现 politics 栏位', () => {
   const state = installCountry(createState(0), demoTree(), 0);
