@@ -120,6 +120,30 @@ test('换期承接 active 的 ID、投入、工期与效果帐本；往期只存
   assert.equal(before.countries.land.period.number, 1);
 });
 
+test('换期原样保留国家政局', () => {
+  const state = installCountry(
+    createState(100),
+    {
+      ...tree,
+      politics: {
+        ruling: 'court',
+        factions: [
+          { id: 'court', name: '宫廷派', appeal: '维持现制', stance: 'moderate', support: 60 },
+          { id: 'army', name: '军部', appeal: '扩军', stance: 'hardline', support: 40 },
+        ],
+        members: [
+          { id: 'guard', name: '近卫军', kind: 'army', weight: 'heavy', faction: 'army', note: '驻守王都' },
+        ],
+        succession: '长子继承',
+      },
+    },
+    100,
+  );
+  const after = transitionPeriod(state, transition, reply('p2_', 'old_done'));
+  assert.equal(after.countries.land.period.number, 2);
+  assert.deepEqual(after.countries.land.politics, state.countries.land.politics);
+});
+
 test('换期回复接受分支 ID，保存名称并保留原承接国策，不改写输入', () => {
   const state = fixture();
   const next = reply();

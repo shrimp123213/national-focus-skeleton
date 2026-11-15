@@ -20,7 +20,8 @@ import type { Snapshot } from './platform';
 import { generateBySkeleton, type SkeletonProgress } from './skeleton';
 import { structureData, typeShape, type Structure, type TreeType } from './structure';
 
-export const GeneratedTreeSchema = TreeSchema.extend({
+/** Politics stays out until generation writes it (v0.18.0-b). */
+export const GeneratedTreeSchema = TreeSchema.omit({ politics: true }).extend({
   analysis: z.string().min(1),
   branches: z.array(BranchSchema).min(1).max(16),
   nodes: z

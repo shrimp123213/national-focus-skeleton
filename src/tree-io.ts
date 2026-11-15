@@ -58,6 +58,7 @@ export function countryTree(country: Country): Record<string, unknown> {
     autoPeriod: country.autoPeriod,
     branches: country.branches,
     ...(country.relations ? { relations: country.relations } : {}),
+    ...(country.politics ? { politics: country.politics } : {}),
     // Base capabilities only: the ones no focus in this tree produces.
     capabilities: Object.values(country.capabilities).filter(
       (capability) => !produced.has(capability.id) || inheritedProducts.has(capability.id),

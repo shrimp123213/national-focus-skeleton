@@ -1,3 +1,4 @@
+import { assignColors, validatePolitics } from './politics';
 import { storyTime } from './story-time';
 import {
   Country,
@@ -68,6 +69,10 @@ export function installCountry(input: State, raw: unknown, day: number): State {
   const state = structuredClone(input);
   const nodes = Object.fromEntries(tree.nodes.map((n) => [n.id, n]));
   validateGraph(nodes);
+  if (tree.politics) {
+    validatePolitics(tree.politics);
+    tree.politics.factions = assignColors(tree.politics.factions);
+  }
   const { historical, capabilities, ...definition } = tree;
   const country: Country = {
     ...definition,

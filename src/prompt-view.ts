@@ -1,6 +1,6 @@
 import { conditionMet, eventText, eventUpdatedAt, newsDigest, startableFocuses } from './engine';
 import { stateTime, storyTime } from './story-time';
-import type { Country, FocusNode, State } from './model';
+import { factionStanceNames, type Country, type FocusNode, type State } from './model';
 
 /**
  * The country data for the story model, saved with every floor at `国策.prompt`. It is the true
@@ -69,6 +69,34 @@ function chosenRoutes(country: Country): string[] {
     return taken[0] ? `${taken[0].branch}：${taken[0].name}路线` : lock.reason;
   });
 }
+/** The ruling faction, the three strongest factions, heavy members and a pending change of government. */
+function politicsLines(country: Country): string[] {
+  const politics = country.politics;
+  if (!politics) {
+    return [];
+  }
+  const factions = Object.fromEntries(politics.factions.map((faction) => [faction.id, faction]));
+  const ruling = factions[politics.ruling];
+  const strongest = [...politics.factions]
+    .sort((a, b) => b.support - a.support)
+    .slice(0, 3)
+    .map((faction) => `${faction.name} ${faction.support}%`);
+  const lines = [
+    `执政派系：${ruling.name}（${factionStanceNames[ruling.stance]}）；主要派系（支持度）：${strongest.join('、')}`,
+  ];
+  const heavy = politics.members.filter((member) => member.weight === 'heavy');
+  if (heavy.length) {
+    lines.push(
+      `重要成员：${heavy.map((member) => `${member.name}（${member.faction ? `支持${factions[member.faction].name}` : '未表态'}）`).join('、')}`,
+    );
+  }
+  if (politics.pending) {
+    lines.push(
+      `待决更替：政权已易手给${factions[politics.pending.ruling].name}，国策树尚未更新。原因：${politics.pending.reason}`,
+    );
+  }
+  return lines;
+}
 const stepMarks = { done: '已完成', active: '进行中', pending: '待办', planned: '预定' } as const;
 /**
  * An ongoing event like a Workflow Assistant 事件脉络: how it began, where it stands (`current`
@@ -130,6 +158,7 @@ function countrySections(
       `长期方向：${country.longTerm.map((goal) => goal.text.trim().replace(/[。；;.]+$/, '')).join('；')}`,
     );
   }
+  sections.push(...politicsLines(country));
   const current = country.current ? country.nodes[country.current] : undefined;
   if (current) {
     sections.push(`推进中：${progressText(country)}：${clip(current.description, limits.description)}`);

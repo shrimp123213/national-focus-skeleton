@@ -160,6 +160,96 @@ export const RelationSchema = z
   })
   .strict();
 export type Relation = z.infer<typeof RelationSchema>;
+export const factionStances = ['moderate', 'hardline', 'extreme'] as const;
+export const factionStanceNames: Record<(typeof factionStances)[number], string> = {
+  moderate: '温和',
+  hardline: '强硬',
+  extreme: '极端',
+};
+export const memberKinds = [
+  'family',
+  'race',
+  'clan',
+  'order',
+  'army',
+  'guild',
+  'institution',
+  'other',
+] as const;
+export const memberKindNames: Record<(typeof memberKinds)[number], string> = {
+  family: '家族',
+  race: '种族',
+  clan: '氏族',
+  order: '教团',
+  army: '军团',
+  guild: '商会',
+  institution: '机构',
+  other: '其他',
+};
+export const memberWeights = ['light', 'medium', 'heavy'] as const;
+export const memberWeightNames: Record<(typeof memberWeights)[number], string> = {
+  light: '轻',
+  medium: '中',
+  heavy: '重',
+};
+/**
+ * A country's factions (v0.18.0): groups that change the country's course when they rule. Support
+ * measures political influence; members are labels only and own no share of it.
+ */
+export const PoliticsSchema = z
+  .object({
+    ruling: Id.describe('执政派系的 id'),
+    factions: z
+      .array(
+        z
+          .object({
+            id: Id,
+            name: Text,
+            appeal: Text.describe('一句诉求'),
+            leader: Text.optional().describe('代表人物；可省略'),
+            stance: z.enum(factionStances).describe('作风：moderate 温和、hardline 强硬、extreme 极端'),
+            support: z
+              .number()
+              .int()
+              .min(0)
+              .max(100)
+              .describe('支持度：政治影响力，不是人口；所有派系合计 100'),
+            /** The script assigns the slot on install and stores it; the author never picks one. */
+            color: z.number().int().min(0).max(7).optional().describe('色位，由脚本分配；不要填写'),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(8),
+    members: z.array(
+      z
+        .object({
+          id: Id,
+          name: Text,
+          kind: z
+            .enum(memberKinds)
+            .describe(
+              '类型：family 家族、race 种族、clan 氏族、order 教团、army 军团、guild 商会、institution 机构、other 其他',
+            ),
+          weight: z
+            .enum(memberWeights)
+            .describe('分量：light 轻、medium 中、heavy 重；只用于显示，不参与计算'),
+          faction: Id.nullable().describe('支持的派系 id；null＝未表态'),
+          note: Text,
+        })
+        .strict(),
+    ),
+    succession: Text.describe('此国政权如何更替（选举、推举、继承、政变），一句'),
+    /** A change of government that waits for the player; empty in normal play. */
+    pending: z
+      .object({ ruling: Id, reason: z.string().min(1).max(800), at: Day })
+      .strict()
+      .nullable()
+      .optional()
+      .describe('待决的执政更替，由脚本写入；不要填写'),
+  })
+  .strict();
+export type Politics = z.infer<typeof PoliticsSchema>;
 /**
  * Generated focuses last whole weeks, one to five (v0.14.16), so a period fits the days, weeks and
  * occasional months a role-play advances by. Imported trees keep their own durations.
@@ -209,6 +299,8 @@ export const TreeSchema = z
     branches: z.array(BranchSchema).default([]),
     /** Optional so trees without relations stay readable by v0.11.1. */
     relations: z.array(RelationSchema).optional(),
+    /** Optional: a country without politics has no factions and no faction rules. */
+    politics: PoliticsSchema.optional(),
     capabilities: z.array(CapabilitySchema),
     historical: z.array(z.object({ node: Id, evidence: Text }).strict()),
     nodes: z.array(NodeSchema).min(1).max(300),
