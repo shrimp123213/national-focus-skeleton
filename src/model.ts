@@ -600,11 +600,21 @@ export const ProposalSchema = z
         z
           .object({
             country: CountryId,
-            cause: z.enum(['completed', 'incompatible']),
+            cause: z.enum(['completed', 'incompatible', 'government']),
+            ruling: Id.optional().describe('新执政派系的 id：cause=government 时必填，其他 cause 不填'),
             reason: z.string().min(1).max(800),
             invalidateActive: z.boolean().default(false),
           })
-          .strict(),
+          .strict()
+          .refine((transition) => (transition.cause === 'government') === (transition.ruling !== undefined), {
+            message:
+              'cause=government 时必须填 ruling（新执政派系的 id）；completed 与 incompatible 不填 ruling',
+            path: ['ruling'],
+          })
+          // A new government never carries the active focus, whatever the reply says.
+          .transform((transition) =>
+            transition.cause === 'government' ? { ...transition, invalidateActive: true } : transition,
+          ),
       )
       .default([])
       .describe('本期主要目的已完成或已不适配时直接换期；无需换期填空，禁止为关闭 autoPeriod 的国家换期'),

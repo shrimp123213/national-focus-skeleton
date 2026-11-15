@@ -36,9 +36,22 @@ import {
   workingState,
 } from './generation';
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
-import { checkTransition, periodAnchor, PeriodReplySchema, transitionPeriod } from './periods';
+import {
+  checkGovernment,
+  checkTransition,
+  periodAnchor,
+  PeriodReplySchema,
+  transitionPeriod,
+} from './periods';
 import { drawStructure, signature, structureData, type Structure, type TreeType } from './structure';
-import { DATA_TOKEN, GENERATE_POLITICS_TASK, GUIDANCE_TASK, POLITICS_TASK, promptText } from './prompts';
+import {
+  DATA_TOKEN,
+  GENERATE_POLITICS_TASK,
+  GOVERNMENT_TASK,
+  GUIDANCE_TASK,
+  POLITICS_TASK,
+  promptText,
+} from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
 import { storyTime } from './story-time';
@@ -403,6 +416,14 @@ export class FocusController {
       for (const transition of proposal.transitions) {
         const country = next.countries[transition.country];
         if (!country.enabled || !country.autoPeriod || country.calibration) {
+          // The player decides on this change of government; a newer one replaces it.
+          if (country.enabled && transition.cause === 'government') {
+            country.politics!.pending = {
+              ruling: transition.ruling!,
+              reason: transition.reason,
+              at: proposal.until,
+            };
+          }
           continue;
         }
         periods.push({
@@ -888,6 +909,30 @@ export class FocusController {
     // Route pools limit requests; independent countries keep their own result and failure state.
     await Promise.all(candidates.map((candidate) => this.run('generate', candidate)));
   }
+  /**
+   * Start the next period for the country's pending change of government (spec 五「待决」). The
+   * player approves it, so the autoPeriod switch does not apply. A country in calibration is refused.
+   */
+  async approvePending(id: string): Promise<void> {
+    const country = this.state?.countries[id];
+    const pending = country?.politics?.pending;
+    if (!country || !pending) {
+      throw new Error('此国没有待决的执政更替');
+    }
+    const work: PeriodWork = {
+      transition: {
+        country: id,
+        cause: 'government',
+        ruling: pending.ruling,
+        reason: pending.reason,
+        invalidateActive: true,
+      },
+      approved: true,
+    };
+    checkTransition(this.state!, work.transition, true);
+    const { name, description, evidence } = country;
+    await this.run('generate', { id, name, description, evidence }, work);
+  }
   async run(kind: JobKind, candidate?: Candidate, periodWork?: PeriodWork): Promise<void> {
     if (kind === 'update') {
       this.coordinationEpoch++;
@@ -983,7 +1028,7 @@ export class FocusController {
       }
       aborter.signal.throwIfAborted();
       if (periodWork) {
-        checkTransition(snapshot.state, periodWork.transition);
+        checkTransition(snapshot.state, periodWork.transition, periodWork.approved);
       }
       // One draw per run: retries in this run keep the same lots.
       const structure =
@@ -1074,12 +1119,15 @@ export class FocusController {
                 ...shapeLimits(snapshot.state.settings, structure?.type.key as TreeType | undefined),
               },
               ...(structure ? { structure: structureData(structure) } : {}),
-              instructions:
-                '生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程序原样保留；新节点可引用 anchor 作必要前置，不相关议程可独立推进。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。',
+              instructions: `生成下一期与旧期摘要。tree.nodes 只输出新节点，承接节点由程序原样保留；${
+                periodWork.transition.cause === 'government'
+                  ? '政权已更替，anchor 只作历史保留，新节点不得以它为前置'
+                  : '新节点可引用 anchor 作必要前置，不相关议程可独立推进'
+              }。节点与互斥组使用 prefix。不得生成 historical 或改变既有能力、数值、事实及事件。保留仍有效的 longTerm 的 id 与原文，修订理由写 analysis。summary 只叙述已发生事实与旧期终止原因，不把新计划当成果。总数含 anchor，以 limits 为篇幅目标，不凑数。`,
             },
             PeriodReplySchema,
             (value) => {
-              transitionPeriod(snapshot.state, periodWork.transition, value);
+              transitionPeriod(snapshot.state, periodWork.transition, value, periodWork.approved);
             },
             '生成下一期与旧期摘要',
           )
@@ -1133,7 +1181,12 @@ export class FocusController {
       } else {
         next = await this.writeState((current) => {
           const state = periodWork
-            ? transitionPeriod(current.state, periodWork.transition, PeriodReplySchema.parse(result))
+            ? transitionPeriod(
+                current.state,
+                periodWork.transition,
+                PeriodReplySchema.parse(result),
+                periodWork.approved,
+              )
             : this.proposedState(kind, current, result, candidate);
           if (structure && state.countries[candidate!.id]) {
             state.countries[candidate!.id].shape = structure;
@@ -1219,6 +1272,10 @@ export class FocusController {
     const countries = (payload as { state?: { countries?: { politics?: unknown }[] } }).state?.countries;
     if ((kind === 'update' || kind === 'reshape') && countries?.some((country) => country.politics)) {
       note(POLITICS_TASK, '派系说明');
+      // Only the update task may propose transitions.
+      if (kind === 'update') {
+        note(GOVERNMENT_TASK, '执政更替说明');
+      }
     }
     // Generation may write politics: the first generation and the period stage, not skeleton stages.
     const stage = (payload as { stage?: unknown }).stage;
@@ -1484,6 +1541,9 @@ export class FocusController {
       }
       if (country.enabled && country.autoPeriod && !country.calibration) {
         checkTransition(next, transition);
+      } else {
+        // Such a change waits for the player, but it must still name a valid ruling faction.
+        checkGovernment(next, transition);
       }
       if (countries.has(transition.country)) {
         throw new Error('同一次更新不可对同国重复换期');

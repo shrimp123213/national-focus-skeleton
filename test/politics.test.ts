@@ -12,6 +12,7 @@ import { PeriodReplySchema } from '../src/periods';
 import {
   DEFAULT_TASK,
   GENERATE_POLITICS_TASK,
+  GOVERNMENT_TASK,
   GUIDANCE_TASK,
   POLITICS_TASK,
   WORLD_CONTEXT_TASK,
@@ -352,9 +353,11 @@ const contents = (controller: FocusController, kind: JobKind, state: State, extr
 test('派系说明：有政局的启用国家时附在 update 与 reshape 的任务指示之后；没有时、其他任务都不附', () => {
   const controller = new FocusController(new DemoPlatform());
   for (const kind of ['update', 'reshape'] as const) {
+    // The update task also gets the government note after it.
+    const notes = kind === 'update' ? `${POLITICS_TASK}\n${GOVERNMENT_TASK}` : POLITICS_TASK;
     assert.deepEqual(
       contents(controller, kind, promptState(true)).filter((text) => text.includes(POLITICS_TASK)),
-      [`${DEFAULT_TASK[kind]}\n${POLITICS_TASK}`],
+      [`${DEFAULT_TASK[kind]}\n${notes}`],
     );
     for (const state of [promptState(false), installCountry(createState(0), demoTree(), 0)]) {
       assert.equal(
@@ -377,20 +380,21 @@ test('派系说明与世界指引说明的附加方式相同：自订任务指�
   task.content = '自订更新指示';
   const state = promptState(true);
   const custom = `自订更新指示\n${WORLD_CONTEXT_TASK}`;
-  assert.ok(contents(controller, 'update', state).includes(`${custom}\n${POLITICS_TASK}`));
+  const notes = `${POLITICS_TASK}\n${GOVERNMENT_TASK}`;
+  assert.ok(contents(controller, 'update', state).includes(`${custom}\n${notes}`));
   assert.ok(
     contents(controller, 'update', state, { guidance: '指引' }).includes(
-      `${custom}\n${POLITICS_TASK}\n${GUIDANCE_TASK}`,
+      `${custom}\n${notes}\n${GUIDANCE_TASK}`,
     ),
   );
   task.enabled = false;
   assert.deepEqual(controller.messages('update', undefined, { state: workingState(state) })[0], {
     role: 'system',
     name: '派系说明',
-    content: POLITICS_TASK,
+    content: notes,
   });
   const both = contents(controller, 'update', state, { guidance: '指引' });
-  assert.equal(both[0], `${POLITICS_TASK}\n${GUIDANCE_TASK}`);
+  assert.equal(both[0], `${notes}\n${GUIDANCE_TASK}`);
   assert.equal(
     both.some((text) => text.includes('自订更新指示')),
     false,
@@ -449,7 +453,7 @@ test('示范局势更新带政局时，请求仍在默认输入上限内，并�
     assert.equal(controller.config.sources.maxInputCharacters, 120000);
     assert.ok(job.inputCharacters! < 120000, String(job.inputCharacters));
     const [messages] = platform.sent;
-    assert.ok(messages.some((message) => message.content.endsWith(`\n${POLITICS_TASK}`)));
+    assert.ok(messages.some((message) => message.content.endsWith(`\n${POLITICS_TASK}\n${GOVERNMENT_TASK}`)));
     assert.ok(messages.some((message) => message.content.includes('"ruling":true')));
   } finally {
     controller.dispose();

@@ -8,6 +8,8 @@ import type { ScheduleSource, WorldSchedulePrediction } from './world-schedule';
 
 export type PeriodWork = {
   transition: Transition;
+  /** The player approved a pending change of government; a re-run keeps this. */
+  approved?: boolean;
 };
 
 /** `name` is only for display and logs; API requests send role and content only. */

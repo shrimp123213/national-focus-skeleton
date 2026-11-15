@@ -31,20 +31,82 @@ export function periodAnchor(country: Country, invalidateActive = false): string
   );
 }
 
-export function checkTransition(state: State, transition: Transition): void {
-  const country = state.countries[transition.country];
-  if (!country?.enabled || !country.autoPeriod || country.calibration) {
-    throw new Error('此国未启用自动换期，或尚待校准');
+/**
+ * Rules for a change of government (spec 五): the country has factions, and the new ruling faction
+ * exists, has support and does not rule yet. Other causes pass.
+ */
+export function checkGovernment(state: State, transition: Transition): void {
+  if (transition.cause !== 'government') {
+    return;
   }
-  if (transition.invalidateActive && transition.cause !== 'incompatible') {
-    throw new Error('只有局势不适配可停止承接进行中国策');
+  const country = state.countries[transition.country];
+  const politics = country?.politics;
+  if (!politics) {
+    throw new Error(`${country?.name ?? transition.country}没有派系，不能提出执政更替（cause=government）`);
+  }
+  const faction = politics.factions.find((item) => item.id === transition.ruling);
+  if (!faction) {
+    throw new Error(
+      `执政更替的新执政派系 ${transition.ruling} 不存在：ruling 须照抄 state 中${country.name}的派系 id`,
+    );
+  }
+  if (faction.support <= 0) {
+    throw new Error(`新执政派系「${faction.name}」的支持度为 0，不能执政`);
+  }
+  if (faction.id === politics.ruling) {
+    throw new Error(`「${faction.name}」已是${country.name}的执政派系：同一派系内换人不算执政更替`);
   }
 }
 
+/**
+ * `approved` marks a pending change of government that the player approved. The autoPeriod switch
+ * does not apply to it.
+ */
+export function checkTransition(state: State, transition: Transition, approved = false): void {
+  const country = state.countries[transition.country];
+  if (approved && country?.calibration) {
+    throw new Error('此国尚待校准：新一期要依校准后的现况生成，请先完成「更新局势」再换期');
+  }
+  if (!country?.enabled || (!country.autoPeriod && !approved) || country.calibration) {
+    throw new Error('此国未启用自动换期，或尚待校准');
+  }
+  if (transition.invalidateActive && !['incompatible', 'government'].includes(transition.cause)) {
+    throw new Error('只有局势不适配或执政更替可停止承接进行中国策');
+  }
+  // The approval holds only while the same change is still pending.
+  if (
+    approved &&
+    (transition.cause !== 'government' || country.politics?.pending?.ruling !== transition.ruling)
+  ) {
+    throw new Error('这项执政更替已不在待决中：已换期、已放弃或已被新的更替取代');
+  }
+  checkGovernment(state, transition);
+}
+
+/** Drop a pending change of government; the ruling faction stays (spec 五「待决」). */
+export function dismissPending(input: State, id: string): State {
+  if (!input.countries[id]?.politics?.pending) {
+    throw new Error('此国没有待决的执政更替');
+  }
+  const state = structuredClone(input);
+  delete state.countries[id].politics!.pending;
+  state.revision++;
+  return StateSchema.parse(state);
+}
+
+/** Commitments of a former government stay; their text says so once (spec 五). */
+const FORMER_GOVERNMENT = '前政府：';
+
 /** Replace just the policy tree. Events and all already-applied results belong to the live state. */
-export function transitionPeriod(input: State, transition: Transition, reply: PeriodReply): State {
-  checkTransition(input, transition);
+export function transitionPeriod(
+  input: State,
+  transition: Transition,
+  reply: PeriodReply,
+  approved = false,
+): State {
+  checkTransition(input, transition, approved);
   const old = input.countries[transition.country];
+  const government = transition.cause === 'government';
   const anchor = periodAnchor(old, transition.invalidateActive);
   const number = old.period.number + 1;
   const prefix = `p${number}_`;
@@ -69,6 +131,9 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
     if (node.impact === 'pivotal' && !node.news) {
       throw new Error(`重要国策 ${node.id} 缺少新闻`);
     }
+    if (government && anchor && node.prerequisites.flat().includes(anchor)) {
+      throw new Error(`新国策 ${node.id} 不可以 anchor（${anchor}）为前置：政权已更替，前期国策只作历史保留`);
+    }
     return node;
   });
   if (
@@ -85,7 +150,12 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   if (generated.politics) {
     validateGeneratedPolitics(generated.politics);
   }
-  const politics = old.politics ?? generated.politics;
+  let politics = old.politics ?? generated.politics;
+  if (government) {
+    // The new government takes office with the new tree, and the pending change ends.
+    const { pending: _pending, ...rest } = old.politics!;
+    politics = { ...rest, ruling: transition.ruling! };
+  }
   // New focuses only: the carried focus may name a faction that has dissolved since.
   validateFactionRules(nodes, politics, nodes);
   if (anchor) {
@@ -129,7 +199,17 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   state.countries[old.id] = {
     ...old,
     // New politics, with the colour slots the install assigned, take effect with the new tree.
-    ...(generated.politics ? { politics: installed.politics } : {}),
+    ...(generated.politics || government ? { politics: installed.politics } : {}),
+    ...(government
+      ? {
+          commitments: Object.fromEntries(
+            Object.entries(old.commitments).map(([id, text]) => [
+              id,
+              text.startsWith(FORMER_GOVERNMENT) ? text : `${FORMER_GOVERNMENT}${text}`,
+            ]),
+          ),
+        }
+      : {}),
     periodTitle: tree.periodTitle,
     agenda: tree.agenda,
     longTerm: tree.longTerm,
