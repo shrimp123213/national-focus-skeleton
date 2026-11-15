@@ -4,6 +4,7 @@ import { FocusController } from '../src/workflow';
 import { createState } from '../src/engine';
 import { defaultConfig, StateSchema, type Config, type State } from '../src/model';
 import type { GenerateResult, Platform, PromptMessage, Snapshot } from '../src/platform';
+import { importTrees, parseTreeFile } from '../src/tree-io';
 
 class SingleCountryPlatform implements Platform {
   async worldbooks() {
@@ -360,6 +361,217 @@ test('大型每期单次生成且最多 24 项；超额结果不提交', async (
     assert.equal(platform.calls.length, 1);
   }
 });
+
+type Reply = Record<string, any>;
+/** One generate run whose reply gets `change`; returns the job, the platform and the reply sent. */
+async function generateWith(change: (reply: Reply) => void) {
+  const platform = new SingleCountryPlatform();
+  const generate = platform.generate.bind(platform);
+  let reply: Reply = {};
+  platform.generate = async (messages) => {
+    reply = JSON.parse((await generate(messages)).content);
+    change(reply);
+    return { content: JSON.stringify(reply) };
+  };
+  const controller = new FocusController(platform);
+  try {
+    await controller.run('generate', candidate);
+    return { job: controller.jobs[0], platform, reply };
+  } finally {
+    controller.dispose();
+  }
+}
+const generatedPolitics = () => ({
+  ruling: 'crown',
+  factions: [
+    { id: 'crown', name: '王党', appeal: '王权高于一切', leader: '女王', stance: 'hardline', support: 50 },
+    { id: 'nobles', name: '旧贵族', appeal: '恢复领主特权', stance: 'extreme', support: 30 },
+    { id: 'guilds', name: '商会派', appeal: '开放商路', stance: 'moderate', support: 20 },
+  ],
+  members: [
+    { id: 'hohen', name: '霍亨家族', kind: 'family', weight: 'heavy', faction: 'nobles', note: '北境大领主' },
+    {
+      id: 'academy',
+      name: '星辉学塔',
+      kind: 'institution',
+      weight: 'medium',
+      faction: null,
+      note: '不涉政争',
+    },
+  ],
+  succession: '女王指定继承人，由枢密院确认',
+});
+const condition = (faction: string, minimum = 40) => ({
+  kind: 'support',
+  faction,
+  minimum,
+  label: `${faction} 支持度 ≥ ${minimum}`,
+});
+const focusOf = (reply: Reply, id: string) => reply.nodes.find((node: Reply) => node.id === id);
+/** Politics and faction rules in every place; b2_1 names `reform`, which b1_0 creates. */
+function withFactions(reply: Reply) {
+  reply.politics = generatedPolitics();
+  focusOf(reply, 'b0_1').requirements.push(condition('crown'));
+  focusOf(reply, 'b0_1').mutex.backers = ['crown'];
+  focusOf(reply, 'b0_2').mutex.backers = ['nobles', 'guilds'];
+  focusOf(reply, 'b0_3').effects.push(
+    { id: 'turn', kind: 'member', member: 'hohen', faction: 'crown' },
+    { id: 'fall', kind: 'support', faction: 'nobles', value: -10 },
+    { id: 'rise', kind: 'support', faction: 'crown', value: 10, when: [condition('crown', 30)] },
+  );
+  focusOf(reply, 'b1_0').effects.push({
+    id: 'found',
+    kind: 'faction',
+    key: 'reform',
+    name: '改革党',
+    appeal: '废除特权',
+    stance: 'moderate',
+    support: 10,
+  });
+  focusOf(reply, 'b2_1').requirements.push(condition('reform', 10));
+  focusOf(reply, 'b2_1').mutex.backers = ['reform'];
+}
+
+test('生成回复带政局：连同派系规则安装，派系依序取得色位，可引用另一国策建立的派系；不带政局照旧', async () => {
+  const { job, platform, reply } = await generateWith(withFactions);
+  assert.equal(job.state, 'success', job.message);
+  const country = platform.state.countries.testland;
+  assert.deepEqual(country.politics, {
+    ...reply.politics,
+    factions: reply.politics.factions.map((faction: Reply, color: number) => ({ ...faction, color })),
+  });
+  assert.deepEqual(country.nodes.b0_1.requirements, [condition('crown')]);
+  assert.deepEqual(country.nodes.b0_3.effects, focusOf(reply, 'b0_3').effects);
+  assert.deepEqual(country.nodes.b2_1.mutex?.backers, ['reform']);
+  const plain = await generateWith(() => {});
+  assert.equal(plain.job.state, 'success', plain.job.message);
+  assert.equal('politics' in plain.platform.state.countries.testland, false);
+});
+
+const sevenFactions = Array.from({ length: 7 }, (_, i) => ({
+  id: `f${i}`,
+  name: `派系${i}`,
+  appeal: '诉求',
+  stance: 'moderate',
+  support: i ? 10 : 40,
+}));
+/** Name, change, error, and whether a tree file with the same content imports (relaxed rules). */
+const generationRejects: [string, (reply: Reply) => void, RegExp, boolean][] = [
+  [
+    '只有 1 个派系',
+    (r) => {
+      r.politics = { ...generatedPolitics(), factions: [generatedPolitics().factions[0]], members: [] };
+      r.politics.factions[0].support = 100;
+    },
+    /生成时派系须为 2–6 个/,
+    true,
+  ],
+  [
+    '7 个派系',
+    (r) => {
+      r.politics = { ...generatedPolitics(), ruling: 'f0', factions: sevenFactions, members: [] };
+    },
+    /生成时派系须为 2–6 个/,
+    true,
+  ],
+  [
+    '执政派系支持度为 0',
+    (r) => {
+      r.politics = generatedPolitics();
+      r.politics.factions[0].support = 0;
+      r.politics.factions[1].support = 80;
+    },
+    /执政派系「王党」的支持度须大于 0/,
+    true,
+  ],
+  [
+    '条件引用不存在的派系',
+    (r) => {
+      withFactions(r);
+      focusOf(r, 'b0_1').requirements[0].faction = 'ghost';
+    },
+    /国策 b0_1 引用的派系 ghost 不存在/,
+    true,
+  ],
+  [
+    '效果引用不存在的派系',
+    (r) => {
+      withFactions(r);
+      focusOf(r, 'b0_3').effects.find((effect: Reply) => effect.id === 'fall').faction = 'ghost';
+    },
+    /国策 b0_3 引用的派系 ghost 不存在/,
+    true,
+  ],
+  [
+    'backers 引用不存在的派系',
+    (r) => {
+      withFactions(r);
+      focusOf(r, 'b0_2').mutex.backers = ['nobles', 'ghost'];
+    },
+    /国策 b0_2 引用的派系 ghost 不存在/,
+    true,
+  ],
+  [
+    '引用没有国策建立的派系',
+    (r) => {
+      withFactions(r);
+      focusOf(r, 'b1_0').effects.pop();
+    },
+    /国策 b2_1 引用的派系 reform 不存在/,
+    true,
+  ],
+  [
+    '成员不存在',
+    (r) => {
+      withFactions(r);
+      focusOf(r, 'b0_3').effects[1].member = 'nobody';
+    },
+    /国策 b0_3 的效果 turn：成员 nobody 不存在/,
+    true,
+  ],
+  [
+    '没有政局却用派系规则',
+    (r) => {
+      withFactions(r);
+      delete r.politics;
+    },
+    /国策 b0_1 使用了派系条件、派系效果或 backers，但此国没有派系/,
+    false,
+  ],
+  [
+    '填写色位',
+    (r) => {
+      r.politics = generatedPolitics();
+      Object.assign(r.politics.factions[0], { color: 0 });
+    },
+    /Unrecognized key.*color/,
+    true,
+  ],
+  [
+    '填写待决',
+    (r) => {
+      r.politics = { ...generatedPolitics(), pending: { ruling: 'nobles', reason: '议会罢免', at: 0 } };
+    },
+    /Unrecognized key.*pending/,
+    true,
+  ],
+];
+for (const [name, change, message, imports] of generationRejects) {
+  test(`生成时验证退回：${name}；同样内容的国策树档案${imports ? '仍可依宽松规则汇入' : '也不能汇入'}`, async () => {
+    const { job, platform, reply } = await generateWith(change);
+    assert.equal(job.state, 'failed');
+    assert.match(job.message, message);
+    assert.equal(platform.commits, 0);
+    assert.equal(platform.calls.length, 1);
+    const load = () =>
+      importTrees(createState(100), parseTreeFile(reply), { withProgress: false, replace: false });
+    if (imports) {
+      assert.equal(load().countries.testland.politics?.factions.length, reply.politics.factions.length);
+    } else {
+      assert.throws(load, message);
+    }
+  });
+}
 
 test('每次生成由脚本抽结构签送入请求，保存在国家资料；同批两国的结构签不撞形', async () => {
   const platform = new SingleCountryPlatform();

@@ -38,7 +38,7 @@ import {
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
 import { checkTransition, periodAnchor, PeriodReplySchema, transitionPeriod } from './periods';
 import { drawStructure, signature, structureData, type Structure, type TreeType } from './structure';
-import { DATA_TOKEN, GUIDANCE_TASK, POLITICS_TASK, promptText } from './prompts';
+import { DATA_TOKEN, GENERATE_POLITICS_TASK, GUIDANCE_TASK, POLITICS_TASK, promptText } from './prompts';
 import { currentApiName, parseJsonReply, redactApiError, validateApi } from './api-config';
 import { repairReply } from './repair';
 import { storyTime } from './story-time';
@@ -1219,6 +1219,11 @@ export class FocusController {
     const countries = (payload as { state?: { countries?: { politics?: unknown }[] } }).state?.countries;
     if ((kind === 'update' || kind === 'reshape') && countries?.some((country) => country.politics)) {
       note(POLITICS_TASK, '派系说明');
+    }
+    // Generation may write politics: the first generation and the period stage, not skeleton stages.
+    const stage = (payload as { stage?: unknown }).stage;
+    if (kind === 'generate' && (stage === 'generate' || stage === 'period')) {
+      note(GENERATE_POLITICS_TASK, '派系说明');
     }
     if (typeof (payload as { guidance?: unknown }).guidance === 'string') {
       note(GUIDANCE_TASK, '世界指引说明');

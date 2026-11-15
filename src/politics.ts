@@ -301,6 +301,16 @@ export function validatePolitics(politics: Politics): void {
 }
 
 /**
+ * Rules for politics that a generate or period reply writes (spec 七). The reply schema allows 2 to
+ * 6 factions. Tree files keep the play rules: one faction, or a ruling faction at 0, is valid there.
+ */
+export function validateGeneratedPolitics(politics: Politics): void {
+  validatePolitics(politics);
+  const ruling = politics.factions.find((faction) => faction.id === politics.ruling)!;
+  requireThat(ruling.support > 0, `执政派系「${ruling.name}」的支持度须大于 0：ruling 是现在掌权的派系`);
+}
+
+/**
  * Give each faction without a colour the first free slot. The slot is stored, so other colours
  * stay the same when a faction leaves.
  */

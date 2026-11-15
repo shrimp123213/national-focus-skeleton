@@ -77,6 +77,17 @@ export const POLITICS_TASK = `state.countries[].politics 是该国的派系，�
 支持度条件（kind=support：faction、minimum，可加 negate）只能写在国策 requirements 与效果的 when，不能写在 sustain 或 outcomes。
 AI 国选策时偏好 mutex.backers 含其执政派系的路线，并依执政派系的作风行事。只有正文或事件显示影响力确实消长时才改派系；平静是常态，不要每次更新都改数字。`;
 
+/** Added to the generate task, for the first generation and the period stage (v0.18.0). */
+export const GENERATE_POLITICS_TASK = `politics 是本国的派系，选填。派系是掌权后会改变国家方向的一群人：是一群人而不是一个选项，世界书中有具名的人物或势力在推动才算；以外交取向区分的阵营符合这点也算；同一派系内换人不算另一个派系。世界书显示 2 个以上符合定义的派系时才写 politics，共 2–6 个；否则省略 politics，也不用支持度条件、派系效果与 backers。
+support 是政治影响力，不是人口，整数，合计 100；ruling 是现在掌权的派系，其 support 大于 0。stance 是作风：moderate 优先谈判与妥协，hardline 优先施压与动武但守既有规矩，extreme 不惜清洗异己或全面开战。members 是世界书中具名的势力（家族、种族、氏族、教团、军团、商会、机构），name 照抄世界书；weight 为 light／medium／heavy；faction 是其支持的派系，世界书看不出明确立场时填 null，不硬分配；note 写一句。成员只是标签，不占支持度。succession 用一句写此国政权如何更替。不写 color 与 pending。
+支持度条件（kind=support：faction、minimum，可加 negate）只写在国策 requirements 与效果的 when，门槛应在本期内达得到。派系效果：
+- support：某派系 ±5、±10 或 ±15。
+- member：成员倒戈或转为未表态，只改标签。重要成员倒戈时，同一国策通常也要写相应的 support 增减。
+- merge：source 整个派系并入 target；source 不可是执政派系。
+- faction：key 不存在时建立新派系，须填起始 support（5、10 或 15）；已存在时改写名称、诉求与作风，不填 support。
+mutex.backers 是该路线倚重的派系。引用的派系须在 politics.factions 中或由本树国策的 faction 效果建立，成员须在 politics.members 中。
+stage=period 时：state 中该国已有 politics 则不输出 politics，所用派系 id 与成员 id 照抄 state；没有则可依上述规则补上 politics。`;
+
 const builtinMeta: Record<BuiltinKind, { name: string; role: PromptRole }> = {
   guide: { name: '系统规则', role: 'system' },
   task: { name: '任务指示', role: 'system' },

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   BranchSchema,
   NodeSchema,
+  PoliticsSchema,
   corePathDays,
   focusDays,
   periodDays,
@@ -18,13 +19,26 @@ import {
 } from './model';
 import { coreBranch, layoutTree } from './layout';
 import type { Snapshot } from './platform';
+import { validateFactionRules, validateGeneratedPolitics } from './politics';
 import { generateBySkeleton, type SkeletonProgress } from './skeleton';
 import { structureData, typeShape, type Structure, type TreeType } from './structure';
 
-/** Politics stays out until generation writes it (v0.18.0-b). */
-export const GeneratedTreeSchema = TreeSchema.omit({ politics: true }).extend({
+/**
+ * Politics as a generation reply writes them (spec 七): 2 to 6 factions. The script assigns colour
+ * slots and writes pending, so the reply has neither; the strict schema rejects them.
+ */
+const factionCount = '生成时派系须为 2–6 个：不足 2 个时省略 politics，超过 6 个时合并相近的派系';
+const GeneratedPoliticsSchema = PoliticsSchema.omit({ pending: true }).extend({
+  factions: z
+    .array(PoliticsSchema.shape.factions.element.omit({ color: true }))
+    .min(2, factionCount)
+    .max(6, factionCount),
+});
+export const GeneratedTreeSchema = TreeSchema.extend({
   analysis: z.string().min(1),
   branches: z.array(BranchSchema).min(1).max(16),
+  /** Optional: written only when the worldbook shows two or more factions. */
+  politics: GeneratedPoliticsSchema.optional(),
   nodes: z
     .array(NodeSchema.omit({ x: true, y: true }))
     .min(1)
@@ -310,6 +324,11 @@ export function validateTree(
     );
     validateTopology(raw.nodes, size);
     const tree = TreeSchema.parse({ ...raw, nodes: layoutTree(raw.nodes, coreBranch(raw)) });
+    if (tree.politics) {
+      validateGeneratedPolitics(tree.politics);
+    }
+    // Every focus is new, so references are checked strictly; the install check below is not strict.
+    validateFactionRules(tree.nodes, tree.politics, tree.nodes);
     if (
       tree.relations?.some(
         (relation) =>

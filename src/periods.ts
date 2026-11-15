@@ -4,7 +4,7 @@ import { installCountry, validateGraph } from './engine';
 import { GeneratedTreeSchema, normalizeCore, validateTopology } from './generation';
 import { coreBranch, layoutTree } from './layout';
 import { sizeLimits, StateSchema, TreeSchema, type Country, type Proposal, type State } from './model';
-import { validateFactionRules } from './politics';
+import { validateFactionRules, validateGeneratedPolitics } from './politics';
 import { assertCapabilityOrder } from './reachability';
 
 export type Transition = Proposal['transitions'][number];
@@ -78,8 +78,16 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   ) {
     throw new Error('新期分支不可重复，节点必须属于已定义分支');
   }
+  // A country with politics keeps its own; one without may get them in this reply (spec 六).
+  if (old.politics && generated.politics) {
+    throw new Error('此国已有派系：新一期不要输出 politics，照抄 state 中的派系 id 与成员 id');
+  }
+  if (generated.politics) {
+    validateGeneratedPolitics(generated.politics);
+  }
+  const politics = old.politics ?? generated.politics;
   // New focuses only: the carried focus may name a faction that has dissolved since.
-  validateFactionRules(nodes, old.politics, nodes);
+  validateFactionRules(nodes, politics, nodes);
   if (anchor) {
     // The old routes are no longer choices. Preserve work/effects, not obsolete graph edges.
     nodes.unshift({ ...old.nodes[anchor], prerequisites: [], mutex: null });
@@ -100,8 +108,8 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
     branches,
     nodes: layoutTree(nodes, coreBranch({ branches })),
     capabilities: Object.values(old.capabilities),
-    // Only for the install checks; the country keeps its own politics below.
-    politics: old.politics,
+    // The install checks these politics; the country stores them below only when they are new.
+    politics,
   });
   assertCapabilityOrder(
     tree.nodes,
@@ -120,6 +128,8 @@ export function transitionPeriod(input: State, transition: Transition, reply: Pe
   const state = structuredClone(input);
   state.countries[old.id] = {
     ...old,
+    // New politics, with the colour slots the install assigned, take effect with the new tree.
+    ...(generated.politics ? { politics: installed.politics } : {}),
     periodTitle: tree.periodTitle,
     agenda: tree.agenda,
     longTerm: tree.longTerm,

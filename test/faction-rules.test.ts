@@ -660,7 +660,7 @@ const branch = {
   tradeoff: '稳定与改革',
   destination: '新的朝局',
 };
-function nextPeriod(state: State, nodes: Record<string, unknown>[]): State {
+function nextPeriod(state: State, nodes: Record<string, unknown>[], value?: Politics): State {
   const { politics: _politics, nodes: _nodes, ...definition } = realm([], politics());
   return transitionPeriod(
     state,
@@ -669,6 +669,7 @@ function nextPeriod(state: State, nodes: Record<string, unknown>[]): State {
       summary: '本期结束',
       tree: {
         ...definition,
+        ...(value ? { politics: value } : {}),
         analysis: '新一期',
         periodTitle: '新议程',
         agenda: '整顿朝局',
@@ -723,6 +724,48 @@ test('换期：新树中一项国策建立的派系，其他国策可以引用�
     () => nextPeriod(state, [uses('p2_rise', 'rebels'), royal]),
     /国策 p2_rise 引用的派系 rebels 不存在/,
   );
+});
+
+test('换期：已有政局的国家，回复带 politics 时退回；不带时政局原样保留', () => {
+  const state = install([focus('x')]);
+  assert.throws(
+    () => nextPeriod(state, [focus('p2_a')], politics()),
+    /此国已有派系：新一期不要输出 politics，照抄 state 中的派系 id 与成员 id/,
+  );
+  assert.deepEqual(
+    nextPeriod(state, [focus('p2_a')]).countries.realm.politics,
+    state.countries.realm.politics,
+  );
+});
+
+test('换期：没有政局的国家可由回复补上政局，依生成规则验证并取得色位，新国策依它检查引用；不合规则时不改任何资料', () => {
+  const plain = install([focus('x')], null);
+  const before = structuredClone(plain);
+  const royal = focus('p2_royal', {
+    mutex: { group: 'p2_way', route: 'royal', lock: 'complete', reason: '择一', backers: ['crown'] },
+  });
+  const found = focus('p2_found', { effects: [faction('a', 'rebels', { support: 10 })] });
+  const after = nextPeriod(plain, [uses('p2_rise', 'rebels'), royal, found], politics());
+  assert.equal(after.countries.realm.period.number, 2);
+  assert.deepEqual(after.countries.realm.politics, {
+    ...politics(),
+    factions: politics().factions.map((item, color) => ({ ...item, color })),
+  });
+  assert.deepEqual(after.countries.realm.nodes.p2_royal.mutex?.backers, ['crown']);
+  const fallen = politics();
+  fallen.factions[0].support = 0;
+  fallen.factions[1].support = 70;
+  const single = { ...politics(), factions: [{ ...politics().factions[0], support: 100 }], members: [] };
+  const cases: [Record<string, unknown>[], Politics, RegExp][] = [
+    [[focus('p2_a')], fallen, /执政派系「王党」的支持度须大于 0/],
+    [[focus('p2_a')], single, /生成时派系须为 2–6 个/],
+    [[uses('p2_rise', 'ghost'), royal], politics(), /国策 p2_rise 引用的派系 ghost 不存在/],
+    [[focus('p2_a', { effects: [member('m', 'nobody', 'crown')] })], politics(), /成员 nobody 不存在/],
+  ];
+  for (const [nodes, value, message] of cases) {
+    assert.throws(() => nextPeriod(plain, nodes, value), message);
+    assert.deepEqual(plain, before);
+  }
 });
 
 test('执政派系支持度归零、派系并入后，国家仍可汇出再汇入，政局原样保留', () => {

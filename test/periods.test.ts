@@ -338,6 +338,53 @@ test('新期失败保留原树与已提交事件，重试只生成该期', async
   assert.equal(platform.calls, 3);
 });
 
+test('没有政局的国家换期时补上政局，与新树一起提交；政局不合生成规则时整期不提交', async () => {
+  const politics = {
+    ruling: 'court',
+    factions: [
+      { id: 'court', name: '宫廷派', appeal: '维持现制', stance: 'moderate', support: 60 },
+      { id: 'army', name: '军部', appeal: '扩军', stance: 'hardline', support: 40 },
+    ],
+    members: [
+      { id: 'guard', name: '近卫军', kind: 'army', weight: 'heavy', faction: 'army', note: '驻守王都' },
+    ],
+    succession: '长子继承',
+  };
+  for (const support of [60, 0]) {
+    const value = structuredClone(politics);
+    value.factions[0].support = support;
+    value.factions[1].support = 100 - support;
+    const platform = new PeriodPlatform();
+    platform.outputs.push(
+      async () => JSON.stringify(update),
+      async () => {
+        const next = reply();
+        return JSON.stringify({ ...next, tree: { ...next.tree, politics: value } });
+      },
+    );
+    const controller = controllerFor(platform);
+    await controller.run('update');
+    const land = platform.data.countries.land;
+    if (support) {
+      assert.ok(
+        controller.jobs.every((job) => job.state === 'success'),
+        JSON.stringify(controller.jobs),
+      );
+      assert.equal(land.period.number, 2);
+      assert.deepEqual(land.politics, {
+        ...value,
+        factions: value.factions.map((faction, color) => ({ ...faction, color })),
+      });
+    } else {
+      assert.equal(controller.jobs[0].state, 'failed');
+      assert.match(controller.jobs[0].message, /执政派系「宫廷派」的支持度须大于 0/);
+      assert.equal(land.period.number, 1);
+      assert.equal('politics' in land, false);
+      assert.ok(land.nodes.old_active);
+    }
+  }
+});
+
 test('生成中事件与世界资料更新不阻挡换期，关闭换期仍遵守功能开关', async () => {
   for (const change of ['event', 'story', 'switch']) {
     const platform = new PeriodPlatform();

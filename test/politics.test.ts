@@ -5,10 +5,17 @@ import { createState, installCountry } from '../src/engine';
 import { DemoPlatform } from '../src/demo';
 import { demoTree } from '../src/demo-tree';
 import { GeneratedTreeSchema, workingState } from '../src/generation';
-import { StateSchema, type JobKind, type Politics, type State } from '../src/model';
-import type { PromptMessage } from '../src/platform';
+import { StateSchema, type Candidate, type JobKind, type Politics, type State } from '../src/model';
+import type { PeriodWork, PromptMessage } from '../src/platform';
 import { assignColors } from '../src/politics';
-import { DEFAULT_TASK, GUIDANCE_TASK, POLITICS_TASK, WORLD_CONTEXT_TASK } from '../src/prompts';
+import { PeriodReplySchema } from '../src/periods';
+import {
+  DEFAULT_TASK,
+  GENERATE_POLITICS_TASK,
+  GUIDANCE_TASK,
+  POLITICS_TASK,
+  WORLD_CONTEXT_TASK,
+} from '../src/prompts';
 import { promptView, worldSummary } from '../src/prompt-view';
 import { countryTree, exportTrees, importTrees, parseTreeFile } from '../src/tree-io';
 import { FocusController } from '../src/workflow';
@@ -236,12 +243,20 @@ test('汇出再汇入保留政局（色位与待决），手写树的政局在�
   );
 });
 
-test('生成与换期的回复格式不含政局', () => {
-  assert.equal('politics' in GeneratedTreeSchema.shape, false);
-  assert.equal(
-    JSON.stringify(z.toJSONSchema(GeneratedTreeSchema, { io: 'input' })).includes('politics'),
-    false,
-  );
+type Shown = Record<string, any>;
+test('生成与换期的回复格式含选填政局：派系 2–6 个，不含色位与待决', () => {
+  const generated = z.toJSONSchema(GeneratedTreeSchema, { io: 'input' }) as Shown;
+  const period = (z.toJSONSchema(PeriodReplySchema, { io: 'input' }) as Shown).properties.tree;
+  for (const tree of [generated, period]) {
+    const shown = tree.properties.politics;
+    assert.equal(tree.required.includes('politics'), false);
+    assert.equal(shown.properties.factions.minItems, 2);
+    assert.equal(shown.properties.factions.maxItems, 6);
+    assert.equal('color' in shown.properties.factions.items.properties, false);
+    assert.equal('pending' in shown.properties, false);
+    assert.equal(shown.additionalProperties, false);
+    assert.equal(shown.properties.factions.items.additionalProperties, false);
+  }
 });
 
 const lines = [
@@ -382,6 +397,34 @@ test('派系说明与世界指引说明的附加方式相同：自订任务指�
   );
 });
 
+test('生成派系说明：附在生成与换期阶段的任务指示之后，不论有无政局；骨架阶段与其他任务都不附', () => {
+  const controller = new FocusController(new DemoPlatform());
+  for (const state of [promptState(true), installCountry(createState(0), demoTree(), 0)]) {
+    for (const stage of ['generate', 'period']) {
+      assert.deepEqual(
+        contents(controller, 'generate', state, { stage }).filter((text) =>
+          text.includes(GENERATE_POLITICS_TASK),
+        ),
+        [`${DEFAULT_TASK.generate}\n${GENERATE_POLITICS_TASK}`],
+        stage,
+      );
+    }
+    for (const [kind, stage] of [
+      ['generate', 'skeleton'],
+      ['generate', 'fill'],
+      ['update', 'update'],
+      ['reshape', 'reshape'],
+      ['identify', 'identify'],
+    ] as const) {
+      assert.equal(
+        contents(controller, kind, state, { stage }).some((text) => text.includes(GENERATE_POLITICS_TASK)),
+        false,
+        stage,
+      );
+    }
+  }
+});
+
 class PoliticsPlatform extends DemoPlatform {
   sent: PromptMessage[][] = [];
   override async read(...args: Parameters<DemoPlatform['read']>) {
@@ -410,5 +453,48 @@ test('示范局势更新带政局时，请求仍在默认输入上限内，并�
     assert.ok(messages.some((message) => message.content.includes('"ruling":true')));
   } finally {
     controller.dispose();
+  }
+});
+
+class RecordingPlatform extends DemoPlatform {
+  sent: PromptMessage[][] = [];
+  override async generate(messages: PromptMessage[]) {
+    this.sent.push(messages);
+    return { content: '{}' };
+  }
+}
+
+test('示范生成与换期请求附生成派系说明，仍在默认输入上限内；换期资料只在该国有政局时带出 politics', async () => {
+  const augustium = { id: 'augustium', name: '奥古斯提姆帝国', description: '示范', evidence: '示范' };
+  const work = {
+    transition: { country: 'augustium', cause: 'completed', reason: '议程完成', invalidateActive: false },
+  } as const;
+  const cases: [{ sent: PromptMessage[][] } & DemoPlatform, Candidate, PeriodWork | undefined][] = [
+    [
+      new RecordingPlatform(),
+      { id: 'newland', name: '新国', description: '候选', evidence: '设定' },
+      undefined,
+    ],
+    [new RecordingPlatform(), augustium, work],
+    [new PoliticsPlatform(), augustium, work],
+  ];
+  for (const [index, [platform, candidate, period]] of cases.entries()) {
+    const controller = new FocusController(platform);
+    controller.config.jobs.generate.retries = 0;
+    try {
+      await controller.run('generate', candidate, period);
+      const job = controller.jobs[0];
+      assert.ok(job.inputCharacters! < 120000, String(job.inputCharacters));
+      const [messages] = platform.sent;
+      assert.ok(messages.some((message) => message.content.endsWith(`\n${GENERATE_POLITICS_TASK}`)));
+      const data = messages.find((message) => message.content.includes('{"job":"generate"'))!.content;
+      const payload = JSON.parse(data.slice(data.indexOf('{')));
+      assert.equal(payload.stage, period ? 'period' : 'generate');
+      if (period) {
+        assert.equal('politics' in payload.state.countries[0], index === 2);
+      }
+    } finally {
+      controller.dispose();
+    }
   }
 });
