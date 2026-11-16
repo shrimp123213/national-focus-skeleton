@@ -1,13 +1,113 @@
 import { demoTree } from './demo-tree';
 export { demoTree } from './demo-tree';
-import { applyProposal, createState, installCountry, stampNews, startFocus } from './engine';
-import { defaultConfig, type Config, type State, type JobKind } from './model';
+import { applyProposal, changeCountry, createState, installCountry, stampNews, startFocus } from './engine';
+import { defaultConfig, type Config, type Effect, type FocusNode, type State, type JobKind } from './model';
 import { buildSourceContext } from './sources';
 import { stamp, storyDay, type GenerateResult, type Platform, type Snapshot } from './platform';
 import { makeSampleState, advancePeriodSample, type Scenario } from './demo-period';
 
-export function demoState(start = 100): State {
-  let state = installCountry(createState(start), demoTree(), start);
+/**
+ * Offline sample factions for the preview page (v0.18.0): the empire's politics, route backers,
+ * support conditions and faction effects. Authored for the interface, not worldbook canon.
+ */
+function withFactions(tree: ReturnType<typeof demoTree>) {
+  const backers: Record<string, string[]> = {
+    focus_0_2: ['crown'],
+    focus_0_6: ['nobles'],
+    focus_0_10: ['cabinet', 'trade'],
+    focus_1_9: ['trade'],
+    focus_1_10: ['cabinet'],
+  };
+  const requirements: Record<string, FocusNode['requirements']> = {
+    focus_0_3: [{ kind: 'support', faction: 'crown', minimum: 45, label: '皇权派支持度达到 45' }],
+    focus_0_7: [
+      { kind: 'support', faction: 'nobles', minimum: 40, negate: true, label: '旧贵族支持度低于 40' },
+    ],
+  };
+  const effects: Record<string, Effect[]> = {
+    // The main focus at the start: after it completes, its conditional effect shows as not applied.
+    focus_1_1: [
+      { id: 'trade_up', kind: 'support', faction: 'trade', value: 5 },
+      {
+        id: 'trade_more',
+        kind: 'support',
+        faction: 'trade',
+        value: 5,
+        when: [{ kind: 'support', faction: 'trade', minimum: 30, label: '商贸派支持度达到 30' }],
+      },
+    ],
+    focus_0_2: [
+      { id: 'crown_up', kind: 'support', faction: 'crown', value: 10 },
+      { id: 'nobles_down', kind: 'support', faction: 'nobles', value: -5 },
+    ],
+    focus_0_6: [
+      { id: 'nobles_up', kind: 'support', faction: 'nobles', value: 10 },
+      { id: 'bolyu_turns', kind: 'member', member: 'bolyu', faction: 'nobles' },
+    ],
+    focus_0_9: [
+      {
+        id: 'provinces',
+        kind: 'faction',
+        key: 'provinces',
+        name: '行省自治派',
+        appeal: '七省各自征税与募兵。',
+        stance: 'moderate',
+        support: 10,
+      },
+    ],
+    focus_0_10: [
+      { id: 'cabinet_up', kind: 'support', faction: 'cabinet', value: 15 },
+      { id: 'crown_down', kind: 'support', faction: 'crown', value: -10 },
+      { id: 'schmidt_turns', kind: 'member', member: 'schmidt', faction: 'cabinet' },
+    ],
+    focus_0_13: [{ id: 'trade_joins', kind: 'merge', source: 'trade', target: 'cabinet' }],
+  };
+  return {
+    ...tree,
+    nodes: tree.nodes.map((node) => ({
+      ...node,
+      mutex: node.mutex && backers[node.id] ? { ...node.mutex, backers: backers[node.id] } : node.mutex,
+      requirements: [...node.requirements, ...(requirements[node.id] ?? [])],
+      effects: [...node.effects, ...(effects[node.id] ?? [])],
+    })),
+    politics: {
+      ruling: 'crown',
+      succession: '皇位世袭；内阁经选举产生，枢密院可弹劾内阁。',
+      factions: (
+        [
+          ['crown', '皇权派', 'hardline', 40, '女皇', '帝国由女皇与枢密院直辖，议会只备咨询。'],
+          ['nobles', '旧贵族', 'hardline', 30, '霍亨伯格家主', '恢复各大家族的封地特权与世袭席位。'],
+          ['trade', '商贸派', 'moderate', 20, '施密特家主', '以商路与关税养国，反对代价高昂的战争。'],
+          ['cabinet', '内阁派', 'moderate', 10, '', '由选举官员组成的内阁向议会负责。'],
+        ] as const
+      ).map(([id, name, stance, support, leader, appeal]) => ({
+        id,
+        name,
+        stance,
+        support,
+        appeal,
+        ...(leader ? { leader } : {}),
+      })),
+      members: (
+        [
+          ['privy', '枢密院', 'institution', 'heavy', 'crown', '女皇的直属机构'],
+          ['bolyu', '波流家族', 'family', 'medium', 'crown', '皇室姻亲'],
+          ['hohen', '霍亨伯格家族', 'family', 'heavy', 'nobles', '北方最大的封地'],
+          ['raven', '雷文家族', 'family', 'medium', 'nobles', '世袭上院议席'],
+          ['gordon', '戈登家族', 'family', 'light', 'nobles', '没落的边境领主'],
+          ['schmidt', '施密特家族', 'family', 'heavy', 'trade', '掌握内河商路'],
+          ['wyndham', '温德姆家族', 'family', 'medium', 'cabinet', '议会党团的出资者'],
+          ['officials', '内阁选举官员', 'institution', 'light', 'cabinet', '经选举进入内阁的文官'],
+          ['scholars', '时钟塔学者', 'institution', 'medium', null, '尚未表明支持哪一方'],
+        ] as const
+      ).map(([id, name, kind, weight, faction, note]) => ({ id, name, kind, weight, faction, note })),
+    },
+  };
+}
+
+/** `factions` gives the empire sample factions (the preview page); tests keep the plain tree. */
+export function demoState(start = 100, factions = false): State {
+  let state = installCountry(createState(start), factions ? withFactions(demoTree()) : demoTree(), start);
   state = installCountry(state, demoTree('north', '北境联邦'), start);
   state = installCountry(state, demoTree('coast', '苍海同盟'), start);
   state.countries.north.control = 'ai';
@@ -41,15 +141,18 @@ function eraText(day: number): string {
 export class DemoPlatform implements Platform {
   readonly demo = true;
   private readonly calendar: boolean;
+  private readonly factions: boolean;
   private readonly start: number;
   /**
    * `calendar` starts the story on a date and gives the card's era text as the source time, so the
-   * preview shows times as a real chat does. Tests keep the plain day count.
+   * preview shows times as a real chat does. Tests keep the plain day count. `factions` gives the
+   * empire sample factions (v0.18.0); tests keep the plain tree.
    */
-  constructor({ calendar = false } = {}) {
+  constructor({ calendar = false, factions = false } = {}) {
     this.calendar = calendar;
+    this.factions = factions;
     this.start = calendar ? storyDay('488-03-01 09:00') : 100;
-    this.state = demoState(this.start);
+    this.state = demoState(this.start, factions);
   }
   chatId(): string {
     return 'demo';
@@ -249,8 +352,32 @@ export class DemoPlatform implements Platform {
       change();
     }
   }
+  /**
+   * Offline sample of a change of government that waits for the player (v0.18.0). Automatic
+   * periods go off, as they are when an update records such a change.
+   */
+  async pendingSample(): Promise<void> {
+    const politics = this.state.countries.augustium?.politics;
+    const next =
+      politics?.factions.find((f) => f.id === 'cabinet' && f.id !== politics.ruling && f.support > 0) ??
+      politics?.factions.find((f) => f.id !== politics.ruling && f.support > 0);
+    if (!next) {
+      throw new Error('示范帝国没有可以接掌的派系；请先「重设示范」');
+    }
+    const state = changeCountry(this.state, 'augustium', { autoPeriod: false });
+    state.countries.augustium.politics!.pending = {
+      ruling: next.id,
+      reason: '议会逼宫后女皇退居离宫，内阁受命摄政。',
+      at: state.day,
+    };
+    this.state = state;
+    this.revision++;
+    for (const change of this.changes) {
+      change();
+    }
+  }
   reset(): void {
-    this.state = demoState(this.start);
+    this.state = demoState(this.start, this.factions);
     this.revision++;
     for (const change of this.changes) {
       change();

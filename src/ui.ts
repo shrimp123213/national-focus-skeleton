@@ -2,6 +2,20 @@ import { periodLine, periodNote, periodControl, anchorNotice, anchorBadge, histo
 import { blockers, changeCountry, isHistoricalEvidence, pauseFocus, resultNames, startFocus } from './engine';
 import { icon } from './icons';
 import { coreBranch, layoutTree } from './layout';
+import { dismissPending } from './periods';
+import { isFactionEffect } from './politics';
+import {
+  backersLine,
+  factionEffect,
+  factionEffectSkipped,
+  factionInk,
+  nodeBackers,
+  pendingBar,
+  politicsDrawer,
+  politicsGauge,
+  routeBackers,
+  supportCondition,
+} from './politics-ui';
 import { mutexRoutes } from './reachability';
 import {
   ConfigSchema,
@@ -88,6 +102,7 @@ export function mountUI(
     reset(): void;
     periodSample?(completed: boolean): Promise<void>;
     nextPeriod?(): Promise<void>;
+    pendingSample?(): Promise<void>;
   },
 ): () => void {
   const host = doc.createElement('div');
@@ -118,6 +133,8 @@ export function mountUI(
   let zoom = 0.85;
   let pan = { x: 45, y: 45 };
   let detailsOpen = false;
+  /** What the drawer shows: a focus, or the country's politics (v0.18.0). One at a time. */
+  let drawerView: 'focus' | 'politics' = 'focus';
   let routesOpen = (doc.defaultView?.innerWidth ?? 1200) > 760;
   /** Phone layout: the control select and 更新局势 sit behind the nation bar's ⋯ button. */
   let nationMore = false;
@@ -316,8 +333,9 @@ export function mountUI(
     }
   }
   /** Open the drawer; on narrow screens the routes panel yields its space to the tree. */
-  function openDetails(): void {
+  function openDetails(view: typeof drawerView = 'focus'): void {
     detailsOpen = true;
+    drawerView = view;
     if ((shell.querySelector<HTMLElement>('.stage')?.clientWidth ?? 0) < 1200) {
       routesOpen = false;
     }
@@ -374,6 +392,12 @@ export function mountUI(
         note.textContent = text;
         note.title = text;
       }
+      // The pending change of government shows whether its period job is running.
+      const pending = shell.querySelector<HTMLElement>('.pending-bar');
+      if (country && pending) {
+        pending.outerHTML = pendingBar(country, controller.jobs);
+        lockReadOnly();
+      }
       updateTaskWindows();
       return;
     }
@@ -403,6 +427,7 @@ export function mountUI(
       : '';
     let body: string;
     if (country && state) {
+      const politicsShown = drawerView === 'politics' && Boolean(country.politics);
       const current = country.current ? country.nodes[country.current] : undefined;
       const currentProgress = current ? country.progress[current.id] : undefined;
       const percent =
@@ -451,8 +476,8 @@ export function mountUI(
         .join(
           '',
         )}</ul><div class="route-actions"><button data-action="isolate">只看此路线</button><button data-action="expand-all">全部展开</button></div></aside>`;
-      body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2 title="${escape(country.description)}">${escape(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape(stateTime(state, false))}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>
-<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-guided">依世界指引更新</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="国策详情" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? renderDetails(country, country.nodes[nodeId]) : ''}</aside></section>`;
+      body = `<section class="nation-bar ${nationMore ? 'more-open' : ''}${country.politics ? ' with-politics' : ''}"><div class="nation-id"><span class="nation-crest">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div class="nation-copy"><h2 title="${escape(country.description)}">${escape(country.name)}<small class="control-tag">${controlLabel(country)}<span class="tag-day"> · ${escape(stateTime(state, false))}</span></small></h2>${periodLine(country, controller.jobs)}</div></div><div class="gauges">${politicsGauge(country, detailsOpen && politicsShown)}${gauge('稳定度', country.stability, 'stability')}${gauge('战争支持度', country.warSupport, 'war')}</div><button class="nation-more-btn" data-action="nation-more" aria-expanded="${nationMore}" aria-label="控制方式与更新局势" title="控制方式与更新局势">⋯</button>${focusGauge}<div class="nation-actions"><label class="control-select"><span class="sr">控制方式</span><select id="country-control"><option value="player" ${selected(country.control === 'player')}>玩家选策</option><option value="ai" ${selected(country.control === 'ai')}>AI 自主演化</option></select></label><button class="primary" data-action="update" title="依目前正文与 MVU 重新评估">更新局势</button></div></section>${pendingBar(country, controller.jobs)}
+<section class="stage ${detailsOpen ? 'with-drawer' : ''}"><div class="canvas" tabindex="0" aria-label="国策画布，可拖动平移，滚轮或双指缩放"><div class="tree"></div></div>${routes}${routesOpen ? '' : `<button class="routes-tab" data-action="routes" aria-label="开启路线面板">路线 <small>${stats.length}</small></button>`}<div class="stage-tools"><details class="legend-pop" data-pop="legend" ${openPops.has('legend') ? 'open' : ''}><summary>图例</summary><ul class="legend-list"><li><i class="sw completed"></i>已完成</li><li><i class="sw active"></i>进行中</li><li><i class="sw waiting"></i>等待成果</li><li><i class="sw paused"></i>已暂停</li><li><i class="sw available"></i>可开始</li><li><i class="sw locked"></i>条件未满</li><li><i class="sw terminated"></i>已终止／路线锁定</li><li><i class="ln solid"></i>必要前置</li><li><i class="ln dashed"></i>择一前置</li><li><i class="ln cross"></i>跨路线依赖</li><li><i class="ln mutex"></i>互斥</li></ul></details><button data-action="locate-current" ${country.current ? '' : 'disabled'} title="定位主国策">◎ 主国策</button>${country.relations?.length || country.branches.some((b) => b.core) ? '<button data-action="relations" title="核心分支与国策之间的关系">⇄ 关系</button>' : ''}<button data-action="overview" title="显示所有分支，维持可读的大小">⤢ 全览</button><div class="zoom-controls"><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit" title="缩放到整棵树"><span class="zoom-value">${Math.round(zoom * 100)}%</span></button><button data-action="zoom-in" aria-label="放大">＋</button></div></div><div class="minimap" aria-hidden="true"><svg class="minimap-svg"></svg></div>${controller.platform.demo ? `<details class="demo-pop" data-pop="demo" ${openPops.has('demo') ? 'open' : ''}><summary>测试操作</summary><small>只改离线示范，不呼叫 API</small><button data-action="demo-days">故事时间 ＋7 日</button><button data-action="demo-outcome">完成联运勘查</button><button data-action="demo-news">发布示范事件</button><button data-action="demo-guided">依世界指引更新</button><button data-action="demo-rollback">国策回退提示</button>${preview?.periodSample ? '<button data-action="demo-period-crisis">加载分期：局势突变</button><button data-action="demo-period-complete">加载分期：议程完成</button><button data-action="demo-period-next">推进事件／演示换期</button>' : ''}${preview?.pendingSample ? '<button data-action="demo-pending">加载待决更替</button>' : ''}<button data-action="demo-reset">重设示范</button></details>` : ''}<aside class="drawer ${drawerDrawn ? 'open' : ''}" aria-label="${politicsShown ? '政局' : '国策详情'}" ${detailsOpen ? '' : 'aria-hidden="true"'}>${detailsOpen || drawerDrawn ? (politicsShown ? politicsDrawer(country) : renderDetails(country, country.nodes[nodeId])) : ''}</aside></section>`;
     } else {
       body = `<section class="empty"><div class="empty-card">${icon('eagle')}<h2>${state ? '为这个世界选择方向' : '连接你的故事'}</h2><p>${state ? '先辨识本局国家，再勾选要启用的对象。国策内容会依你选择的世界书与剧情生成。' : '国策树需要一则已完成的正文，以及本楼可读取的 MVU 变数。你仍可先设置 API 与来源。'}</p><div class="row"><button class="primary" data-action="countries">选择启用国家</button><button data-action="settings">设置来源与 API</button></div></div></section>`;
     }
@@ -460,15 +485,7 @@ export function mountUI(
     const tabsScroll = shell.querySelector<HTMLElement>('.nation-tabs')?.scrollLeft ?? 0;
     shell.innerHTML = `${command}${error}${readOnly}${renderRollback()}${body}<footer class="statusline">${renderTaskSummary()}<span class="status-mid">${country && state ? `${Object.keys(country.nodes).length} 项国策` : ''}</span><button class="linkish" data-action="events">事件记录</button></footer>`;
     bindNationTabs(tabsScroll);
-    if (controller.readOnly) {
-      // Saves go only to the latest finished AI floor; stop these here instead of failing later.
-      for (const control of shell.querySelectorAll<HTMLButtonElement | HTMLSelectElement>(
-        '[data-action="update"], [data-action="start"], [data-action="pause"], [data-action="switch"], [data-action="lock-ask"], #country-control',
-      )) {
-        control.disabled = true;
-        control.title = '只读：等本楼 AI 回复完成';
-      }
-    }
+    lockReadOnly();
     // v0.15.3: the panel is redrawn on every change, so the drawer is drawn in its old position
     // and moved once, letting its transition run (opening and closing).
     const drawer = shell.querySelector<HTMLElement>('.drawer');
@@ -498,6 +515,17 @@ export function mountUI(
     }
     rendered = { state, config: controller.config, error: controller.error };
     updateTaskWindows();
+  }
+  function lockReadOnly(): void {
+    if (controller.readOnly) {
+      // Saves go only to the latest finished AI floor; stop these here instead of failing later.
+      for (const control of shell.querySelectorAll<HTMLButtonElement | HTMLSelectElement>(
+        '[data-action="update"], [data-action="start"], [data-action="pause"], [data-action="switch"], [data-action="lock-ask"], [data-action="pending-approve"], [data-action="pending-dismiss"], #country-control',
+      )) {
+        control.disabled = true;
+        control.title = '只读：等本楼 AI 回复完成';
+      }
+    }
   }
   function updateTaskWindows(): void {
     if (modal === 'jobs') {
@@ -566,9 +594,11 @@ export function mountUI(
       ? { text: `上次完成：${jobNames[last.kind as JobKind] ?? last.kind} · ${last.time}`, state: '' }
       : { text: '任务待命', state: '' };
   }
+  function whenText(e: FocusNode['effects'][number]): string {
+    return e.when?.length ? `若${e.when.map((r) => r.label).join('且')}：` : '';
+  }
   function effectText(e: FocusNode['effects'][number], country?: Country): string {
-    const when = e.when?.length ? `若${e.when.map((r) => r.label).join('且')}：` : '';
-    return when + effectBody(e, country);
+    return whenText(e) + effectBody(e, country);
   }
   function effectBody(e: FocusNode['effects'][number], country?: Country): string {
     // Faction effects name factions and members by name when the country still has them.
@@ -617,10 +647,15 @@ export function mountUI(
         : stateClass === 'available'
           ? '可开始'
           : statuses[progress.status];
+    const condition = (kind: string, label: string) =>
+      `<li><span class="cond-kind">${kind}</span>${escape(label)}</li>`;
+    // A support condition names its faction by shield and shows the support now (v0.18.0).
     const conditions = [
-      ...node.requirements.map((r) => ['启动', r.label]),
-      ...node.sustain.map((r) => ['持续', r.label]),
-      ...node.outcomes.map((r) => ['成果', r.label]),
+      ...node.requirements.map((r) =>
+        r.kind === 'support' ? supportCondition(country, r) : condition('启动', r.label),
+      ),
+      ...node.sustain.map((r) => condition('持续', r.label)),
+      ...node.outcomes.map((r) => condition('成果', r.label)),
     ];
     // Starting a route that locks on start closes the other routes for good: say so and confirm.
     const locking =
@@ -650,22 +685,27 @@ export function mountUI(
           ? '<button class="primary" data-action="switch">改选此国策</button>'
           : `<button class="primary" data-action="start" ${startable ? '' : 'disabled'}>${progress.status === 'paused' ? '恢复国策' : progress.status === 'completed' ? '国策已完成' : '开始此国策'}</button>`;
     const done = progress.status === 'completed';
+    const note = (e: FocusNode['effects'][number]) =>
+      progress.by?.mode === 'bypassed' && done
+        ? '（已略过，未生效）'
+        : e.when?.length && done
+          ? isHistoricalEvidence(progress.evidence)
+            ? '（历史承接，实际效果未记录）'
+            : progress.applied.includes(e.id)
+              ? '（已生效）'
+              : '（条件未成立，未生效）'
+          : '';
+    // Faction effects show their shields (v0.18.0). One that a completed focus did not apply says so.
+    const effectItem = (e: FocusNode['effects'][number]) =>
+      !isFactionEffect(e)
+        ? `<li>${escape(effectText(e, country) + note(e))}</li>`
+        : factionEffectSkipped(e, progress)
+          ? `<li class="skipped">${escape(whenText(e))}${factionEffect(e, country.politics)}<span class="skip-tag">未套用</span></li>`
+          : `<li>${escape(whenText(e))}${factionEffect(e, country.politics)}${escape(note(e))}</li>`;
     // A completed focus shows what it gained right under its status (v0.15.0).
-    const effects = `<section class="detail-section ${done ? 'gained' : ''}"><h4>${done ? '已取得' : '完成效果'}</h4>${list(
-      node.effects.map(
-        (e) =>
-          effectText(e, country) +
-          (progress.by?.mode === 'bypassed' && done
-            ? '（已略过，未生效）'
-            : e.when?.length && done
-              ? isHistoricalEvidence(progress.evidence)
-                ? '（历史承接，实际效果未记录）'
-                : progress.applied.includes(e.id)
-                  ? '（已生效）'
-                  : '（条件未成立，未生效）'
-              : ''),
-      ),
-    )}</section>`;
+    const effects = `<section class="detail-section ${done ? 'gained' : ''}"><h4>${done ? '已取得' : '完成效果'}</h4>${
+      node.effects.length ? `<ul>${node.effects.map(effectItem).join('')}</ul>` : '<p class="muted">无</p>'
+    }</section>`;
     const action = done
       ? doneStatus(country, node, progress)
       : country.control === 'player'
@@ -678,7 +718,7 @@ export function mountUI(
       <p class="description">${escape(node.description)}</p>
       <section class="detail-section"><h4>前置国策</h4>${node.prerequisites.length ? `<div class="prereqs">${node.prerequisites.map((group) => `<div class="prereq-group">${group.map((id, i) => `${i ? '<span class="or">或</span>' : ''}<button class="chip ${country.progress[id].status === 'completed' ? 'done' : ''}" data-goto="${escape(id)}">${escape(country.nodes[id].name)}</button>`).join('')}</div>`).join('<span class="and">且</span>')}</div>` : '<p class="muted">此路线的起点</p>'}</section>
       ${done ? '' : effects}
-      ${conditions.length ? `<section class="detail-section"><h4>条件</h4><ul class="conditions">${conditions.map(([kind, label]) => `<li><span class="cond-kind">${kind}</span>${escape(label)}</li>`).join('')}</ul></section>` : ''}
+      ${conditions.length ? `<section class="detail-section"><h4>条件</h4><ul class="conditions">${conditions.join('')}</ul></section>` : ''}
       ${node.impact === 'pivotal' ? `<section class="detail-section pivotal-note"><h4>重要国策</h4><p>完成时发布新闻${node.news ? `：「${escape(node.news.headline)}」` : ''}。</p></section>` : ''}
       ${node.mutex ? mutexNote(country, node) : ''}
       <section class="detail-section"><h4>投入与工期</h4>${list(node.investments)}${node.durationReason ? `<details class="fold"><summary>工期理由</summary><p class="reason">${escape(node.durationReason)}</p></details>` : ''}</section>
@@ -694,13 +734,17 @@ export function mountUI(
     const when =
       progress.completed === null ? '' : ` · ${storyTime(progress.completed, false, controller.state?.time)}`;
     const missed = node.effects.some((e) => e.when?.length && !progress.applied.includes(e.id));
+    // A faction effect without a condition can also stay unapplied, when its faction is gone (v0.18.0).
+    const applied = node.effects.some((e) => factionEffectSkipped(e, progress))
+      ? '部分派系效果未套用'
+      : '效果已生效';
     const how = by
       ? by.mode === 'achieved'
-        ? '由事件直接达成，不经工期 · 效果已生效'
+        ? `由事件直接达成，不经工期 · ${applied}`
         : '结果已由他方或局势造成，直接略过 · 效果未生效'
       : isHistoricalEvidence(progress.evidence)
         ? '历史承接：生成时已经完成'
-        : `依工期完成（${node.days} 日）· ${missed ? '部分效果的条件未成立' : '效果已生效'}`;
+        : `依工期完成（${node.days} 日）· ${missed ? '部分效果的条件未成立' : applied}`;
     // Old finished events are pruned; the saved title still names the cause.
     const cause = by
       ? `<p class="done-cause">${escape(by.reason)}</p>${
@@ -721,7 +765,7 @@ export function mountUI(
       list.map((n) => `<button class="chip" data-goto="${escape(n.id)}">${escape(n.name)}</button>`).join('');
     const lock =
       node.mutex!.lock === 'start' ? '开始路线起点时即作出不可撤回的承诺' : '完成路线起点后锁定其他路线';
-    return `<section class="detail-section mutex-note"><h4>互斥路线</h4><p>${escape(node.mutex!.reason)}</p>${
+    return `<section class="detail-section mutex-note"><h4>互斥路线</h4><p>${escape(node.mutex!.reason)}</p>${backersLine(routeBackers(country.politics, node.mutex!.backers))}${
       others.length
         ? `<p class="mutex-rivals"><small>${head ? '本国策是这条路线的起点，与以下路线互斥：' : `本国策属于「${escape(own.heads.map((n) => n.name).join('／'))}」开启的路线，与以下路线互斥：`}</small></p><div class="prereqs"><div class="prereq-group">${others.map(([, route]) => chips(route.heads)).join('<span class="or">／</span>')}</div></div><small>${lock}</small>`
         : '<small>这个互斥组没有其他路线，实际上不会锁定任何国策（旧版生成的资料）。</small>'
@@ -891,7 +935,10 @@ export function mountUI(
         // Progress ring for running, waiting and paused focuses.
         const ring =
           p.started !== null && stateClass !== 'completed' ? Math.min(100, (p.days / node.days) * 100) : 0;
-        return `<button class="node ${stateClass} ${fresh.has(node.id) ? 'just-done' : ''} ${nodeId === node.id && detailsOpen ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}" style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape(node.name)}（${escape(meta(node, stateClass))}${p.by && stateClass === 'completed' ? `：「${escape(p.by.title)}」` : ''}）" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}"><span class="node-medal" style="--p:${ring}">${icon(node.icon)}<span class="node-meta">${escape(meta(node, stateClass))}</span>${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}</span><span class="node-plate"><span class="node-name">${escape(node.name)}</span></span>${anchorBadge(country, node)}</button>`;
+        // v0.18.0: a route head carries the factions its route relies on.
+        const backers = heads.has(node.id) ? routeBackers(country.politics, node.mutex?.backers) : [];
+        const relies = backers.length ? `，倚重：${backers.map((f) => f.name).join('、')}` : '';
+        return `<button class="node ${stateClass} ${fresh.has(node.id) ? 'just-done' : ''} ${nodeId === node.id && detailsOpen && drawerView === 'focus' ? 'selected' : ''} ${dim ? 'dim' : ''} ${isCurrent ? 'current' : ''}" data-node="${escape(node.id)}"${backers.length ? ` data-backers="${escape(backers.map((f) => f.id).join(' '))}"` : ''} style="left:${position.x}px;top:${position.y}px;width:${NODE_W}px;height:${NODE_H}px" title="${escape(node.name)}（${escape(meta(node, stateClass))}${p.by && stateClass === 'completed' ? `：「${escape(p.by.title)}」` : ''}）" aria-label="${escape(node.name)}，${escape(meta(node, stateClass))}${escape(relies)}"><span class="node-medal" style="--p:${ring}">${icon(node.icon)}<span class="node-meta">${escape(meta(node, stateClass))}</span>${node.impact === 'pivotal' ? '<span class="node-pivot" title="重要国策：完成时发布新闻">✦</span>' : ''}${heads.has(node.id) ? '<span class="node-flag" title="互斥路线的分歧点">⇋</span>' : ''}</span><span class="node-plate"><span class="node-name">${escape(node.name)}</span>${nodeBackers(backers)}</span>${anchorBadge(country, node)}</button>`;
       })
       .join('')}`;
     const minimap = shell.querySelector<SVGSVGElement>('.minimap-svg');
@@ -2073,6 +2120,20 @@ export function mountUI(
             detailsOpen = false;
             render();
             break;
+          case 'politics':
+            if (detailsOpen && drawerView === 'politics') {
+              detailsOpen = false;
+            } else {
+              openDetails('politics');
+            }
+            render();
+            break;
+          case 'pending-approve':
+            await controller.approvePending(countryId);
+            break;
+          case 'pending-dismiss':
+            await controller.mutate((state) => dismissPending(state, countryId));
+            break;
           case 'routes':
             routesOpen = !routesOpen;
             render();
@@ -2230,6 +2291,9 @@ export function mountUI(
           case 'demo-period-next':
             await preview?.nextPeriod?.();
             break;
+          case 'demo-pending':
+            await preview?.pendingSample?.();
+            break;
           case 'demo-outcome':
             await preview?.outcome();
             break;
@@ -2245,6 +2309,32 @@ export function mountUI(
     }
   };
   root.addEventListener('click', clickHandler);
+  /**
+   * Hovering a faction (a pie slice, a faction row or a backer) marks it and the route heads it
+   * backs; the other route heads with backers fade (v0.18.0).
+   */
+  function highlight(id: string): void {
+    const stage = shell.querySelector<HTMLElement>('.stage');
+    if (!stage || (!id && !stage.classList.contains('has-hl'))) {
+      return;
+    }
+    for (const element of stage.querySelectorAll('.hl')) {
+      element.classList.remove('hl');
+    }
+    const faction = id ? currentCountry()?.politics?.factions.find((item) => item.id === id) : undefined;
+    stage.classList.toggle('has-hl', Boolean(faction));
+    if (!faction) {
+      return;
+    }
+    stage.style.setProperty('--hl', factionInk(faction));
+    for (const element of stage.querySelectorAll(`[data-faction="${id}"], .node[data-backers~="${id}"]`)) {
+      element.classList.add('hl');
+    }
+  }
+  shell.addEventListener('mouseover', (event) =>
+    highlight((event.target as Element).closest('[data-faction]')?.getAttribute('data-faction') ?? ''),
+  );
+  shell.addEventListener('mouseleave', () => highlight(''));
   // <details> toggles do not bubble; keep popovers open across re-renders.
   root.addEventListener(
     'toggle',

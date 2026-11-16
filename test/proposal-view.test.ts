@@ -53,6 +53,31 @@ test('letter digest lists starts, completions, events and shifts in story order'
   assert.equal(digest.entries[1].note, '未公开');
 });
 
+test('a change of government names the new faction and says pending when the player decides', () => {
+  const preview = structuredClone(state);
+  preview.countries.land.politics = {
+    ruling: 'crown',
+    factions: [
+      { id: 'crown', name: '皇权派', appeal: '王权', stance: 'hardline', support: 60, color: 0 },
+      { id: 'cabinet', name: '内阁派', appeal: '议会', stance: 'moderate', support: 40, color: 1 },
+    ],
+    members: [],
+    succession: '议会推举',
+  };
+  const government = ProposalSchema.parse({
+    ...proposal,
+    transitions: [{ country: 'land', cause: 'government', ruling: 'cabinet', reason: '议会罢免首相' }],
+  });
+  const title = (country: typeof preview.countries.land) =>
+    letterDigest(state, { ...preview, countries: { land: country } }, government)[0].entries[0];
+  const automatic = title(preview.countries.land);
+  assert.equal(automatic.title, '政权易手：「内阁派」接掌，进入下一期');
+  assert.equal(automatic.note, '议会罢免首相');
+  const pending = '政权易手待决：「内阁派」将接掌，由玩家决定是否换期';
+  assert.equal(title({ ...preview.countries.land, autoPeriod: false }).title, pending);
+  assert.equal(title({ ...preview.countries.land, calibration: true }).title, pending);
+});
+
 test('an unchanged country appears with no entries and equal shifts', () => {
   const [digest] = letterDigest(state, structuredClone(state), proposal);
   assert.equal(digest.entries.length, 0);

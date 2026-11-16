@@ -22,6 +22,15 @@
   /* Cinnabar seal ink: used only for the world letter's seal, so ratifying a proposal reads as one act. */
   --seal: #b4432f;
   --seal-ink: #f3dccb;
+  /* Faction ink slots 0-7 (v0.18.0): each faction stores its slot, so a colour never follows the order. */
+  --f0: #ca5843;
+  --f1: #376daf;
+  --f2: #43a88a;
+  --f3: #a67ed3;
+  --f4: #ba8a2e;
+  --f5: #108faa;
+  --f6: #5b7714;
+  --f7: #ac5278;
   --radius: 10px;
   --drawer: 392px;
   /* Simplified Chinese faces first (zh-Hans text), traditional faces only as fallbacks; same as the news card. */
@@ -4694,4 +4703,571 @@ details.detail-section.fold > summary::before {
 .readonly-banner p {
   flex: 1;
   margin: 0;
+}
+
+/* ---------- v0.18.0 · factions: shields, the ruling gauge, the politics drawer, a pending change ---------- */
+/* A faction colour always appears as a shield, so it never reads as a status dot. */
+.pip {
+  display: inline-block;
+  width: 10px;
+  height: 12px;
+  flex: none;
+  vertical-align: -1px;
+}
+.pip.lg {
+  width: 14px;
+  height: 17px;
+  vertical-align: -3px;
+}
+.pip.xl {
+  width: 22px;
+  height: 26px;
+}
+.pip path {
+  fill: var(--c);
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 1;
+}
+.crown-mark {
+  display: inline-block;
+  width: 15px;
+  height: 11px;
+  color: var(--gold);
+  vertical-align: 0;
+}
+.stance {
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.stance.hardline {
+  color: var(--text);
+}
+.stance.extreme {
+  color: var(--red);
+  font-weight: 600;
+}
+/* The ruling faction reads as one more gauge; its track is the pie laid flat. */
+.pol-gauge {
+  position: relative;
+  display: block;
+  width: 176px;
+  padding: 4px 8px;
+  margin: -4px 0 -4px -8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+button.pol-gauge:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.035);
+}
+/* hairline between the ruling faction and the national gauges, like the one before the main focus */
+.pol-gauge::after {
+  content: '';
+  position: absolute;
+  right: -9px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line);
+}
+.pol-gauge .gauge-head {
+  justify-content: flex-start;
+  gap: 8px;
+}
+.pol-gauge .gauge-head small {
+  white-space: nowrap;
+}
+/* invisible strut: keeps this gauge on the baseline of the 22px numerals beside it */
+.pol-gauge .gauge-head::after {
+  content: '\200b';
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+}
+.pol-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.pol-name > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pol-gauge[aria-expanded='true'] .pol-name {
+  color: var(--gold);
+}
+.pol-track {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pol-track i {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--c);
+}
+/* Pending change of government: a strip under the nation bar in the colour of the faction to rule. */
+.pending-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 18px 9px 15px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 16%, var(--panel)), var(--panel) 46%);
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--c);
+}
+.pending-copy {
+  min-width: 0;
+}
+.pending-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 600;
+}
+.pending-title .was {
+  color: var(--muted);
+  font-weight: 400;
+}
+.pending-title .arrow {
+  color: var(--gold-deep);
+}
+.pending-copy p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pending-hint {
+  max-width: 300px;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: right;
+  color: var(--faint);
+}
+.pending-hint.blocked {
+  color: var(--amber);
+}
+.pending-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pending-actions button {
+  height: 34px;
+  white-space: nowrap;
+}
+.pending-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Route heads carry their backers like seals hanging from a charter. */
+.node-plate {
+  position: relative;
+}
+.node-backers {
+  position: absolute;
+  left: 9px;
+  bottom: -8px;
+  display: flex;
+  gap: 3px;
+}
+.node-backers .pip {
+  width: 11px;
+  height: 13px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+/* Hovering a faction marks the route heads it backs; other heads with backers fade. */
+.stage.has-hl .node[data-backers]:not(.hl) {
+  opacity: 0.38;
+}
+.stage.has-hl .node.hl .node-medal {
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 6px var(--hl),
+    0 0 22px color-mix(in srgb, var(--hl) 60%, transparent);
+}
+.stage.has-hl .node.hl .node-plate {
+  border-top-color: var(--hl);
+}
+/* Politics drawer */
+.drawer-head.politics {
+  box-shadow: inset 4px 0 0 var(--c);
+}
+.drawer-head.politics p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.pol-top {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  padding: 0 0 6px;
+}
+.pie {
+  display: block;
+  width: 196px;
+  height: 196px;
+}
+.pie .slice {
+  fill: var(--c);
+  stroke: var(--panel);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transition: opacity 0.15s;
+}
+.pie .ring {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.pie .tick {
+  stroke: var(--gold-deep);
+  stroke-width: 1;
+  opacity: 0.7;
+}
+.pie .rim {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 4;
+}
+.pie .rim.next {
+  stroke-width: 2;
+  stroke-dasharray: 3 4;
+}
+.pie text {
+  font-family: var(--serif);
+  font-size: 13px;
+  fill: var(--text);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+.stage.has-hl .pie .slice:not(.hl) {
+  opacity: 0.3;
+}
+.pol-ruler {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.pol-ruler small {
+  font-size: 11.5px;
+  letter-spacing: 0.2em;
+  color: var(--gold-deep);
+}
+.pol-ruler strong {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.3;
+}
+.pol-ruler .big {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1;
+  color: var(--text);
+}
+.pol-ruler .big small {
+  margin-left: 2px;
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.faction {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  column-gap: 9px;
+  row-gap: 3px;
+  padding: 11px 8px;
+  margin: 0 -8px;
+  border-top: 1px solid var(--line);
+  border-radius: 6px;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
+}
+.faction:hover,
+.faction.hl {
+  background: rgba(255, 255, 255, 0.035);
+}
+.stage.has-hl .faction:not(.hl) {
+  opacity: 0.5;
+}
+.faction .pip {
+  margin-top: 3px;
+}
+.faction-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.faction-head strong {
+  font-family: var(--serif);
+  font-size: 15.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.faction-num {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.25;
+  text-align: right;
+}
+.faction-num small {
+  margin-left: 1px;
+  font-size: 11.5px;
+}
+.faction-body {
+  grid-column: 2 / -1;
+  display: grid;
+  gap: 6px;
+}
+.faction-body p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.next-tag {
+  padding: 0 7px;
+  border: 1px dashed var(--gold-deep);
+  border-radius: 9px;
+  font-size: 11.5px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 6px;
+  font-size: 12.5px;
+}
+.members .leader {
+  margin-right: 4px;
+  color: var(--text);
+}
+.members .leader small {
+  margin-right: 4px;
+  font-size: 11px;
+  color: var(--faint);
+}
+/* Weight shows as emphasis only: heavy has a gold rule, medium a hairline, light is bare text. */
+.member {
+  padding: 1px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  white-space: nowrap;
+  cursor: default;
+}
+.member.heavy {
+  border-color: var(--gold-deep);
+  background: rgba(220, 194, 124, 0.07);
+  color: var(--text);
+  font-weight: 600;
+}
+.member.medium {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.member.light {
+  padding-inline: 2px;
+  color: var(--muted);
+}
+.unaligned {
+  margin-top: 2px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+}
+.unaligned h4 {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  color: var(--faint);
+}
+.unaligned .member {
+  border-style: dashed;
+}
+/* Faction conditions and effects in the focus drawer */
+.fx {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+.fx b {
+  font-weight: 600;
+}
+.delta {
+  font-family: var(--serif);
+  font-size: 15px;
+}
+.delta.up {
+  color: var(--green);
+}
+.delta.down {
+  color: var(--red);
+}
+.req-now {
+  margin-left: auto;
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--amber);
+}
+.req-now.met {
+  color: var(--green);
+}
+.skipped {
+  color: var(--faint);
+}
+.skipped .fx b {
+  font-weight: 400;
+}
+.skip-tag {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.backers-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.backers-line small {
+  font-size: 12px;
+}
+/* Widths with a ruling gauge: the gauges narrow below 1500px, then the bar takes the next narrower
+   arrangement one step early, so the country name keeps its line. The lower bounds use the range
+   syntax: a fractional width never falls between two queries. */
+@media (max-width: 1499px) {
+  .pol-gauge {
+    width: 148px;
+  }
+}
+@media (760px < width <= 1499px) {
+  .nation-bar.with-politics .gauges > .gauge:not(.pol-gauge) {
+    width: 104px;
+  }
+}
+@media (1000px < width <= 1499px) {
+  .nation-bar.with-politics {
+    gap: 16px;
+  }
+}
+@media (max-width: 1279px) {
+  .pending-hint {
+    max-width: 200px;
+  }
+}
+/* 1180px arrangement: 更新局势 under the gauges */
+@media (1180px < width <= 1279px) {
+  .nation-bar.with-politics {
+    grid-template-columns: minmax(180px, 1fr) auto auto;
+  }
+  .nation-bar.with-politics .nation-actions {
+    grid-column: 1/-1;
+    justify-content: flex-end;
+    margin-top: -4px;
+  }
+}
+/* 1000px arrangement: the main focus and the actions share the second row */
+@media (1000px < width <= 1180px) {
+  .nation-bar.with-politics {
+    grid-template-columns: 1fr auto;
+    gap: 12px 16px;
+  }
+  .nation-bar.with-politics .focus-gauge {
+    order: 3;
+    width: auto;
+  }
+  .nation-bar.with-politics .focus-gauge::after {
+    display: none;
+  }
+  .nation-bar.with-politics .nation-actions {
+    grid-column: auto;
+    margin-top: 0;
+    order: 4;
+  }
+}
+@media (max-width: 760px) {
+  .pol-gauge {
+    width: auto;
+    min-width: 0;
+    max-width: 150px;
+    padding: 2px 6px;
+    margin: -2px 0 -2px -6px;
+  }
+  .pol-gauge::after,
+  .pol-gauge .gauge-head::after {
+    display: none;
+  }
+  .pol-gauge .gauge-head {
+    display: grid;
+    grid-template-columns: minmax(0, auto) auto;
+    column-gap: 6px;
+  }
+  .pol-gauge .gauge-head small {
+    grid-column: 1 / -1;
+  }
+  .pol-name {
+    font-size: 14px;
+  }
+  .pol-gauge .stance {
+    font-size: 11px;
+  }
+  .pol-track {
+    height: 3px;
+    margin-top: 2px;
+  }
+  .pending-bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    padding: 8px 10px 8px 9px;
+  }
+  .pending-copy {
+    grid-column: 2 / -1;
+  }
+  .pending-hint {
+    grid-column: 2;
+    max-width: none;
+    text-align: left;
+  }
+  .pending-actions {
+    grid-column: 3;
+  }
 }

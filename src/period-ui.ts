@@ -10,12 +10,18 @@ const escape = (value: string): string =>
 export function periodControl(country: Country): string {
   return `<label class="switch-label period-toggle" title="关闭后保留当前树，事件仍继续推进"><input type="checkbox" data-period-auto="${escape(country.id)}" ${country.autoPeriod ? 'checked' : ''}>自动换期</label>`;
 }
-export function periodNote(country: Country, jobs: JobStatus[]): string {
-  const generating = jobs.some(
+/** Whether a period job of this country is queued or running. */
+export function generatingPeriod(country: Country, jobs: JobStatus[]): boolean {
+  return jobs.some(
     (job) => job.periodWork?.transition.country === country.id && ['queued', 'running'].includes(job.state),
   );
-  return generating
-    ? '下一期生成中；事件继续更新，成功后才换树'
+}
+export function periodNote(country: Country, jobs: JobStatus[]): string {
+  // The pending change of government already says that the next period is being generated.
+  return generatingPeriod(country, jobs)
+    ? country.politics?.pending
+      ? '事件继续更新，成功后才换树'
+      : '下一期生成中；事件继续更新，成功后才换树'
     : country.autoPeriod
       ? country.agenda || '本期目的完成或局势不再适配时自动换期'
       : '保留当前国策树；事件仍继续更新';

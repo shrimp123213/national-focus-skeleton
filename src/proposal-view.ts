@@ -1,4 +1,4 @@
-import type { Proposal, State } from './model';
+import type { Country, Proposal, State } from './model';
 
 /**
  * What a situation update changed in each nation (v0.16 world letter, v0.18 task window). It compares
@@ -84,7 +84,7 @@ export function letterDigest(state: State, preview: State, proposal: Proposal): 
         entries.push({
           day: proposal.until,
           kind: 'transition',
-          title: transition.cause === 'completed' ? '本期议程完成，进入下一期' : '局势变化，本期议程改换',
+          title: transitionTitle(after, transition),
           note: transition.reason,
         });
       }
@@ -107,6 +107,21 @@ export function letterDigest(state: State, preview: State, proposal: Proposal): 
   }
   // Countries with the most to review first; ties keep the archive order.
   return out.sort((a, b) => weight(b) - weight(a));
+}
+
+/**
+ * A change of government names the faction to rule. The update records it as pending when automatic
+ * periods are off or the country is in calibration (workflow commitUpdate); the player decides then.
+ */
+function transitionTitle(country: Country, transition: Proposal['transitions'][number]): string {
+  if (transition.cause !== 'government') {
+    return transition.cause === 'completed' ? '本期议程完成，进入下一期' : '局势变化，本期议程改换';
+  }
+  const name = country.politics?.factions.find((faction) => faction.id === transition.ruling)?.name;
+  const faction = `「${name ?? transition.ruling}」`;
+  return !country.autoPeriod || country.calibration
+    ? `政权易手待决：${faction}将接掌，由玩家决定是否换期`
+    : `政权易手：${faction}接掌，进入下一期`;
 }
 
 const order: Record<LetterEntry['kind'], number> = {
