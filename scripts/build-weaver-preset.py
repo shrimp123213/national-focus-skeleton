@@ -5,7 +5,7 @@ import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v6.0 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v6.1 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -335,6 +335,7 @@ Step 1：阶段
 - period 时：anchor 是哪个国策？prefix 是什么？有效的制度、能力与事件有哪些？旧期只写时间外的一段 summary，不重造承接国策，不重发成果
 Step 2：国情
 - 国情、超凡力量、利益群体、当前局势与本期主要目的；区分设定事实及新设计
+- 派系：stage=period 且 state 中该国已有 politics 时，照用其派系 ID 与成员 ID，不输出 politics；其余情况，世界书是否显示 2 个以上符合定义的派系？有就列出派系、执政派系与具名成员并写 politics，没有就省略 politics，全树不用支持度条件、派系效果与 backers
 Step 3：议程
 - 本期议程及长期方向；保留有效长期方向的 id 与原文，修订或放弃要说明
 - 标准 10–16、大型 16–24（含承接），是篇幅目标，禁止为凑数补国策；分岔、汇流、互斥、核心分支与重要国策没有配额
@@ -353,11 +354,12 @@ Step 6：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - 根物件：stage=generate 是整棵树；stage=period 只有 summary 与 tree
 - 数字与布尔：stability、warSupport、days、minimum、value 是数字；active、negate 是布尔；都不加引号
 - 每个 days 都是 7、14、21、28 或 35
-- 每个国策 17 键齐全；name 是 4–12 字的短语；没有内容的列表写 []；mutex 是 null 或四键物件；normal 国策的 news 是 null，pivotal 国策的 news 三键齐全
+- 每个国策 17 键齐全；name 是 4–12 字的短语；没有内容的列表写 []；mutex 是 null 或四键物件（有派系时可加 backers）；normal 国策的 news 是 null，pivotal 国策的 news 三键齐全
 - prerequisites 每一组都是阵列（两层）；引用的国策 ID 都存在
-- 条件只有 kind、id、label（可加 negate）或 kind、minimum、label；效果都有自己的 id，能力与承诺用 key
+- 条件只有 kind、id、label（可加 negate）或 kind、minimum、label（支持度条件另加 faction）；效果都有自己的 id，能力与承诺用 key
+- 有派系时：politics 的 support 合计 100、派系 2–6 个、ruling 的 support 大于 0；支持度条件、派系效果与 backers 引用的派系 ID、成员 ID 都存在；支持度条件不在 sustain、outcomes。没有派系时：全树没有 politics、支持度条件、派系效果与 backers
 - branch 填分支 name 原文；每个分支至少一个国策；恰好一条分支 core=true；没有 x、y 或其它格式以外的键
-- stage=period 时另查：periodTitle、agenda 不为空；historical、capabilities 是 []；nodes 不含 anchor；新国策 id 与新 mutex.group 都有 prefix；前置只引用 anchor 或新国策；新国策数加 anchor 不超过 limits.max；summary 不超过 1200 字
+- stage=period 时另查：periodTitle、agenda 不为空；historical、capabilities 是 []；nodes 不含 anchor；新国策 id 与新 mutex.group 都有 prefix；前置只引用 anchor 或新国策；新国策数加 anchor 不超过 limits.max；summary 不超过 1200 字；state 已有 politics 时 tree 不写 politics；transition.cause 是 government 时新国策不以 anchor 为前置
 </analysis_format>''',
     'update': '''VOID: 织界者，以下是你的思维要求：
 
@@ -384,7 +386,8 @@ Step 4：逐国推演
 - 玩家国：只有跳时且 skipDelegate=true 时才能代选
 - 事件完成国策：逐国核对，正文或事件中是否已实际做成某项未完成国策 description 所描述的事（不论是否开始、前置是否完成）？依<国策输出格式>的「事件完成判断」决定 achieved、bypassed 或不完成；正在进行、部分达成、只是条件变好都不算
 - 稳定度与战争支持度：只有明确原因时才小幅变动
-- 换期：本期主要目的已完成或已不适配吗？依据是什么？树有多个结局时，走到任一结局即算完成；没有就 transitions 为 []
+- 派系（只看 state 中有 politics 的国家）：正文或事件是否显示某派系的影响力确实消长、成员倒戈？有才写派系效果，平静是常态。政权是否已实际易手给另一派系？是才提出执政更替（cause=government），支持度落后本身不是理由
+- 换期：本期主要目的已完成或已不适配吗？依据是什么？树有多个结局时，走到任一结局即算完成；没有换期也没有执政更替就 transitions 为 []
 Step 5：事件
 - 先处理 state.events.ongoing：逐件判断本期有没有实际进展；有就用 eventUpdates 写进展，情况改变时整句取代 current、整份取代 steps，实际取得的规则成果写 changes（只写这次新增的），值得报导才 report=true；结束时填 result（achieved／abandoned／failed）并写结局；附 review 的事件要说明推进、结束或为何停滞
 - 国策的执行：已开始或已完成的国策若有持续的工程、阻力或成果，由同一个事件承接（focus 写 country 与 node，一项国策最多一个事件；已有就用 eventUpdates）；outcomes 需要工程结果时，在工程完成的那次更新同时写入事实
@@ -404,6 +407,7 @@ Step 8：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - 每个时间步骤 6 键齐全（没有内容写 []）；at 是故事日数字、由小到大、不晚于 until；新事件的 at 等于所在步骤的 at
 - 新事件 16 个必写键齐全；countries 是阵列；public 是布尔；option 是 {label,text} 物件
 - changes 每项是 {country, effects}，每个效果有自己的 id；数值写数字（✗ "+5"）
+- 派系效果只写给有 politics 的国家，派系 ID 与成员 ID 照抄 state，support 的 value 只用 ±5、±10、±15；cause=government 的 transitions 有 ruling，其他没有
 - eventUpdates 的 id 都是既有 ongoing 事件；填了 result 就不写 status:"ongoing"
 - completions 的 event 是本步或更早写入、或 state.events 中的事件，且参与国家含该国；mode 符合事件完成判断
 - 根物件的 steps（时间步骤）与事件的 steps（计划步骤）没有混用
@@ -437,7 +441,8 @@ Step 7：格式自检（对照<国策输出格式>逐条确认；只写发现的
 - 根物件 7 键齐全；until 是数字且等于 now；transitions 是 []；id 是这次新取的
 - 每国的 edits 恰好 country、remove、nodes、reason 四键；remove 与 nodes 都是阵列；country 照抄 state 中的国家 ID
 - edits 中每个国策 19 键齐全（含 x、y 整数）；数字与布尔不加引号；没有内容的列表写 []
-- prerequisites 两层阵列；mutex 是 null 或四键物件；normal 国策的 news 是 null
+- prerequisites 两层阵列；mutex 是 null 或四键物件（有派系时可加 backers）；normal 国策的 news 是 null
+- 支持度条件、派系效果与 backers 只写给有 politics 的国家，派系 ID 与成员 ID 照抄 state；支持度条件不在 sustain、outcomes
 - 所有引用的国家、国策 ID 都存在
 </analysis_format>''',
 }
@@ -530,22 +535,43 @@ GENERATE_EXAMPLE = {
     'relations': [{'from': 'n_army', 'to': 'n_market', 'kind': 'opportunity', 'change': '选了扩军，开市的财政余裕就会减少'}],
     'capabilities': [],
     'historical': [],
+    'politics': {
+        'ruling': 'crown_party',
+        'factions': [
+            {'id': 'crown_party', 'name': '王党', 'appeal': '一句诉求', 'stance': 'hardline', 'support': 55},
+            {'id': 'merchant_party', 'name': '商会派', 'appeal': '一句诉求', 'stance': 'moderate', 'support': 45},
+        ],
+        'members': [
+            {'id': 'm_guard', 'name': '王室卫队', 'kind': 'army', 'weight': 'heavy', 'faction': 'crown_party',
+             'note': '一句说明'},
+            {'id': 'm_port_guild', 'name': '港口商会', 'kind': 'guild', 'weight': 'medium',
+             'faction': 'merchant_party', 'note': '一句说明'},
+            {'id': 'm_temple', 'name': '旧神殿', 'kind': 'order', 'weight': 'light', 'faction': None,
+             'note': '世界书看不出立场'},
+        ],
+        'succession': '此国政权如何更替，一句',
+    },
     'nodes': [
         node('n_council', COURT, 'crown', 14, [], investments=['御前书记官'],
              effects=[{'id': 'e_council', 'kind': 'capability', 'key': 'royal_council', 'name': '御前会议', 'active': True}]),
         node('n_army', COURT, 'army', 35, [['n_council']],
-             requirements=[{'kind': 'capability', 'id': 'royal_council', 'label': '已设御前会议'}],
+             requirements=[{'kind': 'capability', 'id': 'royal_council', 'label': '已设御前会议'},
+                           {'kind': 'support', 'faction': 'crown_party', 'minimum': 50, 'label': '王党支持度至少 50'}],
              sustain=[{'kind': 'warSupport', 'minimum': 20, 'label': '战争支持度至少 20'}],
              investments=['王室卫队', '军费'],
              effects=[{'id': 'e_army_ws', 'kind': 'warSupport', 'value': 5}],
-             mutex={'group': 'court_choice', 'route': 'army', 'lock': 'start', 'reason': '国库只够支持一条路线'}),
+             mutex={'group': 'court_choice', 'route': 'army', 'lock': 'start', 'reason': '国库只够支持一条路线',
+                    'backers': ['crown_party']}),
         node('n_port', COURT, 'trade', 28, [['n_council']],
              requirements=[{'kind': 'fact', 'id': 'port_blockaded', 'label': '港口未遭封锁', 'negate': True}],
              outcomes=[{'kind': 'fact', 'id': 'port_survey_done', 'label': '港口勘查完成'}],
              investments=['商会资金'],
              effects=[{'id': 'e_port_charter', 'kind': 'commitment', 'key': 'merchant_charter', 'name': '商会特许状'},
-                      {'id': 'e_port_stab', 'kind': 'stability', 'value': -3}],
-             mutex={'group': 'court_choice', 'route': 'trade', 'lock': 'start', 'reason': '国库只够支持一条路线'}),
+                      {'id': 'e_port_stab', 'kind': 'stability', 'value': -3},
+                      {'id': 'e_port_sup', 'kind': 'support', 'faction': 'merchant_party', 'value': 10},
+                      {'id': 'e_port_temple', 'kind': 'member', 'member': 'm_temple', 'faction': 'merchant_party'}],
+             mutex={'group': 'court_choice', 'route': 'trade', 'lock': 'start', 'reason': '国库只够支持一条路线',
+                    'backers': ['merchant_party']}),
         node('n_cabinet', COURT, 'crown', 21, [['n_army', 'n_port']],
              requirements=[{'kind': 'stability', 'minimum': 40, 'label': '稳定度至少 40'}],
              investments=['宫廷法官'],
@@ -775,23 +801,38 @@ NODE_RULES = '''## 国策（nodes 的每一项）
 - requirements／sustain／outcomes：[条件]
 - investments：[文字]，简短名词，例如 ["户部书吏","三万金币"]
 - effects：[效果]
-- mutex：null，或 {"group":ID,"route":ID,"lock":"start"|"complete","reason":文字} 四键齐全（start＝开始就锁住同组其他路线，complete＝完成才锁）；同一个 group 至少要有两个不同的 route
+- mutex：null，或 {"group":ID,"route":ID,"lock":"start"|"complete","reason":文字} 四键齐全（start＝开始就锁住同组其他路线，complete＝完成才锁）；同一个 group 至少要有两个不同的 route；有派系的国家可加第五键 "backers":[派系ID]（此路线倚重的派系）
 - impact："normal"｜"pivotal"
 - news：impact="normal" 时写 null；impact="pivotal" 时写 {"headline":文字,"body":文字,"option":{"label":文字,"text":文字(可空)}}
 - execution：可省略；只能是 "once"｜"ongoing"（ongoing＝完成后仍需持续执行，系统会建立执行事件）
 
-## 条件（requirements／sustain／outcomes／effects[].when 的每一项）——只有三种形状
+## 条件（requirements／sustain／outcomes／effects[].when 的每一项）——三种形状（有派系的国家另有支持度条件，见「派系」）
 {"kind":"capability","id":能力ID,"label":文字}
 {"kind":"fact","id":事实ID,"label":文字}
 {"kind":"stability","minimum":数字0–100,"label":文字}（或 "kind":"warSupport"）
 需要「没有」某能力或事实时，加 "negate":true。不要写 "not_capability" 之类的 kind，不要加 name、description、value。
 
-## 效果（effects 与 changes[].effects 的每一项）——只有三种形状，每项都有自己唯一的 id
+## 效果（effects 与 changes[].effects 的每一项）——三种形状（有派系的国家另有派系效果，见「派系」），每项都有自己唯一的 id
 {"id":ID,"kind":"capability","key":能力ID,"name":文字,"active":true}（废除能力写 "active":false）
 {"id":ID,"kind":"commitment","key":承诺ID,"name":文字}
 {"id":ID,"kind":"stability","value":数字-100–100}（或 "kind":"warSupport"）
 可选 "when":[条件]，表示完成时条件都成立才生效。
 条件用 id 指向能力，效果用 key 指向能力，两者不要互换；效果没有 label、minimum。'''
+
+# Faction shapes (v0.18.0). The task note that the script adds gives the meaning; this gives the shapes.
+FACTION_EFFECTS = '''派系效果——四种形状，与其他效果写在同一个阵列，每项都有自己唯一的 id：
+{"id":ID,"kind":"support","faction":派系ID,"value":-15|-10|-5|5|10|15}（不能直接写支持度数字，脚本会调整其他派系使合计保持 100）
+{"id":ID,"kind":"member","member":成员ID,"faction":派系ID 或 null}（成员倒戈；null＝转为未表态）
+{"id":ID,"kind":"merge","source":派系ID,"target":派系ID}（source 整个并入 target；source 不可是执政派系，也不可与 target 相同）
+{"id":ID,"kind":"faction","key":派系ID,"name":文字,"appeal":文字,"stance":"moderate"|"hardline"|"extreme"}（可加 "leader":文字；key 不存在＝建立新派系，必须加 "support":5|10|15，每国最多 8 个派系；key 已存在＝改写，不写 support）'''
+
+FACTION_RULES = '''## 派系（只用于有派系的国家：本次输出写了 politics，或换期、改树时 state 中该国已有 politics；其他国家不写本节任何形状）
+派系 ID 与成员 ID 照抄 politics 中的 id；派系也可以由本树国策的 faction 效果建立，成员不能新增
+支持度条件——只能写在 requirements 与 effects[].when，不能写在 sustain、outcomes：
+{"kind":"support","faction":派系ID,"minimum":数字0–100,"label":文字}（加 "negate":true＝支持度须低于 minimum）
+''' + FACTION_EFFECTS + '''
+派系效果同样可选 "when":[条件]。
+✗ 常见退回原因：没有派系的国家写了支持度条件、派系效果或 backers；派系 ID 或成员 ID 不在 politics 中；支持度条件写进 sustain 或 outcomes；support 的 value 写成 3、20 或 "+5"；建立新派系没有写 support；执政派系被 merge 并掉'''
 
 NODE_TABLE = '''## 决策表
 | 我想表达 | 写法 |
@@ -808,6 +849,9 @@ NODE_TABLE = '''## 决策表
 | 完成后获得能力 | "effects":[{"id":"e1","kind":"capability","key":"x","name":"…","active":true}] |
 | 完成后废除能力 | 同上，"active":false |
 | 稳定度 +5 | "effects":[{"id":"e2","kind":"stability","value":5}] |
+| 开始前某派系支持度至少 30 | "requirements":[{"kind":"support","faction":"x","minimum":30,"label":"…"}] |
+| 完成后某派系支持度 +10 | "effects":[{"id":"e3","kind":"support","faction":"x","value":10}] |
+| 这条互斥路线倚重某派系 | "mutex":{"group":"…","route":"…","lock":"start","reason":"…","backers":["x"]} |
 | 一般国策 | "impact":"normal","news":null |
 | 重要国策 | "impact":"pivotal","news":{"headline":"…","body":"…","option":{"label":"…","text":""}} |
 
@@ -843,10 +887,16 @@ STEP_RULES = '''## 时间步骤（根物件 steps 的每一项，依 at 由小�
 {"country":国家ID,"effects":[效果]}
 ✗ 常见退回原因：写成 {"stability":-3}、或 [{"kind":"stability","value":-3}]（少了 country 包装与效果 id）'''
 
-EFFECT_SHAPES = '''## 效果（changes[].effects 的每一项）——只有三种形状，每项都有自己唯一的 id
+EFFECT_SHAPES = '''## 效果（changes[].effects 的每一项）——三种形状（有派系的国家另有派系效果，见「派系」），每项都有自己唯一的 id
 {"id":ID,"kind":"capability","key":能力ID,"name":文字,"active":布尔}
 {"id":ID,"kind":"commitment","key":承诺ID,"name":文字}
-{"id":ID,"kind":"stability","value":数字-100–100}（或 "kind":"warSupport"；✗ "+5"）'''
+{"id":ID,"kind":"stability","value":数字-100–100}（或 "kind":"warSupport"；✗ "+5"）
+
+## 派系（只用于 state 中有 politics 的国家；其他国家不写派系效果，也不提出执政更替）
+派系 ID 与成员 ID 照抄 state 中该国 politics 的 id；成员不能新增
+''' + FACTION_EFFECTS + '''
+执政更替不是效果：写在根物件的 transitions（cause="government"）。
+✗ 常见退回原因：没有 politics 的国家写了派系效果；派系 ID 或成员 ID 不在该国 politics 中；support 的 value 写成 3、20 或 "+5"；建立新派系没有写 support，或派系已有 8 个；执政派系被 merge 并掉'''
 
 PERIOD_RULES = '''## 换期（stage=period）
 根物件只有两个键：{"summary":文字(≤1200字),"tree":{整棵树}}，tree 的键同上，另有以下规定：
@@ -858,6 +908,8 @@ PERIOD_RULES = '''## 换期（stage=period）
 - prerequisites 只能引用 anchor 或本期新国策；旧期其他国策已不存在
 - 能力条件只能要求 state 中 active 的能力，或由本期新国策在前置链上产生的能力
 - anchor 所属的旧分支不在新 branches 时会被程式带入，新分支不可使用它的 id
+- state 中该国已有 politics 时，tree 不写 politics，派系 ID 与成员 ID 照抄 state；没有时可依「政局」补上
+- 任务资料的 transition.cause 是 "government" 时政权已更替：transition.ruling 的派系现在执政，anchor 只作历史保留，新国策不可以它为前置
 
 ## 换期决策表
 | 我想表达 | 写法 |
@@ -867,6 +919,7 @@ PERIOD_RULES = '''## 换期（stage=period）
 | 新国策接在承接国策之后 | "prerequisites":[["anchor 的 id"]] |
 | 与承接国策无关的新议程 | "prerequisites":[]，作为新的起点 |
 | anchor 是空字串 | 本期没有承接国策，所有起点写 [] |
+| 政权更替后的新一期（transition.cause="government"） | 所有起点写 "prerequisites":[]，不引用 anchor；议程与路线依 transition.ruling 派系的 appeal 与 stance |
 | 需要已有的制度或能力 | "requirements":[{"kind":"capability","id":"state 中 active 的能力 id","label":"…"}] |
 | 长期方向仍有效 | longTerm 保留原 id 与原文 |
 | 修订或放弃长期方向 | 改写或删除该条，并在 analysis 说明理由 |
@@ -879,7 +932,8 @@ PERIOD_RULES = '''## 换期（stage=period）
 - prerequisites 引用 anchor 以外的旧期国策
 - historical 不是 []
 - tree.id 不等于 candidate.id
-- 新国策数加上 anchor 超过 limits.max；summary 超过 1200 字'''
+- 新国策数加上 anchor 超过 limits.max；summary 超过 1200 字
+- state 中该国已有 politics，tree 又写了 politics；政权更替后的新国策以 anchor 为前置'''
 
 UPDATE_TABLE = '''## 决策表
 | 我想表达 | 写法 |
@@ -899,6 +953,10 @@ UPDATE_TABLE = '''## 决策表
 | calibration=true 的国家承接了现况 | "calibrations":["国家ID"]；只能列 state 中 calibration=true 的国家 |
 | 本期主要目的已完成，换下一期 | "transitions":[{"country":"国家ID","cause":"completed","reason":"…","invalidateActive":false}] |
 | 世界变局使本期议程不再适用 | 同上，"cause":"incompatible"；进行中的国策本身也已失效时才写 "invalidateActive":true |
+| 正文或事件显示某派系的影响力确实消长 | 该事件或 eventUpdates 加 "changes":[{"country":"国家ID","effects":[{"id":"…","kind":"support","faction":"派系ID","value":10}]}]；只用 ±5、±10、±15 |
+| 成员倒戈或转为未表态 | 同一个 effects 加 {"id":"…","kind":"member","member":"成员ID","faction":"派系ID"}（未表态写 null）；重要成员倒戈通常同时写 support |
+| 正文或事件显示政权已实际易手给另一派系 | "transitions":[{"country":"国家ID","cause":"government","ruling":"新执政派系ID","reason":"…","invalidateActive":true}]；auto=false 或 calibration=true 的国家也照样提出 |
+| 执政派系只是支持度落后，政权没有易手 | 不提出执政更替；由事件写出它承受的压力 |
 
 ## 事件完成判断（completions）
 | 情况 | 处理 |
@@ -923,6 +981,7 @@ UPDATE_TABLE = '''## 决策表
 - 同一项国策已有执行事件，又新建一个承接它的事件
 - completions 的 event 不存在、参与国家不含该国，或国策已完成；achieved 完成本国已放弃路线的国策；bypassed 用在尚未选定或已放弃的互斥路线上
 - calibrations 列了 calibration 不是 true 的国家
+- cause="government" 没有写 ruling，或其他 cause 写了 ruling；ruling 不是 state 中该国的派系 ID、该派系支持度为 0，或它已是执政派系；该国没有 politics
 - edits 不是 []；沿用上一次的根物件 id（会被当成已处理而整份忽略）'''
 
 FORMAT = {
@@ -947,7 +1006,18 @@ FORMAT = {
 - historical：[{"node":国策ID,"evidence":文字}]，本树 nodes 中有证据已完成的国策，node 必须是 nodes 里的 id；建国、旧战争等不属于本树国策的历史写进 evidence 或 description，不放这里；没有写 []
 - nodes：[国策]
 - 可选 keywords：[文字]，最多 8 个，每个 ≤24 字
+- 可选 politics：{政局}，见下
 - 不输出 x、y、autoPeriod（座标由脚本布局）
+
+## 政局（politics，可选）
+世界书显示 2 个以上符合定义的派系时才写；否则整个键省略（不写 null 或 {}），全树也不写支持度条件、派系效果与 backers
+{"ruling":派系ID,"factions":[派系],"members":[成员],"succession":文字}
+- factions：2–6 项，每项 {"id":ID,"name":文字,"appeal":文字,"stance":"moderate"|"hardline"|"extreme","support":整数0–100}，可加 "leader":文字；所有 support 合计恰好 100
+- ruling：factions 中现在掌权的派系 id，其 support 大于 0
+- members：每项 {"id":ID,"name":文字,"kind":"family"|"race"|"clan"|"order"|"army"|"guild"|"institution"|"other","weight":"light"|"medium"|"heavy","faction":派系ID 或 null,"note":文字}；name 照抄世界书；立场不明写 "faction":null；没有写 []
+- succession：一句，此国政权如何更替（选举、推举、继承、政变）
+- 不写 color、pending（由脚本写入）
+✗ 常见退回原因：support 合计不是 100；只有 1 个或超过 6 个派系；ruling 不在 factions 中，或其 support 为 0；成员的 faction 不是 factions 中的 id；派系 ID 或成员 ID 重复；写了 color 或 pending
 
 ## 分支（branches 的每一项）
 {"id":ID,"name":文字,"purpose":文字,"supporters":文字,"opposition":文字,"tradeoff":文字,"destination":文字}
@@ -956,11 +1026,11 @@ FORMAT = {
 
 ## 关系（relations 的每一项）
 {"from":国策ID,"to":国策ID,"kind":"exchange"|"synergy"|"opportunity"|"context"|"deferred"|"replacement","change":文字}
-kind 写英文，不写「利益交换」等中文名''', NODE_RULES, NODE_TABLE,
+kind 写英文，不写「利益交换」等中文名''', NODE_RULES, FACTION_RULES, NODE_TABLE,
         example('generate', GENERATE_EXAMPLE,
-                '发展型范例（stage=generate；只示范结构与型别，形状依任务资料的 structure，国策数不代表规模，内容须依本国设定重写）'),
+                '发展型范例（stage=generate；有派系的国家；只示范结构与型别，形状依任务资料的 structure，国策数不代表规模，内容须依本国设定重写）'),
         example('generate', CHOICE_EXAMPLE,
-                '抉择型范例（stage=generate；两层互斥、子路线汇合、各自结局、无侧翼；只示范结构与型别）'),
+                '抉择型范例（stage=generate；没有派系的国家，省略 politics；两层互斥、子路线汇合、各自结局、无侧翼；只示范结构与型别）'),
         PERIOD_RULES,
         example('period', PERIOD_EXAMPLE,
                 '换期范例（stage=period；假设任务资料的 anchor 为 n_cabinet、prefix 为 p2_；只示范结构与型别）'),
@@ -971,7 +1041,8 @@ kind 写英文，不写「利益交换」等中文名''', NODE_RULES, NODE_TABLE
 - until：数字，必须等于任务资料的 now
 - edits：局势更新永远是 []
 - calibrations：calibration=true 而这次承接现况的国家 ID；没有写 []
-- transitions：没有换期写 []；每项 {"country":国家ID,"cause":"completed"|"incompatible","reason":文字(≤800字),"invalidateActive":布尔}；invalidateActive=true 只能配 cause="incompatible"''',
+- transitions：没有换期写 []；每项 {"country":国家ID,"cause":"completed"|"incompatible"|"government","reason":文字(≤800字),"invalidateActive":布尔}；invalidateActive=true 只能配 cause="incompatible" 或 "government"
+- cause="government"（执政更替，只用于有 politics 的国家）时另加第五键 "ruling":新执政派系ID，invalidateActive 写 true；其他 cause 不写 ruling''',
         STEP_RULES, EFFECT_SHAPES, UPDATE_TABLE,
         example('update', UPDATE_EXAMPLE, '结构范例（只示范结构与型别，内容须依正文与 state 重写）'),
         example('update', UPDATE_EMPTY, '没有变化时的范例'),
@@ -988,16 +1059,16 @@ kind 写英文，不写「利益交换」等中文名''', NODE_RULES, NODE_TABLE
 - remove：要删除的尚未开始国策；没有写 []
 - nodes：新增或改写的尚未开始国策（同 id 即改写）；没有写 []
 - edits 里的国策比生成时多两个键：x、y，都是 0–1000 的整数（可沿用被取代国策的座标），共 19 键''',
-        NODE_RULES, NODE_TABLE, STEP_RULES,
+        NODE_RULES, FACTION_RULES, NODE_TABLE, STEP_RULES,
         example('reshape', RESHAPE_EXAMPLE, '最小结构范例（只示范结构与型别，内容须依剧变重写）'),
         FORMAT_CLOSE]),
 }
 
 FORMAT_ACK = {
     'identify': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出：根物件只有 countries，每项恰好 id、name、description、evidence 四键，id 以英文字母开头。我会先完成思考，再只输出一个合法的 JSON 物件。',
-    'generate': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：数字与布尔不加引号；没有内容的列表写 []；prerequisites 一律两层阵列；mutex 只写 null 或四键齐全的物件；normal 国策的 news 写 null；条件用 id、效果用 key 且每个效果有自己的 id；不写格式以外的键；换期时根物件只有 summary 与 tree，新国策与新互斥组用 prefix，前置只引用 anchor 或新国策，historical 与 capabilities 写 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
-    'update': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：until 与 at 写故事日数字；每个时间步骤六键齐全；新事件 16 键齐全且 countries 是阵列；changes 每项都包 country 与 effects，每个效果有自己的 id；根物件的 steps 与事件的 steps 不混用；edits 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
-    'reshape': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：edits 每项恰好 country、remove、nodes、reason 四键；改写的国策 19 键齐全，x、y 是整数，days 只用 7／14／21／28／35；prerequisites 一律两层阵列；mutex 只写 null 或四键物件；transitions 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
+    'generate': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：数字与布尔不加引号；没有内容的列表写 []；prerequisites 一律两层阵列；mutex 只写 null 或四键齐全的物件（有派系时可加 backers）；normal 国策的 news 写 null；条件用 id、效果用 key 且每个效果有自己的 id；politics、支持度条件与派系效果只在有派系时写，support 合计 100；不写格式以外的键；换期时根物件只有 summary 与 tree，新国策与新互斥组用 prefix，前置只引用 anchor 或新国策，historical 与 capabilities 写 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
+    'update': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：until 与 at 写故事日数字；每个时间步骤六键齐全；新事件 16 键齐全且 countries 是阵列；changes 每项都包 country 与 effects，每个效果有自己的 id；派系效果只写给有 politics 的国家，执政更替写 cause=government 并加 ruling；根物件的 steps 与事件的 steps 不混用；edits 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
+    'reshape': 'Weaver: 所有要求与信息已理解，我会严格依照<国策输出格式>输出，尤其注意：edits 每项恰好 country、remove、nodes、reason 四键；改写的国策 19 键齐全，x、y 是整数，days 只用 7／14／21／28／35；prerequisites 一律两层阵列；mutex 只写 null 或四键物件（有派系时可加 backers）；支持度条件与派系效果只写给有 politics 的国家；transitions 为 []。我会先完成思考，再只输出一个合法的压缩 JSON 物件。',
 }
 
 TAIL = {

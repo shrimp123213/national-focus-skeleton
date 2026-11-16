@@ -7,6 +7,7 @@ import { GeneratedTreeSchema, validateTopology } from '../src/generation';
 import { layoutTree } from '../src/layout';
 import { CandidatesSchema, ProposalSchema, TreeSchema, defaultConfig, type FocusNode } from '../src/model';
 import { PeriodReplySchema, periodAnchor, transitionPeriod } from '../src/periods';
+import { validateFactionRules, validateGeneratedPolitics } from '../src/politics';
 import { assertCapabilityOrder } from '../src/reachability';
 import { repairReply } from '../src/repair';
 import { DEFAULT_GUIDE } from '../src/prompts';
@@ -44,7 +45,11 @@ test('weaver preset generate examples (development and choice) pass the schema, 
     const tree = normalizeBranchReferences(GeneratedTreeSchema.parse(repairReply(example.value, 'generate')));
     validateTopology(tree.nodes, 'standard');
     assertCapabilityOrder(tree.nodes as FocusNode[], [], []);
+    validateFactionRules(tree.nodes, tree.politics, tree.nodes);
   }
+  // The development example has politics; the choice example shows a country without them.
+  validateGeneratedPolitics(GeneratedTreeSchema.parse(repairReply(generated[0].value, 'generate')).politics!);
+  assert.equal(GeneratedTreeSchema.parse(repairReply(generated[1].value, 'generate')).politics, undefined);
   // The choice example: one core branch, nested exclusive choices and two separate endings.
   const choice = GeneratedTreeSchema.parse(repairReply(generated[1].value, 'generate'));
   assert.equal(choice.branches.length, 1);
