@@ -16,7 +16,7 @@ import {
   type Requirement,
   type State,
 } from '../src/model';
-import { PeriodReplySchema, transitionPeriod } from '../src/periods';
+import { addPolitics, PeriodReplySchema, transitionPeriod } from '../src/periods';
 import { assignColors, settlePolitics, validatePolitics, type FactionEffect } from '../src/politics';
 import { exportTrees, importTrees, parseTreeFile } from '../src/tree-io';
 
@@ -764,6 +764,42 @@ test('换期：没有政局的国家可由回复补上政局，依生成规则�
   ];
   for (const [nodes, value, message] of cases) {
     assert.throws(() => nextPeriod(plain, nodes, value), message);
+    assert.deepEqual(plain, before);
+  }
+});
+
+test('补上政局：没有政局的国家取得政局与色位，国策树、进度与能力不变；已有政局、国家不存在或不合生成规则时退回，不改输入', () => {
+  const road = { id: 'cap', kind: 'capability', key: 'road', name: '公路', active: true };
+  const plain = complete(install([focus('x', { effects: [road] }), focus('y')], null), 'x');
+  const before = structuredClone(plain);
+  const after = addPolitics(plain, 'realm', politics());
+  assert.deepEqual(after.countries.realm.politics, {
+    ...politics(),
+    factions: politics().factions.map((item, color) => ({ ...item, color })),
+  });
+  // Everything except the politics and the revision stays the same.
+  const rest = (state: State) => ({
+    ...state,
+    revision: 0,
+    countries: { realm: { ...state.countries.realm, politics: undefined } },
+  });
+  assert.deepEqual(rest(after), rest(plain));
+  assert.equal(after.countries.realm.progress.x.status, 'completed');
+  assert.ok(after.countries.realm.capabilities.road?.active);
+  assert.equal(after.revision, plain.revision + 1);
+  assert.deepEqual(plain, before, '不改写输入');
+  assert.throws(() => addPolitics(after, 'realm', politics()), /此国已有政局/);
+  assert.throws(() => addPolitics(plain, 'ghost', politics()), /国家不存在/);
+  const uneven = politics();
+  uneven.factions[0].support = 50;
+  const fallen = politics();
+  fallen.factions[0].support = 0;
+  fallen.factions[1].support = 70;
+  for (const [value, message] of [
+    [uneven, /派系支持度合计须为 100，目前为 110/],
+    [fallen, /执政派系「王党」的支持度须大于 0/],
+  ] as const) {
+    assert.throws(() => addPolitics(plain, 'realm', value), message);
     assert.deepEqual(plain, before);
   }
 });

@@ -110,7 +110,15 @@ test('weaver preset chains reset macros first and read only variables they set',
     assert.doesNotMatch(deepseek.content, /国策_卡COT/);
     assert.match(deepseek.content, /\{\{setvar::国策_尾部::[^}]*begin▁of▁thinking/);
     assert.match(segment(job, 'nf-tail').content, /\{\{getvar::国策_尾部\}\}$/);
+    // The VOID instruction is off by default. When it is on, it adds one step to the thinking steps.
+    const input = segment(job, 'nf-input');
+    assert.ok(!input.enabled);
+    assert.match(input.content, /\{\{setvar::国策_VOID指令::[^}]*VOID_INPUT/);
+    assert.ok(order.indexOf('nf-input') < order.indexOf('nf-cot'));
+    assert.match(segment(job, 'nf-cot').content, /\{\{getvar::国策_VOID指令\}\}/);
   }
+  // Identify: a country that the instruction names is not dropped for lack of evidence.
+  assert.match(segment('identify', 'nf-input').content, /Step 2 不排除/);
 });
 
 test('weaver preset period example passes the real period transition after the generate example', () => {

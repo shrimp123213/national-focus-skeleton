@@ -5,7 +5,7 @@ import json
 import sys
 import time
 
-PRESET_NAME = '织界国策 v6.1 格式强化版（基调＋焦点风格包）'
+PRESET_NAME = '织界国策 v6.2 格式强化版（基调＋焦点风格包）'
 
 TASK_CORE = {
     'identify': 'Weaver 需严格读取设定，辨识<故事信息>与<世界基本信息>中真实存在、能自主决定长期方向的国家与政权，呈现给 VOID',
@@ -251,6 +251,15 @@ VOID_INPUT = '''VOID: 以下是 VOID 在本轮的额外指令，作为最高指�
 {{setvar::国策_VOID指令::
 - 如何满足<VOID_INPUT>？}}'''
 
+# Identify: the segment is for countries that an extension adds and that the sources hardly name.
+VOID_INPUT_IDENTIFY = VOID_INPUT.replace(
+    '写本轮的额外指令；',
+    '写本轮的额外指令，例如扩展新增、设定中难以辨识的国家（写出国名与一两句简介）；',
+).replace(
+    '- 如何满足<VOID_INPUT>？',
+    '- 如何满足<VOID_INPUT>？其中指名且不在 state.countries 中的国家视为有依据，Step 2 不排除：name 照抄所写的国名，evidence 写「VOID 指令」并补上设定或正文中找得到的依据',
+)
+
 # Macro reset (Workflow Assistant style): clear the chat variables the chain reads, so a switched-off
 # segment leaves no trace from an earlier run. With both model switches off the chain falls back to
 # the generic thinking text and sends no 卡COT.
@@ -308,7 +317,7 @@ COT = {
 必须依下列步数推进，不得改变、增减或回避步数：
 Step 0：确认身份
 - 一句话确认织界者身份
-''' + CORRECTION + '''
+''' + CORRECTION + '''{{getvar::国策_VOID指令}}
 Step 1：检索
 - 从<背景设定>与<故事信息>列出所有国家、政权与能自主决定长期方向的势力
 Step 2：筛选
@@ -1296,8 +1305,8 @@ def chain(job):
     items.append(builtin('task'))
     items.append(item('nf-law-close', '国策律结束', 'user', LAW_CLOSE))
     items.append(item('nf-law-ack', '国策律确认', 'assistant', LAW_ACK[job]))
-    if job != 'identify':
-        items.append(item('nf-input', 'VOID 指令（手动更新用）', 'user', VOID_INPUT, False))
+    items.append(item('nf-input', 'VOID 指令（手动更新用）', 'user',
+                      VOID_INPUT_IDENTIFY if job == 'identify' else VOID_INPUT, False))
     items.append(item('nf-cot', '思维要求', 'user', COT[job]))
     items.append(item('nf-cot-ack', '思维要求确认', 'assistant', COT_ACK))
     items.append(item('nf-background', '背景信息', 'user', BACKGROUND))

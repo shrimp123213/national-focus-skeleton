@@ -3,8 +3,8 @@
   "version": 1,
   "presets": [
     {
-      "name": "织界国策 v6.1 格式强化版（基调＋焦点风格包）",
-      "savedAt": 1794806757825,
+      "name": "织界国策 v6.2 格式强化版（基调＋焦点风格包）",
+      "savedAt": 1795186785147,
       "jobs": {
         "identify": {
           "retries": 2,
@@ -93,11 +93,19 @@
               "enabled": true
             },
             {
+              "id": "nf-input",
+              "kind": "custom",
+              "name": "VOID 指令（手动更新用）",
+              "role": "user",
+              "content": "VOID: 以下是 VOID 在本轮的额外指令，作为最高指令考虑：\n\n<VOID_INPUT>\n{{// 在这一行下面写本轮的额外指令，例如扩展新增、设定中难以辨识的国家（写出国名与一两句简介）；本段开启后，思维要求会自动多出「如何满足<VOID_INPUT>」一步}}\n\n</VOID_INPUT>\n{{setvar::国策_VOID指令::\n- 如何满足<VOID_INPUT>？其中指名且不在 state.countries 中的国家视为有依据，Step 2 不排除：name 照抄所写的国名，evidence 写「VOID 指令」并补上设定或正文中找得到的依据}}",
+              "enabled": false
+            },
+            {
               "id": "nf-cot",
               "kind": "custom",
               "name": "思维要求",
               "role": "user",
-              "content": "VOID: 织界者，以下是你的思维要求：\n\n<analysis_format>\n思维语言：简体中文\n思考位置：\n{{getvar::国策_思考位置}}\n- 思考要精简：整段控制在 600 字内，用代号、清单与数字，不要预写 JSON 全文，也不要把<国策输出格式>的范例抄进思考。输出上限要留给 JSON。\n- 思考结束后只输出一个 JSON 物件，不加 Markdown 围栏，也不加任何前后缀。\n\n必须依下列步数推进，不得改变、增减或回避步数：\nStep 0：确认身份\n- 一句话确认织界者身份\n- 若任务资料中的 correction 非空（最优先）：逐条列出被退回的原因。原因中的 path 指出出错位置，例如 [\"nodes\",3,\"prerequisites\",0] 是第 4 个国策 prerequisites 的第 1 组（从 0 起算）；对照<国策输出格式>找出对应条目，写出这次的正确写法。同一种错误通常不只一处，检查所有同类栏位\nStep 1：检索\n- 从<背景设定>与<故事信息>列出所有国家、政权与能自主决定长期方向的势力\nStep 2：筛选\n- 排除任务资料 state.countries 已有的国家；排除没有依据的名字；组织与家族除非设定明示其国家级自主权，否则排除\nStep 3：国名\n- name 照抄世界书或设定中的国名原文，字形一致，不翻译成英文；id 填与 name 相同的文字（脚本以国名作为国家 ID）\nStep 4：描述与依据\n- description 一两句写现状与主要矛盾；evidence 引用设定或正文的依据\nStep 5：格式自检（对照<国策输出格式>；只写发现的问题与修正，没有问题写「通过」）\n- 根物件只有 countries；每项恰好 id、name、description、evidence 四键，文字都不为空；id 与 name 相同\n- 没有新国家时输出 {\"countries\":[]}\n</analysis_format>",
+              "content": "VOID: 织界者，以下是你的思维要求：\n\n<analysis_format>\n思维语言：简体中文\n思考位置：\n{{getvar::国策_思考位置}}\n- 思考要精简：整段控制在 600 字内，用代号、清单与数字，不要预写 JSON 全文，也不要把<国策输出格式>的范例抄进思考。输出上限要留给 JSON。\n- 思考结束后只输出一个 JSON 物件，不加 Markdown 围栏，也不加任何前后缀。\n\n必须依下列步数推进，不得改变、增减或回避步数：\nStep 0：确认身份\n- 一句话确认织界者身份\n- 若任务资料中的 correction 非空（最优先）：逐条列出被退回的原因。原因中的 path 指出出错位置，例如 [\"nodes\",3,\"prerequisites\",0] 是第 4 个国策 prerequisites 的第 1 组（从 0 起算）；对照<国策输出格式>找出对应条目，写出这次的正确写法。同一种错误通常不只一处，检查所有同类栏位{{getvar::国策_VOID指令}}\nStep 1：检索\n- 从<背景设定>与<故事信息>列出所有国家、政权与能自主决定长期方向的势力\nStep 2：筛选\n- 排除任务资料 state.countries 已有的国家；排除没有依据的名字；组织与家族除非设定明示其国家级自主权，否则排除\nStep 3：国名\n- name 照抄世界书或设定中的国名原文，字形一致，不翻译成英文；id 填与 name 相同的文字（脚本以国名作为国家 ID）\nStep 4：描述与依据\n- description 一两句写现状与主要矛盾；evidence 引用设定或正文的依据\nStep 5：格式自检（对照<国策输出格式>；只写发现的问题与修正，没有问题写「通过」）\n- 根物件只有 countries；每项恰好 id、name、description、evidence 四键，文字都不为空；id 与 name 相同\n- 没有新国家时输出 {\"countries\":[]}\n</analysis_format>",
               "enabled": true
             },
             {

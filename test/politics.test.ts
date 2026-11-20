@@ -10,6 +10,7 @@ import type { PeriodWork, PromptMessage } from '../src/platform';
 import { assignColors } from '../src/politics';
 import { PeriodReplySchema } from '../src/periods';
 import {
+  ADD_POLITICS_TASK,
   DEFAULT_TASK,
   GENERATE_POLITICS_TASK,
   GOVERNMENT_TASK,
@@ -500,5 +501,108 @@ test('示范生成与换期请求附生成派系说明，仍在默认输入上�
     } finally {
       controller.dispose();
     }
+  }
+});
+
+/** Sends the queued replies first, then the offline sample's own reply. */
+class AddPoliticsPlatform extends DemoPlatform {
+  sent: PromptMessage[][] = [];
+  replies: unknown[] = [];
+  override async generate(messages: PromptMessage[]) {
+    this.sent.push(messages);
+    return this.replies.length ? { content: JSON.stringify(this.replies.shift()) } : super.generate(messages);
+  }
+}
+/** The request data of one sent request. */
+const requestData = (messages: PromptMessage[]) => {
+  const data = messages.find((message) => message.content.includes('{"job":"generate"'))!.content;
+  return JSON.parse(data.slice(data.indexOf('{')));
+};
+
+test('补上政局：一次 politics 请求，只送系统规则、补上政局任务与资料，生成任务与自订段都不送；有效回复只写入政局', async () => {
+  const platform = new AddPoliticsPlatform();
+  const controller = new FocusController(platform);
+  controller.config.jobs.generate.retries = 0;
+  controller.config.jobs.generate.prompts.push({
+    id: 'pformat',
+    kind: 'custom',
+    name: '格式',
+    role: 'system',
+    content: '自订格式段：输出完整国策树',
+    enabled: true,
+  });
+  try {
+    await controller.refresh();
+    const before = (await platform.read()).state;
+    // A second request for the same country while the first one runs does not start a job.
+    await Promise.all([controller.addPolitics('north'), controller.addPolitics('north')]);
+    assert.equal(controller.jobs.length, 1);
+    const [job] = controller.jobs;
+    assert.equal(job.state, 'success', job.message);
+    assert.equal(job.addPolitics, true);
+    assert.equal(job.label, '北境联邦 · 补上政局');
+    assert.equal(platform.sent.length, 1);
+    const [messages] = platform.sent;
+    assert.deepEqual(
+      messages.map((message) => message.name),
+      ['补上政局', '系统规则', '任务资料'],
+    );
+    assert.equal(messages[0].content, ADD_POLITICS_TASK);
+    for (const text of ['自订格式段', DEFAULT_TASK.generate, GENERATE_POLITICS_TASK]) {
+      assert.equal(
+        messages.some((message) => message.content.includes(text)),
+        false,
+      );
+    }
+    const payload = requestData(messages);
+    assert.equal(payload.stage, 'politics');
+    assert.equal(payload.candidate.id, 'north');
+    assert.deepEqual(
+      payload.state.countries.map((country: { id: string }) => country.id),
+      ['north'],
+    );
+    const after = (await platform.read()).state;
+    const politics = after.countries.north.politics!;
+    assert.equal(politics.ruling, 'union');
+    assert.deepEqual(
+      politics.factions.map((faction) => faction.color),
+      [0, 1, 2],
+    );
+    assert.deepEqual(
+      { ...after.countries.north, politics: undefined },
+      { ...before.countries.north, politics: undefined },
+    );
+    assert.deepEqual(after.countries.augustium, before.countries.augustium);
+    await assert.rejects(controller.addPolitics('north'), /此国已有政局/);
+    assert.equal(platform.sent.length, 1);
+  } finally {
+    controller.dispose();
+  }
+});
+
+test('补上政局：回复不合生成规则时带验证意见重问；politics 为 null 时任务失败并写出理由，不重问也不改资料', async () => {
+  const platform = new AddPoliticsPlatform();
+  const controller = new FocusController(platform);
+  controller.config.jobs.generate.retries = 2;
+  const uneven = politics();
+  uneven.factions = uneven.factions.map(({ color: _color, ...faction }) => faction);
+  uneven.factions[0].support = 50;
+  try {
+    await controller.refresh();
+    platform.replies.push({ reason: '四派', politics: uneven });
+    await controller.addPolitics('north');
+    assert.equal(controller.jobs[0].state, 'success', controller.jobs[0].message);
+    assert.equal(platform.sent.length, 2);
+    assert.match(requestData(platform.sent[1]).correction, /派系支持度合计须为 100，目前为 110/);
+    const before = (await platform.read()).state;
+    platform.replies.push({ reason: '世界书只写到一位女王，没有第二个派系。', politics: null });
+    await controller.addPolitics('coast');
+    const [job] = controller.jobs;
+    assert.equal(job.state, 'failed');
+    assert.match(job.message, /模型判断此国没有 2 个以上的派系：世界书只写到一位女王，没有第二个派系。/);
+    assert.equal(platform.sent.length, 3);
+    assert.deepEqual((await platform.read()).state, before);
+  } finally {
+    controller.dispose();
   }
 });

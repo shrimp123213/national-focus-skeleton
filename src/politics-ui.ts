@@ -106,11 +106,24 @@ function named(politics: Politics | undefined, id: string): string {
   return faction ? `${pip(faction)}<b>${escape(faction.name)}</b>` : `<b>${escape(id)}</b>`;
 }
 
-/** The ruling faction as one more gauge in the nation bar; its track is the pie laid flat. */
-export function politicsGauge(country: Country, open: boolean): string {
+/**
+ * The ruling faction as one more gauge in the nation bar; its track is the pie laid flat. A country
+ * without politics shows an empty gauge that adds them. While that job runs, the gauge shows its state.
+ */
+export function politicsGauge(country: Country, open: boolean, jobs: JobStatus[]): string {
   const politics = country.politics;
-  const ruling = politics?.factions.find((faction) => faction.id === politics.ruling);
-  if (!politics || !ruling) {
+  if (!politics) {
+    const busy = jobs.some(
+      (job) =>
+        job.addPolitics && job.candidate?.id === country.id && ['queued', 'running'].includes(job.state),
+    );
+    const head = busy
+      ? '<span class="pol-add"><i class="spinner"></i>生成中</span>'
+      : '<span class="pol-name"><span>尚无政局</span></span><span class="pol-add">补上</span>';
+    return `<button class="gauge pol-gauge empty" data-action="politics-add" ${busy ? 'disabled aria-busy="true" ' : ''}title="依世界书与目前局势生成此国的派系，不改动国策树" aria-label="${busy ? '政局生成中' : '尚无政局，补上政局'}"><span class="gauge-head"><small>执政</small>${head}</span><span class="pol-track"></span></button>`;
+  }
+  const ruling = politics.factions.find((faction) => faction.id === politics.ruling);
+  if (!ruling) {
     return '';
   }
   const track = pieSlices(politics)

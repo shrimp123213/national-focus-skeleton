@@ -37,14 +37,17 @@ import {
 } from './generation';
 import { skeletonPlan, type SkeletonProgress } from './skeleton';
 import {
+  addPolitics,
   checkGovernment,
   checkTransition,
   periodAnchor,
   PeriodReplySchema,
+  PoliticsReplySchema,
   transitionPeriod,
 } from './periods';
 import { drawStructure, signature, structureData, type Structure, type TreeType } from './structure';
 import {
+  ADD_POLITICS_TASK,
   DATA_TOKEN,
   GENERATE_POLITICS_TASK,
   GOVERNMENT_TASK,
@@ -94,6 +97,19 @@ import {
 
 function taskData(snapshot: Snapshot, full: boolean) {
   return { now: snapshot.day, state: workingState(snapshot.state, full), context: snapshot.context };
+}
+/** The state of one country and its events, for the period and the politics requests. */
+function countryState(state: State, id: string) {
+  return workingState(
+    {
+      ...state,
+      countries: { [id]: state.countries[id] },
+      events: Object.fromEntries(
+        Object.entries(state.events).filter(([, event]) => event.countries.includes(id)),
+      ),
+    },
+    true,
+  );
 }
 /** What an update has to know about selections and outcomes, so the model need not work out the rules. */
 function updateData(state: State, now: number) {
@@ -933,6 +949,21 @@ export class FocusController {
     const { name, description, evidence } = country;
     await this.run('generate', { id, name, description, evidence }, work);
   }
+  /**
+   * Add politics to a country that has none. One request returns only the politics; the focus
+   * tree stays the same. A country that has politics is refused.
+   */
+  async addPolitics(id: string): Promise<void> {
+    const country = this.state?.countries[id];
+    if (!country) {
+      throw new Error('国家不存在');
+    }
+    if (country.politics) {
+      throw new Error('此国已有政局');
+    }
+    const { name, description, evidence } = country;
+    await this.runTask('generate', { id, name, description, evidence }, undefined, 'manual', undefined, true);
+  }
   async run(kind: JobKind, candidate?: Candidate, periodWork?: PeriodWork): Promise<void> {
     if (kind === 'update') {
       this.coordinationEpoch++;
@@ -955,6 +986,7 @@ export class FocusController {
     periodWork?: PeriodWork,
     mode: 'manual' | 'scheduled' | 'guided' = 'manual',
     guidance?: WorldGuidance,
+    addingPolitics = false,
   ): Promise<void> {
     if (this.disposed) {
       return;
@@ -1003,6 +1035,7 @@ export class FocusController {
       ...(candidate ? { label: candidate.name, candidate } : {}),
       ...(periodWork ? { periodWork, label: `${candidate?.name} · 换期` } : {}),
       ...(guidance ? { guidance, label: '依世界指引' } : {}),
+      ...(addingPolitics ? { addPolitics: true, label: `${candidate?.name} · 补上政局` } : {}),
     };
     this.jobs.unshift(status);
     this.jobs = this.jobs.slice(0, 40);
@@ -1030,9 +1063,11 @@ export class FocusController {
       if (periodWork) {
         checkTransition(snapshot.state, periodWork.transition, periodWork.approved);
       }
-      // One draw per run: retries in this run keep the same lots.
+      // One draw per run: retries in this run keep the same lots. Adding politics draws no lots.
       const structure =
-        kind === 'generate' && candidate ? this.drawFor(snapshot.state, candidate.id) : undefined;
+        kind === 'generate' && candidate && !addingPolitics
+          ? this.drawFor(snapshot.state, candidate.id)
+          : undefined;
       if (structure) {
         this.drawing.set(candidate!.id, structure);
       }
@@ -1060,6 +1095,40 @@ export class FocusController {
           snapshot.prompts,
         );
       };
+      if (addingPolitics) {
+        // One request for the politics only: no skeleton progress, no shape, no change to the tree.
+        const reply = await ask(
+          'politics',
+          {
+            now: snapshot.day,
+            context: snapshot.context,
+            state: countryState(snapshot.state, candidate!.id),
+            candidate,
+            instructions:
+              '只为此国补上政局：依 context 与 state 判断派系，不足 2 个时 politics 填 null。不生成、不修改国策。',
+          },
+          PoliticsReplySchema,
+          (value) => {
+            if (value.politics) {
+              addPolitics(snapshot.state, candidate!.id, value.politics);
+            }
+          },
+          '补上政局',
+        );
+        aborter.signal.throwIfAborted();
+        const { politics } = reply;
+        if (!politics) {
+          throw new Error(`模型判断此国没有 2 个以上的派系：${reply.reason}`);
+        }
+        await this.writeState(
+          (current) => addPolitics(current.state, candidate!.id, politics),
+          aborter.signal,
+        );
+        status.state = 'success';
+        status.message = '验证通过，已保存至本楼';
+        await this.refresh();
+        return;
+      }
       const segmentMax = this.segmentMax();
       const progressKey =
         kind === 'generate'
@@ -1092,18 +1161,7 @@ export class FocusController {
                   current: country.nodes[country.current]?.name,
                   capabilities: Object.values(country.capabilities).filter((c) => c.active),
                 })),
-              state: workingState(
-                {
-                  ...snapshot.state,
-                  countries: { [candidate!.id]: snapshot.state.countries[candidate!.id] },
-                  events: Object.fromEntries(
-                    Object.entries(snapshot.state.events).filter(([, event]) =>
-                      event.countries.includes(candidate!.id),
-                    ),
-                  ),
-                },
-                true,
-              ),
+              state: countryState(snapshot.state, candidate!.id),
               candidate,
               transition: periodWork.transition,
               anchor: periodAnchor(
@@ -1281,6 +1339,12 @@ export class FocusController {
     const stage = (payload as { stage?: unknown }).stage;
     if (kind === 'generate' && (stage === 'generate' || stage === 'period')) {
       note(GENERATE_POLITICS_TASK, '派系说明');
+    }
+    // The generate chain can hold format, self-check and example items that ask for a whole tree.
+    // They contradict a request for politics only, so this request keeps the rules and the data.
+    if (stage === 'politics') {
+      chain = chain.filter((item) => item.kind === 'guide' || item.kind === 'data');
+      note(ADD_POLITICS_TASK, '补上政局');
     }
     if (typeof (payload as { guidance?: unknown }).guidance === 'string') {
       note(GUIDANCE_TASK, '世界指引说明');

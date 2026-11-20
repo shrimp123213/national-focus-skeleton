@@ -59,6 +59,8 @@ export type JobStatus = {
   /** The candidate a generation job was for, so a failed job can be retried. */
   candidate?: { id: string; name: string; description: string; evidence: string };
   periodWork?: PeriodWork;
+  /** The job adds politics to the candidate's country, so a failed job can run again. */
+  addPolitics?: boolean;
   /** Epoch milliseconds when the job started running. */
   started?: number;
   /** Epoch milliseconds when the job finished. */

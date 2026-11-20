@@ -28,7 +28,7 @@ import { structureData, typeShape, type Structure, type TreeType } from './struc
  * slots and writes pending, so the reply has neither; the strict schema rejects them.
  */
 const factionCount = '生成时派系须为 2–6 个：不足 2 个时省略 politics，超过 6 个时合并相近的派系';
-const GeneratedPoliticsSchema = PoliticsSchema.omit({ pending: true }).extend({
+export const GeneratedPoliticsSchema = PoliticsSchema.omit({ pending: true }).extend({
   factions: z
     .array(PoliticsSchema.shape.factions.element.omit({ color: true }))
     .min(2, factionCount)

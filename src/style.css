@@ -4819,6 +4819,39 @@ button.pol-gauge:hover:not(:disabled) {
   min-width: 2px;
   background: var(--c);
 }
+/* No politics yet: a quiet empty gauge like the empty main focus; one rubric word adds them. */
+/* The page-level .empty rule must not grow this gauge or centre its content. */
+.pol-gauge.empty {
+  flex: initial;
+  place-items: normal;
+}
+.pol-gauge.empty .pol-name {
+  color: var(--faint);
+  font-weight: 400;
+}
+.pol-gauge.empty .pol-track {
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.09) 0 6px, transparent 6px 10px);
+}
+.pol-add {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--gold-deep);
+  white-space: nowrap;
+}
+button.pol-gauge.empty:hover:not(:disabled) .pol-add {
+  color: var(--gold);
+}
+.pol-add .spinner {
+  margin-right: 6px;
+}
+/* A running job is not an unavailable control: it keeps full ink. */
+.pol-gauge.empty[aria-busy='true'] {
+  opacity: 1;
+  cursor: progress;
+}
+.pol-gauge.empty[aria-busy='true'] .pol-add {
+  color: var(--muted);
+}
 /* Pending change of government: a strip under the nation bar in the colour of the faction to rule. */
 .pending-bar {
   display: grid;

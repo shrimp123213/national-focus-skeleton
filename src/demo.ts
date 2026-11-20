@@ -3,7 +3,14 @@ export { demoTree } from './demo-tree';
 import { applyProposal, changeCountry, createState, installCountry, stampNews, startFocus } from './engine';
 import { defaultConfig, type Config, type Effect, type FocusNode, type State, type JobKind } from './model';
 import { buildSourceContext } from './sources';
-import { stamp, storyDay, type GenerateResult, type Platform, type Snapshot } from './platform';
+import {
+  stamp,
+  storyDay,
+  type GenerateResult,
+  type Platform,
+  type PromptMessage,
+  type Snapshot,
+} from './platform';
 import { makeSampleState, advancePeriodSample, type Scenario } from './demo-period';
 
 /**
@@ -104,6 +111,57 @@ function withFactions(tree: ReturnType<typeof demoTree>) {
     },
   };
 }
+
+/**
+ * Offline reply to the 补上政局 request: any sample country without politics gets these factions.
+ * Authored for the interface, not worldbook canon.
+ */
+const demoPolitics = {
+  reason: '离线示范：示范资料写有掌握联合议会的统合派、把持各邦议席的自治派，以及主张开战的边军。',
+  politics: {
+    ruling: 'union',
+    succession: '盟主由各邦议会推举，任期六年。',
+    factions: [
+      {
+        id: 'union',
+        name: '统合派',
+        appeal: '扩大盟主与联合议会的权力。',
+        leader: '盟主',
+        stance: 'moderate',
+        support: 45,
+      },
+      { id: 'states', name: '自治派', appeal: '各邦自行征税与募兵。', stance: 'hardline', support: 35 },
+      { id: 'border', name: '边军派', appeal: '以武力收回失地。', stance: 'extreme', support: 20 },
+    ],
+    members: [
+      {
+        id: 'assembly',
+        name: '联合议会',
+        kind: 'institution',
+        weight: 'heavy',
+        faction: 'union',
+        note: '盟主的根基',
+      },
+      {
+        id: 'houses',
+        name: '各邦世家',
+        kind: 'family',
+        weight: 'medium',
+        faction: 'states',
+        note: '把持地方议席',
+      },
+      {
+        id: 'garrison',
+        name: '边境守备军',
+        kind: 'army',
+        weight: 'medium',
+        faction: 'border',
+        note: '驻守边境的老兵',
+      },
+      { id: 'harbor', name: '港口商会', kind: 'guild', weight: 'light', faction: null, note: '尚未表态' },
+    ],
+  },
+};
 
 /** `factions` gives the empire sample factions (the preview page); tests keep the plain tree. */
 export function demoState(start = 100, factions = false): State {
@@ -274,7 +332,11 @@ export class DemoPlatform implements Platform {
       change();
     }
   }
-  async generate(..._args: Parameters<Platform['generate']>): Promise<GenerateResult> {
+  async generate(messages: PromptMessage[]): Promise<GenerateResult> {
+    // The preview can try the 补上政局 button offline; every other request needs a real API.
+    if (messages.some((message) => message.content.includes('"stage":"politics"'))) {
+      return { content: JSON.stringify(demoPolitics) };
+    }
     throw new Error('此页为离线 UI 测试。真实国家辨识与 AI 生成请汇入酒馆脚本后使用。');
   }
   secretLocation(): string {

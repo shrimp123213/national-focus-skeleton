@@ -13,6 +13,7 @@ import {
   pendingBar,
   pieSlices,
   polar,
+  politicsGauge,
   routeBackers,
 } from '../src/politics-ui';
 
@@ -154,6 +155,39 @@ test('待决条：平时显示提示与两个按钮；校准中停用换期并�
   }
   // Another country's job, or a finished one, leaves the buttons.
   assert.match(pendingBar(normal, [job('north', 'running'), job('augustium', 'failed')]), /pending-approve/);
+});
+
+test('执政仪表：有政局时显示执政派系；没有政局时是补上政局的按钮，该国的补上工作排队或进行中时停用并显示生成中', () => {
+  const ruled = politicsGauge(country(), true, []);
+  assert.match(ruled, /data-action="politics" aria-expanded="true"/);
+  assert.match(ruled, /内阁派/);
+  const plain = installCountry(createState(0), demoTree(), 0).countries.augustium;
+  const adding = (id: string, state: JobStatus['state']): JobStatus => ({
+    id: 'job',
+    kind: 'generate',
+    state,
+    message: '',
+    time: '',
+    addPolitics: true,
+    candidate: { id, name: '示范', description: '', evidence: '' },
+  });
+  const idle = politicsGauge(plain, false, []);
+  assert.match(idle, /<button class="gauge pol-gauge empty" data-action="politics-add" title=/);
+  assert.match(idle, /尚无政局/);
+  assert.doesNotMatch(idle, /disabled|spinner/);
+  for (const state of ['queued', 'running'] as const) {
+    const busy = politicsGauge(plain, false, [adding('augustium', state)]);
+    assert.match(busy, /data-action="politics-add" disabled aria-busy="true"/);
+    assert.match(busy, /<i class="spinner"><\/i>生成中/);
+  }
+  // Another country's job, a finished job or a period job of this country leaves the button.
+  for (const jobs of [
+    [adding('north', 'running')],
+    [adding('augustium', 'failed')],
+    [job('augustium', 'running')],
+  ]) {
+    assert.doesNotMatch(politicsGauge(plain, false, jobs), /disabled/);
+  }
 });
 
 test('有待决时，换期生成中的期别说明不重复待决条的「新一期生成中」', () => {

@@ -1,10 +1,18 @@
 import { z } from 'zod';
 import { normalizeBranchReferences } from './branch-references';
 import { installCountry, validateGraph } from './engine';
-import { GeneratedTreeSchema, normalizeCore, validateTopology } from './generation';
+import { GeneratedPoliticsSchema, GeneratedTreeSchema, normalizeCore, validateTopology } from './generation';
 import { coreBranch, layoutTree } from './layout';
-import { sizeLimits, StateSchema, TreeSchema, type Country, type Proposal, type State } from './model';
-import { validateFactionRules, validateGeneratedPolitics } from './politics';
+import {
+  sizeLimits,
+  StateSchema,
+  TreeSchema,
+  type Country,
+  type Politics,
+  type Proposal,
+  type State,
+} from './model';
+import { assignColors, validateFactionRules, validateGeneratedPolitics } from './politics';
 import { assertCapabilityOrder } from './reachability';
 
 export type Transition = Proposal['transitions'][number];
@@ -18,6 +26,10 @@ export const PeriodReplySchema = z
   })
   .strict();
 export type PeriodReply = z.output<typeof PeriodReplySchema>;
+/** The reply that adds politics to an existing country. Null politics means fewer than 2 factions. */
+export const PoliticsReplySchema = z
+  .object({ reason: z.string().min(1).max(400), politics: GeneratedPoliticsSchema.nullable() })
+  .strict();
 
 /** Only a still-active focus is carried; paused and waiting focuses do not take precedence. */
 export function periodAnchor(country: Country, invalidateActive = false): string {
@@ -90,6 +102,27 @@ export function dismissPending(input: State, id: string): State {
   }
   const state = structuredClone(input);
   delete state.countries[id].politics!.pending;
+  state.revision++;
+  return StateSchema.parse(state);
+}
+
+/**
+ * Give politics to a country that has none. The factions get colour slots as on install. The tree,
+ * the progress and the capabilities stay the same.
+ */
+export function addPolitics(input: State, id: string, politics: Politics): State {
+  const country = input.countries[id];
+  if (!country) {
+    throw new Error('国家不存在');
+  }
+  if (country.politics) {
+    throw new Error('此国已有政局');
+  }
+  validateGeneratedPolitics(politics);
+  const added = structuredClone(politics);
+  added.factions = assignColors(added.factions);
+  const state = structuredClone(input);
+  state.countries[id].politics = added;
   state.revision++;
   return StateSchema.parse(state);
 }

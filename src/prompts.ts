@@ -80,16 +80,28 @@ AI 国选策时偏好 mutex.backers 含其执政派系的路线，并依执政�
 /** Added to the update task after POLITICS_TASK (v0.18.0): how to propose a change of government. */
 export const GOVERNMENT_TASK = `执政更替：政权易手只在 transitions 提出，填 cause=government、ruling（新执政派系的 id）与 reason（指明正文或事件中的依据）；它不是效果。只有正文或事件显示政权已实际易手时才提出；支持度落后本身不是理由，执政派系长期落后时，应由事件写出它承受的压力，例如逼宫、罢免的呼声、地方抗命。同一派系内换人不算更替。系统随后为新政府生成新一期，不承接进行中国策。auto=false 或 calibration=true 的国家是「不可换期」的例外：照样提出 government 换期，系统记为待决（politics.pending），由玩家决定；已有待决且没有新的变化时，不要再次提出。`;
 
+/** What a faction is. The generate task and the add-politics task share this text. */
+const FACTION_DEFINITION = `派系是掌权后会改变国家方向的一群人：是一群人而不是一个选项，世界书中有具名的人物或势力在推动才算；以外交取向区分的阵营符合这点也算；同一派系内换人不算另一个派系。`;
+/** The field rules of politics. The generate task and the add-politics task share this text. */
+const POLITICS_FIELDS = `support 是政治影响力，不是人口，整数，合计 100；ruling 是现在掌权的派系，其 support 大于 0。stance 是作风：moderate 优先谈判与妥协，hardline 优先施压与动武但守既有规矩，extreme 不惜清洗异己或全面开战。members 是世界书中具名的势力（家族、种族、氏族、教团、军团、商会、机构），name 照抄世界书；weight 为 light／medium／heavy；faction 是其支持的派系，世界书看不出明确立场时填 null，不硬分配；note 写一句。成员只是标签，不占支持度。succession 用一句写此国政权如何更替。不写 color 与 pending。`;
+
 /** Added to the generate task, for the first generation and the period stage (v0.18.0). */
-export const GENERATE_POLITICS_TASK = `politics 是本国的派系，选填。派系是掌权后会改变国家方向的一群人：是一群人而不是一个选项，世界书中有具名的人物或势力在推动才算；以外交取向区分的阵营符合这点也算；同一派系内换人不算另一个派系。世界书显示 2 个以上符合定义的派系时才写 politics，共 2–6 个；否则省略 politics，也不用支持度条件、派系效果与 backers。
-support 是政治影响力，不是人口，整数，合计 100；ruling 是现在掌权的派系，其 support 大于 0。stance 是作风：moderate 优先谈判与妥协，hardline 优先施压与动武但守既有规矩，extreme 不惜清洗异己或全面开战。members 是世界书中具名的势力（家族、种族、氏族、教团、军团、商会、机构），name 照抄世界书；weight 为 light／medium／heavy；faction 是其支持的派系，世界书看不出明确立场时填 null，不硬分配；note 写一句。成员只是标签，不占支持度。succession 用一句写此国政权如何更替。不写 color 与 pending。
+export const GENERATE_POLITICS_TASK = `politics 是本国的派系，选填。${FACTION_DEFINITION}世界书显示 2 个以上符合定义的派系时才写 politics，共 2–6 个；否则省略 politics，也不用支持度条件、派系效果与 backers。
+${POLITICS_FIELDS}
 支持度条件（kind=support：faction、minimum，可加 negate）只写在国策 requirements 与效果的 when，门槛应在本期内达得到。派系效果：
 - support：某派系 ±5、±10 或 ±15。
 - member：成员倒戈或转为未表态，只改标签。重要成员倒戈时，同一国策通常也要写相应的 support 增减。
 - merge：source 整个派系并入 target；source 不可是执政派系。
 - faction：key 不存在时建立新派系，须填起始 support（5、10 或 15）；已存在时改写名称、诉求与作风，不填 support。
 mutex.backers 是该路线倚重的派系。引用的派系须在 politics.factions 中或由本树国策的 faction 效果建立，成员须在 politics.members 中。
-stage=period 时：state 中该国已有 politics 则不输出 politics，所用派系 id 与成员 id 照抄 state；没有则可依上述规则补上 politics。transition.cause=government 时政权已更替：transition.ruling 的派系现在执政（state 中的 ruling 是前政府），新一期的 agenda 与路线依该派系的 appeal 与 stance 制定。`;
+stage=period 时：state 中该国已有 politics 则不输出 politics，所用派系 id 与成员 id 照抄 state；没有则必须依上述规则判断：世界书显示 2 个以上符合定义的派系就写 politics；确实没有才省略，并在 analysis 写明理由。transition.cause=government 时政权已更替：transition.ruling 的派系现在执政（state 中的 ruling 是前政府），新一期的 agenda 与路线依该派系的 appeal 与 stance 制定。`;
+
+/** The task of a request that adds politics to a country that already has a focus tree. */
+export const ADD_POLITICS_TASK = `任务：为已有国策树的国家补上政局。只输出符合本次 schema 的 JSON：reason 与 politics；不生成也不修改国策。
+politics 是该国的派系。${FACTION_DEFINITION}
+依 context（世界书、正文、纪要）与 state 中该国目前的局势（period.agenda、已完成的国策、events）判断：ruling 取现在实际掌权的派系，support 写目前的影响力，不写建国之初的局面。
+世界书显示 2 个以上符合定义的派系时写 politics，共 2–6 个；否则 politics 填 null。reason 用一两句写出依据。
+${POLITICS_FIELDS}`;
 
 const builtinMeta: Record<BuiltinKind, { name: string; role: PromptRole }> = {
   guide: { name: '系统规则', role: 'system' },
