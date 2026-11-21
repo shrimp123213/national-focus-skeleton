@@ -12,7 +12,7 @@ import {
   type Proposal,
   type State,
 } from './model';
-import { assignColors, validateFactionRules, validateGeneratedPolitics } from './politics';
+import { assignColors, politicsLock, validateFactionRules, validateGeneratedPolitics } from './politics';
 import { assertCapabilityOrder } from './reachability';
 
 export type Transition = Proposal['transitions'][number];
@@ -123,6 +123,28 @@ export function addPolitics(input: State, id: string, politics: Politics): State
   added.factions = assignColors(added.factions);
   const state = structuredClone(input);
   state.countries[id].politics = added;
+  state.revision++;
+  return StateSchema.parse(state);
+}
+
+/**
+ * Remove a country's politics, so the player can add them again. The tree, the progress and the
+ * events stay the same; past faction changes stay in the events as history.
+ */
+export function removePolitics(input: State, id: string): State {
+  const country = input.countries[id];
+  if (!country) {
+    throw new Error('国家不存在');
+  }
+  if (!country.politics) {
+    throw new Error('此国没有政局');
+  }
+  const lock = politicsLock(country);
+  if (lock) {
+    throw new Error(`不能移除政局：${lock}`);
+  }
+  const state = structuredClone(input);
+  delete state.countries[id].politics;
   state.revision++;
   return StateSchema.parse(state);
 }

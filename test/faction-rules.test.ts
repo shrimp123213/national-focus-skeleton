@@ -16,8 +16,14 @@ import {
   type Requirement,
   type State,
 } from '../src/model';
-import { addPolitics, PeriodReplySchema, transitionPeriod } from '../src/periods';
-import { assignColors, settlePolitics, validatePolitics, type FactionEffect } from '../src/politics';
+import { addPolitics, PeriodReplySchema, removePolitics, transitionPeriod } from '../src/periods';
+import {
+  assignColors,
+  politicsLock,
+  settlePolitics,
+  validatePolitics,
+  type FactionEffect,
+} from '../src/politics';
 import { exportTrees, importTrees, parseTreeFile } from '../src/tree-io';
 
 const politics = (): Politics => ({
@@ -802,6 +808,44 @@ test('补上政局：没有政局的国家取得政局与色位，国策树、�
     assert.throws(() => addPolitics(plain, 'realm', value), message);
     assert.deepEqual(plain, before);
   }
+});
+
+test('移除政局：国策树没有引用派系且没有待决时可移除，其余资料不变，之后可以再补上；有引用或待决时退回', () => {
+  const road = { id: 'cap', kind: 'capability', key: 'road', name: '公路', active: true };
+  const state = complete(install([focus('x', { effects: [road] }), focus('y')]), 'x');
+  const before = structuredClone(state);
+  assert.equal(politicsLock(state.countries.realm), '');
+  const after = removePolitics(state, 'realm');
+  assert.equal('politics' in after.countries.realm, false);
+  const rest = (value: State) => ({
+    ...value,
+    revision: 0,
+    countries: { realm: { ...value.countries.realm, politics: undefined } },
+  });
+  assert.deepEqual(rest(after), rest(state));
+  assert.equal(after.revision, state.revision + 1);
+  assert.deepEqual(state, before, '不改写输入');
+  assert.ok(addPolitics(after, 'realm', politics()).countries.realm.politics);
+  assert.throws(() => removePolitics(after, 'realm'), /此国没有政局/);
+  assert.throws(() => removePolitics(state, 'ghost'), /国家不存在/);
+  // A tree that names factions keeps its politics.
+  const route = { group: 'g', route: 'r', lock: 'complete', reason: '择一', backers: ['crown'] };
+  for (const fields of [
+    { requirements: [rule('crown', 10)] },
+    { effects: [support('a', 'crown', 5)] },
+    { effects: [{ id: 'a', kind: 'stability', value: 5, when: [rule('crown', 10)] }] },
+    { mutex: route },
+  ]) {
+    const used = install([focus('x', fields), focus('y')]);
+    assert.equal(politicsLock(used.countries.realm), '本期国策树已引用派系');
+    assert.throws(() => removePolitics(used, 'realm'), /不能移除政局：本期国策树已引用派系/);
+  }
+  const waiting = install([focus('x')], {
+    ...politics(),
+    pending: { ruling: 'cabinet', reason: '议会罢免首相', at: 0 },
+  });
+  assert.equal(politicsLock(waiting.countries.realm), '有待决的执政更替');
+  assert.throws(() => removePolitics(waiting, 'realm'), /不能移除政局：有待决的执政更替/);
 });
 
 test('执政派系支持度归零、派系并入后，国家仍可汇出再汇入，政局原样保留', () => {

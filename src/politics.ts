@@ -1,4 +1,4 @@
-import type { Effect, FocusNode, Politics } from './model';
+import type { Country, Effect, FocusNode, Politics } from './model';
 
 function requireThat(value: unknown, message: string): asserts value {
   if (!value) {
@@ -14,6 +14,30 @@ export function isFactionEffect(effect: Effect): effect is FactionEffect {
 }
 
 type RuleNode = Pick<FocusNode, 'id' | 'requirements' | 'sustain' | 'outcomes' | 'effects' | 'mutex'>;
+/** A focus that names factions: a support condition, a faction effect or the backers of its route. */
+function usesFactions(node: RuleNode): boolean {
+  const rules = [
+    ...node.requirements,
+    ...node.sustain,
+    ...node.outcomes,
+    ...node.effects.flatMap((effect) => effect.when ?? []),
+  ];
+  return (
+    rules.some((rule) => rule.kind === 'support') ||
+    node.effects.some(isFactionEffect) ||
+    Boolean(node.mutex?.backers?.length)
+  );
+}
+/**
+ * Why a country's politics cannot be removed; empty when they can. A tree that names factions
+ * needs them, and a pending change of government names its next ruling faction.
+ */
+export function politicsLock(country: Country): string {
+  if (country.politics?.pending) {
+    return '有待决的执政更替';
+  }
+  return Object.values(country.nodes).some(usesFactions) ? '本期国策树已引用派系' : '';
+}
 /**
  * Faction rules of focuses (spec 七). A tree needs politics to use them, a `support` condition goes
  * only in requirements and in an effect's `when`, and a faction never merges into itself. With

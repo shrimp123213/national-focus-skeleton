@@ -11,7 +11,7 @@ import {
 } from './model';
 import { generatingPeriod } from './period-ui';
 import type { JobStatus } from './platform';
-import { isFactionEffect, type FactionEffect } from './politics';
+import { isFactionEffect, politicsLock, type FactionEffect } from './politics';
 
 type Faction = Politics['factions'][number];
 type Member = Politics['members'][number];
@@ -164,8 +164,11 @@ function pie(politics: Politics): string {
 const memberChip = (member: Member) =>
   `<span class="member ${member.weight}" title="${escape(`${memberKindNames[member.kind]} · 分量${memberWeightNames[member.weight]} · ${member.note}`)}">${escape(member.name)}</span>`;
 
-/** The politics drawer: the pie, then every faction in the pie's order, then the undecided members. */
-export function politicsDrawer(country: Country): string {
+/**
+ * The politics drawer: the pie, then every faction in the pie's order, then the undecided members.
+ * The last line removes the politics; `removing` shows its confirmation.
+ */
+export function politicsDrawer(country: Country, removing: boolean): string {
   const politics = country.politics;
   const ruling = politics?.factions.find((faction) => faction.id === politics.ruling);
   if (!politics || !ruling) {
@@ -181,12 +184,18 @@ export function politicsDrawer(country: Country): string {
     })
     .join('');
   const undecided = factionMembers(politics, null);
+  const lock = politicsLock(country);
+  const remove = lock
+    ? `<button class="ghost danger" data-action="politics-remove-ask" disabled title="${lock}">移除政局</button><small>${lock}</small>`
+    : removing
+      ? `<div class="remove-confirm" role="alert"><small>移除「${escape(country.name)}」的派系、成员与支持度？会写入目前楼层；国策树与进度不变，之后可以再按「补上」。</small><button class="danger" data-action="politics-remove">确认移除</button><button data-action="politics-remove-cancel">取消</button></div>`
+      : '<button class="ghost danger" data-action="politics-remove-ask">移除政局</button>';
   return `<header class="drawer-head politics" style="--c:${ink(ruling)}"><button class="ghost drawer-close" data-action="detail-close" aria-label="关闭政局">×</button><span class="drawer-emblem">${icon(country.control === 'player' ? 'eagle' : 'crown')}</span><div><span class="drawer-branch">政局</span><h3>${escape(country.name)}</h3><p>${escape(politics.succession)}</p></div></header>
       <div class="drawer-body"><div class="pol-top">${pie(politics)}<div class="pol-ruler"><small>执政</small><strong>${escape(ruling.name)}</strong>${stance(ruling)}<span class="big">${ruling.support}<small>%</small></span></div></div>${rows}${
         undecided.length
           ? `<div class="unaligned"><h4>未表态</h4><div class="members">${undecided.map(memberChip).join('')}</div></div>`
           : ''
-      }</div>`;
+      }<div class="pol-remove">${remove}</div></div>`;
 }
 
 /**

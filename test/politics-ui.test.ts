@@ -13,6 +13,7 @@ import {
   pendingBar,
   pieSlices,
   polar,
+  politicsDrawer,
   politicsGauge,
   routeBackers,
 } from '../src/politics-ui';
@@ -187,6 +188,28 @@ test('执政仪表：有政局时显示执政派系；没有政局时是补上�
     [job('augustium', 'running')],
   ]) {
     assert.doesNotMatch(politicsGauge(plain, false, jobs), /disabled/);
+  }
+});
+
+test('政局抽屉的移除政局：可移除时先问再确认；有待决时停用并写出原因', () => {
+  const idle = politicsDrawer(country(), false);
+  assert.match(idle, /<button class="ghost danger" data-action="politics-remove-ask">移除政局<\/button>/);
+  assert.doesNotMatch(idle, /data-action="politics-remove"/);
+  const asking = politicsDrawer(country(), true);
+  assert.match(asking, /role="alert"/);
+  assert.match(asking, /data-action="politics-remove">确认移除<\/button>/);
+  assert.match(asking, /data-action="politics-remove-cancel">取消<\/button>/);
+  assert.doesNotMatch(asking, /politics-remove-ask/);
+  const pending = politics();
+  pending.pending = { ruling: 'crown', reason: '女皇复辟', at: 0 };
+  // A locked country shows no confirmation, even if one was open.
+  for (const html of [politicsDrawer(country(pending), false), politicsDrawer(country(pending), true)]) {
+    assert.match(
+      html,
+      /data-action="politics-remove-ask" disabled title="有待决的执政更替">移除政局<\/button>/,
+    );
+    assert.match(html, /<small>有待决的执政更替<\/small>/);
+    assert.doesNotMatch(html, /data-action="politics-remove"/);
   }
 });
 

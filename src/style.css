@@ -5150,6 +5150,25 @@ button.pol-gauge.empty:hover:not(:disabled) .pol-add {
 .unaligned .member {
   border-style: dashed;
 }
+/* The last line of the politics drawer: remove the politics, after a confirmation. */
+.pol-remove {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.pol-remove > .ghost {
+  margin-left: auto;
+  font-size: 12px;
+}
+.pol-remove > small {
+  order: -1;
+  font-size: 12px;
+  color: var(--faint);
+}
 /* Faction conditions and effects in the focus drawer */
 .fx {
   display: inline-flex;

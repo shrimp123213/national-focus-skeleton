@@ -59,7 +59,7 @@ import { currentApiName, parseJsonReply, redactApiError, validateApi } from './a
 import { repairReply } from './repair';
 import { storyTime } from './story-time';
 import { letterDigest } from './proposal-view';
-import { assertInputSize, InputSizeError, messageCharacters } from './sources';
+import { assertInputSize, InputSizeError, messageCharacters, segmentPlaceholders } from './sources';
 import { RoutePool, routeLimits } from './route-pool';
 import {
   FocusIntegration,
@@ -1342,8 +1342,14 @@ export class FocusController {
     }
     // The generate chain can hold format, self-check and example items that ask for a whole tree.
     // They contradict a request for politics only, so this request keeps the rules and the data.
+    // A custom item with a source placeholder also stays: that source is not in the data.
     if (stage === 'politics') {
-      chain = chain.filter((item) => item.kind === 'guide' || item.kind === 'data');
+      const sources = new Set(
+        config.jobs[kind].prompts
+          .filter((item) => item.kind === 'custom' && segmentPlaceholders([item], kind).size)
+          .map((item) => item.id),
+      );
+      chain = chain.filter((item) => item.kind === 'guide' || item.kind === 'data' || sources.has(item.id));
       note(ADD_POLITICS_TASK, '补上政局');
     }
     if (typeof (payload as { guidance?: unknown }).guidance === 'string') {

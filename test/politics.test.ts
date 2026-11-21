@@ -519,7 +519,7 @@ const requestData = (messages: PromptMessage[]) => {
   return JSON.parse(data.slice(data.indexOf('{')));
 };
 
-test('补上政局：一次 politics 请求，只送系统规则、补上政局任务与资料，生成任务与自订段都不送；有效回复只写入政局', async () => {
+test('补上政局：一次 politics 请求，送系统规则、补上政局任务、资料与带来源占位符的自订段，生成任务与其余自订段不送；有效回复只写入政局', async () => {
   const platform = new AddPoliticsPlatform();
   const controller = new FocusController(platform);
   controller.config.jobs.generate.retries = 0;
@@ -529,6 +529,15 @@ test('补上政局：一次 politics 请求，只送系统规则、补上政局�
     name: '格式',
     role: 'system',
     content: '自订格式段：输出完整国策树',
+    enabled: true,
+  });
+  // A segment with a source placeholder is the only place that holds that source, so it stays.
+  controller.config.jobs.generate.prompts.push({
+    id: 'pbackground',
+    kind: 'custom',
+    name: '背景信息',
+    role: 'user',
+    content: '<背景设定>$1</背景设定>',
     enabled: true,
   });
   try {
@@ -545,7 +554,7 @@ test('补上政局：一次 politics 请求，只送系统规则、补上政局�
     const [messages] = platform.sent;
     assert.deepEqual(
       messages.map((message) => message.name),
-      ['补上政局', '系统规则', '任务资料'],
+      ['补上政局', '系统规则', '任务资料', '背景信息'],
     );
     assert.equal(messages[0].content, ADD_POLITICS_TASK);
     for (const text of ['自订格式段', DEFAULT_TASK.generate, GENERATE_POLITICS_TASK]) {
